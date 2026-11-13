@@ -105,7 +105,7 @@ export function startedNewSession(): void {
 const RECONNECT_TRIES = 3;
 
 export async function restoreSession(afterReconnect = 0): Promise<void> {
-  const { setAuth, setLoading } = useAuthStore.getState();
+  const { setAuth, setLoading, setAwaitingNetwork } = useAuthStore.getState();
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -115,6 +115,7 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
   try {
     const res = await authApi.refresh();
     if (!res) {
+      setAwaitingNetwork(false);
       setLoading(false);
       return;
     }
@@ -122,11 +123,14 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
     setAuth(res.accessToken, user);
   } catch (err) {
     // The device is offline: the session may be fine, so don't treat the learner as signed out.
-    // Stay loading and try again once the browser is back online (PWA readiness, 2026-11-13: the
-    // installed app opened offline used to land on /login and stay signed out). Only when the
-    // browser says it's offline: an online browser that can't reach the API (an outage, DNS) would
-    // wait for an `online` event that never comes (review on #283), so it signs out as before
+    // Protected pages wait for the connection, and the restore runs again once the browser is
+    // back online (PWA readiness, 2026-11-13: the installed app opened offline used to land on
+    // /login and stay signed out). Loading ends, so public pages show a guest meanwhile (review on
+    // #283). Only when the browser says it's offline: an online browser that can't reach the API
+    // (an outage, DNS) would wait for an `online` event that never comes, so it signs out as before
     if (isOffline()) {
+      setAwaitingNetwork(true);
+      setLoading(false);
       retryWhenOnline();
       return;
     }
@@ -137,6 +141,7 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       return;
     }
     // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
+    setAwaitingNetwork(false);
     setLoading(false);
   }
 }

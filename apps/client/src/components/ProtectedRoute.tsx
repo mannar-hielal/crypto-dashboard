@@ -32,17 +32,20 @@ export function ProtectedRoute() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const awaitingNetwork = useAuthStore((s) => s.awaitingNetwork);
   const location = useLocation();
   const online = useOnline();
 
-  if (isLoading) {
+  // Opened offline: the session waits for the connection instead of signing out
+  if (isLoading || (awaitingNetwork && !accessToken)) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
         <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
-        {/* Opened offline: the session waits for the connection instead of signing out */}
-        {!online && (
+        {(awaitingNetwork || !online) && (
           <p className="text-muted-foreground max-w-xs text-sm" role="status">
-            You&apos;re offline. You&apos;ll be signed back in as soon as you&apos;re online.
+            {online
+              ? 'Reconnecting…'
+              : 'You’re offline. You’ll be signed back in as soon as you’re online.'}
           </p>
         )}
       </div>

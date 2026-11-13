@@ -4608,7 +4608,7 @@ and approved the review's top five to-dos.
 - **Offline:**
   - A launch with no connection keeps the session. When the browser reports no connection (`navigator.onLine` false),
     `restoreSession` stays loading and retries once on `online`. An online browser that can't reach the API still
-    signs out as before, so an outage never leaves a spinner for ever (review on #283). `ProtectedRoute` says
+    signs out as before, so an outage never leaves a spinner for ever (review on #283). The wait is its own flag (`authStore.awaitingNetwork`), not `isLoading`, so public pages (the `/chart` sign-in lock) show a guest meanwhile; after reconnecting, a failed fetch retries three times (1, 2, 4 s) before signing out. `ProtectedRoute` says
     "You're offline. You'll be signed back in as soon as you're online." It used to land on /login, signed out.
   - The offline notice stays bottom-centre (the 2026-09-29 gate) but is raised above the Buy / Sell bar and drawn
     above the cookie banner.

@@ -111,7 +111,8 @@ describe('msUntilExpiry()', () => {
     const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     await restoreSession();
-    expect(useAuthStore.getState().isLoading).toBe(true); // not "signed out"
+    // Not signed out: protected pages wait; public pages see a guest (review on #283)
+    expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: true });
     onLine.mockReturnValue(true);
 
     refresh.mockResolvedValueOnce({ accessToken: 'new' } as never);
@@ -138,7 +139,7 @@ describe('msUntilExpiry()', () => {
       me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
       window.dispatchEvent(new Event('online'));
       await vi.advanceTimersByTimeAsync(0);
-      expect(useAuthStore.getState().isLoading).toBe(true); // still waiting, not signed out
+      expect(useAuthStore.getState().awaitingNetwork).toBe(true); // still waiting, not signed out
       await vi.advanceTimersByTimeAsync(1000);
       await vi.advanceTimersByTimeAsync(2000);
       expect(useAuthStore.getState().accessToken).toBe('back');
@@ -154,10 +155,11 @@ describe('msUntilExpiry()', () => {
     try {
       useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
       refresh.mockRejectedValue(new TypeError('Failed to fetch'));
+      useAuthStore.setState({ awaitingNetwork: true });
       await restoreSession(1);
       await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
       expect(refresh).toHaveBeenCalledTimes(4);
-      expect(useAuthStore.getState().isLoading).toBe(false);
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
 
       refresh.mockReset();
       useAuthStore.setState({ isLoading: true });
