@@ -47,3 +47,19 @@ export async function purgeStaleRefreshTokens(
     if (batch.length < PURGE_BATCH) return total;
   }
 }
+
+/**
+ * The daily job's refresh-token step, on its own: a failure here is logged with its own message
+ * and never thrown, and a failure in another step never skips this one (review on #288)
+ */
+export async function runRefreshTokenPurge(
+  app: Pick<FastifyInstance, 'prisma' | 'log'>,
+  now: Date = new Date()
+): Promise<void> {
+  try {
+    const purged = await purgeStaleRefreshTokens(app.prisma, now);
+    if (purged > 0) app.log.info({ count: purged }, 'Purged expired refresh tokens');
+  } catch (err) {
+    app.log.error(err, 'Error purging expired refresh tokens');
+  }
+}

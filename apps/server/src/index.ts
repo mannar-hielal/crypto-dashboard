@@ -4,7 +4,7 @@ import { logger } from './logger.js';
 import { EmailService } from './services/EmailService.js';
 import { purgeOldActivity } from './services/UserActivity.js';
 import { purgeOldLearningEvents } from './services/LearningEvents.js';
-import { purgeStaleRefreshTokens } from './services/RefreshTokens.js';
+import { runRefreshTokenPurge } from './services/RefreshTokens.js';
 import { DIGEST_WINDOW_MS, startErrorDigest } from './lib/errorAlerts.js';
 
 type AppInstance = Awaited<ReturnType<typeof buildApp>>;
@@ -68,12 +68,14 @@ async function startPurgeJob(app: AppInstance) {
       if (purged > 0) app.log.info({ count: purged }, 'Purged old activity days');
       const purgedEvents = await purgeOldLearningEvents(app.prisma, now);
       if (purgedEvents > 0) app.log.info({ count: purgedEvents }, 'Purged old learning events');
-      // Refresh tokens nobody can use any more: rotated past the reuse window, or expired
-      const purgedTokens = await purgeStaleRefreshTokens(app.prisma, now);
-      if (purgedTokens > 0) app.log.info({ count: purgedTokens }, 'Purged stale refresh tokens');
     } catch (err) {
       app.log.error(err, 'Error purging activity days and learning events');
     }
+
+    // 4. Expired refresh tokens (rotated rows are kept until they expire, for the theft signal);
+    //    its own try, so a failure above never lets the table grow, and its own message (review
+    //    on #288)
+    await runRefreshTokenPurge(app, now);
   };
 
   // Run once on startup, then every 24 hours

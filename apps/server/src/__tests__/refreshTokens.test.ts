@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { SESSION_RECONNECT_TRIES } from '@crypto-dashboard/sdk';
-import { purgeStaleRefreshTokens, REFRESH_REUSE_CAP } from '../services/RefreshTokens.js';
+import {
+  purgeStaleRefreshTokens,
+  REFRESH_REUSE_CAP,
+  runRefreshTokenPurge,
+} from '../services/RefreshTokens.js';
 
 describe('purgeStaleRefreshTokens', () => {
   it('should delete expired rows in batches, so a large first run never locks the table for long', async () => {
@@ -45,5 +49,32 @@ describe('the reuse cap and the client’s retries (review on #288)', () => {
   it('should serve every reconnect retry of a lost reply, with room for a second tab', () => {
     // The client retries SESSION_RECONNECT_TRIES times; each retry of a lost reply is one reuse
     expect(REFRESH_REUSE_CAP).toBeGreaterThan(SESSION_RECONNECT_TRIES);
+  });
+});
+
+describe('runRefreshTokenPurge (the daily job’s step, review on #288)', () => {
+  it('should log a failure with its own message and never throw', async () => {
+    const error = vi.fn();
+    const app = {
+      prisma: { refreshToken: { findMany: vi.fn().mockRejectedValue(new Error('db down')) } },
+      log: { info: vi.fn(), error },
+    } as unknown as Pick<FastifyInstance, 'prisma' | 'log'>;
+    await expect(runRefreshTokenPurge(app)).resolves.toBeUndefined();
+    expect(error).toHaveBeenCalledWith(expect.any(Error), 'Error purging expired refresh tokens');
+  });
+
+  it('should log how many expired tokens it removed', async () => {
+    const info = vi.fn();
+    const app = {
+      prisma: {
+        refreshToken: {
+          findMany: vi.fn().mockResolvedValueOnce([{ id: 'a' }, { id: 'b' }]),
+          deleteMany: vi.fn().mockResolvedValue({ count: 2 }),
+        },
+      },
+      log: { info, error: vi.fn() },
+    } as unknown as Pick<FastifyInstance, 'prisma' | 'log'>;
+    await runRefreshTokenPurge(app);
+    expect(info).toHaveBeenCalledWith({ count: 2 }, 'Purged expired refresh tokens');
   });
 });
