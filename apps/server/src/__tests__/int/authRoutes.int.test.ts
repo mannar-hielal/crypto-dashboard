@@ -94,19 +94,21 @@ describe('/api/auth/refresh on Postgres — two tabs at once, and a lost reply',
     expect((await refresh(b!)).statusCode).toBe(401);
   });
 
-  it('cleans up rotated rows once they are past the window', async () => {
+  it('keeps a rotated token until it expires, so a replay after later refreshes is still caught (review on #288)', async () => {
     const { userId, token } = await register();
-    const res = await refresh(token);
-    expect(res.statusCode).toBe(200);
+    const t2 = refreshCookie(await refresh(token));
+    // The legitimate user goes on refreshing, past the window
     await db.refreshToken.updateMany({
       where: { userId, rotatedAt: { not: null } },
       data: { rotatedAt: new Date(Date.now() - 60_000) },
     });
-    expect((await refresh(refreshCookie(res)!)).statusCode).toBe(200);
-    // The old rotated row is gone; the just-rotated one stays for its window
-    const rotated = await db.refreshToken.findMany({ where: { userId, rotatedAt: { not: null } } });
-    expect(rotated).toHaveLength(1);
-    expect(Date.now() - rotated[0]!.rotatedAt!.getTime()).toBeLessThan(30_000);
+    const t3 = refreshCookie(await refresh(t2!));
+    expect(t3).toBeDefined();
+    // The first token's row is still there…
+    expect(await db.refreshToken.count({ where: { userId, rotatedAt: { not: null } } })).toBe(2);
+    // …so a thief replaying it now trips the theft signal: the sign-in is ended, t3 included
+    expect((await refresh(token)).statusCode).toBe(401);
+    expect((await refresh(t3!)).statusCode).toBe(401);
   });
 });
 
@@ -189,7 +191,7 @@ describe('/api/auth/refresh reuse cap and logout scope on Postgres (review on #2
 });
 
 describe('purgeStaleRefreshTokens on Postgres', () => {
-  it('removes rows rotated past the window and expired ones, and keeps live and just-rotated ones', async () => {
+  it('removes expired rows only: rotated ones stay until they expire, for the theft signal', async () => {
     const { userId, token } = await register();
     const first = refreshCookie(await refresh(token)); // the registration token, rotated now
     expect(first).toBeDefined();
@@ -210,10 +212,11 @@ describe('purgeStaleRefreshTokens on Postgres', () => {
         expiresAt: new Date(Date.now() - 1000),
       },
     });
-    expect(await purgeStaleRefreshTokens(db)).toBe(2);
+    expect(await purgeStaleRefreshTokens(db)).toBe(1); // the expired one
     const left = await db.refreshToken.findMany({ where: { userId } });
-    expect(left.map((r) => r.tokenHash).sort()).not.toContain('stale-rotated');
-    expect(left).toHaveLength(2); // the live token and the one rotated a moment ago
+    expect(left.map((r) => r.tokenHash)).toContain('stale-rotated');
+    expect(left.map((r) => r.tokenHash)).not.toContain('expired');
+    expect(left).toHaveLength(3); // the live token, the one rotated a moment ago, the older rotated one
   });
 });
 

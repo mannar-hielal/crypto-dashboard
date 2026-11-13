@@ -18,9 +18,9 @@ const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 // the token it rotates; it stamps `rotatedAt` and keeps the row this long. The same token coming
 // back inside the window is a reply lost in transit (a phone reconnecting) or two tabs refreshing
 // at once, so it gets a fresh token too, and the one already issued stays valid (it may be the one
-// the browser keeps: replies can land in either order). After the window the token is refused with
-// a plain 401 for this browser. In the database, so every API machine agrees. A logout removes the
-// user's rotated rows too, so no token outlives it.
+// the browser keeps: replies can land in either order). A replay after the window is treated as
+// theft and ends that sign-in's family, so rotated rows are kept until they expire. In the
+// database, so every API machine agrees. A logout removes its family, so no token outlives it.
 
 // 🔐 Serializes concurrent /refresh requests for the same token within this
 // process. The rotation's updateMany is atomic at the DB layer (only one request can ever
@@ -935,13 +935,9 @@ export async function authRoutes(app: FastifyInstance) {
           );
         }
 
-        // Rotated rows past the window are cleaned up for this user (bounded: a few per user)
-        await app.prisma.refreshToken.deleteMany({
-          where: {
-            userId: stored.userId,
-            rotatedAt: { lt: new Date(now.getTime() - REFRESH_REUSE_WINDOW_MS) },
-          },
-        });
+        // Rotated rows stay until they expire: the 30 s window only decides whether a token is
+        // served again, and a replay found later is the theft signal above (review on #288). The
+        // daily job removes expired rows; a logout removes its family at once
 
         // Fetch the user to include email in the new access token payload
         const user = await app.prisma.user.findUnique({

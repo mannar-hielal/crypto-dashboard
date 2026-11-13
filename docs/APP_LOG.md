@@ -4598,8 +4598,8 @@ signed that device out. The owner approved a server fix:
   - The same token inside the 30 s window (`REFRESH_REUSE_WINDOW_MS`) gets a fresh token, logged as
     a warning. The one already issued stays valid: replies can land in either order, so deleting it
     could leave a browser holding a dead cookie.
-  - After the window: a 401 for that browser, nothing else revoked. Rotated rows past the window are
-    cleaned up per user and by the daily job (`purgeStaleRefreshTokens`, expired rows too).
+  - After the window: a replay reads as theft (see the reviews below). Rotated rows are kept until they
+    expire (the theft signal needs them; review on #288), and the daily job purges expired rows.
   - **Reviews on #288:**
     - Reuse is capped at 2 per rotated token (`reuseCount`, an atomic increment, so every machine
       agrees).

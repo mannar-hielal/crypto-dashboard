@@ -593,11 +593,9 @@ describe('POST /api/auth/refresh', () => {
     expect(res.statusCode).toBe(200);
     expect(createMock).toHaveBeenCalledTimes(1); // a fresh token, in a new cookie
     expect(res.headers['set-cookie']).toBeDefined();
-    // 🔐 Never every session: only rotated rows past the window are cleaned up
-    expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
-    expect(deleteManyMock).toHaveBeenCalledWith({
-      where: { userId: 'user-1', rotatedAt: { lt: expect.any(Date) } },
-    });
+    // 🔐 Nothing is deleted on a reuse inside the window: never every session, and rotated rows
+    //    stay until they expire, so a later replay can still be caught (review on #288)
+    expect(deleteManyMock).not.toHaveBeenCalled();
   });
 
   it('should refuse a third reuse of the same rotated token: the cap (review on #288)', async () => {

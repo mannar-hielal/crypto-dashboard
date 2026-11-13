@@ -1,8 +1,8 @@
 /**
  * Refresh-token housekeeping (the reuse window, owner 2026-11-13). `/refresh` keeps a rotated row
- * for `REFRESH_REUSE_WINDOW_MS` so a reply lost in transit can be recovered; this removes the rows
- * nobody can use any more: rotated past the window, or expired. The daily job runs it, so rows
- * don't pile up for a user who rotates once and never refreshes again (review on #288).
+ * until it expires: within `REFRESH_REUSE_WINDOW_MS` it can be served again (a lost reply, a second
+ * tab), and after that a replay of it is the theft signal, which needs the row (review on #288).
+ * The daily job removes expired rows, rotated or not.
  */
 
 import type { FastifyInstance } from 'fastify';
@@ -20,12 +20,7 @@ export async function purgeStaleRefreshTokens(
   now: Date = new Date()
 ): Promise<number> {
   const { count } = await prisma.refreshToken.deleteMany({
-    where: {
-      OR: [
-        { rotatedAt: { lt: new Date(now.getTime() - REFRESH_REUSE_WINDOW_MS) } },
-        { expiresAt: { lt: now } },
-      ],
-    },
+    where: { expiresAt: { lt: now } },
   });
   return count;
 }

@@ -113,7 +113,8 @@ supply-chain policy, secrets management, container hardening — see [`security.
   sign-in's `familyId` (set at login, kept on rotation): a logout deletes that family, so no token of
   the session outlives it and other devices stay signed in. A refresh re-checks, after minting, that
   the token it rotated still exists, and takes the new one back if a logout landed meanwhile. The
-  daily job purges rows rotated past the window or expired (`services/RefreshTokens.ts`). Mass revocation is
+  rotated rows are kept until they expire, so a late replay can still be caught, and the daily job purges
+  expired rows (`services/RefreshTokens.ts`). Mass revocation is
   for the explicit flows (password change or reset, email change, delete), not for reuse: the client
   retries a lost reply, so a reuse is far likelier to be a flaky phone than a thief.
 
