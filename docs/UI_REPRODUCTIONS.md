@@ -247,7 +247,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    notebook (Emi, Leo, Sofia, then Leo → Emi 3) and no "Bitcoin" in the text. [lesson.next] **What if Nora cheats? →**
    → Expect **What can go wrong with one Nora?**: four tiles (print, move, rewrite, lose) dropping in one after another,
    four bold points, and **Could money work with no Nora? →** (Lesson 1 ends on the problem; owner 2026-11-08).
-   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect [lesson.picked] "You picked “The bank”." then "Not quite." and Berwyn
+   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect "Not quite." and the Why, with no "You picked" line, and Berwyn
    calm (never worried), the same guide who asked: Berwyn stays through the answer. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to
    15"; tick "Many notebooks" → Expect "4 of 5 copies still say Leo paid 3". The questions, then the summary → Expect **The problem** staged as [lesson.genesis] (about 24 s, each line held by its length;
    Continue hidden until it ends; Enter, a tap, Back to it later and reduced motion all show the problems, the

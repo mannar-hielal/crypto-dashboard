@@ -95,9 +95,8 @@ describe('LessonSheet', () => {
 
     fireEvent.click(option(1)); // "It went down": right in hindsight, not the praised answer
     expect(sheet()!.textContent).toContain('Not quite.');
-    // The Why opens on the learner's own choice (owner 2026-11-12)
-    const picked = document.querySelector('[data-guide="lesson.picked"]')!;
-    expect(picked.textContent).toBe(`You picked “${getLesson('lesson-02').moment.options[1]}”.`);
+    // Right or not, then why: the choice isn't repeated (owner 2026-11-13)
+    expect(sheet()!.textContent).not.toContain('You picked');
     // Tock reacts, calm: red is never the villain
     expect(sheet()!.querySelector('[data-mood="calm"]')?.getAttribute('data-guide-who')).toBe(
       'tock'
