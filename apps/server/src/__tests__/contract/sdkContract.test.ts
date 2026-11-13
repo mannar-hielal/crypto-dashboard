@@ -237,6 +237,8 @@ const CALLS: Call[] = [
   { name: 'authApi.refresh (no session)', run: () => authApi.refresh(), status: 204 },
   { name: 'authApi.logout', run: () => authApi.logout(), status: 204 },
   { name: 'authApi.me', run: () => authApi.me(T), status: 200, response: f.meResponse },
+  // The reachability probe before a session refresh (review on #287)
+  { name: 'authApi.health', run: () => authApi.health(), status: 200, response: f.healthResponse },
   {
     name: 'authApi.forgotPassword',
     run: () => authApi.forgotPassword({ email: 'a@example.test' }),

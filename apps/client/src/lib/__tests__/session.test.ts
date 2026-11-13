@@ -7,7 +7,6 @@ import { authApi } from '@crypto-dashboard/sdk';
 import {
   isOffline,
   isSafeToRetry,
-  RECONNECT_SETTLE_MS,
   msUntilExpiry,
   refreshAccessToken,
   restoreSession,
@@ -20,18 +19,27 @@ vi.mock('@crypto-dashboard/sdk', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@crypto-dashboard/sdk')>();
   return {
     ...actual,
-    authApi: { ...actual.authApi, refresh: vi.fn(), me: vi.fn(), logout: vi.fn() },
+    authApi: {
+      ...actual.authApi,
+      refresh: vi.fn(),
+      me: vi.fn(),
+      logout: vi.fn(),
+      health: vi.fn(),
+    },
   };
 });
 
 const refresh = vi.mocked(authApi.refresh);
 const me = vi.mocked(authApi.me);
 const logout = vi.mocked(authApi.logout);
+const health = vi.mocked(authApi.health);
 
 beforeEach(() => {
   refresh.mockReset();
   me.mockReset();
   logout.mockReset();
+  health.mockReset();
+  health.mockResolvedValue({ status: 'ok' });
   localStorage.clear();
   useAuthStore.setState({ accessToken: 'old', user: { id: 'u1' } as never, isLoading: false });
 });
@@ -107,7 +115,7 @@ describe('restoreSession()', () => {
 });
 
 describe('msUntilExpiry()', () => {
-  it('should keep the session waiting when opened offline, and restore it once the network settles', async () => {
+  it('should keep the session waiting when opened offline, and restore it once the API answers', async () => {
     // PWA readiness (2026-11-13): an offline launch used to land on /login, signed out
     vi.useFakeTimers();
     try {
@@ -119,15 +127,42 @@ describe('msUntilExpiry()', () => {
       expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: true });
       onLine.mockReturnValue(true);
 
+      // The `online` event came early: /health fails twice, then answers (review on #287)
+      health
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce({ status: 'ok' });
       refresh.mockResolvedValueOnce({ accessToken: 'new' } as never);
       me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
       window.dispatchEvent(new Event('online'));
-      // The `online` event often comes early: nothing is sent until the network has settled
-      await vi.advanceTimersByTimeAsync(RECONNECT_SETTLE_MS - 1);
+      await vi.advanceTimersByTimeAsync(0);
+      // No refresh until the network is proven: the token is never spent on a dead line
       expect(refresh).toHaveBeenCalledTimes(1);
-      await vi.advanceTimersByTimeAsync(1);
+      expect(useAuthStore.getState().awaitingNetwork).toBe(true);
+      await vi.advanceTimersByTimeAsync(1000 + 2000);
+      expect(health).toHaveBeenCalledTimes(3);
+      expect(refresh).toHaveBeenCalledTimes(2); // exactly once after reconnecting
       expect(useAuthStore.getState().accessToken).toBe('new');
-      expect(refresh).toHaveBeenCalledTimes(2);
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should sign out like an outage when the API never answers after reconnecting', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      onLine.mockReturnValue(true);
+      health.mockRejectedValue(new TypeError('Failed to fetch'));
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000 + 8000);
+      expect(health).toHaveBeenCalledTimes(5);
+      expect(refresh).toHaveBeenCalledTimes(1); // never sent while the line was dead
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
       onLine.mockRestore();
     } finally {
       vi.useRealTimers();

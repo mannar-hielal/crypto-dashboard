@@ -134,13 +134,13 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       retryWhenOnline();
       return;
     }
-    // Back online: retry only a 429. /refresh rotates the token, and a token sent twice reads as
-    // theft and revokes every session (web.md). Only the rate limit answers before the handler, so
-    // only a 429 proves the token wasn't used. A failed fetch, a timeout or a 5xx may have reached
-    // the handler (a connection can drop mid-reply), so they sign out as before and the learner
-    // signs in again: a lost session, never every session revoked. The early `online` event is
-    // handled by waiting before the first try instead (`RECONNECT_SETTLE_MS`). A server-side grace
-    // window for a just-rotated token would let these retry too (reviews on #284, #285, #287)
+    // Back online, and /health already answered, so the network works (`reconnect`): retry only a
+    // 429. /refresh rotates the token, and a token sent twice reads as theft and revokes every
+    // session (web.md). Only the rate limit answers before the handler, so only a 429 proves the
+    // token wasn't used. Anything else may have reached the handler (a connection can drop
+    // mid-reply), so it signs out as before: a lost session at worst, never every session revoked.
+    // A server-side grace window for a just-rotated token would let those retry too (reviews on
+    // #284, #285, #287)
     if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && isSafeToRetry(err)) {
       setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
       return;
@@ -159,9 +159,35 @@ export function isSafeToRetry(err: unknown): boolean {
   return (err as { status?: unknown } | null)?.status === 429;
 }
 
-/** After the `online` event, the wait before the restore: the event often fires before the
- *  network really works */
-export const RECONNECT_SETTLE_MS = 2000;
+/** Probes of /health after the `online` event, a second apart and doubling (1, 2, 4, 8, 16 s) */
+const PROBE_TRIES = 5;
+
+/**
+ * Back online: prove the network works with /health (idempotent, safe to repeat) before the one
+ * /refresh, which mustn't be sent twice. The `online` event often fires before the radio, DNS or a
+ * captive portal lets anything through, so a refresh sent then would fail for nothing (review on
+ * #287). If the API never answers, the learner is signed out as an outage would leave them
+ */
+async function reconnect(probe = 0): Promise<void> {
+  try {
+    await authApi.health();
+  } catch {
+    // Offline again: wait for the next `online` event
+    if (isOffline()) {
+      retryWhenOnline();
+      return;
+    }
+    if (probe + 1 < PROBE_TRIES) {
+      setTimeout(() => void reconnect(probe + 1), 1000 * 2 ** probe);
+      return;
+    }
+    const { setAwaitingNetwork, setLoading } = useAuthStore.getState();
+    setAwaitingNetwork(false);
+    setLoading(false);
+    return;
+  }
+  await restoreSession(1);
+}
 
 /** The browser reports no connection at all (not an API it can't reach) */
 export function isOffline(): boolean {
@@ -170,7 +196,7 @@ export function isOffline(): boolean {
 
 let waitingForOnline = false;
 
-/** One restore when the connection comes back, once it has settled (one listener, however many tries) */
+/** One restore when the connection comes back, once /health shows the network works (one listener) */
 function retryWhenOnline(): void {
   if (waitingForOnline) return;
   waitingForOnline = true;
@@ -178,7 +204,7 @@ function retryWhenOnline(): void {
     'online',
     () => {
       waitingForOnline = false;
-      setTimeout(() => void restoreSession(1), RECONNECT_SETTLE_MS);
+      void reconnect();
     },
     { once: true }
   );
