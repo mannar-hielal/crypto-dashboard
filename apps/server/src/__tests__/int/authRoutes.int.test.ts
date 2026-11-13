@@ -134,6 +134,30 @@ describe('/api/auth/refresh reuse cap and logout scope on Postgres (review on #2
     expect((await refresh(token)).statusCode).toBe(401); // the cap
   });
 
+  it('ends a pre-family token’s session for good after the backfill (review on #288)', async () => {
+    // A token issued before families, as the migration left it: its own id is its family
+    const { userId } = await register();
+    const legacy = 'e1'.repeat(32);
+    const row = await db.refreshToken.create({
+      data: {
+        tokenHash: createHash('sha256').update(legacy).digest('hex'),
+        userId,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        familyId: 'placeholder',
+      },
+    });
+    await db.refreshToken.update({ where: { id: row.id }, data: { familyId: row.id } });
+    const rotated = refreshCookie(await refresh(legacy));
+    expect(rotated).toBeDefined();
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie: `refresh_token=${rotated}` },
+    });
+    // The rotation kept the family, so the logout removed the old row too
+    expect((await refresh(legacy)).statusCode).toBe(401);
+  });
+
   it('signs out this sign-in only: another device of the same user stays signed in', async () => {
     const { userId, token } = await register();
     // A second device: its own sign-in, so its own family (a token as the server stores it)
@@ -166,12 +190,18 @@ describe('purgeStaleRefreshTokens on Postgres', () => {
       data: {
         tokenHash: 'stale-rotated',
         userId,
+        familyId: 'stale',
         expiresAt: new Date(Date.now() + 86_400_000),
         rotatedAt: new Date(Date.now() - 60_000),
       },
     });
     await db.refreshToken.create({
-      data: { tokenHash: 'expired', userId, expiresAt: new Date(Date.now() - 1000) },
+      data: {
+        tokenHash: 'expired',
+        userId,
+        familyId: 'expired',
+        expiresAt: new Date(Date.now() - 1000),
+      },
     });
     expect(await purgeStaleRefreshTokens(db)).toBe(2);
     const left = await db.refreshToken.findMany({ where: { userId } });

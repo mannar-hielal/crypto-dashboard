@@ -205,7 +205,7 @@ export type RefreshTokenGroupByOutputType = {
   createdAt: Date
   rotatedAt: Date | null
   reuseCount: number
-  familyId: string | null
+  familyId: string
   _count: RefreshTokenCountAggregateOutputType | null
   _avg: RefreshTokenAvgAggregateOutputType | null
   _sum: RefreshTokenSumAggregateOutputType | null
@@ -239,7 +239,7 @@ export type RefreshTokenWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"RefreshToken"> | Date | string
   rotatedAt?: Prisma.DateTimeNullableFilter<"RefreshToken"> | Date | string | null
   reuseCount?: Prisma.IntFilter<"RefreshToken"> | number
-  familyId?: Prisma.StringNullableFilter<"RefreshToken"> | string | null
+  familyId?: Prisma.StringFilter<"RefreshToken"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
@@ -251,7 +251,7 @@ export type RefreshTokenOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   rotatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   reuseCount?: Prisma.SortOrder
-  familyId?: Prisma.SortOrderInput | Prisma.SortOrder
+  familyId?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -266,7 +266,7 @@ export type RefreshTokenWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"RefreshToken"> | Date | string
   rotatedAt?: Prisma.DateTimeNullableFilter<"RefreshToken"> | Date | string | null
   reuseCount?: Prisma.IntFilter<"RefreshToken"> | number
-  familyId?: Prisma.StringNullableFilter<"RefreshToken"> | string | null
+  familyId?: Prisma.StringFilter<"RefreshToken"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "id" | "tokenHash">
 
@@ -278,7 +278,7 @@ export type RefreshTokenOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   rotatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   reuseCount?: Prisma.SortOrder
-  familyId?: Prisma.SortOrderInput | Prisma.SortOrder
+  familyId?: Prisma.SortOrder
   _count?: Prisma.RefreshTokenCountOrderByAggregateInput
   _avg?: Prisma.RefreshTokenAvgOrderByAggregateInput
   _max?: Prisma.RefreshTokenMaxOrderByAggregateInput
@@ -297,7 +297,7 @@ export type RefreshTokenScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"RefreshToken"> | Date | string
   rotatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"RefreshToken"> | Date | string | null
   reuseCount?: Prisma.IntWithAggregatesFilter<"RefreshToken"> | number
-  familyId?: Prisma.StringNullableWithAggregatesFilter<"RefreshToken"> | string | null
+  familyId?: Prisma.StringWithAggregatesFilter<"RefreshToken"> | string
 }
 
 export type RefreshTokenCreateInput = {
@@ -307,7 +307,7 @@ export type RefreshTokenCreateInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId?: string | null
+  familyId: string
   user: Prisma.UserCreateNestedOneWithoutRefreshTokensInput
 }
 
@@ -319,7 +319,7 @@ export type RefreshTokenUncheckedCreateInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId?: string | null
+  familyId: string
 }
 
 export type RefreshTokenUpdateInput = {
@@ -329,7 +329,7 @@ export type RefreshTokenUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   reuseCount?: Prisma.IntFieldUpdateOperationsInput | number
-  familyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
   user?: Prisma.UserUpdateOneRequiredWithoutRefreshTokensNestedInput
 }
 
@@ -341,7 +341,7 @@ export type RefreshTokenUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   reuseCount?: Prisma.IntFieldUpdateOperationsInput | number
-  familyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type RefreshTokenCreateManyInput = {
@@ -352,7 +352,7 @@ export type RefreshTokenCreateManyInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId?: string | null
+  familyId: string
 }
 
 export type RefreshTokenUpdateManyMutationInput = {
@@ -362,7 +362,7 @@ export type RefreshTokenUpdateManyMutationInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   reuseCount?: Prisma.IntFieldUpdateOperationsInput | number
-  familyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type RefreshTokenUncheckedUpdateManyInput = {
@@ -373,7 +373,7 @@ export type RefreshTokenUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   reuseCount?: Prisma.IntFieldUpdateOperationsInput | number
-  familyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type RefreshTokenListRelationFilter = {
@@ -484,7 +484,7 @@ export type RefreshTokenCreateWithoutUserInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId?: string | null
+  familyId: string
 }
 
 export type RefreshTokenUncheckedCreateWithoutUserInput = {
@@ -494,7 +494,7 @@ export type RefreshTokenUncheckedCreateWithoutUserInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId?: string | null
+  familyId: string
 }
 
 export type RefreshTokenCreateOrConnectWithoutUserInput = {
@@ -534,7 +534,7 @@ export type RefreshTokenScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"RefreshToken"> | Date | string
   rotatedAt?: Prisma.DateTimeNullableFilter<"RefreshToken"> | Date | string | null
   reuseCount?: Prisma.IntFilter<"RefreshToken"> | number
-  familyId?: Prisma.StringNullableFilter<"RefreshToken"> | string | null
+  familyId?: Prisma.StringFilter<"RefreshToken"> | string
 }
 
 export type RefreshTokenCreateManyUserInput = {
@@ -544,7 +544,7 @@ export type RefreshTokenCreateManyUserInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId?: string | null
+  familyId: string
 }
 
 export type RefreshTokenUpdateWithoutUserInput = {
@@ -554,7 +554,7 @@ export type RefreshTokenUpdateWithoutUserInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   reuseCount?: Prisma.IntFieldUpdateOperationsInput | number
-  familyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type RefreshTokenUncheckedUpdateWithoutUserInput = {
@@ -564,7 +564,7 @@ export type RefreshTokenUncheckedUpdateWithoutUserInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   reuseCount?: Prisma.IntFieldUpdateOperationsInput | number
-  familyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type RefreshTokenUncheckedUpdateManyWithoutUserInput = {
@@ -574,7 +574,7 @@ export type RefreshTokenUncheckedUpdateManyWithoutUserInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   reuseCount?: Prisma.IntFieldUpdateOperationsInput | number
-  familyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -650,7 +650,7 @@ export type $RefreshTokenPayload<ExtArgs extends runtime.Types.Extensions.Intern
     createdAt: Date
     rotatedAt: Date | null
     reuseCount: number
-    familyId: string | null
+    familyId: string
   }, ExtArgs["result"]["refreshToken"]>
   composites: {}
 }

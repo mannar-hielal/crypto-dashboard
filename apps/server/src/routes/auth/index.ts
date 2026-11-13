@@ -938,13 +938,8 @@ export async function authRoutes(app: FastifyInstance) {
           return reply.status(401).send({ error: 'User no longer exists' });
         }
 
-        // The same sign-in's family (a token from before families starts one now)
-        const issued = await issueTokens(
-          reply,
-          user.id,
-          user.email,
-          stored.familyId ?? randomUUID()
-        );
+        // The same sign-in's family
+        const issued = await issueTokens(reply, user.id, user.email, stored.familyId);
 
         // 🔐 A logout, password change or deletion may have landed while this request was
         //    rotating (they don't take the refresh lock): if the token we rotated is gone, so is
@@ -982,7 +977,7 @@ export async function authRoutes(app: FastifyInstance) {
       // 🔐 And the rest of this sign-in's family: a token rotated just before this logout can't
       //    be served a fresh session. Only this session's: other devices stay signed in (reviews
       //    on #288)
-      if (stored?.familyId) {
+      if (stored) {
         await app.prisma.refreshToken.deleteMany({ where: { familyId: stored.familyId } });
       }
     }

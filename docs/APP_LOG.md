@@ -4603,7 +4603,7 @@ signed that device out. The owner approved a server fix:
   - **Reviews on #288:**
     - Reuse is capped at 2 per rotated token (`reuseCount`, an atomic increment, so every machine
       agrees).
-    - Every token carries its sign-in's `familyId` (migration `20261113140000_refresh_token_family`).
+    - Every token carries its sign-in's `familyId` (migration `20261113140000_refresh_token_family`; tokens issued before it were backfilled as their own family, and the column is required, so no token is ever without one).
       A logout deletes the family, so a token rotated just before it can't revive the session, and
       the user's other devices stay signed in.
     - A refresh that finds its rotated token gone after minting (a logout landed meanwhile) takes

@@ -114,9 +114,9 @@ model RefreshToken {
   // 🔐 How often this rotated token was served again inside the window (capped: review on #288)
   reuseCount Int     @default(0)
   // 🔐 One sign-in's chain of tokens: set at login, inherited on every rotation. A logout deletes
-  // the family, so no token of that session outlives it, and other devices are left alone. Null
-  // for tokens issued before 2026-11-13 (a logout then deletes just that token)
-  familyId  String?
+  // the family, so no token of that session outlives it, and other devices are left alone. Tokens
+  // issued before 2026-11-13 were backfilled as their own family
+  familyId  String
 
   @@index([userId])
   @@index([familyId])
