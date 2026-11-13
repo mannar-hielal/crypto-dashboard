@@ -31,14 +31,20 @@ export async function signInAs(page: Page, email: string, password: string): Pro
  */
 export async function resetAccount(page: Page): Promise<void> {
   const button = at(page, 'acct-settings.reset');
+  // The dialog is open before the loop starts: a missing button inside it means "closed", never
+  // "not mounted yet" (review on #294)
+  await expect(button).toBeVisible();
+  let confirmed = false;
   await expect(async () => {
-    if ((await button.count()) === 0) return; // the dialog closed: the reset went through
+    // The dialog closed after a confirm click: the reset went through
+    if (confirmed && (await button.count()) === 0) return;
     // "Resetting…" is in flight: wait for the dialog to close rather than clicking again
     if ((await button.textContent())?.includes('Reset account')) await button.click();
     // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
     // step only once it is there, or the click lands on the departing "Reset account"
     await expect(button).toHaveText('Confirm reset?', { timeout: 2_000 });
     await button.click({ timeout: 2_000 });
+    confirmed = true;
     await expect(button).toHaveCount(0, { timeout: 10_000 });
   }).toPass({ timeout: 45_000 });
 }
