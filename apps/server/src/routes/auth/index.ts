@@ -939,35 +939,53 @@ export async function authRoutes(app: FastifyInstance) {
         // served again, and a replay found later is the theft signal above (review on #288). The
         // daily job removes expired rows; a logout removes its family at once
 
-        // Fetch the user to include email in the new access token payload
-        const user = await app.prisma.user.findUnique({
-          where: { id: stored.userId },
-          select: { id: true, email: true },
-        });
+        // A reuse that fails below (a transient DB error, a 500) gives its cap slot back, so the
+        // client's retry of that 500 is still served (review on #289). Best effort: if the refund
+        // fails too, the cap only errs on the strict side
+        const reused = rotated === 0;
+        try {
+          // Fetch the user to include email in the new access token payload
+          const user = await app.prisma.user.findUnique({
+            where: { id: stored.userId },
+            select: { id: true, email: true },
+          });
 
-        if (!user) {
-          void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-          return reply.status(401).send({ error: 'User no longer exists' });
+          if (!user) {
+            void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+            return reply.status(401).send({ error: 'User no longer exists' });
+          }
+
+          // The same sign-in's family
+          const issued = await issueTokens(reply, user.id, user.email, stored.familyId);
+
+          // 🔐 A logout, password change or deletion may have landed while this request was
+          //    rotating (they don't take the refresh lock): if the token we rotated is gone, so is
+          //    the session, and the token just issued goes too (review on #288)
+          const stillThere = await app.prisma.refreshToken.findUnique({
+            where: { tokenHash },
+            select: { id: true },
+          });
+          if (!stillThere) {
+            await app.prisma.refreshToken.deleteMany({ where: { tokenHash: issued.tokenHash } });
+            void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+            return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+          }
+
+          trackActivity(app, user.id);
+          return reply.send({ accessToken: issued.accessToken });
+        } catch (err) {
+          if (reused) {
+            await app.prisma.refreshToken
+              .updateMany({
+                where: { tokenHash, reuseCount: { gt: 0 } },
+                data: { reuseCount: { decrement: 1 } },
+              })
+              .catch((refundErr: unknown) => {
+                app.log.error({ err: refundErr }, 'Refresh token reuse refund failed');
+              });
+          }
+          throw err;
         }
-
-        // The same sign-in's family
-        const issued = await issueTokens(reply, user.id, user.email, stored.familyId);
-
-        // 🔐 A logout, password change or deletion may have landed while this request was
-        //    rotating (they don't take the refresh lock): if the token we rotated is gone, so is
-        //    the session, and the token just issued goes too (review on #288)
-        const stillThere = await app.prisma.refreshToken.findUnique({
-          where: { tokenHash },
-          select: { id: true },
-        });
-        if (!stillThere) {
-          await app.prisma.refreshToken.deleteMany({ where: { tokenHash: issued.tokenHash } });
-          void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-          return reply.status(401).send({ error: 'Invalid or expired refresh token' });
-        }
-
-        trackActivity(app, user.id);
-        return reply.send({ accessToken: issued.accessToken });
       });
     }
   );

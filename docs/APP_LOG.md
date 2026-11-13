@@ -4584,6 +4584,15 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-13 — A reuse that fails gives its cap slot back (review on #289)
+
+The reuse cap (4) was counted before the fresh session was minted. A transient DB error after the count (the user
+lookup, the insert, the post-mint check) answered 500, and the client's retry of that 500 found one slot fewer: on a
+flaky link the last retry could get a 401 and sign the learner out. The re-issue now runs in a `try`; on an error a
+reuse gives its slot back (`reuseCount` decrement, never below 0) and the error still answers the generic 500. A
+first rotation never touches the count. Best effort: if the refund itself fails it's logged and the cap stays on
+the strict side. Tests in `auth.test.ts` ("should give the cap slot back…", "should not touch the reuse count…").
+
 ### 2026-11-13 — A lost session-refresh reply recovers: the server's reuse window
 
 Reviews of the PWA work kept trading two risks: retrying a session refresh after reconnecting
