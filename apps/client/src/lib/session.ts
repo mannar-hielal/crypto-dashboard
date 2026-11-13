@@ -134,12 +134,13 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       retryWhenOnline();
       return;
     }
-    // Just back online and the network may not be ready yet: retry, but only when the server can't
-    // have used the refresh token. /refresh rotates it, and a token sent twice reads as theft and
-    // revokes every session (web.md). So: a failed fetch (the request never left the device) or a
-    // 429 (the rate limit answers before the handler) retries; a timeout, a 5xx or an HTML error
-    // page may have rotated it, so those sign out like before and the learner signs in again
-    // (reviews on #284 and #285)
+    // Back online: retry only a 429. /refresh rotates the token, and a token sent twice reads as
+    // theft and revokes every session (web.md). Only the rate limit answers before the handler, so
+    // only a 429 proves the token wasn't used. A failed fetch, a timeout or a 5xx may have reached
+    // the handler (a connection can drop mid-reply), so they sign out as before and the learner
+    // signs in again: a lost session, never every session revoked. The early `online` event is
+    // handled by waiting before the first try instead (`RECONNECT_SETTLE_MS`). A server-side grace
+    // window for a just-rotated token would let these retry too (reviews on #284, #285, #287)
     if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && isSafeToRetry(err)) {
       setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
       return;
@@ -151,14 +152,16 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
 }
 
 /**
- * A failed restore that can be tried again without risking a reused refresh token: the request
- * never reached the server (`TypeError: Failed to fetch`), or the rate limit turned it away before
- * the handler ran (429)
+ * A failed restore that can be tried again without risking a reused refresh token: only a 429,
+ * which the rate limit sends before the handler can rotate anything
  */
 export function isSafeToRetry(err: unknown): boolean {
-  if (err instanceof TypeError) return true;
   return (err as { status?: unknown } | null)?.status === 429;
 }
+
+/** After the `online` event, the wait before the restore: the event often fires before the
+ *  network really works */
+export const RECONNECT_SETTLE_MS = 2000;
 
 /** The browser reports no connection at all (not an API it can't reach) */
 export function isOffline(): boolean {
@@ -167,7 +170,7 @@ export function isOffline(): boolean {
 
 let waitingForOnline = false;
 
-/** One retry of the restore when the connection comes back (one listener, however many tries) */
+/** One restore when the connection comes back, once it has settled (one listener, however many tries) */
 function retryWhenOnline(): void {
   if (waitingForOnline) return;
   waitingForOnline = true;
@@ -175,7 +178,7 @@ function retryWhenOnline(): void {
     'online',
     () => {
       waitingForOnline = false;
-      void restoreSession(1);
+      setTimeout(() => void restoreSession(1), RECONNECT_SETTLE_MS);
     },
     { once: true }
   );
