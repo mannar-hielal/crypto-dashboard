@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { purgeStaleRefreshTokens } from '../services/RefreshTokens.js';
+import { SESSION_RECONNECT_TRIES } from '@crypto-dashboard/sdk';
+import { purgeStaleRefreshTokens, REFRESH_REUSE_CAP } from '../services/RefreshTokens.js';
 
 describe('purgeStaleRefreshTokens', () => {
   it('should delete expired rows in batches, so a large first run never locks the table for long', async () => {
@@ -37,5 +38,12 @@ describe('purgeStaleRefreshTokens', () => {
     } as unknown as FastifyInstance['prisma'];
     expect(await purgeStaleRefreshTokens(prisma)).toBe(0);
     expect(deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('the reuse cap and the client’s retries (review on #288)', () => {
+  it('should serve every reconnect retry of a lost reply, with room for a second tab', () => {
+    // The client retries SESSION_RECONNECT_TRIES times; each retry of a lost reply is one reuse
+    expect(REFRESH_REUSE_CAP).toBeGreaterThan(SESSION_RECONNECT_TRIES);
   });
 });

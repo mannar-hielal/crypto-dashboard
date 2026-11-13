@@ -12,8 +12,12 @@ type Prisma = FastifyInstance['prisma'];
 /** How long a rotated refresh token is still served again (a lost reply, a second tab) */
 export const REFRESH_REUSE_WINDOW_MS = 30_000;
 
-/** How many times one rotated token may be served again inside the window (a lost reply, a tab) */
-export const REFRESH_REUSE_CAP = 2;
+/**
+ * How many times one rotated token may be served again inside the window: the client's reconnect
+ * retries (`SESSION_RECONNECT_TRIES` in the SDK, 3) plus one for a second tab. A test holds it above
+ * the client's retries, or a flaky link's last retry would be refused (review on #288)
+ */
+export const REFRESH_REUSE_CAP = 4;
 
 /** Rows deleted per statement by the purge, so a large first run never locks the table for long */
 const PURGE_BATCH = 1000;

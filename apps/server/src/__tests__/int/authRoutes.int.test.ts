@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
  * concurrent requests, where the unit tests can only mock what `deleteMany` returns.
  */
 
-import { purgeStaleRefreshTokens } from '../../services/RefreshTokens.js';
+import { purgeStaleRefreshTokens, REFRESH_REUSE_CAP } from '../../services/RefreshTokens.js';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
@@ -130,17 +130,21 @@ describe('/api/auth/logout on Postgres — after a rotation (review on #288)', (
 });
 
 describe('/api/auth/refresh reuse cap and logout scope on Postgres (review on #288)', () => {
-  it('serves a rotated token again at most twice, then refuses it', async () => {
+  it('serves a rotated token again up to the cap (the client’s retries and a tab), then refuses it', async () => {
     const { token } = await register();
     expect((await refresh(token)).statusCode).toBe(200); // the rotation
-    expect((await refresh(token)).statusCode).toBe(200); // reuse 1: a lost reply
-    const second = await refresh(token); // reuse 2: a second tab
-    expect(second.statusCode).toBe(200);
+    // A flaky link: every one of the client's reconnect retries of a lost reply is served
+    let last = await refresh(token);
+    expect(last.statusCode).toBe(200);
+    for (let reuse = 2; reuse <= REFRESH_REUSE_CAP; reuse++) {
+      last = await refresh(token);
+      expect(last.statusCode, `reuse ${reuse}`).toBe(200);
+    }
     const capped = await refresh(token);
     expect(capped.statusCode).toBe(401); // the cap
-    // …without clearing the cookie: the session the second reuse set still works
+    // …without clearing the cookie: the session the last reuse set still works
     expect(capped.headers['set-cookie']).toBeUndefined();
-    expect((await refresh(refreshCookie(second)!)).statusCode).toBe(200);
+    expect((await refresh(refreshCookie(last)!)).statusCode).toBe(200);
   });
 
   it('ends a pre-family token’s session for good after the backfill (review on #288)', async () => {

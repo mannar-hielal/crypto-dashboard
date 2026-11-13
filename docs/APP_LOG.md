@@ -4601,7 +4601,7 @@ signed that device out. The owner approved a server fix:
   - After the window: a replay reads as theft (see the reviews below). Rotated rows are kept until they
     expire (the theft signal needs them; review on #288), and the daily job purges expired rows.
   - **Reviews on #288:**
-    - Reuse is capped at 2 per rotated token (`reuseCount`, an atomic increment, so every machine
+    - Reuse is capped at 4 per rotated token (the client's 3 reconnect retries and a tab; a test keeps it above `SESSION_RECONNECT_TRIES`) (`reuseCount`, an atomic increment, so every machine
       agrees).
     - Every token carries its sign-in's `familyId` (migration `20261113140000_refresh_token_family`; tokens issued before it were backfilled as their own family, and the column is required, so no token is ever without one).
       A logout deletes the family, so a token rotated just before it can't revive the session, and

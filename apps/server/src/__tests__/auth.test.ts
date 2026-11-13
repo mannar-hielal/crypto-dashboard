@@ -85,6 +85,7 @@ vi.mock('../plugins/prisma.js', () => {
   return { prismaPlugin: plugin };
 });
 
+import { REFRESH_REUSE_CAP } from '../services/RefreshTokens.js';
 import { buildApp } from '../app.js';
 import { EmailService } from '../services/EmailService.js';
 
@@ -626,7 +627,7 @@ describe('POST /api/auth/refresh', () => {
     // The cookie stays: the session an earlier reuse set in this browser survives (review on #288)
     expect(res.headers['set-cookie']).toBeUndefined();
     expect(updateManyMock).toHaveBeenLastCalledWith({
-      where: { tokenHash: expect.any(String), reuseCount: { lt: 2 } },
+      where: { tokenHash: expect.any(String), reuseCount: { lt: REFRESH_REUSE_CAP } },
       data: { reuseCount: { increment: 1 } },
     });
   });

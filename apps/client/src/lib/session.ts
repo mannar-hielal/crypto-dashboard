@@ -7,7 +7,7 @@
  * the in-memory token fresh using the httpOnly refresh cookie.
  */
 
-import { authApi } from '@crypto-dashboard/sdk';
+import { authApi, SESSION_RECONNECT_TRIES } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 
 let inflight: Promise<string | null> | null = null;
@@ -95,14 +95,14 @@ export function startedNewSession(): void {
   setPendingSignOut(false);
 }
 
+/** Tries after reconnecting, a second apart and doubling (shared with the server's reuse cap) */
+const RECONNECT_TRIES = SESSION_RECONNECT_TRIES;
+
 /**
  * Boot-time session restore: trade the httpOnly refresh cookie for an access token, then load
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
  * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
  */
-/** Tries after the connection comes back, a second apart and doubling: the `online` event often
- *  fires before the network really works (review on #283) */
-const RECONNECT_TRIES = 3;
 
 export async function restoreSession(afterReconnect = 0): Promise<void> {
   const { setAuth, setLoading, setAwaitingNetwork } = useAuthStore.getState();

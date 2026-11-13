@@ -24,7 +24,7 @@ exists, and the controls that sit outside any single route handler.
 Refresh-token reuse used to be described as a compromise signal that revokes every session. The
 owner accepted a narrower rule so that phones on flaky links (the PWA) don't sign learners out:
 
-- **Inside 30 s of a rotation**, the old token is served again, at most twice (a reply lost in
+- **Inside 30 s of a rotation**, the old token is served again, at most 4 times (the client's 3 reconnect retries of a reply lost in
   transit, a second tab). A thief who replays a stolen token inside that window also gets a session.
   It is bounded by the window and the cap, and it sits in the victim's token family, so the victim's
   logout ends it.
