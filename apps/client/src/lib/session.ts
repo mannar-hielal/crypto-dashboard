@@ -134,9 +134,11 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       retryWhenOnline();
       return;
     }
-    // Just back online and the request never got through: the network may not be ready yet.
-    // A refusal from the server (an HTTP error) signs out at once; only a failed fetch retries
-    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && err instanceof TypeError) {
+    // Just back online and the request didn't get a real answer: the network may not be ready yet.
+    // Only a refusal (401 / 403, which the SDK carries as `status`) signs out at once; a failed
+    // fetch, a timeout (`TimeoutError`), a 429, a 5xx or a proxy's HTML error page retries
+    // (reviews on #284 and #285)
+    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && !isRefusal(err)) {
       setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
       return;
     }
@@ -144,6 +146,15 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
     setAwaitingNetwork(false);
     setLoading(false);
   }
+}
+
+/**
+ * The server answered and said no: the session is really over. Only 401 and 403 mean that; a 429
+ * (rate limited) or a 408 (a proxy's timeout) passes, so it retries (review on #285)
+ */
+export function isRefusal(err: unknown): boolean {
+  const status = (err as { status?: unknown } | null)?.status;
+  return status === 401 || status === 403;
 }
 
 /** The browser reports no connection at all (not an API it can't reach) */
