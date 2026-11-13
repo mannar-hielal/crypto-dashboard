@@ -625,6 +625,8 @@ describe('POST /api/auth/refresh', () => {
 
     expect(res.statusCode).toBe(401);
     expect(createMock).not.toHaveBeenCalled();
+    // The cookie stays: the session an earlier reuse set in this browser survives (review on #288)
+    expect(res.headers['set-cookie']).toBeUndefined();
     expect(updateManyMock).toHaveBeenLastCalledWith({
       where: { tokenHash: expect.any(String), reuseCount: { lt: 2 } },
       data: { reuseCount: { increment: 1 } },
@@ -721,6 +723,8 @@ describe('POST /api/auth/refresh', () => {
     expect(res.statusCode).toBe(401);
     expect(createMock).not.toHaveBeenCalled();
     expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+    // A stale tab's refusal doesn't clear the cookie a faster tab just refreshed
+    expect(res.headers['set-cookie']).toBeUndefined();
   });
 
   it('serializes two truly concurrent requests for the same token, and both tabs come away signed in', async () => {

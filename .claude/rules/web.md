@@ -105,8 +105,9 @@ supply-chain policy, secrets management, container hardening — see [`security.
 - `/refresh` rotates a token by stamping `rotatedAt` with an atomic `updateMany` (one winner).
   The rotated row is kept for the **reuse window**, `REFRESH_REUSE_WINDOW_MS` (30 s, owner
   2026-11-13). The same token coming back inside the window (a reply lost in transit, a second tab)
-  gets a fresh token; the one already issued stays valid. After the window it gets a plain 401 for
-  that browser and nothing else is revoked. Each rotated token is served again at most
+  gets a fresh token; the one already issued stays valid. After the window (or over the cap) it gets a
+  plain 401 that leaves the cookie alone, as a faster tab may have set a newer valid one; nothing
+  else is revoked. Each rotated token is served again at most
   `REFRESH_REUSE_CAP` (2) times, counted atomically in the database. Every token carries its
   sign-in's `familyId` (set at login, kept on rotation): a logout deletes that family, so no token of
   the session outlives it and other devices stay signed in. A refresh re-checks, after minting, that

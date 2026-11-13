@@ -130,8 +130,13 @@ describe('/api/auth/refresh reuse cap and logout scope on Postgres (review on #2
     const { token } = await register();
     expect((await refresh(token)).statusCode).toBe(200); // the rotation
     expect((await refresh(token)).statusCode).toBe(200); // reuse 1: a lost reply
-    expect((await refresh(token)).statusCode).toBe(200); // reuse 2: a second tab
-    expect((await refresh(token)).statusCode).toBe(401); // the cap
+    const second = await refresh(token); // reuse 2: a second tab
+    expect(second.statusCode).toBe(200);
+    const capped = await refresh(token);
+    expect(capped.statusCode).toBe(401); // the cap
+    // …without clearing the cookie: the session the second reuse set still works
+    expect(capped.headers['set-cookie']).toBeUndefined();
+    expect((await refresh(refreshCookie(second)!)).statusCode).toBe(200);
   });
 
   it('ends a pre-family token’s session for good after the backfill (review on #288)', async () => {

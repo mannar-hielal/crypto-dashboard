@@ -898,8 +898,15 @@ export async function authRoutes(app: FastifyInstance) {
             select: { rotatedAt: true },
           });
           const rotatedAt = fresh?.rotatedAt;
-          if (!rotatedAt || now.getTime() - rotatedAt.getTime() > REFRESH_REUSE_WINDOW_MS) {
+          // Gone (a logout landed): this browser's session is over, so its cookie goes too
+          if (!rotatedAt) {
             void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+            return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+          }
+          // 🔐 Rotated past the window: refused, but the cookie stays. The request carried a
+          //    stale token, and the browser may already hold a newer valid one from another tab
+          //    (tabs share the cookie): clearing it would sign the browser out (review on #288)
+          if (now.getTime() - rotatedAt.getTime() > REFRESH_REUSE_WINDOW_MS) {
             return reply.status(401).send({ error: 'Invalid or expired refresh token' });
           }
           // 🔐 Capped, atomically across API machines: at most REFRESH_REUSE_CAP re-issues per
@@ -910,7 +917,7 @@ export async function authRoutes(app: FastifyInstance) {
           });
           if (allowed === 0) {
             app.log.warn({ userId: stored.userId }, 'Refresh token reuse cap reached — refused');
-            void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+            // The cookie stays: the browser may hold a valid token another reply just set
             return reply.status(401).send({ error: 'Invalid or expired refresh token' });
           }
           app.log.warn(
