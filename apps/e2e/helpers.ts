@@ -23,6 +23,27 @@ export async function signInAs(page: Page, email: string, password: string): Pro
 }
 
 /**
+ * Reset the account from the open Settings dialog: "Reset account", then "Confirm reset?". The
+ * confirm step reverts after 3 s, and on CI's WebKit (5–10× slower) its entry animation plus the
+ * click's wait for a stable element can use that up, so the confirm click found "Reset account"
+ * again and no reset ran (release #289's [13.3.1]). Retried until the dialog closes, which it does
+ * only once the server has reset the account. A reset is idempotent, so a retry can't harm.
+ */
+export async function resetAccount(page: Page): Promise<void> {
+  const button = at(page, 'acct-settings.reset');
+  await expect(async () => {
+    if ((await button.count()) === 0) return; // the dialog closed: the reset went through
+    // "Resetting…" is in flight: wait for the dialog to close rather than clicking again
+    if ((await button.textContent())?.includes('Reset account')) await button.click();
+    // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
+    // step only once it is there, or the click lands on the departing "Reset account"
+    await expect(button).toHaveText('Confirm reset?', { timeout: 2_000 });
+    await button.click({ timeout: 2_000 });
+    await expect(button).toHaveCount(0, { timeout: 10_000 });
+  }).toPass({ timeout: 45_000 });
+}
+
+/**
  * Market ownership: the fake feed's prices are global per market and specs run in parallel, so each
  * spec that moves prices owns its market(s). Spot BTCUSDT and linear BTCUSDT stay at 50,000 for the
  * smoke scenarios (quotes.spec sets the same values).
