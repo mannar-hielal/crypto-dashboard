@@ -61,13 +61,7 @@ const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 
 /** 'assets' is the Spot counterpart of 'positions' (BP-2) — which one shows follows the market */
 type InfoTab =
-  | 'positions'
-  | 'assets'
-  | 'closedpnl'
-  | 'orders'
-  | 'orderhistory'
-  | 'balancehistory'
-  | 'journal';
+  'positions' | 'assets' | 'closedpnl' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
 type ColTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory';
 type OrderSubTab = 'all' | 'working' | 'inactive' | 'filled' | 'cancelled' | 'rejected';
 type OrderHistorySubTab = 'all' | 'filled' | 'cancelled' | 'rejected';

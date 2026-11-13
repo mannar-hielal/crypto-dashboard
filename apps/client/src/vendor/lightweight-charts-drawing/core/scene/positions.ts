@@ -59,18 +59,16 @@ function positionLabel(
         stroke: border ?? 'none',
         strokeWidth: border ? 1 : 0,
       },
-      ...lines.map(
-        (line, i): SceneItem => ({
-          t: 'text',
-          x: cx,
-          y: top + padV + i * fs + fs / 2,
-          text: line,
-          anchor: 'middle',
-          baseline: 'central',
-          size: fs,
-          fill: s.textColor ?? '#ffffff',
-        })
-      ),
+      ...lines.map((line, i): SceneItem => ({
+        t: 'text',
+        x: cx,
+        y: top + padV + i * fs + fs / 2,
+        text: line,
+        anchor: 'middle',
+        baseline: 'central',
+        size: fs,
+        fill: s.textColor ?? '#ffffff',
+      })),
     ],
   };
 }

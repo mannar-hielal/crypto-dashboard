@@ -409,32 +409,28 @@ export function sceneBarsPattern(
     ];
   }
   return [
-    ...g.bars.map(
-      (b): SceneItem => ({
-        t: 'rect',
-        x: b.x - 1 - tol,
-        y: b.top - tol,
-        w: 2 + 2 * tol,
-        h: b.bottom - b.top + 2 * tol,
-        fill: 'transparent',
-      })
-    ),
+    ...g.bars.map((b): SceneItem => ({
+      t: 'rect',
+      x: b.x - 1 - tol,
+      y: b.top - tol,
+      w: 2 + 2 * tol,
+      h: b.bottom - b.top + 2 * tol,
+      fill: 'transparent',
+    })),
     {
       t: 'group',
       inert: true,
-      items: g.bars.map(
-        (b): SceneItem => ({
-          t: 'rect',
-          x: b.x - 1,
-          y: b.top,
-          w: 2,
-          h: Math.max(1, b.bottom - b.top),
-          fill: color,
-          fillOpacity: 0.9,
-          stroke: color,
-          strokeWidth: 1,
-        })
-      ),
+      items: g.bars.map((b): SceneItem => ({
+        t: 'rect',
+        x: b.x - 1,
+        y: b.top,
+        w: 2,
+        h: Math.max(1, b.bottom - b.top),
+        fill: color,
+        fillOpacity: 0.9,
+        stroke: color,
+        strokeWidth: 1,
+      })),
     },
     ...anchors,
   ];

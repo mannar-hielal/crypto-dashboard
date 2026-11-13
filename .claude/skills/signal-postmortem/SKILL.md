@@ -50,12 +50,12 @@ For 5-bar and 20-bar horizons after `entryPrice`:
 
 ## Outcome categories (preserved from original)
 
-| Category             | Long                                                                                                      | Short                                        |
+| Category | Long | Short |
 | -------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------- | ---- |
-| `TRUE_POSITIVE`      | predicted LONG, realized 5d > 0 AND 20d > 0                                                               | predicted SHORT, realized 5d < 0 AND 20d < 0 |
-| `FALSE_POSITIVE`     | predicted LONG, realized 5d < 0 OR 20d < 0                                                                | predicted SHORT, realized 5d > 0 OR 20d > 0  |
-| `MISSED_OPPORTUNITY` | trade not taken (cancelled or watching), realized 5d strongly in predicted direction (                    | return                                       | > 2× risk) | same |
-| `REGIME_MISMATCH`    | direction correct but regime flipped mid-trade (e.g. BTC risk-on → risk-off causing the SL hit before TP) | same                                         |
+| `TRUE_POSITIVE` | predicted LONG, realized 5d > 0 AND 20d > 0 | predicted SHORT, realized 5d < 0 AND 20d < 0 |
+| `FALSE_POSITIVE` | predicted LONG, realized 5d < 0 OR 20d < 0 | predicted SHORT, realized 5d > 0 OR 20d > 0 |
+| `MISSED_OPPORTUNITY` | trade not taken (cancelled or watching), realized 5d strongly in predicted direction ( | return | > 2× risk) | same |
+| `REGIME_MISMATCH` | direction correct but regime flipped mid-trade (e.g. BTC risk-on → risk-off causing the SL hit before TP) | same |
 
 ## Crypto regime tags
 
