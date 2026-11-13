@@ -4584,6 +4584,19 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-13 — Questions say Right or Not quite, without repeating the pick; full-width buttons everywhere
+
+Owner's request:
+
+- **No "You picked …" line.** The line under a question's answer (added 2026-11-12 from the Finelo review) is gone.
+  The Why opens on **Right.** or **Not quite.**, since the chosen option is already marked. This covers every
+  lesson's questions, the "Your call" moment and the checkpoint, which share `QuestionView`. The `lesson.picked`
+  anchor and the `.picked` style are removed.
+- **Full-width main button on every screen.** The "Try it" screens (Lesson 1's notebook, Lesson 2's Sneaky Sam) had an
+  inline Continue in the body. The real-chart "Try it" (Lesson 3) had an inline Show me. Both now use the footer's
+  full-width button, with Skip this part and ← Back under it, like every card. The checkpoint's Next / See the
+  result and Back to the path are full width too, with Try again under it.
+
 ### 2026-11-13 — A reuse that fails before its session is minted gives its cap slot back (reviews on #289, #293)
 
 The reuse cap (4) was counted before the fresh session was minted. A transient DB error after the count answered
