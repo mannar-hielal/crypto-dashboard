@@ -573,6 +573,10 @@ describe('POST /api/auth/refresh', () => {
       expiresAt: FUTURE,
       rotatedAt: new Date(Date.now() - 5_000),
     });
+    // The re-read after the stamp missed: still rotated 5 s ago
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      rotatedAt: new Date(Date.now() - 5_000),
+    });
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'user-1',
       email: validUser.email,
@@ -594,6 +598,33 @@ describe('POST /api/auth/refresh', () => {
     });
   });
 
+  it('should fail closed when the token vanished between the read and the stamp (a logout in between, review on #288)', async () => {
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    const findUniqueMock = app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>;
+    const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    createMock.mockClear();
+    // Read: a live token. Then a logout deletes it before the stamp: count 0, and gone on re-read
+    findUniqueMock
+      .mockResolvedValueOnce({
+        id: 'rt-gone',
+        tokenHash: 'hashed-gone',
+        userId: 'user-1',
+        expiresAt: FUTURE,
+        rotatedAt: null,
+      })
+      .mockResolvedValueOnce(null);
+    updateManyMock.mockResolvedValueOnce({ count: 0 });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'e'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(createMock).not.toHaveBeenCalled(); // no session minted after the logout
+  });
+
   it('should refuse a reused token after the reuse window with a 401 for this browser only', async () => {
     const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
     const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
@@ -606,6 +637,9 @@ describe('POST /api/auth/refresh', () => {
       tokenHash: 'hashed-old',
       userId: 'user-1',
       expiresAt: FUTURE,
+      rotatedAt: new Date(Date.now() - 60_000),
+    });
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       rotatedAt: new Date(Date.now() - 60_000),
     });
 
@@ -629,13 +663,16 @@ describe('POST /api/auth/refresh', () => {
     deleteManyMock.mockClear();
 
     const CONCURRENT_RAW_TOKEN = 'f'.repeat(64);
-    findUniqueMock.mockResolvedValue({
+    const row = {
       id: 'rt-concurrent',
       tokenHash: 'hashed-concurrent',
       userId: 'user-1',
       expiresAt: FUTURE,
-      rotatedAt: null,
-    });
+    };
+    // A reads it live; once A has stamped it, B (and B's re-read) see it rotated just now
+    findUniqueMock
+      .mockResolvedValueOnce({ ...row, rotatedAt: null })
+      .mockResolvedValue({ ...row, rotatedAt: new Date() });
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: 'user-1',
       email: validUser.email,

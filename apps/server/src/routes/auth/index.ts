@@ -878,10 +878,17 @@ export async function authRoutes(app: FastifyInstance) {
           data: { rotatedAt: now },
         });
         if (rotated === 0) {
-          // Already rotated: inside the reuse window it's a lost reply or a second tab, and
-          // gets a fresh token; after it, it's refused (the row is cleaned up below anyway)
-          const rotatedAt = stored.rotatedAt ?? now;
-          if (now.getTime() - rotatedAt.getTime() > REFRESH_REUSE_WINDOW_MS) {
+          // Already rotated, or gone. 🔐 Fail closed: `stored` was read before the stamp, and a
+          //    logout, password change or deletion may have removed the row since (they don't
+          //    take the refresh lock), so read it again (review on #288). Missing, or not
+          //    rotated after all: refused. Rotated inside the reuse window: a lost reply or a
+          //    second tab, served a fresh token. Past the window: refused
+          const fresh = await app.prisma.refreshToken.findUnique({
+            where: { tokenHash },
+            select: { rotatedAt: true },
+          });
+          const rotatedAt = fresh?.rotatedAt;
+          if (!rotatedAt || now.getTime() - rotatedAt.getTime() > REFRESH_REUSE_WINDOW_MS) {
             void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
             return reply.status(401).send({ error: 'Invalid or expired refresh token' });
           }
