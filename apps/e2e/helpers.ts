@@ -39,12 +39,16 @@ export async function resetAccount(page: Page): Promise<void> {
     // The dialog closed after a confirm click: the reset went through
     if (confirmed && (await button.count()) === 0) return;
     // "Resetting…" is in flight: wait for the dialog to close rather than clicking again
-    if ((await button.textContent())?.includes('Reset account')) await button.click();
+    if ((await button.textContent({ timeout: 2_000 }))?.includes('Reset account')) {
+      await button.click({ timeout: 2_000 });
+    }
     // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
     // step only once it is there, or the click lands on the departing "Reset account"
     await expect(button).toHaveText('Confirm reset?', { timeout: 2_000 });
-    await button.click({ timeout: 2_000 });
+    // Marked before the click: a click that times out after it took effect (the dialog already
+    // closing) must still count, and a repeated reset is harmless (review on #294)
     confirmed = true;
+    await button.click({ timeout: 2_000 });
     await expect(button).toHaveCount(0, { timeout: 10_000 });
   }).toPass({ timeout: 45_000 });
 }
