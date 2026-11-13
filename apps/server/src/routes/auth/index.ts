@@ -939,10 +939,13 @@ export async function authRoutes(app: FastifyInstance) {
         // served again, and a replay found later is the theft signal above (review on #288). The
         // daily job removes expired rows; a logout removes its family at once
 
-        // A reuse that fails below (a transient DB error, a 500) gives its cap slot back, so the
-        // client's retry of that 500 is still served (review on #289). Best effort: if the refund
-        // fails too, the cap only errs on the strict side
+        // A reuse that fails before its session is minted (a transient DB error, a 500) gives its
+        // cap slot back, so the client's retry of that 500 is still served (review on #289).
+        // 🔐 Only before the mint: once `issueTokens` has created a live token, the slot stays spent,
+        //    so a run of failures can never mint more than REFRESH_REUSE_CAP sessions (review on #293).
+        //    Best effort: if the refund fails too, the cap only errs on the strict side
         const reused = rotated === 0;
+        let minted = false;
         try {
           // Fetch the user to include email in the new access token payload
           const user = await app.prisma.user.findUnique({
@@ -957,6 +960,7 @@ export async function authRoutes(app: FastifyInstance) {
 
           // The same sign-in's family
           const issued = await issueTokens(reply, user.id, user.email, stored.familyId);
+          minted = true;
 
           // 🔐 A logout, password change or deletion may have landed while this request was
           //    rotating (they don't take the refresh lock): if the token we rotated is gone, so is
@@ -974,7 +978,7 @@ export async function authRoutes(app: FastifyInstance) {
           trackActivity(app, user.id);
           return reply.send({ accessToken: issued.accessToken });
         } catch (err) {
-          if (reused) {
+          if (reused && !minted) {
             await app.prisma.refreshToken
               .updateMany({
                 where: { tokenHash, reuseCount: { gt: 0 } },
