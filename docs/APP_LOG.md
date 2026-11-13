@@ -4584,6 +4584,36 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-13 — A lost session-refresh reply recovers: the server's reuse window
+
+Reviews of the PWA work kept trading two risks: retrying a session refresh after reconnecting
+might resend a rotated token, and not retrying signed learners out on a flaky link. Reading the
+route settled it. A resent consumed token was never "revoke every session" (that only hit a narrow
+two-request race); it was a plain 401 for that browser. But a reply lost after rotation still
+signed that device out. The owner approved a server fix:
+
+- **Server** (`routes/auth/index.ts`): `/refresh` no longer deletes the token it rotates.
+  - An atomic `updateMany` stamps `RefreshToken.rotatedAt` (new column, migration
+    `20261113120000_refresh_token_rotated_at`), and one request wins it.
+  - The same token inside the 30 s window (`REFRESH_REUSE_WINDOW_MS`) gets a fresh token, logged as
+    a warning. The one already issued stays valid: replies can land in either order, so deleting it
+    could leave a browser holding a dead cookie.
+  - After the window: a 401 for that browser, nothing else revoked. Rotated rows past the window are
+    cleaned up per user.
+  - It lives in the database, so every Fly machine agrees. The per-process 5 s
+    `recentlyRotatedTokens` map is gone.
+- **Client** (`lib/session.ts`): after the `/health` probe, the refresh retries three times (1, 2,
+  4 s) on anything but a 401 or 403. That's inside the window, so a lost reply now recovers.
+- **Rules:** `web.md`'s reuse rule now describes the reuse window. Mass revocation stays for the
+  explicit flows: password change or reset, email change, deletion.
+- **Tests:**
+  - `auth.test`: reuse inside the window gets a fresh token; after it, a 401; concurrent requests
+    are serialized and both served.
+  - `authRoutes.int.test` [19.11] on Postgres: two tabs both served, both sessions work, the old
+    token refused past the window, cleanup.
+  - `session.test`: retries.
+  - Test plan row 19.11 updated.
+
 ### 2026-11-13 — PWA readiness: the name, every browser's install steps, the notch and home bar, offline
 
 From the readiness review in `reports/pwa-readiness-2026-11-13.md` (owner's untracked folder). The owner chose the name

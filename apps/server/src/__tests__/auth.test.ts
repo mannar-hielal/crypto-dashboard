@@ -50,6 +50,8 @@ vi.mock('../plugins/prisma.js', () => {
         create: vi.fn().mockResolvedValue({}),
         findUnique: vi.fn(),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+        // The rotation stamp (`rotatedAt`): one request wins it (count 1)
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       passwordResetToken: {
         findUnique: vi.fn(),
@@ -556,116 +558,99 @@ describe('POST /api/auth/refresh', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('returns 401 on already-consumed refresh token with no recent rotation and revokes ALL user sessions (🔐 replay protection)', async () => {
+  it('should give a reused token a fresh one inside the reuse window, revoking nothing (a lost reply, owner 2026-11-13)', async () => {
     const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
     deleteManyMock.mockClear();
-    deleteManyMock.mockResolvedValue({ count: 0 });
-
-    // A token never successfully rotated in this test file — distinguishes a
-    // genuinely replayed/stolen token from a benign concurrent-tab race (see
-    // the test below), which must NOT trigger a global revoke.
-    const STOLEN_RAW_TOKEN = 'c'.repeat(64);
-
+    createMock.mockClear();
+    // Already rotated 5 s ago: the reply carrying the new token never reached the phone
+    updateManyMock.mockResolvedValueOnce({ count: 0 });
     (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      id: 'rt-stolen',
-      tokenHash: 'hashed-stolen',
+      id: 'rt-lost',
+      tokenHash: 'hashed-lost',
       userId: 'user-1',
       expiresAt: FUTURE,
-    });
-
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/auth/refresh',
-      headers: { cookie: `refresh_token=${STOLEN_RAW_TOKEN}` },
-    });
-
-    expect(res.statusCode).toBe(401);
-    // 🔐 Stolen-token replay = account takeover in progress — the user-wide
-    //    deleteMany({ userId }) must run (2 calls total: token-hash + user-wide).
-    expect(deleteManyMock).toHaveBeenCalledTimes(2);
-    expect(deleteManyMock).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
-  });
-
-  it('returns 401 without revoking other sessions when the token was just rotated by a concurrent request (benign double-tab race)', async () => {
-    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
-    deleteManyMock.mockClear();
-
-    const RACE_RAW_TOKEN = 'd'.repeat(64);
-
-    // First request: rotation succeeds (count: 1) — marks the token as
-    // "recently rotated" in the in-memory grace window.
-    deleteManyMock.mockResolvedValueOnce({ count: 1 });
-    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      id: 'rt-race',
-      tokenHash: 'hashed-race',
-      userId: 'user-1',
-      expiresAt: FUTURE,
+      rotatedAt: new Date(Date.now() - 5_000),
     });
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'user-1',
       email: validUser.email,
     });
 
-    const first = await app.inject({
+    const res = await app.inject({
       method: 'POST',
       url: '/api/auth/refresh',
-      headers: { cookie: `refresh_token=${RACE_RAW_TOKEN}` },
+      headers: { cookie: `refresh_token=${'c'.repeat(64)}` },
     });
-    expect(first.statusCode).toBe(200);
 
-    // Second, near-simultaneous request for the same (already-rotated) token
-    // — e.g. a second browser tab. The delete finds nothing (count: 0).
-    deleteManyMock.mockResolvedValueOnce({ count: 0 });
+    expect(res.statusCode).toBe(200);
+    expect(createMock).toHaveBeenCalledTimes(1); // a fresh token, in a new cookie
+    expect(res.headers['set-cookie']).toBeDefined();
+    // 🔐 Never every session: only rotated rows past the window are cleaned up
+    expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+    expect(deleteManyMock).toHaveBeenCalledWith({
+      where: { userId: 'user-1', rotatedAt: { lt: expect.any(Date) } },
+    });
+  });
+
+  it('should refuse a reused token after the reuse window with a 401 for this browser only', async () => {
+    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    deleteManyMock.mockClear();
+    createMock.mockClear();
+    updateManyMock.mockResolvedValueOnce({ count: 0 });
     (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      id: 'rt-race',
-      tokenHash: 'hashed-race',
+      id: 'rt-old',
+      tokenHash: 'hashed-old',
       userId: 'user-1',
       expiresAt: FUTURE,
+      rotatedAt: new Date(Date.now() - 60_000),
     });
 
-    const second = await app.inject({
+    const res = await app.inject({
       method: 'POST',
       url: '/api/auth/refresh',
-      headers: { cookie: `refresh_token=${RACE_RAW_TOKEN}` },
+      headers: { cookie: `refresh_token=${'d'.repeat(64)}` },
     });
 
-    expect(second.statusCode).toBe(401);
-    // 🔐 Only the token-hash delete ran for the second request — no user-wide
-    //    revoke, so the other (winning) tab stays logged in.
-    expect(deleteManyMock).toHaveBeenCalledTimes(2);
+    expect(res.statusCode).toBe(401);
+    expect(createMock).not.toHaveBeenCalled();
     expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
   });
 
-  it('serializes two truly concurrent requests for the same token instead of letting them race (🔐 no mass revoke regardless of DB response ordering)', async () => {
-    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+  it('serializes two truly concurrent requests for the same token, and both tabs come away signed in', async () => {
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
     const findUniqueMock = app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>;
-    deleteManyMock.mockClear();
+    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    updateManyMock.mockClear();
     findUniqueMock.mockClear();
+    deleteManyMock.mockClear();
 
     const CONCURRENT_RAW_TOKEN = 'f'.repeat(64);
-    const stored = {
+    findUniqueMock.mockResolvedValue({
       id: 'rt-concurrent',
       tokenHash: 'hashed-concurrent',
       userId: 'user-1',
       expiresAt: FUTURE,
-    };
-    findUniqueMock.mockResolvedValue(stored);
+      rotatedAt: null,
+    });
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: 'user-1',
       email: validUser.email,
     });
 
-    // First request's deleteMany is deliberately held open (simulates a slow
-    // DB round trip) so we can assert the second request doesn't even start
-    // its own DB work until the first fully finishes and releases the lock —
-    // that's the mechanism that removes the race, independent of whichever
-    // request's DB response happens to arrive back first in a real deployment.
-    let resolveFirstDelete!: (v: { count: number }) => void;
-    const firstDeleteGate = new Promise<{ count: number }>((resolve) => {
-      resolveFirstDelete = resolve;
-    });
-    deleteManyMock.mockImplementationOnce(() => firstDeleteGate);
-    deleteManyMock.mockResolvedValueOnce({ count: 0 });
+    // The first request's rotation is held open (a slow DB round trip): the second must not
+    // start its own DB work until the first has finished and released the lock
+    let resolveFirst!: (v: { count: number }) => void;
+    updateManyMock.mockImplementationOnce(
+      () =>
+        new Promise<{ count: number }>((resolve) => {
+          resolveFirst = resolve;
+        })
+    );
+    updateManyMock.mockResolvedValueOnce({ count: 0 }); // the second finds it rotated
 
     const requestA = app.inject({
       method: 'POST',
@@ -678,19 +663,15 @@ describe('POST /api/auth/refresh', () => {
       headers: { cookie: `refresh_token=${CONCURRENT_RAW_TOKEN}` },
     });
 
-    // Give both requests a chance to start. B must still be blocked on the
-    // lock — it should not have reached findUnique yet.
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(findUniqueMock).toHaveBeenCalledTimes(1);
-
-    // Now let the first (winning) request finish.
-    resolveFirstDelete({ count: 1 });
+    resolveFirst({ count: 1 });
 
     const [resA, resB] = await Promise.all([requestA, requestB]);
-
-    expect(resA.statusCode).toBe(200);
-    expect(resB.statusCode).toBe(401);
+    // Inside the reuse window: the second tab gets a fresh token too, and nothing is revoked
+    expect([resA.statusCode, resB.statusCode]).toEqual([200, 200]);
     expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+    findUniqueMock.mockReset();
   });
 });
 

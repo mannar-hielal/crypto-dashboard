@@ -108,6 +108,9 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+  // 🔐 Set when /refresh rotates this token (kept a short while, not deleted): a reply lost in
+  // transit can be recovered within the reuse window, then the row is cleaned up (2026-11-13)
+  rotatedAt DateTime?
 
   @@index([userId])
 }

@@ -134,13 +134,11 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       retryWhenOnline();
       return;
     }
-    // Back online, and /health already answered, so the network works (`reconnect`): retry only a
-    // 429. /refresh rotates the token, and a token sent twice reads as theft and revokes every
-    // session (web.md). Only the rate limit answers before the handler, so only a 429 proves the
-    // token wasn't used. Anything else may have reached the handler (a connection can drop
-    // mid-reply), so it signs out as before: a lost session at worst, never every session revoked.
-    // A server-side grace window for a just-rotated token would let those retry too (reviews on
-    // #284, #285, #287)
+    // Back online, and /health already answered, so the network works (`reconnect`): retry a few
+    // times, 1, 2 and 4 s apart, on anything but a refusal (401 / 403). Safe since the server's
+    // reuse window (owner 2026-11-13): /refresh keeps a rotated token for 30 s and serves it again,
+    // so a retry after a lost reply gets a fresh token, never a revocation. Past the window an old
+    // token only gets a 401 for this browser
     if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && isSafeToRetry(err)) {
       setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
       return;
@@ -152,11 +150,13 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
 }
 
 /**
- * A failed restore that can be tried again without risking a reused refresh token: only a 429,
- * which the rate limit sends before the handler can rotate anything
+ * A failed restore worth trying again after reconnecting: anything but a refusal. 401 and 403 mean
+ * the session is over; a failed fetch, a timeout, a 429 or a 5xx may pass, and a token rotated
+ * meanwhile is served again inside the server's reuse window
  */
 export function isSafeToRetry(err: unknown): boolean {
-  return (err as { status?: unknown } | null)?.status === 429;
+  const status = (err as { status?: unknown } | null)?.status;
+  return status !== 401 && status !== 403;
 }
 
 /** Probes of /health after the `online` event, a second apart and doubling (1, 2, 4, 8, 16 s) */

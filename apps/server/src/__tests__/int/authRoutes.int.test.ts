@@ -59,25 +59,50 @@ beforeEach(async () => {
   await cleanDatabase(db);
 });
 
-describe('/api/auth/refresh on Postgres — two tabs at once', () => {
-  it('[19.11] rotates the token once: one new session, the other request refused, nothing revoked', async () => {
+describe('/api/auth/refresh on Postgres — two tabs at once, and a lost reply', () => {
+  it('[19.11] rotates once; the second tab (or a retried lost reply) gets a fresh token too, nothing revoked', async () => {
     const { userId, token } = await register();
     const [first, second] = await Promise.all([refresh(token), refresh(token)]);
-    const statuses = [first.statusCode, second.statusCode].sort();
-    expect(statuses).toEqual([200, 401]);
-    const winner = first.statusCode === 200 ? first : second;
-    const rotated = refreshCookie(winner);
-    expect(rotated).toBeDefined();
-    expect(rotated).not.toBe(token);
+    // Inside the reuse window both are served (owner 2026-11-13): whichever reply the browser
+    // keeps, its cookie works
+    expect([first.statusCode, second.statusCode]).toEqual([200, 200]);
+    const a = refreshCookie(first);
+    const b = refreshCookie(second);
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+    expect(a).not.toBe(b);
 
-    // Exactly one live refresh token for the user: the rotated one (stored hashed)
+    // One rotated row (the old token, kept for the window) and two live ones
     const rows = await db.refreshToken.findMany({ where: { userId } });
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.tokenHash).not.toBe(rotated);
+    expect(rows.filter((r) => r.rotatedAt !== null)).toHaveLength(1);
+    expect(rows.filter((r) => r.rotatedAt === null)).toHaveLength(2);
 
-    // The session the winning tab got still works; the old token never does again
-    expect((await refresh(rotated!)).statusCode).toBe(200);
+    // Both new sessions work
+    expect((await refresh(a!)).statusCode).toBe(200);
+    expect((await refresh(b!)).statusCode).toBe(200);
+
+    // Past the window, the old token is refused: a 401 for that browser, nothing else revoked
+    await db.refreshToken.updateMany({
+      where: { userId, rotatedAt: { not: null } },
+      data: { rotatedAt: new Date(Date.now() - 60_000) },
+    });
     expect((await refresh(token)).statusCode).toBe(401);
+    expect(await db.refreshToken.count({ where: { userId, rotatedAt: null } })).toBeGreaterThan(0);
+  });
+
+  it('cleans up rotated rows once they are past the window', async () => {
+    const { userId, token } = await register();
+    const res = await refresh(token);
+    expect(res.statusCode).toBe(200);
+    await db.refreshToken.updateMany({
+      where: { userId, rotatedAt: { not: null } },
+      data: { rotatedAt: new Date(Date.now() - 60_000) },
+    });
+    expect((await refresh(refreshCookie(res)!)).statusCode).toBe(200);
+    // The old rotated row is gone; the just-rotated one stays for its window
+    const rotated = await db.refreshToken.findMany({ where: { userId, rotatedAt: { not: null } } });
+    expect(rotated).toHaveLength(1);
+    expect(Date.now() - rotated[0]!.rotatedAt!.getTime()).toBeLessThan(30_000);
   });
 });
 

@@ -13,30 +13,17 @@ import { clientIp } from '../../lib/clientIp.js';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
-// 🔐 Short in-memory grace window: when a token rotation succeeds, remember its
-// hash briefly so a near-simultaneous /refresh for the same (already-rotated)
-// token — e.g. two browser tabs refreshing at once — is treated as a benign
-// race rather than a replayed/stolen token, and doesn't log out every device.
-// This is per-process state — correct for a single server instance (current
-// deployment), but a loser request handled by a different instance in a
-// horizontally-scaled deployment wouldn't see the winner's entry here. Move
-// this to Redis (already used elsewhere) before scaling the API past 1 machine.
-const ROTATION_GRACE_MS = 5_000;
-const recentlyRotatedTokens = new Map<string, number>();
-
-function wasRecentlyRotated(tokenHash: string): boolean {
-  const now = Date.now();
-  for (const [hash, rotatedAt] of recentlyRotatedTokens) {
-    if (now - rotatedAt > ROTATION_GRACE_MS) recentlyRotatedTokens.delete(hash);
-  }
-  return recentlyRotatedTokens.has(tokenHash);
-}
+// 🔐 The reuse window (owner 2026-11-13): /refresh no longer deletes the token it rotates; it
+// stamps `rotatedAt` and keeps the row this long. The same token coming back inside the window
+// is a reply lost in transit (a phone reconnecting) or two tabs refreshing at once, so it gets a
+// fresh token too, and the one already issued stays valid (it may be the one the browser keeps:
+// replies can land in either order). After the window the row is gone and the token is refused
+// with a plain 401 for this browser. In the database, so every API machine agrees.
+export const REFRESH_REUSE_WINDOW_MS = 30_000;
 
 // 🔐 Serializes concurrent /refresh requests for the same token within this
-// process. deleteMany is atomic at the DB layer (only one request can ever
-// see count=1), but the two requests' promises resolve independently — Node
-// gives no guarantee that the winner's continuation (which records the grace
-// window above) runs before the loser's continuation checks it. Queuing
+// process. The rotation's updateMany is atomic at the DB layer (only one request can ever
+// see count=1), but the two requests' promises resolve independently. Queuing
 // same-token requests removes that ordering dependency entirely: the second
 // request's body simply doesn't start until the first has fully finished.
 const refreshLocks = new Map<string, Promise<void>>();
@@ -866,7 +853,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       // The client probes this on every app boot. No cookie means a signed-out visitor, which
       // is a normal answer, not a failed authentication: 204 and nothing issued. 🔐 A cookie
-      // that is present but rejected below still gets 401 (and replay detection still runs).
+      // that is present but rejected below still gets 401.
       if (!rawToken) {
         return reply.status(204).send();
       }
@@ -882,31 +869,34 @@ export async function authRoutes(app: FastifyInstance) {
           return reply.status(401).send({ error: 'Invalid or expired refresh token' });
         }
 
-        // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
-        //    each get an atomic delete. Only the first succeeds (count=1); the second
-        //    gets count=0 and is treated as an invalid token — no 500 race condition.
-        const { count: deleted } = await app.prisma.refreshToken.deleteMany({
-          where: { tokenHash },
+        // 🔐 Token rotation: an atomic stamp, so of two concurrent requests only one rotates
+        //    (count 1); `updateMany` with a unique `where` never throws P2025
+        const now = new Date();
+        const { count: rotated } = await app.prisma.refreshToken.updateMany({
+          where: { tokenHash, rotatedAt: null },
+          data: { rotatedAt: now },
         });
-        if (deleted === 0) {
-          // 🔐 Token already consumed = either a benign double-tab race OR a replayed
-          //    stolen token. Only escalate to a full session revoke when this token
-          //    wasn't just rotated by a concurrent request of our own — that's the
-          //    classic session-theft signal. A same-token race within the grace
-          //    window is expected (e.g. two tabs refreshing at once) and shouldn't
-          //    log out every device.
-          if (wasRecentlyRotated(tokenHash)) {
+        if (rotated === 0) {
+          // Already rotated: inside the reuse window it's a lost reply or a second tab, and
+          // gets a fresh token; after it, it's refused (the row is cleaned up below anyway)
+          const rotatedAt = stored.rotatedAt ?? now;
+          if (now.getTime() - rotatedAt.getTime() > REFRESH_REUSE_WINDOW_MS) {
+            void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
             return reply.status(401).send({ error: 'Invalid or expired refresh token' });
           }
           app.log.warn(
             { userId: stored.userId },
-            'Refresh token replay detected — revoking all sessions'
+            'Refresh token reused inside the reuse window — issuing a fresh token (lost reply or second tab)'
           );
-          await app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } });
-          void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-          return reply.status(401).send({ error: 'Invalid or expired refresh token' });
         }
-        recentlyRotatedTokens.set(tokenHash, Date.now());
+
+        // Rotated rows past the window are cleaned up for this user (bounded: a few per user)
+        await app.prisma.refreshToken.deleteMany({
+          where: {
+            userId: stored.userId,
+            rotatedAt: { lt: new Date(now.getTime() - REFRESH_REUSE_WINDOW_MS) },
+          },
+        });
 
         // Fetch the user to include email in the new access token payload
         const user = await app.prisma.user.findUnique({

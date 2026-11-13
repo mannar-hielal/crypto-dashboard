@@ -102,8 +102,13 @@ supply-chain policy, secrets management, container hardening — see [`security.
   email exists (anti-enumeration — see `/forgot-password`).
 - Token invalidation uses `deleteMany` (not `delete`) so a concurrent duplicate request gets
   `count: 0` back instead of a `P2025` race error.
-- If `/refresh` detects a token that was already consumed (`deleteMany` returns `count: 0`), every
-  refresh token for that `userId` is revoked — treat token reuse as a compromise signal.
+- `/refresh` rotates a token by stamping `rotatedAt` with an atomic `updateMany` (one winner).
+  The rotated row is kept for the **reuse window**, `REFRESH_REUSE_WINDOW_MS` (30 s, owner
+  2026-11-13). The same token coming back inside the window (a reply lost in transit, a second tab)
+  gets a fresh token; the one already issued stays valid. After the window it gets a plain 401 for
+  that browser and nothing else is revoked; rows past the window are cleaned up. Mass revocation is
+  for the explicit flows (password change or reset, email change, delete), not for reuse: the client
+  retries a lost reply, so a reuse is far likelier to be a flaky phone than a thief.
 
 ### Client-side security 🔐
 

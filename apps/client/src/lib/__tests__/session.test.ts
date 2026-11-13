@@ -169,39 +169,44 @@ describe('msUntilExpiry()', () => {
     }
   });
 
-  it('should never resend what may have rotated the refresh token, a failed fetch included (reviews on #284, #287)', async () => {
-    // A retry would send a consumed token, and the server would revoke every session: one try,
-    // then signed out as before (the learner signs in again)
-    for (const err of [
-      new TypeError('Failed to fetch'), // a connection can drop mid-reply
-      new DOMException('signal timed out', 'TimeoutError'),
-      Object.assign(new Error('Bad Gateway'), { status: 502 }),
-      new SyntaxError('Unexpected token < in JSON'),
-    ]) {
-      refresh.mockReset();
+  it('should retry a lost or failed refresh after reconnecting, as the server serves a just-rotated token again (owner 2026-11-13)', async () => {
+    vi.useFakeTimers();
+    try {
       useAuthStore.setState({
         accessToken: null,
         user: null,
         isLoading: false,
         awaitingNetwork: true,
       });
-      refresh.mockRejectedValueOnce(err);
+      // A dropped reply, a timeout, a 502: each retried, the fourth try gets through
+      refresh
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'))
+        .mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }))
+        .mockResolvedValueOnce({ accessToken: 'back' } as never);
+      me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
       await restoreSession(1);
-      expect(refresh).toHaveBeenCalledTimes(1);
-      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+      await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
+      expect(refresh).toHaveBeenCalledTimes(4);
+      expect(useAuthStore.getState()).toMatchObject({
+        accessToken: 'back',
+        awaitingNetwork: false,
+      });
+    } finally {
+      vi.useRealTimers();
     }
   });
 
-  it('should retry only a 429, which the rate limit sends before anything is rotated', () => {
+  it('should retry anything but a refusal (401 / 403)', () => {
     expect(isSafeToRetry(Object.assign(new Error('x'), { status: 429 }))).toBe(true);
-    expect(isSafeToRetry(new TypeError('Failed to fetch'))).toBe(false);
+    expect(isSafeToRetry(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 502 }))).toBe(true);
+    expect(isSafeToRetry(new DOMException('t', 'TimeoutError'))).toBe(true);
     expect(isSafeToRetry(Object.assign(new Error('x'), { status: 401 }))).toBe(false);
-    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 502 }))).toBe(false);
-    expect(isSafeToRetry(new DOMException('t', 'TimeoutError'))).toBe(false);
-    expect(isSafeToRetry(null)).toBe(false);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 403 }))).toBe(false);
   });
 
-  it('should retry a 429 up to three times, then sign out; a 401 signs out at once', async () => {
+  it('should give up after three retries, and sign out at once on a 401', async () => {
     vi.useFakeTimers();
     try {
       useAuthStore.setState({
