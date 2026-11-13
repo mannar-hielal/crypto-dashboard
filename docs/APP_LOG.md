@@ -4609,6 +4609,12 @@ signed that device out. The owner approved a server fix:
     - A refresh that finds its rotated token gone after minting (a logout landed meanwhile) takes
       the new token back and answers 401.
     - A token that vanished between the read and the stamp fails closed.
+    - Refusing an already-rotated token leaves the cookie alone (a faster tab may hold a newer one),
+      except for the theft signal: a replay after the window deletes that sign-in's family and logs
+      a warning.
+    - The family column has a database default (`gen_random_uuid()`), so the previous build, still
+      serving while the migration runs, never fails a login.
+    - The trade-off is recorded in `security.md`.
   - It lives in the database, so every Fly machine agrees. The per-process 5 s
     `recentlyRotatedTokens` map is gone.
 - **Client** (`lib/session.ts`): after the `/health` probe, the refresh retries three times (1, 2,

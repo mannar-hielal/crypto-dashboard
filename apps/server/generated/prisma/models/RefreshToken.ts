@@ -307,7 +307,7 @@ export type RefreshTokenCreateInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId: string
+  familyId?: string
   user: Prisma.UserCreateNestedOneWithoutRefreshTokensInput
 }
 
@@ -319,7 +319,7 @@ export type RefreshTokenUncheckedCreateInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId: string
+  familyId?: string
 }
 
 export type RefreshTokenUpdateInput = {
@@ -352,7 +352,7 @@ export type RefreshTokenCreateManyInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId: string
+  familyId?: string
 }
 
 export type RefreshTokenUpdateManyMutationInput = {
@@ -484,7 +484,7 @@ export type RefreshTokenCreateWithoutUserInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId: string
+  familyId?: string
 }
 
 export type RefreshTokenUncheckedCreateWithoutUserInput = {
@@ -494,7 +494,7 @@ export type RefreshTokenUncheckedCreateWithoutUserInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId: string
+  familyId?: string
 }
 
 export type RefreshTokenCreateOrConnectWithoutUserInput = {
@@ -544,7 +544,7 @@ export type RefreshTokenCreateManyUserInput = {
   createdAt?: Date | string
   rotatedAt?: Date | string | null
   reuseCount?: number
-  familyId: string
+  familyId?: string
 }
 
 export type RefreshTokenUpdateWithoutUserInput = {

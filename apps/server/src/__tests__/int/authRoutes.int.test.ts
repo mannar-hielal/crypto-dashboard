@@ -83,13 +83,15 @@ describe('/api/auth/refresh on Postgres — two tabs at once, and a lost reply',
     expect((await refresh(a!)).statusCode).toBe(200);
     expect((await refresh(b!)).statusCode).toBe(200);
 
-    // Past the window, the old token is refused: a 401 for that browser, nothing else revoked
+    // Past the window, the old token coming back reads as stolen: 401, and that sign-in's family
+    // (both new sessions came from it) is ended (review on #288)
     await db.refreshToken.updateMany({
       where: { userId, rotatedAt: { not: null } },
       data: { rotatedAt: new Date(Date.now() - 60_000) },
     });
     expect((await refresh(token)).statusCode).toBe(401);
-    expect(await db.refreshToken.count({ where: { userId, rotatedAt: null } })).toBeGreaterThan(0);
+    expect((await refresh(a!)).statusCode).toBe(401);
+    expect((await refresh(b!)).statusCode).toBe(401);
   });
 
   it('cleans up rotated rows once they are past the window', async () => {

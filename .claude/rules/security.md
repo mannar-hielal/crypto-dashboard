@@ -19,6 +19,23 @@ exists, and the controls that sit outside any single route handler.
   custody, KYC/AML, and PCI-scope concerns do not apply today. Re-evaluate this file if that
   changes.
 
+## Accepted trade-off: the refresh-token reuse window (owner, 2026-11-13)
+
+Refresh-token reuse used to be described as a compromise signal that revokes every session. The
+owner accepted a narrower rule so that phones on flaky links (the PWA) don't sign learners out:
+
+- **Inside 30 s of a rotation**, the old token is served again, at most twice (a reply lost in
+  transit, a second tab). A thief who replays a stolen token inside that window also gets a session.
+  It is bounded by the window and the cap, and it sits in the victim's token family, so the victim's
+  logout ends it.
+- **After the window**, a replay is treated as theft: that sign-in's whole family is deleted, the
+  thief's chain included, and logged at `warn` with the `userId`. The user's other devices stay
+  signed in. Every session is still revoked by the explicit flows: password change or reset, email
+  change, account deletion.
+- **Why:** with the reconnect retries the PWA needs, a reuse is far likelier to be a lost reply than
+  theft. Revoking every device on it would punish the common case. The mechanics are in
+  [`web.md`](./web.md) (Error handling) and `apps/server/src/routes/auth/index.ts`.
+
 ## Defense in depth — the layers, outside-in
 
 1. **Network edge**: Fly.io TLS termination + `strictTransportSecurity` (HSTS, `maxAge: 63072000`,

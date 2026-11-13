@@ -903,10 +903,19 @@ export async function authRoutes(app: FastifyInstance) {
             void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
             return reply.status(401).send({ error: 'Invalid or expired refresh token' });
           }
-          // 🔐 Rotated past the window: refused, but the cookie stays. The request carried a
-          //    stale token, and the browser may already hold a newer valid one from another tab
-          //    (tabs share the cookie): clearing it would sign the browser out (review on #288)
+          // 🔐 Rotated past the window: the theft signal. A lost reply or a second tab comes back
+          //    within seconds; a token replayed later is treated as stolen. Its sign-in's whole
+          //    family is ended, the thief's chain included, while the user's other devices stay
+          //    signed in (reviews on #288). The cookie isn't cleared here: the request carried a
+          //    stale token, and only the family's own browsers lose their session
           if (now.getTime() - rotatedAt.getTime() > REFRESH_REUSE_WINDOW_MS) {
+            const { count: ended } = await app.prisma.refreshToken.deleteMany({
+              where: { familyId: stored.familyId },
+            });
+            app.log.warn(
+              { userId: stored.userId, ended },
+              'Refresh token reused after the reuse window — treated as stolen, its sign-in ended'
+            );
             return reply.status(401).send({ error: 'Invalid or expired refresh token' });
           }
           // 🔐 Capped, atomically across API machines: at most REFRESH_REUSE_CAP re-issues per

@@ -727,6 +727,34 @@ describe('POST /api/auth/refresh', () => {
     expect(res.headers['set-cookie']).toBeUndefined();
   });
 
+  it('should end the whole sign-in when a token comes back after the window: the theft signal (review on #288)', async () => {
+    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    deleteManyMock.mockClear();
+    updateManyMock.mockResolvedValueOnce({ count: 0 });
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        id: 'rt-stolen',
+        tokenHash: 'hashed-stolen',
+        userId: 'user-1',
+        expiresAt: FUTURE,
+        rotatedAt: new Date(Date.now() - 120_000),
+        familyId: 'family-stolen',
+      })
+      .mockResolvedValueOnce({ rotatedAt: new Date(Date.now() - 120_000) });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'7'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+    // That sign-in's family only, the thief's chain included; never the user's other devices
+    expect(deleteManyMock).toHaveBeenCalledWith({ where: { familyId: 'family-stolen' } });
+    expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+  });
+
   it('serializes two truly concurrent requests for the same token, and both tabs come away signed in', async () => {
     const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
     const findUniqueMock = app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>;
