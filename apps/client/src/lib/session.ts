@@ -7,7 +7,12 @@
  * the in-memory token fresh using the httpOnly refresh cookie.
  */
 
-import { authApi, SESSION_RECONNECT_TRIES } from '@crypto-dashboard/sdk';
+import {
+  authApi,
+  SDK_REQUEST_TIMEOUT_MS,
+  SESSION_RECONNECT_TRIES,
+  SESSION_REUSE_WINDOW_MS,
+} from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 
 let inflight: Promise<string | null> | null = null;
@@ -98,14 +103,37 @@ export function startedNewSession(): void {
 /** Tries after reconnecting, a second apart and doubling (shared with the server's reuse cap) */
 const RECONNECT_TRIES = SESSION_RECONNECT_TRIES;
 
+/** Kept clear of the window's edge: clocks and proxies add a little */
+const RETRY_MARGIN_MS = 2_000;
+
+/** Whether a retry starting after `delayMs` still reaches the server inside the reuse window */
+export function retryFitsWindow(now: number, delayMs: number, deadline: number): boolean {
+  return now + delayMs <= deadline;
+}
+
+/**
+ * When a reconnect's retries stop: a whole request timeout (and a margin) before the reuse window
+ * would end if it began at the first attempt. Best effort (reviews on #289, #290): the server's
+ * window starts at its rotation, which may have come before the connection dropped, so a retry can
+ * still land late; the deadline keeps that rare, and running out of retries never signs the learner
+ * out (they get Try again instead)
+ */
+export function reconnectDeadline(startedAt: number): number {
+  return startedAt + SESSION_REUSE_WINDOW_MS - SDK_REQUEST_TIMEOUT_MS - RETRY_MARGIN_MS;
+}
+
 /**
  * Boot-time session restore: trade the httpOnly refresh cookie for an access token, then load
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
  * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
  */
-
-export async function restoreSession(afterReconnect = 0): Promise<void> {
-  const { setAuth, setLoading, setAwaitingNetwork } = useAuthStore.getState();
+export async function restoreSession(
+  afterReconnect = 0,
+  // Each reconnect carries its own deadline, so a second reconnect never moves another's (review
+  // on #290)
+  deadline: number = afterReconnect > 0 ? reconnectDeadline(Date.now()) : 0
+): Promise<void> {
+  const { setAuth, setLoading, setAwaitingNetwork, setReconnectStalled } = useAuthStore.getState();
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -135,16 +163,27 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       return;
     }
     // Back online, and /health already answered, so the network works (`reconnect`): retry a few
-    // times, 1, 2 and 4 s apart, on anything but a refusal (401 / 403). Safe since the server's
-    // reuse window (owner 2026-11-13): /refresh keeps a rotated token for 30 s and serves it again,
-    // so a retry after a lost reply gets a fresh token, never a revocation. Past the window an old
-    // token only gets a 401 for this browser
-    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && isSafeToRetry(err)) {
-      setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
+    // times, 1, 2 and 4 s apart, on anything but a refusal (401 / 403). Inside the server's reuse
+    // window (owner 2026-11-13) a retry after a lost reply gets a fresh token; past it a retry
+    // would read as theft and end the sign-in, so retries stop at the deadline (best effort)
+    const delay = 1000 * 2 ** (afterReconnect - 1);
+    if (afterReconnect > 0 && isSafeToRetry(err)) {
+      if (afterReconnect <= RECONNECT_TRIES && retryFitsWindow(Date.now(), delay, deadline)) {
+        setTimeout(() => void restoreSession(afterReconnect + 1, deadline), delay);
+        return;
+      }
+      // Out of safe retries, and the cookie may still be valid: not a straight trip to /login.
+      // Protected pages offer Try again (owner 2026-11-13). A tap after the reuse window, if the
+      // original reply was lost, reads as theft and ends that sign-in (this device only), so the
+      // screen says the learner may be asked to sign in (review on #290)
+      setReconnectStalled(true);
+      setLoading(false);
       return;
     }
-    // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
+    // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out (to /login, so
+    // no stalled Try again either)
     setAwaitingNetwork(false);
+    setReconnectStalled(false);
     setLoading(false);
   }
 }
@@ -181,12 +220,19 @@ async function reconnect(probe = 0): Promise<void> {
       setTimeout(() => void reconnect(probe + 1), 1000 * 2 ** probe);
       return;
     }
-    const { setAwaitingNetwork, setLoading } = useAuthStore.getState();
-    setAwaitingNetwork(false);
+    // The API never answered: offer Try again rather than sign out (the cookie is untouched)
+    const { setReconnectStalled, setLoading } = useAuthStore.getState();
+    setReconnectStalled(true);
     setLoading(false);
     return;
   }
   await restoreSession(1);
+}
+
+/** The learner's Try again after a stalled reconnect: probe, then one refresh with a new deadline */
+export function retryReconnect(): void {
+  useAuthStore.getState().setReconnectStalled(false);
+  void reconnect();
 }
 
 /** The browser reports no connection at all (not an API it can't reach) */

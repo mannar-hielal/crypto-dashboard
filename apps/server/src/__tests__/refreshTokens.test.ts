@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { SESSION_RECONNECT_TRIES } from '@crypto-dashboard/sdk';
+import { SESSION_RECONNECT_TRIES, SESSION_REUSE_WINDOW_MS } from '@crypto-dashboard/sdk';
 import {
   purgeStaleRefreshTokens,
   REFRESH_REUSE_CAP,
+  REFRESH_REUSE_WINDOW_MS,
   runRefreshTokenPurge,
 } from '../services/RefreshTokens.js';
 
@@ -76,5 +77,11 @@ describe('runRefreshTokenPurge (the daily job’s step, review on #288)', () => 
     } as unknown as Pick<FastifyInstance, 'prisma' | 'log'>;
     await runRefreshTokenPurge(app);
     expect(info).toHaveBeenCalledWith({ count: 2 }, 'Purged expired refresh tokens');
+  });
+});
+
+describe('the reuse window and the client’s retry deadline (review on #289)', () => {
+  it('should be the same window on both sides, so the client stops retrying before it closes', () => {
+    expect(REFRESH_REUSE_WINDOW_MS).toBe(SESSION_REUSE_WINDOW_MS);
   });
 });

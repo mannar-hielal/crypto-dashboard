@@ -20,12 +20,18 @@ interface AuthState {
    * guest meanwhile (review on #283)
    */
   awaitingNetwork: boolean;
+  /**
+   * Back online, but the session couldn't be restored in its safe retries: protected pages offer
+   * Try again instead of sending the learner to /login (owner 2026-11-13, review on #290)
+   */
+  reconnectStalled: boolean;
 
   setAuth: (accessToken: string, user: User) => void;
   updateUser: (partial: Partial<User>) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
   setAwaitingNetwork: (awaiting: boolean) => void;
+  setReconnectStalled: (stalled: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -33,11 +39,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   isLoading: true, // boot state — assume loading until /refresh resolves or fails
   awaitingNetwork: false,
+  reconnectStalled: false,
 
   setAuth: (accessToken, user) =>
-    set({ accessToken, user, isLoading: false, awaitingNetwork: false }),
+    set({ accessToken, user, isLoading: false, awaitingNetwork: false, reconnectStalled: false }),
   updateUser: (partial) => set((s) => ({ user: s.user ? { ...s.user, ...partial } : null })),
-  clearAuth: () => set({ accessToken: null, user: null, isLoading: false, awaitingNetwork: false }),
+  clearAuth: () =>
+    set({
+      accessToken: null,
+      user: null,
+      isLoading: false,
+      awaitingNetwork: false,
+      reconnectStalled: false,
+    }),
   setLoading: (isLoading) => set({ isLoading }),
   setAwaitingNetwork: (awaitingNetwork) => set({ awaitingNetwork }),
+  setReconnectStalled: (reconnectStalled) => set({ reconnectStalled }),
 }));

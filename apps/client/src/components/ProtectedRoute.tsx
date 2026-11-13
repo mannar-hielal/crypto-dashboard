@@ -10,6 +10,8 @@
 
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
+import { guide } from '@/lib/guideAnchors';
+import { retryReconnect } from '@/lib/session';
 import { useAuthStore } from '@/store/authStore';
 
 /** Whether the browser reports a connection, kept up to date */
@@ -33,8 +35,31 @@ export function ProtectedRoute() {
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
   const awaitingNetwork = useAuthStore((s) => s.awaitingNetwork);
+  const reconnectStalled = useAuthStore((s) => s.reconnectStalled);
   const location = useLocation();
   const online = useOnline();
+
+  // Back online, but the safe retries ran out: the cookie may still be valid, so the learner gets
+  // Try again rather than a straight trip to /login (owner 2026-11-13). Honest about the outcome:
+  // if the last reply was lost, the tap ends that sign-in and they sign in again (review on #290)
+  if (reconnectStalled && !accessToken) {
+    return (
+      <div className="flex h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-muted-foreground max-w-xs text-sm" role="status">
+          We couldn’t reach the server to sign you back in. Try again; if it still doesn’t work,
+          you’ll be asked to sign in.
+        </p>
+        <button
+          type="button"
+          onClick={retryReconnect}
+          className="rounded-full bg-brand-purple-dark px-5 py-2 text-sm font-semibold text-white"
+          {...guide('session.retry')}
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   // Opened offline: the session waits for the connection instead of signing out
   if (isLoading || (awaitingNetwork && !accessToken)) {
