@@ -4620,10 +4620,20 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
     line, with the real close code.
   - Prettier 3.8 → 3.10 puts short union types on one line. 17 tracked files were reformatted, in a commit of their
     own.
-  - **Major versions held back** for the owner's decision: TypeScript 7, Vitest 5 (with coverage-v8), framer-motion
-    14, Prisma 8 (still a release candidate), jsdom 31, `@fastify/rate-limit` 11, `@fastify/swagger-ui` 6,
-    fastify-plugin 6, `@hookform/resolvers` 7, dotenv 18, ioredis 6, lint-staged 17, uuid 14, vite-plugin-pwa 2.
-    `@types/node` stays on 24, matching the Node 24 runtime.
+  - **Major versions** (owner: "do d", one commit per group, each run against the full gates):
+    - server: `@fastify/rate-limit` 11, `@fastify/swagger-ui` 6, fastify-plugin 6, dotenv 18, ioredis 6, uuid 14.
+      A boot on a spare port showed `/health`, Swagger UI, and the global (100/min) and per-route (20/min) limits
+      still applied. ioredis and uuid aren't imported anywhere: candidates for removal.
+    - test tooling: Vitest 5 with coverage-v8 5, jsdom 31, lint-staged 17. `@types/node` is 24 everywhere, matching
+      the Node 24 runtime (Vitest 5 wants 22+). jsdom 31 serializes a third as `0.333333fr`, like a browser, so the
+      layout test expects that.
+    - client: framer-motion 14, `@hookform/resolvers` 7, vite-plugin-pwa 2. The PWA build still precaches 84 files,
+      and a lesson's animations run with no console errors.
+    - **Held back:** TypeScript 7 (`typescript-eslint` supports up to TS 6.0) and Prisma 8 (still a release
+      candidate).
+    - Local note: a Stryker dry run fails on `bybitSpec.test.ts`, which imports `generated/` from outside the
+      sandbox. The failure is the same on Vitest 4, so it predates these updates. The weekly job's last two failures
+      were an audit finding at the time, not this.
 - **Local dev after switching branches:** a branch that adds migrations needs `npx prisma migrate deploy` (in
   `apps/server`) on the dev database. The owner's login answered 500 ("column `reuseCount` does not exist") until
   the three new migrations were applied. Production is unaffected: Fly runs the migrations before each deploy.
