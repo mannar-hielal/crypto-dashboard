@@ -25,7 +25,7 @@ export function CookieBanner() {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-4 left-4 right-4 z-[100] md:left-auto md:right-4 md:w-96"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-[100] md:left-auto md:right-4 md:w-96"
         >
           <div
             className="relative overflow-hidden rounded-xl border border-white/10 p-4 shadow-2xl backdrop-blur-md"

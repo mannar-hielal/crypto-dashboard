@@ -5,6 +5,7 @@
   position: relative;
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh; /* the visible height: iOS Safari's 100vh runs behind its toolbar */
   flex-direction: column;
   background: linear-gradient(
     180deg,

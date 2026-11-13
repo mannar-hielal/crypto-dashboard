@@ -100,8 +100,12 @@ export function startedNewSession(): void {
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
  * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
  */
-export async function restoreSession(): Promise<void> {
-  const { setAuth, setLoading } = useAuthStore.getState();
+/** Tries after the connection comes back, a second apart and doubling: the `online` event often
+ *  fires before the network really works (review on #283) */
+const RECONNECT_TRIES = 3;
+
+export async function restoreSession(afterReconnect = 0): Promise<void> {
+  const { setAuth, setLoading, setAwaitingNetwork } = useAuthStore.getState();
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -111,15 +115,99 @@ export async function restoreSession(): Promise<void> {
   try {
     const res = await authApi.refresh();
     if (!res) {
+      setAwaitingNetwork(false);
       setLoading(false);
       return;
     }
     const { user } = await authApi.me(res.accessToken);
     setAuth(res.accessToken, user);
-  } catch {
+  } catch (err) {
+    // The device is offline: the session may be fine, so don't treat the learner as signed out.
+    // Protected pages wait for the connection, and the restore runs again once the browser is
+    // back online (PWA readiness, 2026-11-13: the installed app opened offline used to land on
+    // /login and stay signed out). Loading ends, so public pages show a guest meanwhile (review on
+    // #283). Only when the browser says it's offline: an online browser that can't reach the API
+    // (an outage, DNS) would wait for an `online` event that never comes, so it signs out as before
+    if (isOffline()) {
+      setAwaitingNetwork(true);
+      setLoading(false);
+      retryWhenOnline();
+      return;
+    }
+    // Back online, and /health already answered, so the network works (`reconnect`): retry only a
+    // 429. /refresh rotates the token, and a token sent twice reads as theft and revokes every
+    // session (web.md). Only the rate limit answers before the handler, so only a 429 proves the
+    // token wasn't used. Anything else may have reached the handler (a connection can drop
+    // mid-reply), so it signs out as before: a lost session at worst, never every session revoked.
+    // A server-side grace window for a just-rotated token would let those retry too (reviews on
+    // #284, #285, #287)
+    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && isSafeToRetry(err)) {
+      setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
+      return;
+    }
     // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
+    setAwaitingNetwork(false);
     setLoading(false);
   }
+}
+
+/**
+ * A failed restore that can be tried again without risking a reused refresh token: only a 429,
+ * which the rate limit sends before the handler can rotate anything
+ */
+export function isSafeToRetry(err: unknown): boolean {
+  return (err as { status?: unknown } | null)?.status === 429;
+}
+
+/** Probes of /health after the `online` event, a second apart and doubling (1, 2, 4, 8, 16 s) */
+const PROBE_TRIES = 5;
+
+/**
+ * Back online: prove the network works with /health (idempotent, safe to repeat) before the one
+ * /refresh, which mustn't be sent twice. The `online` event often fires before the radio, DNS or a
+ * captive portal lets anything through, so a refresh sent then would fail for nothing (review on
+ * #287). If the API never answers, the learner is signed out as an outage would leave them
+ */
+async function reconnect(probe = 0): Promise<void> {
+  try {
+    await authApi.health();
+  } catch {
+    // Offline again: wait for the next `online` event
+    if (isOffline()) {
+      retryWhenOnline();
+      return;
+    }
+    if (probe + 1 < PROBE_TRIES) {
+      setTimeout(() => void reconnect(probe + 1), 1000 * 2 ** probe);
+      return;
+    }
+    const { setAwaitingNetwork, setLoading } = useAuthStore.getState();
+    setAwaitingNetwork(false);
+    setLoading(false);
+    return;
+  }
+  await restoreSession(1);
+}
+
+/** The browser reports no connection at all (not an API it can't reach) */
+export function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+}
+
+let waitingForOnline = false;
+
+/** One restore when the connection comes back, once /health shows the network works (one listener) */
+function retryWhenOnline(): void {
+  if (waitingForOnline) return;
+  waitingForOnline = true;
+  window.addEventListener(
+    'online',
+    () => {
+      waitingForOnline = false;
+      void reconnect();
+    },
+    { once: true }
+  );
 }
 
 /**

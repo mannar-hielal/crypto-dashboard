@@ -1,3 +1,4 @@
+import { isCacheableAsset } from './src/lib/swCachePolicy';
 import path from 'path';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -48,8 +49,9 @@ export default defineConfig(({ mode }) => ({
 
       // Web App Manifest — controls how the app appears when installed on mobile/desktop
       manifest: {
-        name: 'cryptopapertrade.com',
-        short_name: 'CP Trade',
+        name: 'Crypto Paper Trade',
+        // The home-screen label (owner 2026-11-13); about 12 characters show before it's cut
+        short_name: 'CryptoPaperTrade',
         description: 'Paper trade crypto with real-time Bybit price feeds',
         theme_color: '#080B14', // Browser chrome color on mobile
         background_color: '#080B14', // Splash screen background
@@ -115,11 +117,9 @@ export default defineConfig(({ mode }) => ({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            // Cache same-origin static assets only — explicitly excludes /api/* so auth/session
-            // responses are never served from the SW cache (always go to network for live data).
-            urlPattern: ({ url }) =>
-              (url.protocol === 'http:' || url.protocol === 'https:') &&
-              !url.pathname.startsWith('/api/'),
+            // Same-origin static assets only (src/lib/swCachePolicy.ts): never the API's origin,
+            // so auth/session responses and the /health probe always go to the network
+            urlPattern: isCacheableAsset,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'app-shell',

@@ -4584,6 +4584,41 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-13 — PWA readiness: the name, every browser's install steps, the notch and home bar, offline
+
+From the readiness review in `reports/pwa-readiness-2026-11-13.md` (owner's untracked folder). The owner chose the name
+and approved the review's top five to-dos.
+
+- **The name:** the installed app is **CryptoPaperTrade**, in the manifest's `short_name` and iOS's
+  `apple-mobile-web-app-title`. It was "CP Trade". The manifest's `name` is "Crypto Paper Trade". At 16 characters,
+  home screens may cut it to about 12 ("CryptoPaperT…"); the owner chose it knowing that.
+- **The install banner** (`PWAInstallBanner.tsx`, wording in `lib/pwaInstall.ts`):
+  - Chrome, Edge and Firefox on iOS are no longer sent to Safari. Since iOS 16.4 they add to the Home Screen from
+    their own Share menu, so they get the same three steps, with the Share button where that browser keeps it.
+  - Firefox on Android, which has no install prompt event, gets its menu steps.
+  - The banner names the app and sits clear of the home bar.
+- **The notch and the home bar** (`viewport-fit=cover` + `black-translucent` had nothing handling them):
+  - The dashboard root pads all four `env(safe-area-inset-*)`, and the auth and legal layouts pad top and bottom.
+  - The full-screen sheets on phones (lesson, path, article) pad top and bottom.
+  - The cookie banner, the install banner, the footer and the offline notice keep clear of the home bar.
+- **The visible height:** `h-screen` / `100vh` → `h-dvh` / `100dvh` (with a `100vh` fallback in CSS). iOS Safari's
+  `100vh` ran behind its toolbar, hiding the Buy / Sell bar.
+- **No zoom on inputs:** an iOS-only rule (`@supports (-webkit-touch-callout: none)`) sets inputs to at least 16 px.
+  Desktops and Android keep the dense panel text. `NumericInput` asks for the decimal keypad.
+- **Offline:**
+  - A launch with no connection keeps the session. When the browser reports no connection (`navigator.onLine` false),
+    `restoreSession` stays loading and retries once on `online`. An online browser that can't reach the API still
+    signs out as before, so an outage never leaves a spinner for ever (review on #283). The wait is its own flag (`authStore.awaitingNetwork`), not `isLoading`, so public pages (the `/chart` sign-in lock) show a guest meanwhile; after the `online` event the app probes `GET /health` (idempotent, `authApi.health`) until it answers, 1, 2, 4, 8 and 16 s apart, then sends `/refresh` exactly once; if the API never answers, it signs out as an outage would. Only a 429 is retried (up to three times): the rate limit answers before the handler, so only a 429 proves the refresh token wasn't rotated. Anything else, a failed fetch included (a connection can drop mid-reply), signs out as before rather than resend a possibly consumed token, which would read as reuse and revoke every session (reviews on #284, #285, #287). A server-side grace window for a just-rotated token would let those retry too: proposed to the owner. The iOS 16 px rule covers text-like inputs only. `ProtectedRoute` says
+    "You're offline. You'll be signed back in as soon as you're online." It used to land on /login, signed out.
+  - The offline notice stays bottom-centre (the 2026-09-29 gate) but is raised above the Buy / Sell bar and drawn
+    above the cookie banner.
+- **Tests:**
+  - `PWAInstallBanner.test`, and `session.test` (offline launch, a refusal still signs out);
+  - the production smoke's new `tests-prod/pwa.spec.ts`: installable manifest and icons, the service worker in
+    control, an offline reload. The service-worker test passed against today's live site; the name test passes once
+    this deploys.
+  - A device checklist is in `UI_REPRODUCTIONS.md` (PWA).
+
 ### 2026-11-12 — The zig-zag back, Duolingo-style: progress rings, a practice dumbbell, synced lesson progress
 
 The owner reversed the vertical rail (entry below) the same day: "the zig-zag broke the monotony". It's back, closer

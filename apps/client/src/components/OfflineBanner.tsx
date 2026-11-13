@@ -18,10 +18,11 @@ export function OfflineBanner() {
 
   return (
     // A bottom-centre toast (visual gate 2026-09-29): a bar across the top covered the top bar and its
-    // Sign out (row 19.15)
+    // Sign out (row 19.15). Above the cookie banner and the phone's Buy / Sell bar, and clear of the
+    // home bar in the installed iOS app (2026-11-13)
     <div
       role="alert"
-      className="fixed bottom-12 left-1/2 z-50 -translate-x-1/2 rounded-full bg-amber-600 px-4 py-1.5 text-center text-sm font-medium text-white shadow-lg"
+      className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-1/2 z-[110] -translate-x-1/2 rounded-full bg-amber-600 px-4 py-1.5 text-center text-sm font-medium text-white shadow-lg"
     >
       ⚠ Offline — data paused until you're back online
     </div>
