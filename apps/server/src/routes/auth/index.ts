@@ -4,7 +4,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
-import { REFRESH_REUSE_WINDOW_MS } from '../../services/RefreshTokens.js';
+import { REFRESH_REUSE_CAP, REFRESH_REUSE_WINDOW_MS } from '../../services/RefreshTokens.js';
 import { trackActivity } from '../../services/UserActivity.js';
 import { clientIp } from '../../lib/clientIp.js';
 
@@ -536,7 +536,17 @@ export async function authRoutes(app: FastifyInstance) {
   // ─── HELPER: issue tokens ────────────────────────────────────────────────────
   // Issues a short-lived access token and sets a rotating httpOnly refresh cookie.
   // Called from /register, /login, and /refresh — single source of truth.
-  async function issueTokens(reply: FastifyReply, userId: string, email: string): Promise<string> {
+  /**
+   * A new access token and refresh token (cookie). `familyId` ties the refresh token to its
+   * sign-in: a login starts a family, a rotation keeps it, a logout deletes it. Returns the access
+   * token and the new refresh token's hash
+   */
+  async function issueTokens(
+    reply: FastifyReply,
+    userId: string,
+    email: string,
+    familyId: string = randomUUID()
+  ): Promise<{ accessToken: string; tokenHash: string }> {
     // 🔐 Access token: 15 min, stored only in Zustand memory — never touches disk
     const accessToken = app.jwt.sign({ userId, email }, { expiresIn: ACCESS_TOKEN_EXPIRY });
 
@@ -545,7 +555,7 @@ export async function authRoutes(app: FastifyInstance) {
     const tokenHash = hashToken(rawRefresh);
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000);
 
-    await app.prisma.refreshToken.create({ data: { tokenHash, userId, expiresAt } });
+    await app.prisma.refreshToken.create({ data: { tokenHash, userId, expiresAt, familyId } });
 
     void reply.setCookie(REFRESH_TOKEN_COOKIE, rawRefresh, {
       ...COOKIE_BASE_OPTIONS,
@@ -553,7 +563,7 @@ export async function authRoutes(app: FastifyInstance) {
       maxAge: REFRESH_TOKEN_TTL_SECONDS,
     });
 
-    return accessToken;
+    return { accessToken, tokenHash };
   }
 
   // ─── REGISTER ───────────────────────────────────────────────────────────────
@@ -688,7 +698,7 @@ export async function authRoutes(app: FastifyInstance) {
           }
         }
 
-        const accessToken = await issueTokens(reply, user.id, user.email);
+        const { accessToken } = await issueTokens(reply, user.id, user.email);
 
         return reply.status(201).send({
           accessToken,
@@ -833,7 +843,7 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.status(401).send({ error: 'Invalid email or password' });
       }
 
-      const accessToken = await issueTokens(reply, user.id, user.email);
+      const { accessToken } = await issueTokens(reply, user.id, user.email);
       trackActivity(app, user.id);
 
       return reply.send({
@@ -892,6 +902,17 @@ export async function authRoutes(app: FastifyInstance) {
             void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
             return reply.status(401).send({ error: 'Invalid or expired refresh token' });
           }
+          // 🔐 Capped, atomically across API machines: at most REFRESH_REUSE_CAP re-issues per
+          //    rotated token (a lost reply, a second tab), never an unbounded stream of sessions
+          const { count: allowed } = await app.prisma.refreshToken.updateMany({
+            where: { tokenHash, reuseCount: { lt: REFRESH_REUSE_CAP } },
+            data: { reuseCount: { increment: 1 } },
+          });
+          if (allowed === 0) {
+            app.log.warn({ userId: stored.userId }, 'Refresh token reuse cap reached — refused');
+            void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+            return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+          }
           app.log.warn(
             { userId: stored.userId },
             'Refresh token reused inside the reuse window — issuing a fresh token (lost reply or second tab)'
@@ -917,10 +938,29 @@ export async function authRoutes(app: FastifyInstance) {
           return reply.status(401).send({ error: 'User no longer exists' });
         }
 
-        const accessToken = await issueTokens(reply, user.id, user.email);
-        trackActivity(app, user.id);
+        // The same sign-in's family (a token from before families starts one now)
+        const issued = await issueTokens(
+          reply,
+          user.id,
+          user.email,
+          stored.familyId ?? randomUUID()
+        );
 
-        return reply.send({ accessToken });
+        // 🔐 A logout, password change or deletion may have landed while this request was
+        //    rotating (they don't take the refresh lock): if the token we rotated is gone, so is
+        //    the session, and the token just issued goes too (review on #288)
+        const stillThere = await app.prisma.refreshToken.findUnique({
+          where: { tokenHash },
+          select: { id: true },
+        });
+        if (!stillThere) {
+          await app.prisma.refreshToken.deleteMany({ where: { tokenHash: issued.tokenHash } });
+          void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+          return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+        }
+
+        trackActivity(app, user.id);
+        return reply.send({ accessToken: issued.accessToken });
       });
     }
   );
@@ -935,16 +975,15 @@ export async function authRoutes(app: FastifyInstance) {
       const tokenHash = hashToken(rawToken);
       const stored = await app.prisma.refreshToken.findUnique({
         where: { tokenHash },
-        select: { userId: true },
+        select: { familyId: true },
       });
       // 🔐 deleteMany is idempotent — no P2025 if already expired/deleted
       await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
-      // 🔐 And the user's rotated tokens still inside the reuse window: one rotated just before
-      //    this logout would otherwise still be served a fresh session (review on #288)
-      if (stored) {
-        await app.prisma.refreshToken.deleteMany({
-          where: { userId: stored.userId, rotatedAt: { not: null } },
-        });
+      // 🔐 And the rest of this sign-in's family: a token rotated just before this logout can't
+      //    be served a fresh session. Only this session's: other devices stay signed in (reviews
+      //    on #288)
+      if (stored?.familyId) {
+        await app.prisma.refreshToken.deleteMany({ where: { familyId: stored.familyId } });
       }
     }
 

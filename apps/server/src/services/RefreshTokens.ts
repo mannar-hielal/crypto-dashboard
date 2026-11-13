@@ -12,6 +12,9 @@ type Prisma = FastifyInstance['prisma'];
 /** How long a rotated refresh token is still served again (a lost reply, a second tab) */
 export const REFRESH_REUSE_WINDOW_MS = 30_000;
 
+/** How many times one rotated token may be served again inside the window (a lost reply, a tab) */
+export const REFRESH_REUSE_CAP = 2;
+
 export async function purgeStaleRefreshTokens(
   prisma: Prisma,
   now: Date = new Date()

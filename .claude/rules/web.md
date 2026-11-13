@@ -106,8 +106,12 @@ supply-chain policy, secrets management, container hardening — see [`security.
   The rotated row is kept for the **reuse window**, `REFRESH_REUSE_WINDOW_MS` (30 s, owner
   2026-11-13). The same token coming back inside the window (a reply lost in transit, a second tab)
   gets a fresh token; the one already issued stays valid. After the window it gets a plain 401 for
-  that browser and nothing else is revoked. A logout also deletes the user's rotated rows, so no token
-  outlives it, and the daily job purges rows rotated past the window or expired (`services/RefreshTokens.ts`). Mass revocation is
+  that browser and nothing else is revoked. Each rotated token is served again at most
+  `REFRESH_REUSE_CAP` (2) times, counted atomically in the database. Every token carries its
+  sign-in's `familyId` (set at login, kept on rotation): a logout deletes that family, so no token of
+  the session outlives it and other devices stay signed in. A refresh re-checks, after minting, that
+  the token it rotated still exists, and takes the new one back if a logout landed meanwhile. The
+  daily job purges rows rotated past the window or expired (`services/RefreshTokens.ts`). Mass revocation is
   for the explicit flows (password change or reset, email change, delete), not for reuse: the client
   retries a lost reply, so a reuse is far likelier to be a flaky phone than a thief.
 

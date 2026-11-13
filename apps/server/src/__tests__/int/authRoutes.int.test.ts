@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 /**
  * /api/auth on a real Postgres (T2i, test plan roadmap P1): refresh-token rotation and logout under
  * concurrent requests, where the unit tests can only mock what `deleteMany` returns.
@@ -120,7 +121,39 @@ describe('/api/auth/logout on Postgres — after a rotation (review on #288)', (
     expect(res.statusCode).toBe(204);
     // Inside the reuse window, but logged out: no fresh session from the old token
     expect((await refresh(token)).statusCode).toBe(401);
-    expect(await db.refreshToken.count({ where: { userId } })).toBe(0);
+    expect(await db.refreshToken.count({ where: { userId } })).toBe(0); // the family is gone
+  });
+});
+
+describe('/api/auth/refresh reuse cap and logout scope on Postgres (review on #288)', () => {
+  it('serves a rotated token again at most twice, then refuses it', async () => {
+    const { token } = await register();
+    expect((await refresh(token)).statusCode).toBe(200); // the rotation
+    expect((await refresh(token)).statusCode).toBe(200); // reuse 1: a lost reply
+    expect((await refresh(token)).statusCode).toBe(200); // reuse 2: a second tab
+    expect((await refresh(token)).statusCode).toBe(401); // the cap
+  });
+
+  it('signs out this sign-in only: another device of the same user stays signed in', async () => {
+    const { userId, token } = await register();
+    // A second device: its own sign-in, so its own family (a token as the server stores it)
+    const other = 'f0'.repeat(32);
+    await db.refreshToken.create({
+      data: {
+        tokenHash: createHash('sha256').update(other).digest('hex'),
+        userId,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        familyId: 'other-device',
+      },
+    });
+    const rotated = refreshCookie(await refresh(token));
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie: `refresh_token=${rotated}` },
+    });
+    expect((await refresh(token)).statusCode).toBe(401);
+    expect((await refresh(other)).statusCode).toBe(200);
   });
 });
 

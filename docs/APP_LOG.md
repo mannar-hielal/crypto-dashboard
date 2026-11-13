@@ -4599,9 +4599,16 @@ signed that device out. The owner approved a server fix:
     a warning. The one already issued stays valid: replies can land in either order, so deleting it
     could leave a browser holding a dead cookie.
   - After the window: a 401 for that browser, nothing else revoked. Rotated rows past the window are
-    cleaned up per user and by the daily job (`purgeStaleRefreshTokens`, expired rows too). A logout
-    also deletes the user's rotated rows, so a token rotated just before it can't revive the
-    session (review on #288).
+    cleaned up per user and by the daily job (`purgeStaleRefreshTokens`, expired rows too).
+  - **Reviews on #288:**
+    - Reuse is capped at 2 per rotated token (`reuseCount`, an atomic increment, so every machine
+      agrees).
+    - Every token carries its sign-in's `familyId` (migration `20261113140000_refresh_token_family`).
+      A logout deletes the family, so a token rotated just before it can't revive the session, and
+      the user's other devices stay signed in.
+    - A refresh that finds its rotated token gone after minting (a logout landed meanwhile) takes
+      the new token back and answers 401.
+    - A token that vanished between the read and the stamp fails closed.
   - It lives in the database, so every Fly machine agrees. The per-process 5 s
     `recentlyRotatedTokens` map is gone.
 - **Client** (`lib/session.ts`): after the `/health` probe, the refresh retries three times (1, 2,

@@ -111,8 +111,15 @@ model RefreshToken {
   // 🔐 Set when /refresh rotates this token (kept a short while, not deleted): a reply lost in
   // transit can be recovered within the reuse window, then the row is cleaned up (2026-11-13)
   rotatedAt DateTime?
+  // 🔐 How often this rotated token was served again inside the window (capped: review on #288)
+  reuseCount Int     @default(0)
+  // 🔐 One sign-in's chain of tokens: set at login, inherited on every rotation. A logout deletes
+  // the family, so no token of that session outlives it, and other devices are left alone. Null
+  // for tokens issued before 2026-11-13 (a logout then deletes just that token)
+  familyId  String?
 
   @@index([userId])
+  @@index([familyId])
 }
 
 // 🔐 One-time use. Expires in 1 hour. Marked usedAt after consumption.

@@ -48,7 +48,9 @@ vi.mock('../plugins/prisma.js', () => {
       refreshToken: {
         // Default: always succeeds — individual tests can override with mockResolvedValueOnce
         create: vi.fn().mockResolvedValue({}),
-        findUnique: vi.fn(),
+        // Tests set each lookup with mockResolvedValueOnce; past those, the row is still there (the
+        // refresh's check after minting, review on #288)
+        findUnique: vi.fn().mockResolvedValue({ id: 'rt-present' }),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
         // The rotation stamp (`rotatedAt`): one request wins it (count 1)
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
@@ -598,6 +600,73 @@ describe('POST /api/auth/refresh', () => {
     });
   });
 
+  it('should refuse a third reuse of the same rotated token: the cap (review on #288)', async () => {
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    createMock.mockClear();
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        id: 'rt-capped',
+        tokenHash: 'hashed-capped',
+        userId: 'user-1',
+        expiresAt: FUTURE,
+        rotatedAt: new Date(Date.now() - 3_000),
+        familyId: 'family-1',
+      })
+      .mockResolvedValueOnce({ rotatedAt: new Date(Date.now() - 3_000) });
+    // The stamp misses (already rotated); the cap's increment finds reuseCount at its limit
+    updateManyMock.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 0 });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'9'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(createMock).not.toHaveBeenCalled();
+    expect(updateManyMock).toHaveBeenLastCalledWith({
+      where: { tokenHash: expect.any(String), reuseCount: { lt: 2 } },
+      data: { reuseCount: { increment: 1 } },
+    });
+  });
+
+  it('should take back the token it just issued when a logout landed meanwhile (review on #288)', async () => {
+    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    deleteManyMock.mockClear();
+    createMock.mockClear();
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        id: 'rt-race',
+        tokenHash: 'hashed-race',
+        userId: 'user-1',
+        expiresAt: FUTURE,
+        rotatedAt: null,
+        familyId: 'family-1',
+      })
+      // After minting: the rotated row is gone (the logout deleted the family)
+      .mockResolvedValueOnce(null);
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'8'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(createMock).toHaveBeenCalledTimes(1);
+    const issued = (
+      createMock.mock.calls[0]![0] as { data: { tokenHash: string; familyId: string } }
+    ).data;
+    expect(issued.familyId).toBe('family-1'); // the rotation kept the sign-in's family
+    expect(deleteManyMock).toHaveBeenCalledWith({ where: { tokenHash: issued.tokenHash } });
+  });
+
   it('should fail closed when the token vanished between the read and the stamp (a logout in between, review on #288)', async () => {
     const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
     const findUniqueMock = app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>;
@@ -743,11 +812,11 @@ describe('POST /api/auth/logout', () => {
     expect(res.statusCode).toBe(204);
   });
 
-  it('should also delete the user’s rotated tokens, so none outlives the logout (review on #288)', async () => {
+  it('should delete this sign-in’s whole token family, so none outlives the logout, and nothing else (reviews on #288)', async () => {
     const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
     deleteManyMock.mockClear();
     (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      userId: 'user-1',
+      familyId: 'family-1',
     });
     const res = await app.inject({
       method: 'POST',
@@ -755,9 +824,11 @@ describe('POST /api/auth/logout', () => {
       headers: { cookie: `refresh_token=${RAW_TOKEN}` },
     });
     expect(res.statusCode).toBe(204);
-    expect(deleteManyMock).toHaveBeenCalledWith({
-      where: { userId: 'user-1', rotatedAt: { not: null } },
-    });
+    expect(deleteManyMock).toHaveBeenCalledWith({ where: { familyId: 'family-1' } });
+    // Never the user's other devices
+    expect(deleteManyMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ userId: expect.anything() }) })
+    );
   });
 });
 
