@@ -1,3 +1,4 @@
+import { isCacheableAsset } from './src/lib/swCachePolicy';
 import path from 'path';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -116,11 +117,9 @@ export default defineConfig(({ mode }) => ({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            // Cache same-origin static assets only — explicitly excludes /api/* so auth/session
-            // responses are never served from the SW cache (always go to network for live data).
-            urlPattern: ({ url }) =>
-              (url.protocol === 'http:' || url.protocol === 'https:') &&
-              !url.pathname.startsWith('/api/'),
+            // Same-origin static assets only (src/lib/swCachePolicy.ts): never the API's origin,
+            // so auth/session responses and the /health probe always go to the network
+            urlPattern: isCacheableAsset,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'app-shell',
