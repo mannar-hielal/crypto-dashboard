@@ -370,7 +370,7 @@ describe('LessonSheet', () => {
     at(1, 'lesson-01');
     renderSheet();
     expect(document.querySelector('[data-guide="lesson.meet"]')!.textContent).toContain(
-      'Hi, I’m Berwyn.'
+      'I’m Berwyn.'
     );
     expect(nextBtn()!.dataset.ready).toBe('false');
     fireEvent.keyDown(sheet()!, { key: 'Enter' });
@@ -422,7 +422,7 @@ describe('LessonSheet', () => {
     desktop = false;
     at(6, 'lesson-01');
     renderSheet();
-    expect(sheet()!.textContent).toContain('Now be Nora');
+    expect(sheet()!.textContent).toContain('be Nora');
     expect(screen.queryByText('Show me')).toBeNull();
     fireEvent.change(document.querySelector('[data-guide="article.nora.amount"]')!, {
       target: { value: '30' },

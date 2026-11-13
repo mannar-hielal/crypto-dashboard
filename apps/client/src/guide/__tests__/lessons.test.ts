@@ -333,7 +333,8 @@ describe('lessons', () => {
     // No other dollar figure anywhere in the lesson: no price claims to judge in hindsight
     expect(JSON.stringify({ ...l, cards: rest })).not.toMatch(/\$\d/);
     // The guides introduce themselves, then say what the lesson answers
-    expect(l.cards[1].meet).toMatchObject({ tick: 'Hi, I’m Pulin.', tock: 'Hi, I’m Berwyn.' });
+    expect(l.cards[1].meet?.tick).toMatch(/^Hi, I’m Pulin\./);
+    expect(l.cards[1].meet?.tock).toMatch(/I’m Berwyn\./);
     expect(l.cards[1].meet?.lead).toMatch(/next 5 minutes/);
     expect(l.cards[1].meet?.list).toHaveLength(3);
   });
@@ -383,8 +384,11 @@ describe('lessons', () => {
   it('should show what goes wrong with someone in charge before Lesson 1 names Satoshi', () => {
     const trust = getLesson('lesson-01').cards[2];
     expect(trust.title).toBe('Money runs on trust');
-    expect(trust.text).toMatch(/print more|change the rules/);
-    expect(trust.text).not.toMatch(/satoshi/i);
+    // The friendlier voice (owner 2026-11-13): a question, then the guides' double act says it
+    const said = [trust.text, ...(trust.lines ?? []).map((l) => l.text)].join(' ');
+    expect(said).toMatch(/print more|change the rules/);
+    expect(said).not.toMatch(/satoshi/i);
+    expect(trust.lines?.map((l) => l.speaker)).toEqual(['tick', 'tock', 'tick', 'tock']);
     // Tock says it straight, looking at the learner
     expect(trust.presenter).toMatchObject({ who: 'tock', mood: 'frank' });
   });

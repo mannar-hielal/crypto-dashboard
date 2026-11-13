@@ -4616,6 +4616,56 @@ signed that device out. The owner approved a server fix:
   - `session.test`: retries.
   - Test plan row 19.11 updated.
 
+### 2026-11-13 — A friendlier voice: the tone guide, and Lesson 1 as the pilot
+
+The owner liked Head First's voice: friendly, funny, never a lecture. A technical-writer review of the book is in
+`guided-learning-topics/09-fun-friendly-tone-plan.md` (git-excluded). The owner approved all six recommendations and
+asked for the humour to be **a notch more noticeable** than the plan's "light".
+
+**The tone guide** (the brief for every new card, peek, article, Why and tour bubble):
+
+- **Who talks:** two friends who learned this and remember being confused. Pulin (green) is curious and asks the
+  "dumb" question out loud; Berwyn (red) is calm, dry and patient. They like each other. Red is never the villain.
+- **Do:**
+  - Talk to "you", with contractions and short sentences (one idea, 15 words or fewer where you can).
+  - Ask before you tell: a question every card or two.
+  - Introduce a term after the idea ("That list has a name: a ledger").
+  - Admit when something is strange. Make it concrete (Nora, Leo, $100, a date).
+  - Humour: a noticeable smile on most cards (a callback, a playful verb, a dry one-liner, a double act). The fact
+    comes first, and the joke decorates it.
+  - Celebrate understanding.
+- **Don't:**
+  - Open with a definition, stack terms, or use the conditional perfect ("Had…, you'd have…").
+  - Use idioms a translation app would mangle.
+  - Use hype or profit framing, even ironically.
+  - Joke about the learner, about losses or money won, or in a warning or a recap.
+  - Use more than one exclamation mark a card.
+- **Rules that don't change:** ≤80 words and ≤2 terms a card, no HYPE words, the honest answer praised, a worried
+  face only for a warning.
+- **Not borrowed:** the book's text, pictures and characters (techniques only); streaks, guilt, fake urgency, rewards
+  tied to trading results.
+
+**The pilot: Lesson 1, copy only** (no new components, the same screens, so its funnel steps stay comparable):
+
+- **"Money runs on trust"** opens on a question ("why is a banknote worth anything? It's paper"). Pulin and Berwyn
+  then act it out in four lines: the first double act. Its term and the art stay.
+- **Meet your guides:** "I ask the questions you're too polite to ask." / "I answer them. Usually."
+- **The notebook and Nora cards:**
+  - shorter sentences;
+  - "That list has a name: a ledger. Remember it. It's coming back.";
+  - Nora is "Lovely person. But picture a bad day…";
+  - "Sofia never agreed. The ink doesn't care."
+- **The moment's and questions' Whys,** for example "One pen, one boss. Even a lovely, honest Nora can have a bad day,
+  spill her coffee or get leaned on." Also the try-it intro and a teaser ending on a spoiler.
+- **Articles:** the first lines of _Money 101_ and _SunCoin_.
+- **Measuring:**
+  - **Baseline:** the admin funnel for `lesson-01` (per-screen reach, start → finish) and its average rating, over the
+    4 weeks to the release.
+  - **After:** the same, 4 weeks after.
+  - **Bar:** the finish rate and rating don't fall, and the journal lines show no new confusion.
+  - **Then:** Phase 2 (the hand font, "Ask anything", chart notes, "two sides" chats), each in its own PR through the
+    visual gate, then Lessons 2 and 3.
+
 ### 2026-11-13 — PWA readiness: the name, every browser's install steps, the notch and home bar, offline
 
 From the readiness review in `reports/pwa-readiness-2026-11-13.md` (owner's untracked folder). The owner chose the name
