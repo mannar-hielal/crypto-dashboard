@@ -7,7 +7,12 @@
  * the in-memory token fresh using the httpOnly refresh cookie.
  */
 
-import { authApi, SESSION_RECONNECT_TRIES } from '@crypto-dashboard/sdk';
+import {
+  authApi,
+  SDK_REQUEST_TIMEOUT_MS,
+  SESSION_RECONNECT_TRIES,
+  SESSION_REUSE_WINDOW_MS,
+} from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 
 let inflight: Promise<string | null> | null = null;
@@ -98,14 +103,34 @@ export function startedNewSession(): void {
 /** Tries after reconnecting, a second apart and doubling (shared with the server's reuse cap) */
 const RECONNECT_TRIES = SESSION_RECONNECT_TRIES;
 
+/** Kept clear of the window's edge: clocks and proxies add a little */
+const RETRY_MARGIN_MS = 2_000;
+
+/**
+ * When the reconnect retries must stop: a retry has to reach the server inside the reuse window,
+ * which starts no earlier than the first attempt, so it must start a whole request timeout before
+ * the window ends (review on #289). Set when the first attempt after reconnecting starts
+ */
+let retryDeadline = 0;
+
+/** Whether a retry starting after `delayMs` still reaches the server inside the reuse window */
+export function retryFitsWindow(now: number, delayMs: number, deadline: number): boolean {
+  return now + delayMs <= deadline;
+}
+
+/** The deadline for a reconnect that starts its first attempt at `startedAt` */
+export function reconnectDeadline(startedAt: number): number {
+  return startedAt + SESSION_REUSE_WINDOW_MS - SDK_REQUEST_TIMEOUT_MS - RETRY_MARGIN_MS;
+}
+
 /**
  * Boot-time session restore: trade the httpOnly refresh cookie for an access token, then load
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
  * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
  */
-
 export async function restoreSession(afterReconnect = 0): Promise<void> {
   const { setAuth, setLoading, setAwaitingNetwork } = useAuthStore.getState();
+  if (afterReconnect === 1) retryDeadline = reconnectDeadline(Date.now());
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -135,12 +160,18 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       return;
     }
     // Back online, and /health already answered, so the network works (`reconnect`): retry a few
-    // times, 1, 2 and 4 s apart, on anything but a refusal (401 / 403). Safe since the server's
-    // reuse window (owner 2026-11-13): /refresh keeps a rotated token for 30 s and serves it again,
-    // so a retry after a lost reply gets a fresh token, never a revocation. Past the window an old
-    // token only gets a 401 for this browser
-    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && isSafeToRetry(err)) {
-      setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
+    // times, 1, 2 and 4 s apart, on anything but a refusal (401 / 403). Safe inside the server's
+    // reuse window (owner 2026-11-13): /refresh serves a just-rotated token again for 30 s, so a
+    // retry after a lost reply gets a fresh token. Past the window it would read as theft and end
+    // the sign-in, so a retry is only sent if it reaches the server in time (review on #289)
+    const delay = 1000 * 2 ** (afterReconnect - 1);
+    if (
+      afterReconnect > 0 &&
+      afterReconnect <= RECONNECT_TRIES &&
+      isSafeToRetry(err) &&
+      retryFitsWindow(Date.now(), delay, retryDeadline)
+    ) {
+      setTimeout(() => void restoreSession(afterReconnect + 1), delay);
       return;
     }
     // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.

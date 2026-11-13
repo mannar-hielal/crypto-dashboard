@@ -4615,6 +4615,7 @@ signed that device out. The owner approved a server fix:
     - The family column has a database default (`gen_random_uuid()`), so the previous build, still
       serving while the migration runs, never fails a login.
     - The trade-off is recorded in `security.md`.
+    - The client's reconnect retries stop before one could reach the server after the window (window − one request timeout − 2 s from the first try), so an honest late retry never reads as theft. The window and the request timeout are SDK constants (`SESSION_REUSE_WINDOW_MS`, `SDK_REQUEST_TIMEOUT_MS`), and a server test keeps `REFRESH_REUSE_WINDOW_MS` equal (review on #289).
   - It lives in the database, so every Fly machine agrees. The per-process 5 s
     `recentlyRotatedTokens` map is gone.
 - **Client** (`lib/session.ts`): after the `/health` probe, the refresh retries three times (1, 2,

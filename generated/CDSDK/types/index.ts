@@ -86,6 +86,16 @@ export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
  */
 export const SESSION_RECONNECT_TRIES = 3;
 
+/**
+ * The server's reuse window for a just-rotated refresh token (apps/server `REFRESH_REUSE_WINDOW_MS`,
+ * held equal by a server test). The client's reconnect retries must all reach the server inside it,
+ * or a late retry reads as theft and ends the sign-in (review on #289)
+ */
+export const SESSION_REUSE_WINDOW_MS = 30_000;
+
+/** Every SDK request gives up after this long (`AbortSignal.timeout`) */
+export const SDK_REQUEST_TIMEOUT_MS = 10_000;
+
 /** GET /health: the API is up (used as a reachability probe before a session refresh) */
 export interface HealthResponse {
   status: string;

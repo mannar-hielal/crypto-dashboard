@@ -7,6 +7,8 @@ import { authApi } from '@crypto-dashboard/sdk';
 import {
   isOffline,
   isSafeToRetry,
+  reconnectDeadline,
+  retryFitsWindow,
   msUntilExpiry,
   refreshAccessToken,
   restoreSession,
@@ -193,6 +195,52 @@ describe('msUntilExpiry()', () => {
         awaitingNetwork: false,
       });
     } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should stop retrying before a retry could reach the server after the reuse window (review on #289)', () => {
+    // Window 30 s, request timeout 10 s, margin 2 s: a retry must start within 18 s of the first try
+    const start = 1_000_000;
+    const deadline = reconnectDeadline(start);
+    expect(deadline - start).toBe(18_000);
+    expect(retryFitsWindow(start + 10_000, 1000, deadline)).toBe(true);
+    expect(retryFitsWindow(start + 17_500, 1000, deadline)).toBe(false);
+  });
+
+  it('should send no retry that lands past the window when every try runs to its timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({
+        accessToken: null,
+        user: null,
+        isLoading: false,
+        awaitingNetwork: true,
+      });
+      // Each refresh hangs to the SDK's 10 s timeout, then fails
+      refresh.mockImplementation(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new DOMException('signal timed out', 'TimeoutError')), 10_000)
+          )
+      );
+      const started = Date.now();
+      const starts: number[] = [];
+      refresh.mockImplementation(() => {
+        starts.push(Date.now() - started);
+        return new Promise((_, reject) =>
+          setTimeout(() => reject(new DOMException('signal timed out', 'TimeoutError')), 10_000)
+        );
+      });
+      void restoreSession(1);
+      await vi.advanceTimersByTimeAsync(60_000);
+      // Tries start at 0 and 11 s; the next (23 s) would reach the server too late, so it isn't sent
+      expect(starts).toEqual([0, 11_000]);
+      // Every request that was sent reached the server inside the 30 s window
+      for (const t of starts) expect(t + 10_000).toBeLessThanOrEqual(30_000);
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+    } finally {
+      refresh.mockReset();
       vi.useRealTimers();
     }
   });

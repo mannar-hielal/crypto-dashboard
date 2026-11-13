@@ -6,6 +6,7 @@ import type {
   MessageResponse,
   UpdateUserResponse,
 } from '../types/index.js';
+import { SDK_REQUEST_TIMEOUT_MS } from '../types/index.js';
 
 const BASE_URL =
   (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? 'http://localhost:3001';
@@ -20,8 +21,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     // Always enforce a 10s ceiling, but don't discard a caller-supplied signal
     // (e.g. an unmount AbortController) — abort on whichever fires first.
     signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
-      : AbortSignal.timeout(10_000),
+      ? AbortSignal.any([signal, AbortSignal.timeout(SDK_REQUEST_TIMEOUT_MS)])
+      : AbortSignal.timeout(SDK_REQUEST_TIMEOUT_MS),
     headers: {
       // Only set Content-Type when there's a body — Fastify rejects Content-Type: application/json with an empty body
       ...(init?.body !== undefined && init.body !== null && { 'Content-Type': 'application/json' }),
