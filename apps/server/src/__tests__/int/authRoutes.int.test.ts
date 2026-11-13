@@ -3,6 +3,7 @@
  * concurrent requests, where the unit tests can only mock what `deleteMany` returns.
  */
 
+import { purgeStaleRefreshTokens } from '../../services/RefreshTokens.js';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
@@ -103,6 +104,46 @@ describe('/api/auth/refresh on Postgres — two tabs at once, and a lost reply',
     const rotated = await db.refreshToken.findMany({ where: { userId, rotatedAt: { not: null } } });
     expect(rotated).toHaveLength(1);
     expect(Date.now() - rotated[0]!.rotatedAt!.getTime()).toBeLessThan(30_000);
+  });
+});
+
+describe('/api/auth/logout on Postgres — after a rotation (review on #288)', () => {
+  it('ends the session for good: the token rotated just before the logout is refused too', async () => {
+    const { userId, token } = await register();
+    const rotated = refreshCookie(await refresh(token));
+    expect(rotated).toBeDefined();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie: `refresh_token=${rotated}` },
+    });
+    expect(res.statusCode).toBe(204);
+    // Inside the reuse window, but logged out: no fresh session from the old token
+    expect((await refresh(token)).statusCode).toBe(401);
+    expect(await db.refreshToken.count({ where: { userId } })).toBe(0);
+  });
+});
+
+describe('purgeStaleRefreshTokens on Postgres', () => {
+  it('removes rows rotated past the window and expired ones, and keeps live and just-rotated ones', async () => {
+    const { userId, token } = await register();
+    const first = refreshCookie(await refresh(token)); // the registration token, rotated now
+    expect(first).toBeDefined();
+    await db.refreshToken.create({
+      data: {
+        tokenHash: 'stale-rotated',
+        userId,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        rotatedAt: new Date(Date.now() - 60_000),
+      },
+    });
+    await db.refreshToken.create({
+      data: { tokenHash: 'expired', userId, expiresAt: new Date(Date.now() - 1000) },
+    });
+    expect(await purgeStaleRefreshTokens(db)).toBe(2);
+    const left = await db.refreshToken.findMany({ where: { userId } });
+    expect(left.map((r) => r.tokenHash).sort()).not.toContain('stale-rotated');
+    expect(left).toHaveLength(2); // the live token and the one rotated a moment ago
   });
 });
 

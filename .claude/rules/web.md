@@ -106,7 +106,8 @@ supply-chain policy, secrets management, container hardening — see [`security.
   The rotated row is kept for the **reuse window**, `REFRESH_REUSE_WINDOW_MS` (30 s, owner
   2026-11-13). The same token coming back inside the window (a reply lost in transit, a second tab)
   gets a fresh token; the one already issued stays valid. After the window it gets a plain 401 for
-  that browser and nothing else is revoked; rows past the window are cleaned up. Mass revocation is
+  that browser and nothing else is revoked. A logout also deletes the user's rotated rows, so no token
+  outlives it, and the daily job purges rows rotated past the window or expired (`services/RefreshTokens.ts`). Mass revocation is
   for the explicit flows (password change or reset, email change, delete), not for reuse: the client
   retries a lost reply, so a reuse is far likelier to be a flaky phone than a thief.
 

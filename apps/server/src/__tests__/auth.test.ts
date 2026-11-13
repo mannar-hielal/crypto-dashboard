@@ -705,6 +705,23 @@ describe('POST /api/auth/logout', () => {
     const res = await app.inject({ method: 'POST', url: '/api/auth/logout' });
     expect(res.statusCode).toBe(204);
   });
+
+  it('should also delete the user’s rotated tokens, so none outlives the logout (review on #288)', async () => {
+    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    deleteManyMock.mockClear();
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      userId: 'user-1',
+    });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie: `refresh_token=${RAW_TOKEN}` },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(deleteManyMock).toHaveBeenCalledWith({
+      where: { userId: 'user-1', rotatedAt: { not: null } },
+    });
+  });
 });
 
 // ─── RESEND VERIFICATION ────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
+import { REFRESH_REUSE_WINDOW_MS } from '../../services/RefreshTokens.js';
 import { trackActivity } from '../../services/UserActivity.js';
 import { clientIp } from '../../lib/clientIp.js';
 
@@ -13,13 +14,13 @@ import { clientIp } from '../../lib/clientIp.js';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
-// 🔐 The reuse window (owner 2026-11-13): /refresh no longer deletes the token it rotates; it
-// stamps `rotatedAt` and keeps the row this long. The same token coming back inside the window
-// is a reply lost in transit (a phone reconnecting) or two tabs refreshing at once, so it gets a
-// fresh token too, and the one already issued stays valid (it may be the one the browser keeps:
-// replies can land in either order). After the window the row is gone and the token is refused
-// with a plain 401 for this browser. In the database, so every API machine agrees.
-export const REFRESH_REUSE_WINDOW_MS = 30_000;
+// 🔐 The reuse window (owner 2026-11-13, `services/RefreshTokens.ts`): /refresh no longer deletes
+// the token it rotates; it stamps `rotatedAt` and keeps the row this long. The same token coming
+// back inside the window is a reply lost in transit (a phone reconnecting) or two tabs refreshing
+// at once, so it gets a fresh token too, and the one already issued stays valid (it may be the one
+// the browser keeps: replies can land in either order). After the window the token is refused with
+// a plain 401 for this browser. In the database, so every API machine agrees. A logout removes the
+// user's rotated rows too, so no token outlives it.
 
 // 🔐 Serializes concurrent /refresh requests for the same token within this
 // process. The rotation's updateMany is atomic at the DB layer (only one request can ever
@@ -925,8 +926,19 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (rawToken) {
       const tokenHash = hashToken(rawToken);
+      const stored = await app.prisma.refreshToken.findUnique({
+        where: { tokenHash },
+        select: { userId: true },
+      });
       // 🔐 deleteMany is idempotent — no P2025 if already expired/deleted
       await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
+      // 🔐 And the user's rotated tokens still inside the reuse window: one rotated just before
+      //    this logout would otherwise still be served a fresh session (review on #288)
+      if (stored) {
+        await app.prisma.refreshToken.deleteMany({
+          where: { userId: stored.userId, rotatedAt: { not: null } },
+        });
+      }
     }
 
     void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);

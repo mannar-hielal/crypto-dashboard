@@ -4599,7 +4599,9 @@ signed that device out. The owner approved a server fix:
     a warning. The one already issued stays valid: replies can land in either order, so deleting it
     could leave a browser holding a dead cookie.
   - After the window: a 401 for that browser, nothing else revoked. Rotated rows past the window are
-    cleaned up per user.
+    cleaned up per user and by the daily job (`purgeStaleRefreshTokens`, expired rows too). A logout
+    also deletes the user's rotated rows, so a token rotated just before it can't revive the
+    session (review on #288).
   - It lives in the database, so every Fly machine agrees. The per-process 5 s
     `recentlyRotatedTokens` map is gone.
 - **Client** (`lib/session.ts`): after the `/health` probe, the refresh retries three times (1, 2,
