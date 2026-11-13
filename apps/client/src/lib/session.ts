@@ -116,12 +116,13 @@ export async function restoreSession(): Promise<void> {
     }
     const { user } = await authApi.me(res.accessToken);
     setAuth(res.accessToken, user);
-  } catch (err) {
-    // Offline, or the server out of reach (fetch rejects with a TypeError): the session may be
-    // fine, so don't treat the learner as signed out. Stay loading and try again once the
-    // browser is back online (PWA readiness, 2026-11-13: the installed app opened offline used to
-    // land on /login and stay signed out)
-    if (isNetworkError(err)) {
+  } catch {
+    // The device is offline: the session may be fine, so don't treat the learner as signed out.
+    // Stay loading and try again once the browser is back online (PWA readiness, 2026-11-13: the
+    // installed app opened offline used to land on /login and stay signed out). Only when the
+    // browser says it's offline: an online browser that can't reach the API (an outage, DNS) would
+    // wait for an `online` event that never comes (review on #283), so it signs out as before
+    if (isOffline()) {
       retryWhenOnline();
       return;
     }
@@ -130,9 +131,9 @@ export async function restoreSession(): Promise<void> {
   }
 }
 
-/** A request that never reached the server, as opposed to one the server refused */
-export function isNetworkError(err: unknown): boolean {
-  return err instanceof TypeError || (typeof navigator !== 'undefined' && !navigator.onLine);
+/** The browser reports no connection at all (not an API it can't reach) */
+export function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
 }
 
 let waitingForOnline = false;

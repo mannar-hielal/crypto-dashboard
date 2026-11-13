@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { authApi } from '@crypto-dashboard/sdk';
 import {
-  isNetworkError,
+  isOffline,
   msUntilExpiry,
   refreshAccessToken,
   restoreSession,
@@ -108,15 +108,25 @@ describe('msUntilExpiry()', () => {
   it('should keep the session waiting when opened offline, and restore it once back online', async () => {
     // PWA readiness (2026-11-13): an offline launch used to land on /login, signed out
     useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     await restoreSession();
     expect(useAuthStore.getState().isLoading).toBe(true); // not "signed out"
+    onLine.mockReturnValue(true);
 
     refresh.mockResolvedValueOnce({ accessToken: 'new' } as never);
     me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
     window.dispatchEvent(new Event('online'));
     await vi.waitFor(() => expect(useAuthStore.getState().accessToken).toBe('new'));
     expect(refresh).toHaveBeenCalledTimes(2);
+    onLine.mockRestore();
+  });
+
+  it('should not hang when online but the API is unreachable: it signs out as before (review on #283)', async () => {
+    useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+    refresh.mockRejectedValueOnce(new TypeError('Failed to fetch')); // an outage, DNS, a restart
+    await restoreSession();
+    expect(useAuthStore.getState().isLoading).toBe(false); // to /login, never a spinner for ever
   });
 
   it('should still sign out when the server refuses the session (not a network failure)', async () => {
@@ -124,8 +134,7 @@ describe('msUntilExpiry()', () => {
     refresh.mockRejectedValueOnce(new Error('Unauthorized'));
     await restoreSession();
     expect(useAuthStore.getState().isLoading).toBe(false);
-    expect(isNetworkError(new Error('Unauthorized'))).toBe(false);
-    expect(isNetworkError(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isOffline()).toBe(false); // jsdom is online
   });
 
   it('reads exp from the token payload', () => {

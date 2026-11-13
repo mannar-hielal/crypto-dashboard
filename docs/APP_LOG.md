@@ -4606,8 +4606,9 @@ and approved the review's top five to-dos.
 - **No zoom on inputs:** an iOS-only rule (`@supports (-webkit-touch-callout: none)`) sets inputs to at least 16 px.
   Desktops and Android keep the dense panel text. `NumericInput` asks for the decimal keypad.
 - **Offline:**
-  - A launch with no connection keeps the session. `restoreSession` tells a network failure (a `TypeError`, or
-    `navigator.onLine` false) from a refusal, stays loading, and retries once on `online`. `ProtectedRoute` says
+  - A launch with no connection keeps the session. When the browser reports no connection (`navigator.onLine` false),
+    `restoreSession` stays loading and retries once on `online`. An online browser that can't reach the API still
+    signs out as before, so an outage never leaves a spinner for ever (review on #283). `ProtectedRoute` says
     "You're offline. You'll be signed back in as soon as you're online." It used to land on /login, signed out.
   - The offline notice stays bottom-centre (the 2026-09-29 gate) but is raised above the Buy / Sell bar and drawn
     above the cookie banner.
