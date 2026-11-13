@@ -304,7 +304,6 @@ export const GUIDE_ANCHORS = [
   /** A card's Read more (key: the article) */
   'lesson.more',
   /** The Why's first words: the option the learner picked */
-  'lesson.picked',
   /** The close's line on what the next lesson brings */
   'lesson.teaser',
   'lesson.highlight',
