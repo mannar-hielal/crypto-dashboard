@@ -156,7 +156,9 @@ describe('Section 10.1 — layout switching', () => {
     // [layout, panes, grid columns, grid rows] — rows 10.1.2–10.1.5
     ['2h', 2, '0.5fr 0.5fr', '1fr'],
     ['2v', 2, '1fr', '0.5fr 0.5fr'],
-    ['3h', 3, `${1 / 3}fr ${1 / 3}fr ${1 / 3}fr`, '1fr'],
+    // A third, as the style serializes it: 6 decimals, like a browser (jsdom ≥ 31; older jsdom
+    // kept every digit of 1/3)
+    ['3h', 3, '0.333333fr 0.333333fr 0.333333fr', '1fr'],
     ['4', 4, '0.5fr 0.5fr', '0.5fr 0.5fr'],
   ] as const)(
     'should show %s as %i panes in its grid, each with a PaneHeader',
