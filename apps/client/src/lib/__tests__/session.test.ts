@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { authApi } from '@crypto-dashboard/sdk';
 import {
   isOffline,
-  isRefusal,
+  isSafeToRetry,
   msUntilExpiry,
   refreshAccessToken,
   restoreSession,
@@ -151,43 +151,35 @@ describe('msUntilExpiry()', () => {
     }
   });
 
-  it('should retry after reconnecting on a timeout, a 5xx or a proxy’s HTML page too (review on #284)', async () => {
-    vi.useFakeTimers();
-    try {
+  it('should not retry what may have rotated the refresh token: a timeout, a 5xx, an HTML page (review on #284)', async () => {
+    // A retry would send a consumed token, and the server would revoke every session
+    for (const err of [
+      new DOMException('signal timed out', 'TimeoutError'),
+      Object.assign(new Error('Bad Gateway'), { status: 502 }),
+      new SyntaxError('Unexpected token < in JSON'),
+    ]) {
+      refresh.mockReset();
       useAuthStore.setState({
         accessToken: null,
         user: null,
         isLoading: false,
         awaitingNetwork: true,
       });
-      refresh
-        .mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'))
-        .mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }))
-        .mockRejectedValueOnce(new SyntaxError('Unexpected token < in JSON'))
-        .mockResolvedValueOnce({ accessToken: 'back' } as never);
-      me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+      refresh.mockRejectedValueOnce(err);
       await restoreSession(1);
-      await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
-      expect(refresh).toHaveBeenCalledTimes(4);
-      expect(useAuthStore.getState()).toMatchObject({
-        accessToken: 'back',
-        awaitingNetwork: false,
-      });
-    } finally {
-      vi.useRealTimers();
+      expect(refresh).toHaveBeenCalledTimes(1);
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
     }
   });
 
-  it('should tell a refusal (401 / 403) from everything else', () => {
-    expect(isRefusal(Object.assign(new Error('x'), { status: 401 }))).toBe(true);
-    expect(isRefusal(Object.assign(new Error('x'), { status: 403 }))).toBe(true);
-    expect(isRefusal(Object.assign(new Error('x'), { status: 503 }))).toBe(false);
-    // Temporary: rate limited, a proxy's timeout (review on #285)
-    expect(isRefusal(Object.assign(new Error('x'), { status: 429 }))).toBe(false);
-    expect(isRefusal(Object.assign(new Error('x'), { status: 408 }))).toBe(false);
-    expect(isRefusal(new TypeError('Failed to fetch'))).toBe(false);
-    expect(isRefusal(new DOMException('t', 'TimeoutError'))).toBe(false);
-    expect(isRefusal(null)).toBe(false);
+  it('should retry only what never reached the handler: a failed fetch, a 429', () => {
+    expect(isSafeToRetry(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 429 }))).toBe(true);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 401 }))).toBe(false);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 502 }))).toBe(false);
+    expect(isSafeToRetry(new DOMException('t', 'TimeoutError'))).toBe(false);
+    expect(isSafeToRetry(new SyntaxError('x'))).toBe(false);
+    expect(isSafeToRetry(null)).toBe(false);
   });
 
   it('should give up after its tries, and sign out at once when the server refuses', async () => {

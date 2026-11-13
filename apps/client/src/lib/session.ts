@@ -134,11 +134,13 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       retryWhenOnline();
       return;
     }
-    // Just back online and the request didn't get a real answer: the network may not be ready yet.
-    // Only a refusal (401 / 403, which the SDK carries as `status`) signs out at once; a failed
-    // fetch, a timeout (`TimeoutError`), a 429, a 5xx or a proxy's HTML error page retries
+    // Just back online and the network may not be ready yet: retry, but only when the server can't
+    // have used the refresh token. /refresh rotates it, and a token sent twice reads as theft and
+    // revokes every session (web.md). So: a failed fetch (the request never left the device) or a
+    // 429 (the rate limit answers before the handler) retries; a timeout, a 5xx or an HTML error
+    // page may have rotated it, so those sign out like before and the learner signs in again
     // (reviews on #284 and #285)
-    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && !isRefusal(err)) {
+    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && isSafeToRetry(err)) {
       setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
       return;
     }
@@ -149,12 +151,13 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
 }
 
 /**
- * The server answered and said no: the session is really over. Only 401 and 403 mean that; a 429
- * (rate limited) or a 408 (a proxy's timeout) passes, so it retries (review on #285)
+ * A failed restore that can be tried again without risking a reused refresh token: the request
+ * never reached the server (`TypeError: Failed to fetch`), or the rate limit turned it away before
+ * the handler ran (429)
  */
-export function isRefusal(err: unknown): boolean {
-  const status = (err as { status?: unknown } | null)?.status;
-  return status === 401 || status === 403;
+export function isSafeToRetry(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  return (err as { status?: unknown } | null)?.status === 429;
 }
 
 /** The browser reports no connection at all (not an API it can't reach) */

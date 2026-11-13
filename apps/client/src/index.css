@@ -50,7 +50,18 @@
    2026-11-13). Only iOS supports -webkit-touch-callout, so desktops and Android keep the dense 13–14 px
    panel text; !important beats the order form's inline font sizes */
 @supports (-webkit-touch-callout: none) {
-  input,
+  /* Text-like fields only: checkboxes, radios, sliders and buttons keep their size (review on #284) */
+  input:not(
+    [type='checkbox'],
+    [type='radio'],
+    [type='range'],
+    [type='button'],
+    [type='submit'],
+    [type='reset'],
+    [type='color'],
+    [type='file'],
+    [type='image']
+  ),
   select,
   textarea {
     font-size: max(16px, 1em) !important;

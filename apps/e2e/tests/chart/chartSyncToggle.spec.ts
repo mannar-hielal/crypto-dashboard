@@ -34,10 +34,12 @@ test('[10.4.7] switching time sync on snaps the other pane to the active pane’
   const box = (await at(page, 'pane.chart', '0').boundingBox())!;
   await at(page, 'pane.chart', '0').click();
   await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
-  await page.mouse.wheel(0, -800);
-  await expect
-    .poll(async () => JSON.stringify(await range(0)))
-    .not.toBe(JSON.stringify(await range(1)));
+  // A slow runner can drop the first wheel while the chart settles: zoom again until it takes
+  // (the release runs flaked here, 2026-11-12/13)
+  await expect(async () => {
+    await page.mouse.wheel(0, -400);
+    expect(JSON.stringify(await range(0))).not.toBe(JSON.stringify(await range(1)));
+  }).toPass({ timeout: 20_000 });
 
   // Sync on: pane 1 snaps to pane 0 at once
   await at(page, 'layout.picker').click();
