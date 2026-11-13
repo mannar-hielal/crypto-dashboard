@@ -17,6 +17,7 @@
   width: 100%;
   max-width: 400px;
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.1); /* border.input */
   border-radius: 8px;

@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { authApi } from '@crypto-dashboard/sdk';
 import {
+  isOffline,
   msUntilExpiry,
   refreshAccessToken,
   restoreSession,
@@ -104,6 +105,88 @@ describe('restoreSession()', () => {
 });
 
 describe('msUntilExpiry()', () => {
+  it('should keep the session waiting when opened offline, and restore it once back online', async () => {
+    // PWA readiness (2026-11-13): an offline launch used to land on /login, signed out
+    useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    await restoreSession();
+    // Not signed out: protected pages wait; public pages see a guest (review on #283)
+    expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: true });
+    onLine.mockReturnValue(true);
+
+    refresh.mockResolvedValueOnce({ accessToken: 'new' } as never);
+    me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+    window.dispatchEvent(new Event('online'));
+    await vi.waitFor(() => expect(useAuthStore.getState().accessToken).toBe('new'));
+    expect(refresh).toHaveBeenCalledTimes(2);
+    onLine.mockRestore();
+  });
+
+  it('should retry a few times when the network isn’t ready yet just after coming back online (review on #283)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      onLine.mockReturnValue(true);
+      // The `online` event came early: the first two tries still fail, the third gets through
+      refresh
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce({ accessToken: 'back' } as never);
+      me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(useAuthStore.getState().awaitingNetwork).toBe(true); // still waiting, not signed out
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(useAuthStore.getState().accessToken).toBe('back');
+      expect(refresh).toHaveBeenCalledTimes(4);
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should give up after its tries, and sign out at once when the server refuses', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      refresh.mockRejectedValue(new TypeError('Failed to fetch'));
+      useAuthStore.setState({ awaitingNetwork: true });
+      await restoreSession(1);
+      await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
+      expect(refresh).toHaveBeenCalledTimes(4);
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+
+      refresh.mockReset();
+      useAuthStore.setState({ isLoading: true });
+      refresh.mockRejectedValueOnce(Object.assign(new Error('Invalid'), { status: 401 }));
+      await restoreSession(1);
+      expect(useAuthStore.getState().isLoading).toBe(false);
+      expect(refresh).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should not hang when online but the API is unreachable: it signs out as before (review on #283)', async () => {
+    useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+    refresh.mockRejectedValueOnce(new TypeError('Failed to fetch')); // an outage, DNS, a restart
+    await restoreSession();
+    expect(useAuthStore.getState().isLoading).toBe(false); // to /login, never a spinner for ever
+  });
+
+  it('should still sign out when the server refuses the session (not a network failure)', async () => {
+    useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+    refresh.mockRejectedValueOnce(new Error('Unauthorized'));
+    await restoreSession();
+    expect(useAuthStore.getState().isLoading).toBe(false);
+    expect(isOffline()).toBe(false); // jsdom is online
+  });
+
   it('reads exp from the token payload', () => {
     const exp = Math.floor(Date.now() / 1000) + 600;
     const token = `x.${btoa(JSON.stringify({ exp })).replace(/=+$/, '')}.y`;

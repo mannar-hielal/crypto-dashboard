@@ -64,6 +64,8 @@ export function NumericInput({
         id={id}
         name={name}
         type="number"
+        // The decimal keypad on phones (iOS shows a full keyboard for a bare number input)
+        inputMode="decimal"
         min={min}
         max={max}
         step={step}

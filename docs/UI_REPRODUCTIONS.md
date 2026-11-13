@@ -347,6 +347,25 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 **Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
 
+### PWA — install, the notch and home bar, offline (no Part B rows yet)
+
+**Automated:** `apps/e2e/tests-prod/pwa.spec.ts` runs in the production smoke (the only build with the service worker):
+the manifest is installable under **CryptoPaperTrade** (standalone, 192 and 512 px icons, the iOS title tag), the
+service worker takes control, and an offline reload still opens the app with the offline notice. Unit tests:
+`PWAInstallBanner.test` (the steps for each browser), `session.test` (an offline launch keeps the session).
+
+**Manual check (M), on real devices** after a release touching `vite.config.ts` (the manifest), `index.html`,
+`PWAInstallBanner.tsx`, `lib/session.ts` or the layouts' safe-area padding:
+
+| Device and browser                 | Expect                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| iPhone, Safari                     | The banner's steps (Share at the bottom). Add to Home Screen offers **CryptoPaperTrade** with the CPT icon. The installed app opens full screen; the top bar sits below the notch / Dynamic Island, the Buy / Sell bar above the home bar; focusing Amount doesn't zoom the page; the decimal keypad shows. |
+| iPhone, Chrome / Firefox / Edge    | The same steps, with the Share button where that browser keeps it (Chrome: right of the address bar; Firefox: ☰ menu). No "open in Safari".                                                                                                                                                                |
+| iPad, Safari                       | Share in the top-right toolbar; landscape keeps the side insets.                                                                                                                                                                                                                                            |
+| Android, Chrome / Samsung Internet | **Install** opens the native dialog; the app lands in the drawer as CryptoPaperTrade; the icon isn't cropped.                                                                                                                                                                                               |
+| Android, Firefox                   | The banner's menu steps (⋮ → Install).                                                                                                                                                                                                                                                                      |
+| Any, the installed app offline     | Signed in, turn on airplane mode, reopen: a spinner with "You're offline. You'll be signed back in as soon as you're online." (never /login); back online → the dashboard. The offline notice sits above the Buy / Sell bar and the cookie banner.                                                          |
+
 ## Stage 1 — Spot basics
 
 ### 14.6 — Spot (14.6.1–14.6.10)

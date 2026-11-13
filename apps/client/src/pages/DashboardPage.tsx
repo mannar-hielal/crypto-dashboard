@@ -381,7 +381,12 @@ export function DashboardInner() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: bg.page }}>
+    // The visible height (dvh), clear of the notch, the home bar and, in landscape, the sides: the
+    // installed iOS app draws under a translucent status bar (owner 2026-11-13, PWA readiness)
+    <div
+      className="flex h-dvh w-full flex-col overflow-hidden pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
+      style={{ background: bg.page }}
+    >
       <TopBar />
       <GuideOverlay />
       <LessonSheet />

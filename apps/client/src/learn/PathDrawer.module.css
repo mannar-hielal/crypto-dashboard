@@ -35,6 +35,9 @@
   .drawer {
     max-width: none;
     border-left: 0;
+    /* Full screen: clear of the notch and the home bar (installed iOS app) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 

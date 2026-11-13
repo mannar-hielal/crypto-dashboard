@@ -5,7 +5,7 @@ import { bg, color, fontSize } from '@/lib/tokens';
 export function Footer() {
   return (
     <footer
-      className="relative px-4 py-6 text-center"
+      className="relative px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"
       style={{
         background: bg.panel,
         zIndex: 1,

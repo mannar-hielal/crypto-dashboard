@@ -100,8 +100,12 @@ export function startedNewSession(): void {
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
  * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
  */
-export async function restoreSession(): Promise<void> {
-  const { setAuth, setLoading } = useAuthStore.getState();
+/** Tries after the connection comes back, a second apart and doubling: the `online` event often
+ *  fires before the network really works (review on #283) */
+const RECONNECT_TRIES = 3;
+
+export async function restoreSession(afterReconnect = 0): Promise<void> {
+  const { setAuth, setLoading, setAwaitingNetwork } = useAuthStore.getState();
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -111,15 +115,56 @@ export async function restoreSession(): Promise<void> {
   try {
     const res = await authApi.refresh();
     if (!res) {
+      setAwaitingNetwork(false);
       setLoading(false);
       return;
     }
     const { user } = await authApi.me(res.accessToken);
     setAuth(res.accessToken, user);
-  } catch {
+  } catch (err) {
+    // The device is offline: the session may be fine, so don't treat the learner as signed out.
+    // Protected pages wait for the connection, and the restore runs again once the browser is
+    // back online (PWA readiness, 2026-11-13: the installed app opened offline used to land on
+    // /login and stay signed out). Loading ends, so public pages show a guest meanwhile (review on
+    // #283). Only when the browser says it's offline: an online browser that can't reach the API
+    // (an outage, DNS) would wait for an `online` event that never comes, so it signs out as before
+    if (isOffline()) {
+      setAwaitingNetwork(true);
+      setLoading(false);
+      retryWhenOnline();
+      return;
+    }
+    // Just back online and the request never got through: the network may not be ready yet.
+    // A refusal from the server (an HTTP error) signs out at once; only a failed fetch retries
+    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && err instanceof TypeError) {
+      setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
+      return;
+    }
     // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
+    setAwaitingNetwork(false);
     setLoading(false);
   }
+}
+
+/** The browser reports no connection at all (not an API it can't reach) */
+export function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+}
+
+let waitingForOnline = false;
+
+/** One retry of the restore when the connection comes back (one listener, however many tries) */
+function retryWhenOnline(): void {
+  if (waitingForOnline) return;
+  waitingForOnline = true;
+  window.addEventListener(
+    'online',
+    () => {
+      waitingForOnline = false;
+      void restoreSession(1);
+    },
+    { once: true }
+  );
 }
 
 /**
