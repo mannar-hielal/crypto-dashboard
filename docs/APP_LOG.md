@@ -865,18 +865,40 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
   risk tiers, Closed P&L. Decisions, reference values, known gaps and open items →
   [Bybit Parity (BP-0 … BP-5) — reference](#-bybit-parity-bp-0--bp-5--reference).
 
+### ✅ Completed (added 2026-11-13 — Guided learning, PWA, sessions)
+
+Details in the dated entries further down (2026-10-22 → 2026-11-13).
+
+- **Guided learning path**: three lessons, presented by the guides Pulin and Berwyn. Lesson 1 is "What is the
+  problem?", Lesson 2 is "Who sets the price?" and Lesson 3 is about price swings and checking before you trust. A
+  zig-zag path, Duolingo-style, has progress rings synced to the server (`LearningProgress.step`), a dumbbell icon
+  for the lessons done on the chart, a checkpoint, and knowledge-base articles with interactive widgets.
+- **The friendlier voice, Phase 0–1**: the tone guide is agreed, and Lesson 1 is rewritten as the pilot (#286).
+  Phases 2–4 are planned below.
+- **PWA readiness**: the home-screen name "CryptoPaperTrade", install steps for every browser, safe-area insets,
+  offline handling with a `/health` probe, and a same-origin-only service-worker cache (#284).
+- **Session resilience**: a 30 s reuse window for rotated refresh tokens, token families, a reuse cap of 4, the
+  theft signal after the window, and the client's reconnect deadline with Try again (#288, #290).
+- **Test automation (`TRADING_TEST_PLAN.md` A8) P1–P5**: Postgres integration tests and coverage floors (P1),
+  Playwright on the fake feed (P2), testnet parity plus feed parity and spec drift (P3), fast-check and Stryker
+  (P4), the prod smoke and log alerts (P5).
+
 ### 📋 Planned (Next)
 
+- **Friendlier voice, Phases 2–4** (plan in the git-excluded `guided-learning-topics/09-fun-friendly-tone-plan.md`;
+  tone guide in the 2026-11-13 entry):
+  - Phase 2: new devices, one PR each, each through the visual Q&A gate: a "Careful" callout and "Ask anything",
+    the Patrick Hand font, chart notes, "Two sides" chats, a "Who does what?" match.
+  - Phase 3: Lessons 2–3, then articles and tours.
+  - Phase 4: Lessons 4+ written in the voice from the start.
+  - Before any of that, measure the pilot: Lesson 1's funnel and rating, 4 weeks before vs 4 weeks after its release.
+- **Lesson 4** of the guided path.
+- **Hardening** (`docs/HARDENING_PLAN.md`): H0 done; H1–H11 deferred by the owner (2026-09-30).
 - **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
 - **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
 - **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
-- **Test automation** (`docs/TRADING_TEST_PLAN.md` A8), one small PR per step:
-  - P1: CI Postgres, migration and repository tests, coverage thresholds.
-  - P2: Playwright on a replayed Bybit feed.
-  - P3: nightly testnet parity ✅ (2026-09-28); still to do: spec-drift and feed parity jobs.
-  - P4: fast-check and Stryker ✅ (M7, 2026-09-30).
-  - P5: prod smoke and log alerts.
-  - P6: moved to `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30).
+- **Test automation** (`docs/TRADING_TEST_PLAN.md` A8): P1–P5 done (see Completed above); P6 moved to
+  `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30).
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -4583,6 +4605,166 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **The buttons:** every close stacks the way on first, as a full-width pill, with "Finish for now" under it.
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
+
+### 2026-11-13 — Housekeeping: the TradingView mirror deleted, dependencies updated
+
+- **`tv-website-full/` deleted** (owner). It was a 15 MB local copy of tradingview.com, git-ignored and used by no
+  code. The sale-readiness report had flagged it as an IP risk. Its entries are gone from `.gitignore`,
+  `.prettierignore` and `eslint.config.js`. `*.har` stays ignored: the 27 MB `www.tradingview.com.har` recording is
+  still on the owner's disk, and the same report suggests deleting it too.
+- **Dependencies:** every package moved to its newest minor or patch version (`pnpm update -r`), skipping releases
+  younger than 7 days (`--config.minimum-release-age=10080`, a guard against a freshly compromised version). The
+  audit shows no high or critical findings.
+  - `ws` 8.21 → 8.22 now completes the close itself right after a protocol error. `wsLogging.test` no longer
+    assumes the close waits for a terminate. Its real check is unchanged: exactly one error line and one close
+    line, with the real close code.
+  - Prettier 3.8 → 3.10 puts short union types on one line. 17 tracked files were reformatted, in a commit of their
+    own.
+  - **Major versions** (owner: "do d", one commit per group, each run against the full gates):
+    - server: `@fastify/rate-limit` 11, `@fastify/swagger-ui` 6, fastify-plugin 6, dotenv 18, ioredis 6, uuid 14.
+      A boot on a spare port showed `/health`, Swagger UI, and the global (100/min) and per-route (20/min) limits
+      still applied. ioredis and uuid aren't imported anywhere: candidates for removal.
+    - test tooling: Vitest 5 with coverage-v8 5, jsdom 31, lint-staged 17. `@types/node` is 24 everywhere, matching
+      the Node 24 runtime (Vitest 5 wants 22+). jsdom 31 serializes a third as `0.333333fr`, like a browser, so the
+      layout test expects that.
+    - client: framer-motion 14, `@hookform/resolvers` 7, vite-plugin-pwa 2. The PWA build still precaches 84 files,
+      and a lesson's animations run with no console errors.
+    - **Held back:** TypeScript 7 (`typescript-eslint` supports up to TS 6.0) and Prisma 8 (still a release
+      candidate).
+    - Local note: a Stryker dry run fails on `bybitSpec.test.ts`, which imports `generated/` from outside the
+      sandbox. The failure is the same on Vitest 4, so it predates these updates. The weekly job's last two failures
+      were an audit finding at the time, not this.
+- **Local dev after switching branches:** a branch that adds migrations needs `npx prisma migrate deploy` (in
+  `apps/server`) on the dev database. The owner's login answered 500 ("column `reuseCount` does not exist") until
+  the three new migrations were applied. Production is unaffected: Fly runs the migrations before each deploy.
+
+### 2026-11-13 — Meet your guides: the hellos wrap instead of being cropped
+
+Owner's report: Lesson 1's longer pilot hellos ("Hi, I’m Pulin. I ask the questions you’re too polite to ask.")
+didn't fit side by side, so the clipped stage cut them off. The bubbles no longer use `nowrap`: each guide takes
+half the stage (at most 220 px), and the bubble wraps, centred, with `text-wrap: balance` (`GuidesMeet.module.css`).
+Checked at 390 and 1280 px.
+
+### 2026-11-13 — Questions say Right or Not quite, without repeating the pick; full-width buttons everywhere
+
+Owner's request:
+
+- **No "You picked …" line.** The line under a question's answer (added 2026-11-12 from the Finelo review) is gone.
+  The Why opens on **Right.** or **Not quite.**, since the chosen option is already marked. This covers every
+  lesson's questions, the "Your call" moment and the checkpoint, which share `QuestionView`. The `lesson.picked`
+  anchor and the `.picked` style are removed.
+- **Full-width main button on every screen.** The "Try it" screens (Lesson 1's notebook, Lesson 2's Sneaky Sam) had an
+  inline Continue in the body. The real-chart "Try it" (Lesson 3) had an inline Show me. Both now use the footer's
+  full-width button, with Skip this part and ← Back under it, like every card. The checkpoint's Next / See the
+  result and Back to the path are full width too, with Try again under it.
+
+### 2026-11-13 — A reuse that fails before its session is minted gives its cap slot back (reviews on #289, #293)
+
+The reuse cap (4) was counted before the fresh session was minted. A transient DB error after the count answered
+500, and the client's retry of that 500 found one slot fewer: on a flaky link the last retry could get a 401 and sign
+the learner out. Now a reuse whose **user lookup** fails gives its slot back (`reuseCount` decrement, never below 0),
+and the error still answers the generic 500. The lookup is the one step known to come before any token exists. From
+the token insert on, the slot stays spent: a failure there (even a connection reset after the insert committed) may
+have left a live token, and refunding it would let a run of failures mint more than the cap (reviews on #293). A first
+rotation never touches the count. Best effort: if the refund itself fails it's logged and the cap stays on the strict
+side. Tests in `auth.test.ts`: "should give the cap slot back…", "should keep the cap slot spent when a reuse fails
+after its session was minted", "…when the token insert fails", "should not touch the reuse count…".
+
+### 2026-11-13 — A lost session-refresh reply recovers: the server's reuse window
+
+Reviews of the PWA work kept trading two risks: retrying a session refresh after reconnecting
+might resend a rotated token, and not retrying signed learners out on a flaky link. Reading the
+route settled it. A resent consumed token was never "revoke every session" (that only hit a narrow
+two-request race); it was a plain 401 for that browser. But a reply lost after rotation still
+signed that device out. The owner approved a server fix:
+
+- **Server** (`routes/auth/index.ts`): `/refresh` no longer deletes the token it rotates.
+  - An atomic `updateMany` stamps `RefreshToken.rotatedAt` (new column, migration
+    `20261113120000_refresh_token_rotated_at`), and one request wins it.
+  - The same token inside the 30 s window (`REFRESH_REUSE_WINDOW_MS`) gets a fresh token, logged as
+    a warning. The one already issued stays valid: replies can land in either order, so deleting it
+    could leave a browser holding a dead cookie.
+  - After the window: a replay reads as theft (see the reviews below). Rotated rows are kept until they
+    expire (the theft signal needs them; review on #288), and the daily job purges expired rows.
+  - **Reviews on #288:**
+    - Reuse is capped at 4 per rotated token (the client's 3 reconnect retries and a tab; a test keeps it above `SESSION_RECONNECT_TRIES`) (`reuseCount`, an atomic increment, so every machine
+      agrees).
+    - Every token carries its sign-in's `familyId` (migration `20261113140000_refresh_token_family`; tokens issued before it were backfilled as their own family, and the column is required, so no token is ever without one).
+      A logout deletes the family, so a token rotated just before it can't revive the session, and
+      the user's other devices stay signed in.
+    - A refresh that finds its rotated token gone after minting (a logout landed meanwhile) takes
+      the new token back and answers 401.
+    - A token that vanished between the read and the stamp fails closed.
+    - Refusing an already-rotated token leaves the cookie alone (a faster tab may hold a newer one),
+      except for the theft signal: a replay after the window deletes that sign-in's family and logs
+      a warning.
+    - The family column has a database default (`gen_random_uuid()`), so the previous build, still
+      serving while the migration runs, never fails a login.
+    - The trade-off is recorded in `security.md`.
+    - The client's reconnect retries stop at a deadline (window − one request timeout − 2 s, counted from the reconnect cycle's first refresh), so an honest late retry rarely reads as theft. The count starts at that first refresh, which the server may have rotated before its reply was lost, not when the connection came back: slow `/health` probes (up to ~31 s) can't push a retry past the window (review on #289). The window starts at whichever refresh rotated, possibly a later one, so the cycle keeps its first and latest send times. Once even the latest send is past the window, the count starts afresh: a rotation by any of them would already be refused (a 401, never retried), and otherwise retries are safe, so a 502 after a long offline gap is still retried. Send times from a second offline wait are merged, not dropped (reviews on #296). A learner's Try again starts a new cycle. Running out of retries, or the API not answering, doesn't send the learner straight to /login: protected pages offer **Try again**. It's honest about the outcome: if the original reply was lost, a tap after the window reads as theft and ends that sign-in (this device only), so the screen says they may be asked to sign in (owner 2026-11-13, reviews on #289/#290). The window and the request timeout are SDK constants (`SESSION_REUSE_WINDOW_MS`, `SDK_REQUEST_TIMEOUT_MS`), and a server test keeps `REFRESH_REUSE_WINDOW_MS` equal (review on #289).
+  - It lives in the database, so every Fly machine agrees. The per-process 5 s
+    `recentlyRotatedTokens` map is gone.
+- **Client** (`lib/session.ts`): after the `/health` probe, the refresh retries three times (1, 2,
+  4 s) on anything but a 401 or 403. That's inside the window, so a lost reply now recovers.
+- **Rules:** `web.md`'s reuse rule now describes the reuse window. Mass revocation stays for the
+  explicit flows: password change or reset, email change, deletion.
+- **Tests:**
+  - `auth.test`: reuse inside the window gets a fresh token; after it, a 401; concurrent requests
+    are serialized and both served.
+  - `authRoutes.int.test` [19.11] on Postgres: two tabs both served, both sessions work, the old
+    token refused past the window, cleanup.
+  - `session.test`: retries.
+  - Test plan row 19.11 updated.
+
+### 2026-11-13 — A friendlier voice: the tone guide, and Lesson 1 as the pilot
+
+The owner liked Head First's voice: friendly, funny, never a lecture. A technical-writer review of the book is in
+`guided-learning-topics/09-fun-friendly-tone-plan.md` (git-excluded). The owner approved all six recommendations and
+asked for the humour to be **a notch more noticeable** than the plan's "light".
+
+**The tone guide** (the brief for every new card, peek, article, Why and tour bubble):
+
+- **Who talks:** two friends who learned this and remember being confused. Pulin (green) is curious and asks the
+  "dumb" question out loud; Berwyn (red) is calm, dry and patient. They like each other. Red is never the villain.
+- **Do:**
+  - Talk to "you", with contractions and short sentences (one idea, 15 words or fewer where you can).
+  - Ask before you tell: a question every card or two.
+  - Introduce a term after the idea ("That list has a name: a ledger").
+  - Admit when something is strange. Make it concrete (Nora, Leo, $100, a date).
+  - Humour: a noticeable smile on most cards (a callback, a playful verb, a dry one-liner, a double act). The fact
+    comes first, and the joke decorates it.
+  - Celebrate understanding.
+- **Don't:**
+  - Open with a definition, stack terms, or use the conditional perfect ("Had…, you'd have…").
+  - Use idioms a translation app would mangle.
+  - Use hype or profit framing, even ironically.
+  - Joke about the learner, about losses or money won, or in a warning or a recap.
+  - Use more than one exclamation mark a card.
+- **Rules that don't change:** ≤80 words and ≤2 terms a card, no HYPE words, the honest answer praised, a worried
+  face only for a warning.
+- **Not borrowed:** the book's text, pictures and characters (techniques only); streaks, guilt, fake urgency, rewards
+  tied to trading results.
+
+**The pilot: Lesson 1, copy only** (no new components, the same screens, so its funnel steps stay comparable):
+
+- **"Money runs on trust"** opens on a question ("why is a banknote worth anything? It's paper"). Pulin and Berwyn
+  then act it out in four lines: the first double act. Its term and the art stay.
+- **Meet your guides:** "I ask the questions you're too polite to ask." / "I answer them. Usually."
+- **The notebook and Nora cards:**
+  - shorter sentences;
+  - "That list has a name: a ledger. Remember it. It's coming back.";
+  - Nora is "Lovely person. But picture a bad day…";
+  - "Sofia never agreed. The ink doesn't care."
+- **The moment's and questions' Whys,** for example "One pen, one boss. Even a lovely, honest Nora can have a bad day,
+  spill her coffee or get leaned on." Also the try-it intro and a teaser ending on a spoiler.
+- **Articles:** the first lines of _Money 101_ and _SunCoin_.
+- **Measuring:**
+  - **Baseline:** the admin funnel for `lesson-01` (per-screen reach, start → finish) and its average rating, over the
+    4 weeks to the release.
+  - **After:** the same, 4 weeks after.
+  - **Bar:** the finish rate and rating don't fall, and the journal lines show no new confusion.
+  - **Then:** Phase 2 (the hand font, "Ask anything", chart notes, "two sides" chats), each in its own PR through the
+    visual gate, then Lessons 2 and 3.
 
 ### 2026-11-13 — PWA readiness: the name, every browser's install steps, the notch and home bar, offline
 

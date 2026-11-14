@@ -266,6 +266,7 @@ export const GUIDE_ANCHORS = [
   'learn.card.dismiss',
   'learn.article',
   'learn.article.open',
+  'session.retry',
   'path.drawer',
   'path.close',
   'path.progress',
@@ -302,8 +303,6 @@ export const GUIDE_ANCHORS = [
   'lesson.recap',
   /** A card's Read more (key: the article) */
   'lesson.more',
-  /** The Why's first words: the option the learner picked */
-  'lesson.picked',
   /** The close's line on what the next lesson brings */
   'lesson.teaser',
   'lesson.highlight',
@@ -374,8 +373,7 @@ export function isGuideAnchor(name: string): name is GuideAnchor {
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 export type GuideProps =
-  | { 'data-guide': GuideAnchor }
-  | { 'data-guide': GuideAnchor; 'data-guide-key': string };
+  { 'data-guide': GuideAnchor } | { 'data-guide': GuideAnchor; 'data-guide-key': string };
 
 /**
  * Props to spread onto the control: `<button {...guide('trade.submit')}>`, or for a row

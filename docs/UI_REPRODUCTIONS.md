@@ -236,17 +236,18 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    full width as **Unlock the story of Bitcoin →** with one shine across it. Pressing it sinks it onto
    its ledge. Open it again and press Enter (or tap [lesson.beats]) during the reveal → Expect every line at once,
    still on card 1. With the OS's reduced motion on → Expect every line at once, no shine (M).
-   Then → or Enter → Expect **Meet your guides**: Pulin slides in from the left ("Hi, I'm Pulin."), Berwyn from the
-   right ("Hi, I'm Berwyn."), they meet in the middle with a small lean, then "In the next 5 minutes you'll learn:" and
+   Then → or Enter → Expect **Meet your guides**: Pulin slides in from the left ("Hi, I'm Pulin. I ask the questions you're too polite to
+   ask."), Berwyn from the right ("And I'm Berwyn. I answer them. Usually."), they meet in the middle with a small lean, then "In the next 5 minutes you'll learn:" and
    three ✓ lines fade in one by one; [lesson.next] shows only after the last, as **Start with money itself →**, with
    ← Back under it. Enter (or a tap on [lesson.meet]) during the scene shows it all at once. ← Back → Expect card 1
    complete, not replayed. Every card has Pulin or Berwyn in its picture.
    Next → Expect **Money runs on trust**: the three tiles (a bank, a state, a game maker) drop in one after another,
-   Berwyn looking straight out, and no Satoshi in the text. Next → Expect **A notebook, not coins**: four lines in Nora's
+   Berwyn looking straight out, the question "why is a banknote worth anything?", then Pulin and Berwyn's four-line
+   double act, and no Satoshi in the text. Next → Expect **A notebook, not coins**: four lines in Nora's
    notebook (Emi, Leo, Sofia, then Leo → Emi 3) and no "Bitcoin" in the text. [lesson.next] **What if Nora cheats? →**
    → Expect **What can go wrong with one Nora?**: four tiles (print, move, rewrite, lose) dropping in one after another,
    four bold points, and **Could money work with no Nora? →** (Lesson 1 ends on the problem; owner 2026-11-08).
-   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect [lesson.picked] "You picked “The bank”." then "Not quite." and Berwyn
+   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect "Not quite." and the Why, with no "You picked" line, and Berwyn
    calm (never worried), the same guide who asked: Berwyn stays through the answer. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to
    15"; tick "Many notebooks" → Expect "4 of 5 copies still say Leo paid 3". The questions, then the summary → Expect **The problem** staged as [lesson.genesis] (about 24 s, each line held by its length;
    Continue hidden until it ends; Enter, a tap, Back to it later and reduced motion all show the problems, the

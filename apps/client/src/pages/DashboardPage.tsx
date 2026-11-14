@@ -46,9 +46,7 @@ import { useTourProgress } from '@/guide/useTourProgress';
 
 // ─── Edit target type ────────────────────────────────────────────────────────
 type EditTarget =
-  | { kind: 'position'; positionId: string }
-  | { kind: 'pending'; orderId: string }
-  | null;
+  { kind: 'position'; positionId: string } | { kind: 'pending'; orderId: string } | null;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

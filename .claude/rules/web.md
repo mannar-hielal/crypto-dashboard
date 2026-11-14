@@ -102,8 +102,22 @@ supply-chain policy, secrets management, container hardening — see [`security.
   email exists (anti-enumeration — see `/forgot-password`).
 - Token invalidation uses `deleteMany` (not `delete`) so a concurrent duplicate request gets
   `count: 0` back instead of a `P2025` race error.
-- If `/refresh` detects a token that was already consumed (`deleteMany` returns `count: 0`), every
-  refresh token for that `userId` is revoked — treat token reuse as a compromise signal.
+- `/refresh` rotates a token by stamping `rotatedAt` with an atomic `updateMany` (one winner).
+  The rotated row is kept for the **reuse window**, `REFRESH_REUSE_WINDOW_MS` (30 s, owner
+  2026-11-13). The same token coming back inside the window (a reply lost in transit, a second tab)
+  gets a fresh token; the one already issued stays valid. Over the cap it gets a plain 401 that leaves the
+  cookie alone (a faster tab may have set a newer valid one). After the window a replay reads as
+  theft: that sign-in's family is deleted and a `warn` logged; other devices stay signed in (the
+  accepted trade-off in [`security.md`](./security.md)). Each rotated token is served again at most
+  `REFRESH_REUSE_CAP` (4: the client's 3 reconnect retries and a tab; a test holds it above `SESSION_RECONNECT_TRIES`) times, counted atomically in the database; a reuse that fails with a 500 before its session is minted (its user lookup) gives its slot back, so the client's retry is still served; from the token insert on, the slot stays spent. Every token carries its
+  sign-in's `familyId` (set at login, kept on rotation): a logout deletes that family, so no token of
+  the session outlives it and other devices stay signed in. A refresh re-checks, after minting, that
+  the token it rotated still exists, and takes the new one back if a logout landed meanwhile. The
+  rotated rows are kept until they expire (7 days, the token's lifetime), so a late replay can still
+  be caught, and the daily job purges expired rows in batches, by the indexed `expiresAt`
+  (`services/RefreshTokens.ts`). Mass revocation is
+  for the explicit flows (password change or reset, email change, delete), not for reuse: the client
+  retries a lost reply, so a reuse is far likelier to be a flaky phone than a thief.
 
 ### Client-side security 🔐
 

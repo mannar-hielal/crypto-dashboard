@@ -282,7 +282,7 @@ const lesson01: Lesson = {
   // Nora's edit alone: the copies that outvote her are Lesson 2's answer (review 2026-11-08)
   tryWidget: 'nora-edits',
   tryIntro:
-    'Now be Nora. Change one line of the notebook and see what a single pen stroke does, with nobody to check it.',
+    'Your turn to be Nora. Change one line of the notebook and watch what a single pen stroke does. Nobody’s checking. That’s exactly the problem.',
   cards: [
     {
       // bitcointalk.org, 22 May 2010: Laszlo Hanyecz in Jacksonville, Florida, paid 10,000 BTC for
@@ -306,7 +306,7 @@ const lesson01: Lesson = {
           text: 'Laszlo Hanyecz paid 10,000 bitcoin for two pizzas.',
           emphasis: '10,000 bitcoin',
         },
-        { kind: 'fact', text: 'Back then, they cost him $41.' },
+        { kind: 'fact', text: 'Back then, they cost him $41. A fair price for two large pizzas.' },
         {
           kind: 'headline',
           text: 'Nobody in that room knew those pizzas would one day be worth over $1 billion!',
@@ -319,8 +319,8 @@ const lesson01: Lesson = {
       title: 'Meet your guides',
       presenter: { who: 'tick', mood: 'smile', pose: 'wave' },
       meet: {
-        tick: 'Hi, I’m Pulin.',
-        tock: 'Hi, I’m Berwyn.',
+        tick: 'Hi, I’m Pulin. I ask the questions you’re too polite to ask.',
+        tock: 'And I’m Berwyn. I answer them. Usually.',
         lead: `In the next ${LESSON_01_MINUTES} minutes you’ll learn:`,
         list: [
           'why money needs someone you trust',
@@ -336,7 +336,18 @@ const lesson01: Lesson = {
       title: 'Money runs on trust',
       art: 'money',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'Bank notes, coins, even game tokens only work because we all trust [[someone in charge|money]]: a government, a bank, a game company. Most of the time that’s handy. But whoever is in charge can print more or change the rules overnight, and the money in your pocket quietly buys less, without anyone asking you. To see why that matters, let’s shrink money down to three friends and one notebook.',
+      // Owner 2026-11-13 (the friendlier voice, guided-learning-topics/09): a question first, then the
+      // guides' double act
+      text: 'Quick question: why is a banknote worth anything? It’s paper. It works because we all trust [[someone in charge|money]]: a government, a bank, a game company.',
+      lines: [
+        { speaker: 'tick', text: 'So whoever’s in charge can just… print more?' },
+        {
+          speaker: 'tock',
+          text: 'Or change the rules overnight. Your money quietly buys less, and nobody asks you.',
+        },
+        { speaker: 'tick', text: 'Rude. Can we watch it happen?' },
+        { speaker: 'tock', text: 'Sure. Three friends, one notebook. Meet Nora.' },
+      ],
       nextLabel: 'So who keeps the record?',
     },
     {
@@ -345,7 +356,7 @@ const lesson01: Lesson = {
       presenter: { who: 'tick', mood: 'curious' },
       // Owner 2026-10-25: the three friends of the SunCoin article, and no Bitcoin until Nora's
       // problems are on the table
-      text: 'Meet three friends, Emi, Leo and Sofia. Their only money is SunCoin, a made-up coin that exists only as lines in Nora’s notebook. When Leo buys Emi’s sticker pack for 3, nothing changes hands: Nora just writes “Leo → Emi, 3”. Notice that nobody’s balance is written anywhere. Your SunCoin is simply what the lines add up to for you. A list like that is called a [[ledger]]: keep that word in mind, it comes back soon.',
+      text: 'Meet Emi, Leo and Sofia. Their money is SunCoin, and it lives only in Nora’s notebook. No coins, no wallets, just lines of ink. Leo buys Emi’s sticker pack for 3? Nora writes “Leo → Emi, 3”. Done. Here’s the odd part: nobody’s balance is written anywhere. Your SunCoin is whatever the lines add up to for you. That list has a name: a [[ledger]]. Remember it. It’s coming back.',
       nextLabel: 'What if Nora cheats?',
     },
     {
@@ -354,16 +365,19 @@ const lesson01: Lesson = {
       title: 'What can go wrong with one Nora?',
       art: 'oneNora',
       presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
-      text: 'SunCoin works only because everyone trusts Nora, and she holds the only pen. Imagine she has a bad day, or a bad idea. Alone, she could:',
+      text: 'SunCoin works because everyone trusts Nora. She holds the only pen. Lovely person. But picture a bad day, or a bad idea. Alone, she could:',
       points: [
         {
           label: 'Print coins.',
-          text: 'Write “Start → Leo, 100”: new money from nothing, so everyone else’s buys less.',
+          text: 'Write “Start → Leo, 100”. Money from thin air, and everyone else’s buys less.',
         },
-        { label: 'Move yours.', text: 'Write “Sofia → Emi, 7”, though Sofia never agreed.' },
+        {
+          label: 'Move yours.',
+          text: 'Write “Sofia → Emi, 7”. Sofia never agreed. The ink doesn’t care.',
+        },
         {
           label: 'Rewrite history.',
-          text: 'Change line 4 so Leo never paid, and nobody could prove otherwise.',
+          text: 'Change line 4 so Leo never paid. Prove otherwise. You can’t.',
         },
         {
           label: 'Lose it all.',
@@ -380,7 +394,7 @@ const lesson01: Lesson = {
     options: ['Nobody: she holds the only pen', 'The bank', 'Emi, by checking her balance'],
     correct: 0,
     explain:
-      'With one keeper, the keeper’s word is the money. Next lesson: a notebook nobody holds alone.',
+      'With one keeper, the keeper’s word is the money. Emi can count all she likes: the notebook says what Nora says. Next lesson: a notebook nobody holds alone.',
   },
   checks: [
     {
@@ -392,7 +406,7 @@ const lesson01: Lesson = {
       ],
       correct: 1,
       explain:
-        'The notebook only lists payments. A balance, in SunCoin or in Bitcoin, is what the list adds up to for you.',
+        'A bit of a trick question. The notebook only lists payments. Your balance, in SunCoin or in Bitcoin, is what the list adds up to for you.',
     },
     {
       question: 'Why is one notebook keeper a risk?',
@@ -403,18 +417,19 @@ const lesson01: Lesson = {
       ],
       correct: 0,
       explain:
-        'One pen means one person decides what the notebook says. Even an honest keeper can make a mistake, or be pressured.',
+        'One pen, one boss. Even a lovely, honest Nora can have a bad day, spill her coffee or get leaned on. And nobody could check.',
     },
     {
       question: 'A central bank prints a lot more money. What happens to the money you hold?',
       options: ['It quietly buys less', 'It buys more', 'Nothing at all'],
       correct: 0,
       explain:
-        'More money chasing the same goods means each note buys less: the rules changed without asking you.',
+        'More money chasing the same stuff means each note buys less. The rules changed, and nobody asked you. Again.',
     },
   ],
   notePrompt: 'What would you like to understand better about money and Bitcoin?',
-  teaser: 'You’ve seen the problem. Next, the answer: what Bitcoin is, and how a payment works.',
+  teaser:
+    'You’ve seen the problem. Next: money with no Nora at all. Spoiler: everyone gets a copy.',
   canDo: [
     { text: 'Say why money depends on trust', article: 'money-101', section: 'weakness' },
     { text: 'Explain where a balance lives', article: 'suncoin', section: 'no-balances' },

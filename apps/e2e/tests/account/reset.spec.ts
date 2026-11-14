@@ -1,7 +1,7 @@
 /** Account reset from Settings (row 8.8; SC-8-x): positions, orders and journal cleared, 10,000 back. */
 
 import { expect, test } from '../../fixtures';
-import { at, placeOrder, signInAs } from '../../helpers';
+import { at, placeOrder, resetAccount, signInAs } from '../../helpers';
 
 test('[8.8] reset clears an open position, a resting limit and the journal; balance back to 10,000 @full', async ({
   page,
@@ -21,11 +21,7 @@ test('[8.8] reset clears an open position, a resting limit and the journal; bala
   await expect(page.getByText('before the reset')).toBeVisible();
 
   await at(page, 'account.settings').click();
-  await at(page, 'acct-settings.reset').click();
-  // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
-  // step only once it is there, or the click lands on the departing "Reset account"
-  await expect(at(page, 'acct-settings.reset')).toHaveText('Confirm reset?');
-  await at(page, 'acct-settings.reset').click(); // the two-step confirm
+  await resetAccount(page); // the two-step confirm, retried if its 3 s window ran out
 
   await at(page, 'account.tab', 'positions').click();
   await expect(at(page, 'positions.row', 'linear:ETHUSDT')).toHaveCount(0);

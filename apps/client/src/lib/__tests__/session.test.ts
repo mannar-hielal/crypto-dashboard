@@ -7,6 +7,10 @@ import { authApi } from '@crypto-dashboard/sdk';
 import {
   isOffline,
   isSafeToRetry,
+  mergeSends,
+  retryReconnect,
+  reconnectDeadline,
+  retryFitsWindow,
   msUntilExpiry,
   refreshAccessToken,
   restoreSession,
@@ -149,7 +153,7 @@ describe('msUntilExpiry()', () => {
     }
   });
 
-  it('should sign out like an outage when the API never answers after reconnecting', async () => {
+  it('should offer Try again, not sign out, when the API never answers after reconnecting (review on #290)', async () => {
     vi.useFakeTimers();
     try {
       useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
@@ -162,46 +166,207 @@ describe('msUntilExpiry()', () => {
       await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000 + 8000);
       expect(health).toHaveBeenCalledTimes(5);
       expect(refresh).toHaveBeenCalledTimes(1); // never sent while the line was dead
-      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
       onLine.mockRestore();
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('should never resend what may have rotated the refresh token, a failed fetch included (reviews on #284, #287)', async () => {
-    // A retry would send a consumed token, and the server would revoke every session: one try,
-    // then signed out as before (the learner signs in again)
-    for (const err of [
-      new TypeError('Failed to fetch'), // a connection can drop mid-reply
-      new DOMException('signal timed out', 'TimeoutError'),
-      Object.assign(new Error('Bad Gateway'), { status: 502 }),
-      new SyntaxError('Unexpected token < in JSON'),
-    ]) {
-      refresh.mockReset();
+  it('should retry a lost or failed refresh after reconnecting, as the server serves a just-rotated token again (owner 2026-11-13)', async () => {
+    vi.useFakeTimers();
+    try {
       useAuthStore.setState({
         accessToken: null,
         user: null,
         isLoading: false,
         awaitingNetwork: true,
       });
-      refresh.mockRejectedValueOnce(err);
+      // A dropped reply, a timeout, a 502: each retried, the fourth try gets through
+      refresh
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new DOMException('signal timed out', 'TimeoutError'))
+        .mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }))
+        .mockResolvedValueOnce({ accessToken: 'back' } as never);
+      me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
       await restoreSession(1);
-      expect(refresh).toHaveBeenCalledTimes(1);
-      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+      await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
+      expect(refresh).toHaveBeenCalledTimes(4);
+      expect(useAuthStore.getState()).toMatchObject({
+        accessToken: 'back',
+        awaitingNetwork: false,
+      });
+    } finally {
+      vi.useRealTimers();
     }
   });
 
-  it('should retry only a 429, which the rate limit sends before anything is rotated', () => {
-    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 429 }))).toBe(true);
-    expect(isSafeToRetry(new TypeError('Failed to fetch'))).toBe(false);
-    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 401 }))).toBe(false);
-    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 502 }))).toBe(false);
-    expect(isSafeToRetry(new DOMException('t', 'TimeoutError'))).toBe(false);
-    expect(isSafeToRetry(null)).toBe(false);
+  it('should stop retrying before a retry could reach the server after the reuse window (review on #289)', () => {
+    // Window 30 s, request timeout 10 s, margin 2 s: a retry must start within 18 s of the first try
+    const start = 1_000_000;
+    const deadline = reconnectDeadline(start);
+    expect(deadline - start).toBe(18_000);
+    expect(retryFitsWindow(start + 10_000, 1000, deadline)).toBe(true);
+    expect(retryFitsWindow(start + 17_500, 1000, deadline)).toBe(false);
   });
 
-  it('should retry a 429 up to three times, then sign out; a 401 signs out at once', async () => {
+  it('should count the deadline from the first refresh, so slow /health probes cannot push a retry past the window (review on #289)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      // t = 0: the first refresh fails offline (the server may have rotated it and lost the reply)
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      // t = 10 s: back online; /health answers only on its 5th probe (10, 11, 13, 17, 25 s)
+      await vi.advanceTimersByTimeAsync(10_000);
+      onLine.mockReturnValue(true);
+      health
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce({ status: 'ok' });
+      // The one refresh after reconnecting (t = 25 s) fails with a 502
+      refresh.mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }));
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(health).toHaveBeenCalledTimes(5);
+      // The deadline was 18 s after the first refresh, already past: no retry is sent, which could
+      // reach the server after its 30 s window and end the sign-in. The learner gets Try again
+      expect(refresh).toHaveBeenCalledTimes(2);
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should still retry a 502 after a long offline gap: that first refresh is past the window anyway (review on #296)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      // t = 0: the first refresh fails offline
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      // Ten minutes later the device is back; /health answers at once
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      onLine.mockReturnValue(true);
+      refresh
+        .mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }))
+        .mockResolvedValueOnce({ accessToken: 'back' } as never);
+      me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(5_000);
+      // The 502 is retried a second later, and the learner is signed back in
+      expect(refresh).toHaveBeenCalledTimes(3);
+      expect(useAuthStore.getState()).toMatchObject({
+        accessToken: 'back',
+        reconnectStalled: false,
+      });
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should keep the anchor while the latest refresh of the cycle is still inside the window (review on #296)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      // t = 0: the first refresh fails offline
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      // t = 20 s: back online, /health answers, the refresh is sent and the line drops again: it
+      // may have rotated the token, and its window runs to 50 s
+      await vi.advanceTimersByTimeAsync(20_000);
+      onLine.mockReturnValue(true);
+      refresh.mockImplementationOnce(() => {
+        onLine.mockReturnValue(false);
+        return Promise.reject(new TypeError('Failed to fetch'));
+      });
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(refresh).toHaveBeenCalledTimes(2);
+      // t = 40 s: back again; the first send is 40 s old, but the latest only 20 s
+      await vi.advanceTimersByTimeAsync(20_000);
+      onLine.mockReturnValue(true);
+      refresh.mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }));
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(60_000);
+      // The deadline still counts from the first send (18 s, long past): no late retry, Try again
+      expect(refresh).toHaveBeenCalledTimes(3);
+      expect(useAuthStore.getState()).toMatchObject({ reconnectStalled: true });
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should merge two cycles’ send times: the earliest first, the latest last', () => {
+    expect(mergeSends({ first: 5, last: 9 }, { first: 2, last: 7 })).toEqual({ first: 2, last: 9 });
+    expect(mergeSends(undefined, { first: 1, last: 1 })).toEqual({ first: 1, last: 1 });
+    expect(mergeSends({ first: 1, last: 3 }, undefined)).toEqual({ first: 1, last: 3 });
+  });
+
+  it('should send no retry past its deadline when every try runs to its timeout, then offer Try again', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({
+        accessToken: null,
+        user: null,
+        isLoading: false,
+        awaitingNetwork: true,
+      });
+      // Each refresh hangs to the SDK's 10 s timeout, then fails
+      const started = Date.now();
+      const starts: number[] = [];
+      refresh.mockImplementation(() => {
+        starts.push(Date.now() - started);
+        return new Promise((_, reject) =>
+          setTimeout(() => reject(new DOMException('signal timed out', 'TimeoutError')), 10_000)
+        );
+      });
+      void restoreSession(1);
+      await vi.advanceTimersByTimeAsync(60_000);
+      // Tries start at 0 and 11 s; the next (23 s) would reach the server too late, so it isn't sent
+      expect(starts).toEqual([0, 11_000]);
+      // Every request that was sent reached the server inside the 30 s window
+      for (const t of starts) expect(t + 10_000).toBeLessThanOrEqual(30_000);
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
+    } finally {
+      refresh.mockReset();
+      vi.useRealTimers();
+    }
+  });
+
+  it('should try again on the learner’s tap: probe, then one refresh, and sign them back in', async () => {
+    useAuthStore.setState({
+      accessToken: null,
+      user: null,
+      isLoading: false,
+      reconnectStalled: true,
+    });
+    refresh.mockResolvedValueOnce({ accessToken: 'again' } as never);
+    me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+    retryReconnect();
+    expect(useAuthStore.getState().reconnectStalled).toBe(false);
+    await vi.waitFor(() => expect(useAuthStore.getState().accessToken).toBe('again'));
+    expect(health).toHaveBeenCalled();
+  });
+
+  it('should retry anything but a refusal (401 / 403)', () => {
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 429 }))).toBe(true);
+    expect(isSafeToRetry(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 502 }))).toBe(true);
+    expect(isSafeToRetry(new DOMException('t', 'TimeoutError'))).toBe(true);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 401 }))).toBe(false);
+    expect(isSafeToRetry(Object.assign(new Error('x'), { status: 403 }))).toBe(false);
+  });
+
+  it('should stop after three retries with Try again, and sign out at once on a 401', async () => {
     vi.useFakeTimers();
     try {
       useAuthStore.setState({
@@ -214,13 +379,14 @@ describe('msUntilExpiry()', () => {
       await restoreSession(1);
       await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
       expect(refresh).toHaveBeenCalledTimes(4);
-      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
 
       refresh.mockReset();
       useAuthStore.setState({ isLoading: true });
       refresh.mockRejectedValueOnce(Object.assign(new Error('Invalid'), { status: 401 }));
       await restoreSession(1);
-      expect(useAuthStore.getState().isLoading).toBe(false);
+      // A refusal is a real sign-out: no stalled Try again left over
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: false });
       expect(refresh).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();

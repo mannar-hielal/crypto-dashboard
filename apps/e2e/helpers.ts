@@ -23,6 +23,37 @@ export async function signInAs(page: Page, email: string, password: string): Pro
 }
 
 /**
+ * Reset the account from the open Settings dialog: "Reset account", then "Confirm reset?". The
+ * confirm step reverts after 3 s, and on CI's WebKit (5–10× slower) its entry animation plus the
+ * click's wait for a stable element can use that up, so the confirm click found "Reset account"
+ * again and no reset ran (release #289's [13.3.1]). Retried until the dialog closes, which it does
+ * only once the server has reset the account. A reset is idempotent, so a retry can't harm.
+ */
+export async function resetAccount(page: Page): Promise<void> {
+  const button = at(page, 'acct-settings.reset');
+  // The dialog is open before the loop starts: a missing button inside it means "closed", never
+  // "not mounted yet" (review on #294)
+  await expect(button).toBeVisible();
+  let confirmed = false;
+  await expect(async () => {
+    // The dialog closed after a confirm click: the reset went through
+    if (confirmed && (await button.count()) === 0) return;
+    // "Resetting…" is in flight: wait for the dialog to close rather than clicking again
+    if ((await button.textContent({ timeout: 2_000 }))?.includes('Reset account')) {
+      await button.click({ timeout: 2_000 });
+    }
+    // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
+    // step only once it is there, or the click lands on the departing "Reset account"
+    await expect(button).toHaveText('Confirm reset?', { timeout: 2_000 });
+    // Marked before the click: a click that times out after it took effect (the dialog already
+    // closing) must still count, and a repeated reset is harmless (review on #294)
+    confirmed = true;
+    await button.click({ timeout: 2_000 });
+    await expect(button).toHaveCount(0, { timeout: 10_000 });
+  }).toPass({ timeout: 45_000 });
+}
+
+/**
  * Market ownership: the fake feed's prices are global per market and specs run in parallel, so each
  * spec that moves prices owns its market(s). Spot BTCUSDT and linear BTCUSDT stay at 50,000 for the
  * smoke scenarios (quotes.spec sets the same values).

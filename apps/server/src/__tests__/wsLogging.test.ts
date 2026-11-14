@@ -157,10 +157,9 @@ describe('WebSocket connection logging', () => {
     const raw = (ws as unknown as { _socket: { write(b: Buffer): void } })._socket;
     raw.write(Buffer.from([0xa1, 0x80, 0, 0, 0, 0]));
     await until(() => linesFor('Paper WS error').length > 0);
-    // The error path cleans up but writes no close line — the code isn't known yet
-    expect(linesFor('Paper WS closed')).toHaveLength(0);
-    // The connection then goes away (in production: the close-handshake timeout ends the socket),
-    // and the real close event arrives
+    // The error path cleans up but writes no close line itself; the line comes from the close event
+    // that follows. ws ≥ 8.22 finishes that close by itself right after the error; older versions
+    // waited for the close-handshake timeout, so end the socket here if it's still open
     const server = (app as unknown as { websocketServer: { clients: Set<{ terminate(): void }> } })
       .websocketServer;
     for (const peer of server.clients) peer.terminate();

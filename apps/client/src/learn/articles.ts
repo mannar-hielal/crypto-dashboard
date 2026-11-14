@@ -108,7 +108,7 @@ const suncoin: Article = {
   blocks: [
     {
       kind: 'p',
-      text: 'Three friends, Emi, Leo and Sofia, want to trade with their own pretend money: **SunCoin**. There’s no real money and no app. There is only a notebook, kept by their friend **Nora**. She starts it by handing out the first SunCoins: 6 to Emi, 4 to Leo and 5 to Sofia. That’s 15 SunCoins in the whole world.',
+      text: 'Three friends, Emi, Leo and Sofia, want their own pretend money: **SunCoin**. No bank, no app, no blockchain. Just a notebook, kept by their friend **Nora**, who takes the job very seriously. She hands out the first SunCoins: 6 to Emi, 4 to Leo and 5 to Sofia. That’s 15 SunCoins in the whole world. Small economy. Big responsibility.',
     },
     { kind: 'widget', id: 'suncoin-notebook' },
     { kind: 'h', text: 'A payment is just one new line' },
@@ -661,7 +661,7 @@ const money101: Article = {
     { kind: 'h', text: 'Three jobs' },
     {
       kind: 'p',
-      text: 'Money is anything people generally accept to **swap** for things, to **compare** what things are worth, and to **keep** value for later. A banknote does all three. So, for some people, does Bitcoin.',
+      text: 'Here’s a strange thought: a banknote is paper, yet a baker hands you bread for it. Why? Because money is anything people accept to **swap** for things, to **compare** what things are worth, and to **keep** value for later. A banknote does all three. So, for some people, does Bitcoin. (The baker doesn’t mind which, as long as it works.)',
     },
     { kind: 'h', text: 'Three classic kinds' },
     {

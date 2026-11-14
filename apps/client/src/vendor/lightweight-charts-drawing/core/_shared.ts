@@ -17,8 +17,7 @@ export const HIT_TOLERANCE = 6;
 export const GLYPH_HALF = 9;
 
 export type HitResult =
-  | { hit: 'handle'; handleIndex: number }
-  | { hit: 'body'; cell?: [number, number] };
+  { hit: 'handle'; handleIndex: number } | { hit: 'body'; cell?: [number, number] };
 
 /** Translate a line-style enum into an SVG stroke-dasharray. */
 export function dashFor(style: DrawingStyle): string | undefined {
