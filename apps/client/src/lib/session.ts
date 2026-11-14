@@ -131,9 +131,16 @@ export async function restoreSession(
   afterReconnect = 0,
   // Each reconnect carries its own deadline, so a second reconnect never moves another's (review
   // on #290)
-  deadline: number = afterReconnect > 0 ? reconnectDeadline(Date.now()) : 0
+  deadline?: number,
+  // 🔐 When the first refresh of this reconnect cycle was sent. The server's reuse window starts at
+  //    that refresh (it may have rotated the token and lost the reply), not when the connection
+  //    came back, so the deadline is anchored here: slow /health probes can't push a retry past
+  //    the window (review on #289)
+  firstSentAt?: number
 ): Promise<void> {
   const { setAuth, setLoading, setAwaitingNetwork, setReconnectStalled } = useAuthStore.getState();
+  const sentAt = firstSentAt ?? Date.now();
+  const until = deadline ?? (afterReconnect > 0 ? reconnectDeadline(sentAt) : 0);
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -159,7 +166,8 @@ export async function restoreSession(
     if (isOffline()) {
       setAwaitingNetwork(true);
       setLoading(false);
-      retryWhenOnline();
+      // The cycle's first refresh travels with it: the deadline counts from that send
+      retryWhenOnline(sentAt);
       return;
     }
     // Back online, and /health already answered, so the network works (`reconnect`): retry a few
@@ -168,8 +176,8 @@ export async function restoreSession(
     // would read as theft and end the sign-in, so retries stop at the deadline (best effort)
     const delay = 1000 * 2 ** (afterReconnect - 1);
     if (afterReconnect > 0 && isSafeToRetry(err)) {
-      if (afterReconnect <= RECONNECT_TRIES && retryFitsWindow(Date.now(), delay, deadline)) {
-        setTimeout(() => void restoreSession(afterReconnect + 1, deadline), delay);
+      if (afterReconnect <= RECONNECT_TRIES && retryFitsWindow(Date.now(), delay, until)) {
+        setTimeout(() => void restoreSession(afterReconnect + 1, until, sentAt), delay);
         return;
       }
       // Out of safe retries, and the cookie may still be valid: not a straight trip to /login.
@@ -207,17 +215,17 @@ const PROBE_TRIES = 5;
  * captive portal lets anything through, so a refresh sent then would fail for nothing (review on
  * #287). If the API never answers, the learner is signed out as an outage would leave them
  */
-async function reconnect(probe = 0): Promise<void> {
+async function reconnect(probe = 0, firstSentAt?: number): Promise<void> {
   try {
     await authApi.health();
   } catch {
     // Offline again: wait for the next `online` event
     if (isOffline()) {
-      retryWhenOnline();
+      retryWhenOnline(firstSentAt);
       return;
     }
     if (probe + 1 < PROBE_TRIES) {
-      setTimeout(() => void reconnect(probe + 1), 1000 * 2 ** probe);
+      setTimeout(() => void reconnect(probe + 1, firstSentAt), 1000 * 2 ** probe);
       return;
     }
     // The API never answered: offer Try again rather than sign out (the cookie is untouched)
@@ -226,10 +234,14 @@ async function reconnect(probe = 0): Promise<void> {
     setLoading(false);
     return;
   }
-  await restoreSession(1);
+  // 🔐 The deadline counts from the cycle's first refresh, not from now (review on #289)
+  await restoreSession(1, undefined, firstSentAt);
 }
 
-/** The learner's Try again after a stalled reconnect: probe, then one refresh with a new deadline */
+/**
+ * The learner's Try again after a stalled reconnect: probe, then one refresh with a new deadline. A
+ * deliberate tap starts a new cycle; the screen already says it may end in signing in again
+ */
 export function retryReconnect(): void {
   useAuthStore.getState().setReconnectStalled(false);
   void reconnect();
@@ -243,14 +255,14 @@ export function isOffline(): boolean {
 let waitingForOnline = false;
 
 /** One restore when the connection comes back, once /health shows the network works (one listener) */
-function retryWhenOnline(): void {
+function retryWhenOnline(firstSentAt?: number): void {
   if (waitingForOnline) return;
   waitingForOnline = true;
   window.addEventListener(
     'online',
     () => {
       waitingForOnline = false;
-      void reconnect();
+      void reconnect(0, firstSentAt);
     },
     { once: true }
   );

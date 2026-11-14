@@ -209,6 +209,38 @@ describe('msUntilExpiry()', () => {
     expect(retryFitsWindow(start + 17_500, 1000, deadline)).toBe(false);
   });
 
+  it('should count the deadline from the first refresh, so slow /health probes cannot push a retry past the window (review on #289)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      // t = 0: the first refresh fails offline (the server may have rotated it and lost the reply)
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      // t = 10 s: back online; /health answers only on its 5th probe (10, 11, 13, 17, 25 s)
+      await vi.advanceTimersByTimeAsync(10_000);
+      onLine.mockReturnValue(true);
+      health
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce({ status: 'ok' });
+      // The one refresh after reconnecting (t = 25 s) fails with a 502
+      refresh.mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }));
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(health).toHaveBeenCalledTimes(5);
+      // The deadline was 18 s after the first refresh, already past: no retry is sent, which could
+      // reach the server after its 30 s window and end the sign-in. The learner gets Try again
+      expect(refresh).toHaveBeenCalledTimes(2);
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('should send no retry past its deadline when every try runs to its timeout, then offer Try again', async () => {
     vi.useFakeTimers();
     try {
