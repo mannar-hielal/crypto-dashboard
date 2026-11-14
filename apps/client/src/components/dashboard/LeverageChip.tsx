@@ -53,7 +53,9 @@ export function LeverageChip({ symbol }: LeverageChipProps) {
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         {...guide('trade.leverage-chip')}
-        aria-label={`Leverage ${leverage}x, ${cross ? 'cross' : 'isolated'} margin`}
+        // Starts with the visible text, so a voice-control user can say what they see (axe
+        // label-content-name-mismatch, 4.14)
+        aria-label={`${cross ? 'Cross' : 'Isolated'} ${leverage}x leverage`}
       >
         {cross ? 'Cross' : 'Isolated'} {leverage}x
         <ChevronDown size={12} aria-hidden="true" />

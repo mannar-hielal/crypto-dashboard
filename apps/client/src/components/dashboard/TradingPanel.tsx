@@ -1497,7 +1497,8 @@ export function TradingPanel({
           {...guide('trade.submit')}
           onClick={handleExecute}
           animate={executeAnim}
-          aria-label={`Execute ${isBuy ? 'buy' : 'sell'} ${tab} order`}
+          // No aria-label: the visible "Buy / Sell" and its order summary are the accessible name, so
+          // a voice-control user can say what they see (axe label-content-name-mismatch, 4.14)
           disabled={
             placing ||
             !latestPrice ||
