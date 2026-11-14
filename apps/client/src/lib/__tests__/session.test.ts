@@ -7,6 +7,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import {
   isOffline,
   isSafeToRetry,
+  mergeSends,
   retryReconnect,
   reconnectDeadline,
   retryFitsWindow,
@@ -268,6 +269,46 @@ describe('msUntilExpiry()', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('should keep the anchor while the latest refresh of the cycle is still inside the window (review on #296)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      // t = 0: the first refresh fails offline
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      // t = 20 s: back online, /health answers, the refresh is sent and the line drops again: it
+      // may have rotated the token, and its window runs to 50 s
+      await vi.advanceTimersByTimeAsync(20_000);
+      onLine.mockReturnValue(true);
+      refresh.mockImplementationOnce(() => {
+        onLine.mockReturnValue(false);
+        return Promise.reject(new TypeError('Failed to fetch'));
+      });
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(refresh).toHaveBeenCalledTimes(2);
+      // t = 40 s: back again; the first send is 40 s old, but the latest only 20 s
+      await vi.advanceTimersByTimeAsync(20_000);
+      onLine.mockReturnValue(true);
+      refresh.mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }));
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(60_000);
+      // The deadline still counts from the first send (18 s, long past): no late retry, Try again
+      expect(refresh).toHaveBeenCalledTimes(3);
+      expect(useAuthStore.getState()).toMatchObject({ reconnectStalled: true });
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should merge two cycles’ send times: the earliest first, the latest last', () => {
+    expect(mergeSends({ first: 5, last: 9 }, { first: 2, last: 7 })).toEqual({ first: 2, last: 9 });
+    expect(mergeSends(undefined, { first: 1, last: 1 })).toEqual({ first: 1, last: 1 });
+    expect(mergeSends({ first: 1, last: 3 }, undefined)).toEqual({ first: 1, last: 3 });
   });
 
   it('should send no retry past its deadline when every try runs to its timeout, then offer Try again', async () => {

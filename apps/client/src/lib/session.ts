@@ -122,6 +122,12 @@ export function reconnectDeadline(startedAt: number): number {
   return startedAt + SESSION_REUSE_WINDOW_MS - SDK_REQUEST_TIMEOUT_MS - RETRY_MARGIN_MS;
 }
 
+/** When a reconnect cycle's refreshes were sent (ms since the epoch): its first and its latest */
+export interface SendTimes {
+  first: number;
+  last: number;
+}
+
 /**
  * Boot-time session restore: trade the httpOnly refresh cookie for an access token, then load
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
@@ -132,15 +138,16 @@ export async function restoreSession(
   // Each reconnect carries its own deadline, so a second reconnect never moves another's (review
   // on #290)
   deadline?: number,
-  // 🔐 When the first refresh of this reconnect cycle was sent. The server's reuse window starts at
-  //    that refresh (it may have rotated the token and lost the reply), not when the connection
-  //    came back, so the deadline is anchored here: slow /health probes can't push a retry past
-  //    the window (review on #289)
-  firstSentAt?: number
+  // 🔐 When this reconnect cycle's refreshes were sent. Any of them may have rotated the token and
+  //    lost the reply, and the server's reuse window starts at that rotation, not when the
+  //    connection came back: the deadline counts from the first send, the strictest bound, so slow
+  //    /health probes can't push a retry past the window (reviews on #289, #296)
+  earlier?: SendTimes
 ): Promise<void> {
   const { setAuth, setLoading, setAwaitingNetwork, setReconnectStalled } = useAuthStore.getState();
-  const sentAt = firstSentAt ?? Date.now();
-  const until = deadline ?? (afterReconnect > 0 ? reconnectDeadline(sentAt) : 0);
+  const now = Date.now();
+  const sends: SendTimes = { first: earlier?.first ?? now, last: now };
+  const until = deadline ?? (afterReconnect > 0 ? reconnectDeadline(sends.first) : 0);
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -166,8 +173,8 @@ export async function restoreSession(
     if (isOffline()) {
       setAwaitingNetwork(true);
       setLoading(false);
-      // The cycle's first refresh travels with it: the deadline counts from that send
-      retryWhenOnline(sentAt);
+      // The cycle's send times travel with it: the deadline counts from them
+      retryWhenOnline(sends);
       return;
     }
     // Back online, and /health already answered, so the network works (`reconnect`): retry a few
@@ -177,7 +184,7 @@ export async function restoreSession(
     const delay = 1000 * 2 ** (afterReconnect - 1);
     if (afterReconnect > 0 && isSafeToRetry(err)) {
       if (afterReconnect <= RECONNECT_TRIES && retryFitsWindow(Date.now(), delay, until)) {
-        setTimeout(() => void restoreSession(afterReconnect + 1, until, sentAt), delay);
+        setTimeout(() => void restoreSession(afterReconnect + 1, until, sends), delay);
         return;
       }
       // Out of safe retries, and the cookie may still be valid: not a straight trip to /login.
@@ -215,17 +222,17 @@ const PROBE_TRIES = 5;
  * captive portal lets anything through, so a refresh sent then would fail for nothing (review on
  * #287). If the API never answers, the learner is signed out as an outage would leave them
  */
-async function reconnect(probe = 0, firstSentAt?: number): Promise<void> {
+async function reconnect(probe = 0, sends?: SendTimes): Promise<void> {
   try {
     await authApi.health();
   } catch {
     // Offline again: wait for the next `online` event
     if (isOffline()) {
-      retryWhenOnline(firstSentAt);
+      retryWhenOnline(sends);
       return;
     }
     if (probe + 1 < PROBE_TRIES) {
-      setTimeout(() => void reconnect(probe + 1, firstSentAt), 1000 * 2 ** probe);
+      setTimeout(() => void reconnect(probe + 1, sends), 1000 * 2 ** probe);
       return;
     }
     // The API never answered: offer Try again rather than sign out (the cookie is untouched)
@@ -235,15 +242,13 @@ async function reconnect(probe = 0, firstSentAt?: number): Promise<void> {
     return;
   }
   // 🔐 The deadline counts from the cycle's first refresh, not from now (review on #289), while
-  //    that refresh is still inside the server's reuse window. After a longer offline gap the
-  //    anchor no longer protects anything: had it rotated the token, the next refresh is refused
-  //    (a 401, never retried); if it never reached the server, retries are safe. So the count
-  //    starts afresh, and a 502 after a long gap is still retried (review on #296)
-  const anchor =
-    firstSentAt !== undefined && Date.now() - firstSentAt <= SESSION_REUSE_WINDOW_MS
-      ? firstSentAt
-      : undefined;
-  await restoreSession(1, undefined, anchor);
+  //    any of its refreshes is still inside the server's reuse window: the window starts at
+  //    whichever one rotated, which may be the latest (review on #296). Once even the latest send
+  //    is past it, the anchor protects nothing: a rotation by any of them is refused at the next
+  //    refresh (a 401, never retried), and if none reached the server, retries are safe. So the
+  //    count starts afresh, and a 502 after a long offline gap is still retried
+  const stillInWindow = sends !== undefined && Date.now() - sends.last <= SESSION_REUSE_WINDOW_MS;
+  await restoreSession(1, undefined, stillInWindow ? sends : undefined);
 }
 
 /**
@@ -261,16 +266,32 @@ export function isOffline(): boolean {
 }
 
 let waitingForOnline = false;
+/** The send times the waiting reconnect will carry, merged across calls (review on #296) */
+let waitingSends: SendTimes | undefined;
+
+/** The earliest first send and the latest last send of two cycles' times */
+export function mergeSends(
+  a: SendTimes | undefined,
+  b: SendTimes | undefined
+): SendTimes | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return { first: Math.min(a.first, b.first), last: Math.max(a.last, b.last) };
+}
 
 /** One restore when the connection comes back, once /health shows the network works (one listener) */
-function retryWhenOnline(firstSentAt?: number): void {
+function retryWhenOnline(sends?: SendTimes): void {
+  // A second call while waiting keeps its newer send times instead of dropping them
+  waitingSends = mergeSends(waitingSends, sends);
   if (waitingForOnline) return;
   waitingForOnline = true;
   window.addEventListener(
     'online',
     () => {
       waitingForOnline = false;
-      void reconnect(0, firstSentAt);
+      const carried = waitingSends;
+      waitingSends = undefined;
+      void reconnect(0, carried);
     },
     { once: true }
   );
