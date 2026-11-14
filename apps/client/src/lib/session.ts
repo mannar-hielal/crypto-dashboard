@@ -234,8 +234,16 @@ async function reconnect(probe = 0, firstSentAt?: number): Promise<void> {
     setLoading(false);
     return;
   }
-  // 🔐 The deadline counts from the cycle's first refresh, not from now (review on #289)
-  await restoreSession(1, undefined, firstSentAt);
+  // 🔐 The deadline counts from the cycle's first refresh, not from now (review on #289), while
+  //    that refresh is still inside the server's reuse window. After a longer offline gap the
+  //    anchor no longer protects anything: had it rotated the token, the next refresh is refused
+  //    (a 401, never retried); if it never reached the server, retries are safe. So the count
+  //    starts afresh, and a 502 after a long gap is still retried (review on #296)
+  const anchor =
+    firstSentAt !== undefined && Date.now() - firstSentAt <= SESSION_REUSE_WINDOW_MS
+      ? firstSentAt
+      : undefined;
+  await restoreSession(1, undefined, anchor);
 }
 
 /**

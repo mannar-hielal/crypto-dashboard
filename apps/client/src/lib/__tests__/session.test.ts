@@ -241,6 +241,35 @@ describe('msUntilExpiry()', () => {
     }
   });
 
+  it('should still retry a 502 after a long offline gap: that first refresh is past the window anyway (review on #296)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      // t = 0: the first refresh fails offline
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      // Ten minutes later the device is back; /health answers at once
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      onLine.mockReturnValue(true);
+      refresh
+        .mockRejectedValueOnce(Object.assign(new Error('Bad Gateway'), { status: 502 }))
+        .mockResolvedValueOnce({ accessToken: 'back' } as never);
+      me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(5_000);
+      // The 502 is retried a second later, and the learner is signed back in
+      expect(refresh).toHaveBeenCalledTimes(3);
+      expect(useAuthStore.getState()).toMatchObject({
+        accessToken: 'back',
+        reconnectStalled: false,
+      });
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('should send no retry past its deadline when every try runs to its timeout, then offer Try again', async () => {
     vi.useFakeTimers();
     try {
