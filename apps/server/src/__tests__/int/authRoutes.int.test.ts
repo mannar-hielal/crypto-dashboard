@@ -250,3 +250,19 @@ describe('/api/auth/logout on Postgres — twice at once', () => {
     expect((await refresh(token)).statusCode).toBe(401);
   });
 });
+
+describe('RefreshToken.familyId default on Postgres', () => {
+  it('gives a token inserted without a family (the previous build, mid-deploy) a family of its own (review on #289)', async () => {
+    const { userId } = await register();
+    // The previous build's insert: no familyId. The migration sets the column's default before
+    // its backfill and NOT NULL, so such a row never fails or stays without a family
+    const row = await db.refreshToken.create({
+      data: {
+        tokenHash: createHash('sha256').update(`no-family-${Date.now()}`).digest('hex'),
+        userId,
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    expect(row.familyId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});
