@@ -115,9 +115,8 @@ function renderPanel(props: Partial<React.ComponentProps<typeof TradingPanel>> =
 
 /** Click the primary execute button in the order form. */
 function getExecuteBtn(): HTMLButtonElement {
-  return screen.getByRole('button', {
-    name: /execute\s+(buy|sell)\s+(market|limit|stop)\s+order/i,
-  });
+  // By its anchor: the button's accessible name is its visible text now (no aria-label)
+  return getByGuide(document.body, 'trade.submit') as HTMLButtonElement;
 }
 
 /** Quantity/margin input shared across Market/Limit/Stop tabs. */
@@ -888,7 +887,7 @@ describe('BP-2 — market tabs and leverage', () => {
   it('shows the symbol leverage chip on USDT Perpetual', () => {
     usePaperStore.setState({ symbolLeverage: { BTCUSDT: 5 } });
     renderPanel();
-    expect(screen.getByRole('button', { name: /Leverage 5x, isolated margin/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Isolated 5x leverage$/ })).toBeTruthy();
   });
 
   it('re-margins an open position: the modal previews the new margin and liquidation price (BP-3)', async () => {
@@ -916,7 +915,7 @@ describe('BP-2 — market tabs and leverage', () => {
       ],
     });
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: /Leverage 1x, isolated margin/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Isolated 1x leverage$/ }));
     const dialog = screen.getByRole('dialog');
     expect(dialog.textContent).toContain('re-margined at the new leverage');
     fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
@@ -938,7 +937,7 @@ describe('BP-2 — market tabs and leverage', () => {
     );
     usePaperStore.setState({ symbolLeverage: { BTCUSDT: 10 } });
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: /Leverage 10x, isolated margin/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Isolated 10x leverage$/ }));
     const dialog = screen.getByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: '1×' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
@@ -1205,7 +1204,7 @@ describe('BP-5 B — order flags and trigger source (USDT Perpetual)', () => {
 describe('BP-5 C — tier info in the leverage modal (O6)', () => {
   it('shows the tier and the max position value at the chosen leverage', () => {
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: /Leverage \d+x, isolated margin/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Isolated \d+x leverage$/ }));
     const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
     fireEvent.click(within(dialog).getByRole('button', { name: '10×' }));
     expect(within(dialog).getByTestId('leverage-tier-info').textContent).toBe(
@@ -1217,7 +1216,7 @@ describe('BP-5 C — tier info in the leverage modal (O6)', () => {
 describe('BP-5 E — margin mode in the leverage chip and modal', () => {
   it('the chip names the mode; switching to Cross calls the server before the leverage', async () => {
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: 'Leverage 1x, isolated margin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Isolated 1x leverage' }));
     expect(screen.getByText(/^Isolated 1x/)).toBeTruthy();
     const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
     fireEvent.click(within(dialog).getByRole('tab', { name: 'Cross' }));
@@ -1243,7 +1242,7 @@ describe('BP-5 E — margin mode in the leverage chip and modal', () => {
     );
     usePaperStore.setState({ marginMode: 'REGULAR_MARGIN' });
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: 'Leverage 1x, cross margin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cross 1x leverage' }));
     const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
     fireEvent.click(within(dialog).getByRole('tab', { name: 'Isolated' }));
     fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
