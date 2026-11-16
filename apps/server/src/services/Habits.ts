@@ -22,7 +22,32 @@ const MAX_ROWS = 500;
  * daylight-saving change is placed with the offset of its own date. UTC for an unknown zone.
  */
 export function dayCounter(zone = 'UTC'): (d: Date) => number {
-  let format: Intl.DateTimeFormat;
+  const format = zoneFormat(zone);
+  if (!format) return (d) => Math.floor(d.getTime() / DAY_MS);
+  return (d) => {
+    // One formatting a date: year, month and day read from the same parts
+    let year = 0;
+    let month = 0;
+    let day = 0;
+    for (const p of format.formatToParts(d)) {
+      if (p.type === 'year') year = Number(p.value);
+      else if (p.type === 'month') month = Number(p.value);
+      else if (p.type === 'day') day = Number(p.value);
+    }
+    return Date.UTC(year, month - 1, day) / DAY_MS;
+  };
+}
+
+/** 🔐 Formatters by zone, so a request doesn't build one; capped (zones in use are a few dozen) */
+const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat | null>();
+const MAX_ZONE_FORMATS = 200;
+
+/** The zone's date formatter, or null for UTC and for a zone this runtime doesn't know */
+function zoneFormat(zone: string): Intl.DateTimeFormat | null {
+  if (zone === 'UTC') return null;
+  const known = ZONE_FORMATS.get(zone);
+  if (known !== undefined) return known;
+  let format: Intl.DateTimeFormat | null;
   try {
     format = new Intl.DateTimeFormat('en-US', {
       timeZone: zone,
@@ -31,13 +56,15 @@ export function dayCounter(zone = 'UTC'): (d: Date) => number {
       day: 'numeric',
     });
   } catch {
-    return (d) => Math.floor(d.getTime() / DAY_MS);
+    format = null;
   }
-  return (d) => {
-    const part = (type: string) =>
-      Number(format.formatToParts(d).find((p) => p.type === type)?.value);
-    return Date.UTC(part('year'), part('month') - 1, part('day')) / DAY_MS;
-  };
+  // Full: the oldest goes first (the cap bounds memory whatever is sent)
+  if (ZONE_FORMATS.size >= MAX_ZONE_FORMATS) {
+    const oldest = ZONE_FORMATS.keys().next().value;
+    if (oldest !== undefined) ZONE_FORMATS.delete(oldest);
+  }
+  ZONE_FORMATS.set(zone, format);
+  return format;
 }
 
 export interface HabitInput {
@@ -84,6 +111,7 @@ export function weekDays(days: ReadonlySet<number>, today: number): boolean[] {
  */
 export function computeHabits(input: HabitInput, now: Date, zone = 'UTC'): HabitsResponse {
   const dayIndex = dayCounter(zone);
+  const today = dayIndex(now);
   const noteDays = new Set(input.noteTimes.map(dayIndex));
   const learningDays = new Set([...noteDays, ...input.tourTimes.map(dayIndex)]);
 
@@ -103,8 +131,8 @@ export function computeHabits(input: HabitInput, now: Date, zone = 'UTC'): Habit
   return {
     badges,
     learningDays: learningDays.size,
-    streakDays: streakEndingAt(learningDays, dayIndex(now)),
-    thisWeek: weekDays(learningDays, dayIndex(now)),
+    streakDays: streakEndingAt(learningDays, today),
+    thisWeek: weekDays(learningDays, today),
   };
 }
 

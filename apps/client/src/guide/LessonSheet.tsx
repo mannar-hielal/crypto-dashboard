@@ -10,11 +10,11 @@
  * history cards show a real mini chart; the close lists what the learner can now do.
  */
 
+import { useTourWide } from './useTourWide';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Star, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { trapFocus } from '@/lib/trapFocus';
 import { getArticle } from '@/learn/articles';
@@ -55,7 +55,7 @@ import {
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
-import { getTour, TOUR_WIDE_QUERY, runsHere } from './tours';
+import { getTour, runsHere } from './tours';
 
 const NOTE_MAX = 500;
 
@@ -466,7 +466,7 @@ function CloseView({ lesson }: { lesson: Lesson }) {
 
 export function LessonSheet() {
   const navigate = useNavigate();
-  const desktop = useMediaQuery(TOUR_WIDE_QUERY);
+  const desktop = useTourWide();
   const activeId = useLessonStore((s) => s.activeId);
   const screenIndex = useLessonStore((s) => s.screen);
   const answers = useLessonStore((s) => s.answers);

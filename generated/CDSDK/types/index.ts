@@ -79,6 +79,18 @@ export const LEARN_ITEM_IDS = [
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
 /**
+ * Each lesson's first funnel step in its current version: the client's `stepBase` + 1
+ * (`apps/client/src/guide/lessons.ts`), the server's `LESSON_FIRST_STEP` (`apps/server/src/constants.ts`),
+ * which refuses a start or a finish from below it. One test on each side holds its copy to this one;
+ * raise all three together with a lesson's `stepBase`
+ */
+export const LESSON_FIRST_STEPS = {
+  'lesson-01': 61,
+  'lesson-ownership': 61,
+  'lesson-02': 61,
+} as const;
+
+/**
  * How many times the client retries a session refresh after reconnecting (apps/client
  * `lib/session.ts`). The server serves a just-rotated token again at most `REFRESH_REUSE_CAP` times,
  * which must stay above this, or the last retry is refused and the learner signed out (review on
@@ -175,7 +187,8 @@ export interface HabitsResponse {
   /** Consecutive learning days up to today (or yesterday, so a streak survives until midnight) */
   streakDays: number;
   /** This week's days (the learner's, in their time zone), Monday first: a learning day or not (the streak screen's dots) */
-  thisWeek: boolean[];
+  // Optional: an API from before 2026-11-16 (a rollback of the API alone) doesn't send it
+  thisWeek?: boolean[];
 }
 
 // ─── Notifications ───────────────────────────────────────────────────────────

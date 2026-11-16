@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
 import {
   LESSON_IDS,
   LESSONS,
@@ -363,10 +364,10 @@ describe('lessons', () => {
     }
   });
 
-  it('should start each lesson’s steps where the server expects its current version (61)', () => {
-    // The server's LESSON_FIRST_STEP (apps/server/src/constants.ts) refuses a start or finish below
-    // it (a client on an earlier version): raise both together with a stepBase
-    for (const l of LESSONS) expect((l.stepBase ?? 0) + 1, l.id).toBe(61);
+  it('should start each lesson’s steps where the server expects its current version', () => {
+    // The server refuses a start or finish below it (a client on an earlier version): the SDK's
+    // LESSON_FIRST_STEPS is the shared number, and a server test holds its copy to it too
+    for (const l of LESSONS) expect((l.stepBase ?? 0) + 1, l.id).toBe(LESSON_FIRST_STEPS[l.id]);
   });
 
   it('should only tease a next lesson that the close really offers', () => {

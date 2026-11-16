@@ -45,6 +45,14 @@ describe('StreakView', () => {
     expect(screen.getByText('Thu: not yet')).toBeTruthy();
   });
 
+  it('should still show the streak when the week’s days are missing (an API rolled back)', async () => {
+    getHabits.mockResolvedValue({ ...habits, thisWeek: undefined });
+    render(<StreakView accessToken="t" onContinue={() => {}} />);
+    await waitFor(() => expect(screen.getByText('Mon: not yet')).toBeTruthy());
+    expect(screen.getByText('Sun: not yet')).toBeTruthy();
+    expect(screen.getByText('3-day streak')).toBeTruthy();
+  });
+
   it('should count up to the streak without reduced motion', async () => {
     reduced = false;
     getHabits.mockResolvedValue(habits);

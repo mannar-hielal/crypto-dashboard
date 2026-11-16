@@ -1279,7 +1279,12 @@ export function lessonScreens(lesson: Lesson): LessonScreen[] {
 
 /** The funnel's step id for a screen (0-based): `lesson-ownership.3`, or `lesson-01.23` past a `stepBase` */
 export function lessonStepId(lesson: Lesson, screen: number): string {
-  return `${lesson.id}.${(lesson.stepBase ?? 0) + screen + 1}`;
+  return `${lesson.id}.${lessonStepNumber(lesson, screen)}`;
+}
+
+/** A screen's funnel step number: the server's progress `step`, which tells the versions apart */
+export function lessonStepNumber(lesson: Lesson, screen: number): number {
+  return (lesson.stepBase ?? 0) + screen + 1;
 }
 
 /** The screen (0-based) a step number stands for today, or null for an earlier version's step */

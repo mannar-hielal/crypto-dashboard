@@ -4665,12 +4665,15 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   own (the funnel's steps don't move). Once per lesson run; ✕ or Esc on it only finish. The days are the learner's
   own: the client sends its IANA time zone (`?tz=Europe/Zurich`, the SDK's default), so the dots, the streak and
   the learning days follow the learner's calendar, each day with its own date's offset (a daylight-saving change
-  moves nothing). UTC when absent or unknown.
+  moves nothing). UTC when absent or unknown (an odd device zone never fails the request). `thisWeek` is optional
+  in the SDK: an API rolled back on its own doesn't send it, and the dots then show no days.
 - **Everyone's progress on Lessons 1–3 is reset** (owner: begun and finished alike), by the data migration
   `20261116200000_reset_lessons_1_3`; the ids stay. So that a tab or a cached PWA still on the old lessons can't undo
-  it, a lesson's start and finish carry the funnel step (a finish: its last screen's), and the server answers 409
-  to one below the current version's first step (`LESSON_FIRST_STEP`, 61 for all three; raised with a
-  `stepBase`).
+  it, a lesson's start and finish carry the funnel step (a finish: its last screen's, kept in the row as its
+  version), and the server answers 409 to one below the current version's first step (`LESSON_FIRST_STEP`, 61 for
+  all three; the SDK's `LESSON_FIRST_STEPS` holds the client and server copies together). Fly runs the migration
+  before the old API machines are gone, so the reads guard it too: `GET /progress` leaves out a lesson row with no
+  step or an earlier one, and a start replaces such a row.
 - **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
   writer against our Bybit candles): profit up or down, Buy and Sell, two Choose buy or sell quizzes, a worked long
   (BTC 2 Oct 2023 → 13 Mar 2024, spot) and short (10 Nov 2021 → 18 Jun 2022, perpetual: a contract, with

@@ -70,13 +70,13 @@ export function StreakView({
             {DAYS.map((d, i) => (
               <li key={d} className={styles.day}>
                 <span
-                  className={`${styles.dot} ${habits.thisWeek[i] ? styles.done : ''}`}
+                  className={`${styles.dot} ${habits.thisWeek?.[i] ? styles.done : ''}`}
                   aria-hidden="true"
                 />
                 <span className={styles.dayName}>
                   <span aria-hidden="true">{d[0]}</span>
                   <span className={styles.srOnly}>
-                    {d}: {habits.thisWeek[i] ? 'learned' : 'not yet'}
+                    {d}: {habits.thisWeek?.[i] ? 'learned' : 'not yet'}
                   </span>
                 </span>
               </li>

@@ -7,16 +7,15 @@
  * material and are never locked — and the habit badges.
  */
 
+import { useTourWide } from '@/guide/useTourWide';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { BookText, Flame, X } from 'lucide-react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { HabitsResponse } from '@crypto-dashboard/sdk';
 import { useNavigate } from 'react-router';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { bg, color } from '@/lib/tokens';
-import { TOUR_WIDE_QUERY } from '@/guide/tours';
 import { getLesson } from '@/guide/lessons';
 import { startLesson, startTour } from '@/guide/afterNote';
 import { useTourStore } from '@/guide/tourStore';
@@ -260,7 +259,7 @@ function ChapterStop({
 export function PathDrawer() {
   const navigate = useNavigate();
   const open = useTourStore((s) => s.panelOpen);
-  const wide = useMediaQuery(TOUR_WIDE_QUERY);
+  const wide = useTourWide();
   const accessToken = useAuthStore((s) => s.accessToken);
   const view = usePathView();
   const [tab, setTab] = useState<Tab>('path');

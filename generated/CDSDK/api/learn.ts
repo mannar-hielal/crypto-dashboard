@@ -19,7 +19,6 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   return data;
 }
 
-/** What the account remembers about the guided tours */
 /** This device's IANA time zone (`Europe/Zurich`), or none where the runtime can't say */
 function deviceTimeZone(): string | undefined {
   try {
@@ -29,13 +28,13 @@ function deviceTimeZone(): string | undefined {
   }
 }
 
+/** What the account remembers about learning: tours, lessons, offers, habits and events */
 export const learnApi = {
   getProgress: (accessToken: string) =>
     request<LearnProgressResponse>('/api/learn/progress', {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
 
-  /** `started` takes a lesson's furthest screen as `step` (its funnel step number) */
   /**
    * `step`: a lesson's funnel step number, with its start (the furthest screen) and its finish (the
    * last screen); the server answers 409 to a step from an earlier version of the lesson
@@ -47,8 +46,10 @@ export const learnApi = {
       body: JSON.stringify(step === undefined ? { status } : { status, step }),
     }),
 
-  /** The account's habit badges and learning streak, counted from what is already stored */
-  /** `zone`: the learner's time zone (IANA; this device's by default), so the days are their own */
+  /**
+   * The account's habit badges and learning streak, counted from what is already stored. `zone`:
+   * the learner's time zone (IANA; this device's by default), so the days are their own
+   */
   getHabits: (accessToken: string, zone: string | undefined = deviceTimeZone()) =>
     request<HabitsResponse>(`/api/learn/habits${zone ? `?tz=${encodeURIComponent(zone)}` : ''}`, {
       headers: { Authorization: `Bearer ${accessToken}` },

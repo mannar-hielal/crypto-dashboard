@@ -6,6 +6,7 @@
  * what to open.
  */
 
+import { useTourWide } from './useTourWide';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, X } from 'lucide-react';
@@ -13,8 +14,7 @@ import { guide, guideSelector } from '@/lib/guideAnchors';
 import { placeBubble, type Box } from './bubblePlacement';
 import { matchesHover, newestCandleBox, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
-import { getTour, type TourStep, tourSteps, TOUR_WIDE_QUERY } from './tours';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { getTour, type TourStep, tourSteps } from './tours';
 import styles from './GuideOverlay.module.css';
 
 const RING_PAD = 3;
@@ -460,7 +460,7 @@ export function GuideOverlay() {
   const activeId = useTourStore((s) => s.activeId);
   const stepIndex = useTourStore((s) => s.stepIndex);
   // A rotation or resize across the tours' width mid-tour: that layout's steps, from this one on
-  const wide = useMediaQuery(TOUR_WIDE_QUERY, true);
+  const wide = useTourWide();
   useEffect(() => {
     if (activeId) useTourStore.getState().setWide(wide);
   }, [activeId, wide]);

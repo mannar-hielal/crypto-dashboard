@@ -56,8 +56,8 @@ export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as
 export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
 
 /**
- * Each lesson's first funnel step in its current version: the client's `stepBase` + 1 (`lessons.ts`;
- * its lessons test checks they match). 🔐 A start or a finish from below it comes from a client still
+ * Each lesson's first funnel step in its current version: the client's `stepBase` + 1 (`lessons.ts`).
+ * Both are held to the SDK's `LESSON_FIRST_STEPS` by a test on each side. 🔐 A start or a finish from below it comes from a client still
  * on an earlier version (an open tab, a cached PWA), and is refused, so the reset of 2026-11-16
  * (`20261116200000_reset_lessons_1_3`) holds. Raise it with the lesson's `stepBase`.
  */

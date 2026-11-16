@@ -34,7 +34,7 @@ interface TourState {
   close: () => void;
   answerQuiz: (index: number) => void;
   /** Replace the finished set (the server's answer) */
-  setCompleted: (ids: TourId[]) => void;
+  setCompleted: (ids: PathTourId[]) => void;
   /** The account's saved progress arrived */
   setProgress: (progress: {
     completed: PathTourId[];
@@ -126,7 +126,9 @@ export const useTourStore = create<TourState>()((set, get) => ({
 
   setCompleted: (ids) =>
     set({
-      completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<Record<TourId, true>>,
+      completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<
+        Record<PathTourId, true>
+      >,
     }),
 
   setProgress: ({ completed, cardDismissed, fillOfferDismissed = false }) =>

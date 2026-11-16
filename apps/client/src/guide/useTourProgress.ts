@@ -17,6 +17,7 @@ import {
   lessonScreenOfStep,
   lessonScreens,
   lessonStepId,
+  lessonStepNumber,
   type LessonId,
 } from './lessons';
 import { useTourStore } from './tourStore';
@@ -26,8 +27,7 @@ import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './to
 let applyingServer = false;
 
 /** A lesson's screen as its funnel step number (the server tells the lesson's versions apart by it) */
-const stepNumber = (id: LessonId, screen: number) =>
-  Number(lessonStepId(getLesson(id), screen).split('.')[1]);
+const stepNumber = (id: LessonId, screen: number) => lessonStepNumber(getLesson(id), screen);
 
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {

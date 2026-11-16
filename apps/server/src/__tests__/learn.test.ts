@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
+import { LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
+import { LESSON_FIRST_STEP } from '../constants.js';
 import type { FastifyInstance } from 'fastify';
 import {
   HABIT_BADGE_IDS as SDK_BADGES,
@@ -105,6 +107,24 @@ describe('/api/learn/progress', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('GET: leaves out a lesson row from an earlier version of the lesson', async () => {
+    // Written by an old client or an old API machine during the rollout: never counted
+    vi.mocked(app.prisma.learningProgress.findMany).mockResolvedValueOnce([
+      { itemId: 'lesson-01', status: 'completed', step: null, updatedAt: AT },
+      { itemId: 'lesson-ownership', status: 'started', step: 24, updatedAt: AT },
+      { itemId: 'lesson-02', status: 'completed', step: 81, updatedAt: AT },
+      { itemId: 'primer', status: 'completed', step: null, updatedAt: AT },
+    ] as never);
+    const res = await app.inject({ method: 'GET', url: '/api/learn/progress', headers: auth() });
+    expect(res.json()).toEqual({
+      items: [
+        // A finish answers without its step
+        { itemId: 'lesson-02', status: 'completed', updatedAt: AT.toISOString() },
+        { itemId: 'primer', status: 'completed', updatedAt: AT.toISOString() },
+      ],
+    });
+  });
+
   it('GET: returns only the caller’s items, as ISO dates', async () => {
     vi.mocked(app.prisma.learningProgress.findMany).mockResolvedValueOnce([
       { itemId: 'primer', status: 'completed', updatedAt: AT },
@@ -148,7 +168,7 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId_itemId: { userId: 'user-1', itemId: 'primer' } },
-        create: { userId: 'user-1', itemId: 'primer', status: 'completed' },
+        create: { userId: 'user-1', itemId: 'primer', status: 'completed', step: null },
         update: { status: 'completed', step: null },
       })
     );
@@ -224,12 +244,14 @@ describe('/api/learn/progress', () => {
     expect(res.statusCode).toBe(200);
     expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        create: { userId: 'user-1', itemId: 'primer', status: 'completed' },
+        create: { userId: 'user-1', itemId: 'primer', status: 'completed', step: null },
       })
     );
   });
 
   it('PUT started: records how far a lesson has got, and the step only rises', async () => {
+    // No row from an earlier version to replace
+    vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });
     // The row exists: the step is raised, and what was asked comes back without a read
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 1 });
@@ -253,6 +275,14 @@ describe('/api/learn/progress', () => {
       where: {
         userId: 'user-1',
         itemId: 'lesson-02',
+        OR: [{ step: null }, { step: { lt: 61 } }],
+      },
+      data: { status: 'started', step: 76 },
+    });
+    expect(app.prisma.learningProgress.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        itemId: 'lesson-02',
         status: 'started',
         OR: [{ step: null }, { step: { lt: 76 } }],
       },
@@ -261,13 +291,28 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
   });
 
+  it('PUT started: takes over a row from an earlier version of the lesson', async () => {
+    // Finished in the old lesson (an old API machine during the rollout): today's start replaces it
+    vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 1 });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-01',
+      headers: auth(),
+      payload: { status: 'started', step: 64 },
+    });
+    expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 64 });
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
+  });
+
   it('PUT started: a finished lesson stays finished', async () => {
+    // No row from an earlier version to replace
+    vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
       itemId: 'lesson-01',
       status: 'completed',
-      step: null,
+      step: 82,
       updatedAt: AT,
     } as never);
     const res = await app.inject({
@@ -315,6 +360,8 @@ describe('/api/learn/progress', () => {
   });
 
   it('PUT started: a new row is created and answered without a read back', async () => {
+    // No row from an earlier version to replace
+    vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 1 });
     const res = await app.inject({
       method: 'PUT',
@@ -324,8 +371,13 @@ describe('/api/learn/progress', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 81 });
-    expect(app.prisma.learningProgress.updateMany).not.toHaveBeenCalled();
+    // Only the earlier-version check: no raise
+    expect(app.prisma.learningProgress.updateMany).toHaveBeenCalledTimes(1);
     expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('holds each lesson’s first step to the SDK’s, which the client’s lessons test holds too', () => {
+    expect(LESSON_FIRST_STEP).toEqual(LESSON_FIRST_STEPS);
   });
 
   it('PUT refuses a lesson’s start or finish from an earlier version of it, before any write', async () => {
@@ -363,7 +415,7 @@ describe('/api/learn/progress', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('PUT completed: a finished lesson drops its furthest screen', async () => {
+  it('PUT completed: a finished lesson answers without a furthest screen, and stores its version', async () => {
     vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
       itemId: 'lesson-02',
       status: 'completed',
@@ -382,7 +434,7 @@ describe('/api/learn/progress', () => {
       updatedAt: AT.toISOString(),
     });
     expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ update: { status: 'completed', step: null } })
+      expect.objectContaining({ update: { status: 'completed', step: 81 } })
     );
   });
 
@@ -610,7 +662,7 @@ describe('GET /api/learn/habits', () => {
     });
   });
 
-  it('should take the learner’s time zone, and refuse one that is no zone name', async () => {
+  it('should take the learner’s time zone, count an unknown one in UTC, and refuse an overlong one', async () => {
     const get = (tz: string) =>
       app.inject({
         method: 'GET',
@@ -621,7 +673,9 @@ describe('GET /api/learn/habits', () => {
     expect((await get('Etc/GMT+5')).statusCode).toBe(200);
     // An unknown name of the right shape counts in UTC
     expect((await get('Mars/Olympus')).statusCode).toBe(200);
-    expect((await get('<script>')).statusCode).toBe(400);
+    // Never refused for its text: the streak keeps working, in UTC
+    expect((await get('+05:30')).statusCode).toBe(200);
+    expect((await get('<script>')).statusCode).toBe(200);
     expect((await get('x'.repeat(65))).statusCode).toBe(400);
   });
 });

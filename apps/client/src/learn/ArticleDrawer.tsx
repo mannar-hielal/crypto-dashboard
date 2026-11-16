@@ -6,13 +6,13 @@
  * app. Article text is our own, plain, with `**bold**` as the only markup — never HTML.
  */
 
+import { useTourWide } from '@/guide/useTourWide';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
-import { TOUR_WIDE_QUERY, runsHere } from '@/guide/tours';
+import { runsHere } from '@/guide/tours';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson } from '@/guide/lessons';
 import { startLesson, startTour } from '@/guide/afterNote';
@@ -117,7 +117,7 @@ function Block({ block }: { block: ArticleBlock }): ReactNode {
 
 export function ArticleDrawer() {
   const navigate = useNavigate();
-  const desktop = useMediaQuery(TOUR_WIDE_QUERY);
+  const desktop = useTourWide();
   const openId = useArticleStore((s) => s.openId);
   const from = useArticleStore((s) => s.from);
   const section = useArticleStore((s) => s.section);

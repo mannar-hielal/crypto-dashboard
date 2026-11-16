@@ -154,18 +154,27 @@ describe('LessonChart', () => {
     expect(h.createPriceLine).not.toHaveBeenCalled();
   });
 
-  it('should show whole dollars for Bitcoin and cents for Solana, on the same chart', async () => {
+  it('should show cents below $1,000 and whole dollars above it, on the same chart', async () => {
     const format = () =>
       (h.applyOptions.mock.calls.at(-1)?.[0] as { priceFormat: { precision: number } }).priceFormat
         .precision;
+    // The test candles trade around $100: cents
     const { rerender } = render(<LessonChart scene={scene} revealed fallback={<p>picture</p>} />);
-    await waitFor(() => expect(h.applyOptions).toHaveBeenCalled());
-    expect(format()).toBe(0);
-    rerender(
-      <LessonChart scene={{ ...scene, symbol: 'SOLUSDT' }} revealed fallback={<p>picture</p>} />
-    );
     await waitFor(() => expect(format()).toBe(2));
-    // Not a new chart: its data and plan line stay
+    // Another scene in the thousands: whole dollars, on the same chart (its data and plan line stay)
+    h.getCandles.mockResolvedValue({
+      candles: candles().map((c) => ({
+        ...c,
+        open: 50_000,
+        high: 51_000,
+        low: 49_000,
+        close: 50_500,
+      })),
+    });
+    rerender(
+      <LessonChart scene={{ ...scene, end: '2024-03-01' }} revealed fallback={<p>picture</p>} />
+    );
+    await waitFor(() => expect(format()).toBe(0));
     expect(h.createChart).toHaveBeenCalledTimes(1);
   });
 });

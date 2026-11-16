@@ -6,14 +6,14 @@
  * back to the map.
  */
 
+import { useTourWide } from '@/guide/useTourWide';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { startLesson, startTour } from '@/guide/afterNote';
-import { TOUR_WIDE_QUERY, runsHere } from '@/guide/tours';
+import { runsHere } from '@/guide/tours';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
 import { getLesson } from '@/guide/lessons';
@@ -65,7 +65,7 @@ function Missed({ q, wide, onReview }: MissedProps) {
 
 export function CheckpointSheet() {
   const navigate = useNavigate();
-  const wide = useMediaQuery(TOUR_WIDE_QUERY);
+  const wide = useTourWide();
   const checkpointId = usePathStore((s) => s.checkpointId);
   const index = usePathStore((s) => s.question);
   const answers = usePathStore((s) => s.answers);

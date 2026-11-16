@@ -39,12 +39,31 @@ interface ItemRow {
   updatedAt: Date;
 }
 
+// A finished lesson keeps its finish's step in the row (its version), but answers without one: it
+// no longer has a "furthest screen"
 const toItem = (r: ItemRow) => ({
   itemId: r.itemId as LearnItemId,
   status: r.status as LearnStatus,
-  ...(typeof r.step === 'number' ? { step: r.step } : {}),
+  ...(r.status === 'started' && typeof r.step === 'number' ? { step: r.step } : {}),
   updatedAt: r.updatedAt.toISOString(),
 });
+
+/** The lesson an item id names, or null for a tour, an offer or a checkpoint */
+const lessonOf = (itemId: string) =>
+  (LEARN_LESSON_IDS as readonly string[]).includes(itemId)
+    ? (itemId as (typeof LEARN_LESSON_IDS)[number])
+    : null;
+
+/**
+ * 🔐 A lesson row from an earlier version of the lesson: no step, or one below the current
+ * version's first. Written by an old client, or by an old API machine during a rolling deploy
+ * (the reset migration runs before the old machines are gone), so it never counts.
+ */
+const isStaleLessonRow = (r: { itemId: string; step?: number | null }) => {
+  const lesson = lessonOf(r.itemId);
+  // eslint-disable-next-line security/detect-object-injection -- lesson is from the fixed list
+  return lesson !== null && (typeof r.step !== 'number' || r.step < LESSON_FIRST_STEP[lesson]);
+};
 
 const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const;
 
@@ -87,7 +106,7 @@ export async function learnRoutes(app: FastifyInstance) {
         where: { userId },
         select: ROW,
       });
-      return reply.send({ items: rows.map(toItem) });
+      return reply.send({ items: rows.filter((r) => !isStaleLessonRow(r)).map(toItem) });
     }
   );
 
@@ -137,9 +156,7 @@ export async function learnRoutes(app: FastifyInstance) {
       const { userId } = request.user as { userId: string };
       const { itemId } = request.params as { itemId: LearnItemId };
       const { status, step } = request.body as { status: LearnStatus; step?: number };
-      const lessonId = (LEARN_LESSON_IDS as readonly string[]).includes(itemId)
-        ? (itemId as (typeof LEARN_LESSON_IDS)[number])
-        : null;
+      const lessonId = lessonOf(itemId);
 
       // 🔐 A step belongs to a lesson's start or finish only: a dismissal, or a tour's finish,
       // carrying one is a bad request
@@ -164,6 +181,19 @@ export async function learnRoutes(app: FastifyInstance) {
         // 🔐 Only a lesson has screens, and a start always says how far
         if (!lessonId || step === undefined) {
           return reply.status(400).send({ error: 'A start needs a lesson and its step' });
+        }
+        // A row from an earlier version of the lesson (finished or begun there) is today's start
+        const replaced = await app.prisma.learningProgress.updateMany({
+          where: {
+            userId,
+            itemId,
+            // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
+            OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
+          },
+          data: { status, step },
+        });
+        if (replaced.count === 1) {
+          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
         }
         // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
         // lesson is unfinished (a completed row is left as it is)
@@ -199,9 +229,9 @@ export async function learnRoutes(app: FastifyInstance) {
       if (status === 'completed') {
         const row = await app.prisma.learningProgress.upsert({
           where: { userId_itemId: { userId, itemId } },
-          create: { userId, itemId, status },
-          // A finished lesson no longer has a "furthest screen"
-          update: { status, step: null },
+          // A lesson's finish keeps its step: the version it was finished in (a tour's: none)
+          create: { userId, itemId, status, step: step ?? null },
+          update: { status, step: step ?? null },
           select: ROW,
         });
         return reply.send({ item: toItem(row) });
@@ -285,8 +315,9 @@ export async function learnRoutes(app: FastifyInstance) {
           type: 'object',
           additionalProperties: false,
           properties: {
-            // 🔐 Bounded, and only the characters of an IANA zone name; an unknown one counts in UTC
-            tz: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9_+/-]+$' },
+            // 🔐 Bounded (IANA names are under 40 characters). Any other text is never refused: an
+            // unknown zone counts in UTC (`dayCounter`), so an odd device zone keeps the streak
+            tz: { type: 'string', maxLength: 64 },
           },
         },
         response: {

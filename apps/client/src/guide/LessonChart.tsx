@@ -97,9 +97,9 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
 
   // ── The chart itself, once there is data ───────────────────────────────────
   const ready = bars !== null;
-  // Whole dollars for Bitcoin ("$57,459", not "57459.00"); cents for a coin priced in the hundreds
-  // (Solana's "$182.57")
-  const cents = scene.symbol !== 'BTCUSDT';
+  // By the coin's price level, not its name: whole dollars from $1,000 (Bitcoin's "$57,459", not
+  // "57459.00"), cents below it (Solana's "$182.57")
+  const cents = !!bars && bars.length > 0 && Math.max(...bars.map((b) => b.high)) < 1000;
   useEffect(() => {
     const el = containerRef.current;
     if (!ready || !el) return;
