@@ -546,8 +546,8 @@ describe('lessons', () => {
     }
     // Rewritten 2026-11-16: past the versions' 1–20 and 21–40
     expect(getLesson('lesson-01').stepBase).toBe(60);
-    // Rewritten 2026-11-16: Lesson 2 past its 1–20, Lesson 3 past its 1–40 and 41–60
-    expect(getLesson('lesson-ownership').stepBase).toBe(20);
+    // Rewritten 2026-11-16: Lessons 2 and 3 past their earlier versions' steps
+    expect(getLesson('lesson-ownership').stepBase).toBe(60);
     expect(getLesson('lesson-02').stepBase).toBe(60);
   });
 });

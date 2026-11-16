@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { startLesson, startTour } from '@/guide/afterNote';
-import { TOUR_MIN_WIDTH } from '@/guide/LearnCard';
+import { TOUR_WIDE_QUERY } from '@/guide/tours';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
 import { getLesson } from '@/guide/lessons';
@@ -65,7 +65,7 @@ function Missed({ q, wide, onReview }: MissedProps) {
 
 export function CheckpointSheet() {
   const navigate = useNavigate();
-  const wide = useMediaQuery(TOUR_MIN_WIDTH);
+  const wide = useMediaQuery(TOUR_WIDE_QUERY);
   const checkpointId = usePathStore((s) => s.checkpointId);
   const index = usePathStore((s) => s.question);
   const answers = usePathStore((s) => s.answers);

@@ -93,6 +93,14 @@ describe('OrderQuiz (Drag and drop)', () => {
     expect(el('lesson.slot', 2).getAttribute('aria-label')).toBe('Slot 3: First');
   });
 
+  it('should ignore a drop that carries no step (dragged text or an image)', () => {
+    render(<OrderQuiz q={order} answer={undefined} onAnswer={() => {}} />);
+    const dataTransfer = { getData: () => '' };
+    fireEvent.drop(el('lesson.slot', 2), { dataTransfer });
+    expect(el('lesson.slot', 2).getAttribute('aria-label')).toBe('Slot 3: empty');
+    expect(el('lesson.step', 0)).toBeTruthy();
+  });
+
   it('should show the right order and the result when an answered question is shown again', () => {
     render(<OrderQuiz q={order} answer={1} onAnswer={() => {}} />);
     expect(el('lesson.slot', 0).getAttribute('aria-label')).toBe('Slot 1: First, right');

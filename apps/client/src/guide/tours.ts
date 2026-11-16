@@ -29,11 +29,10 @@ export function isTourId(value: string): value is (typeof TOUR_IDS)[number] {
   return (TOUR_IDS as readonly string[]).includes(value);
 }
 
-export function isPracticeTourId(value: string): value is PracticeTourId {
-  return (PRACTICE_TOUR_IDS as readonly string[]).includes(value);
-}
-
-/** The width from which tours use the desktop layout (the order form docked beside the chart) */
+/**
+ * The width from which tours use the desktop layout: the order form docked beside the chart, lg and
+ * up (design.md, responsive layout). Below it, phone-ready tours open the form from the bottom bar.
+ */
 export const TOUR_WIDE_QUERY = '(min-width: 1024px)';
 
 export type TourStepKind = 'observe' | 'click' | 'type' | 'quiz' | 'hover';
@@ -97,6 +96,9 @@ export interface Tour {
 // chart on a larger screen, from the Buy / Long or Sell / Short bar at the bottom on a phone
 const FORM_HINT =
   'Open the order form: the Trade button above the chart, or Buy / Long at the bottom on a phone.';
+/** The phone's Buy / Long and Sell / Short bar hides while the order form or an edit panel is open */
+const PHONE_BAR_HINT =
+  'Close the open panel first: the Buy / Long and Sell / Short bar is at the bottom of the screen.';
 
 /** A shared scenario step as a tour step (click / type / observe, same anchor, same words) */
 function fromDraft(draft: StepDraft, over: Partial<TourStep> = {}): Omit<TourStep, 'id'> {
@@ -169,6 +171,7 @@ const buyFirstCoin: Tour = {
       kind: 'click',
       anchor: 'trade.mobile.buy',
       text: 'Tap Buy / Long to open the order form. Buy if you expect the price to rise; buying to gain from a rise is called going long.',
+      missingHint: PHONE_BAR_HINT,
       screen: 'phone',
     },
     fromDraft(
@@ -300,6 +303,7 @@ function practice(
         kind: 'click',
         anchor: side === 'buy' ? 'trade.mobile.buy' : 'trade.mobile.sell',
         text: `Tap ${phoneButton} to open the order form. ${sideText}`,
+        missingHint: PHONE_BAR_HINT,
         screen: 'phone',
       },
       {

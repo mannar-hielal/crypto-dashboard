@@ -13,7 +13,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from './lessonStore';
 import { getLesson, isLessonId, lessonScreenOfStep, lessonStepId, type LessonId } from './lessons';
 import { useTourStore } from './tourStore';
-import { isTourId, type TourId } from './tours';
+import { tourSteps, getTour, isTourId, type TourId } from './tours';
 
 /** Set while the server's furthest screens are merged in: they're already stored, so never sent */
 let applyingServer = false;
@@ -122,11 +122,16 @@ export function useTourProgress(): void {
       }
 
       // The funnel (privacy policy §3 "Learning events"): started → each step → completed / closed
-      const send = (name: LearnEventRequest['name'], itemId: TourId, stepId?: string) =>
-        !isTourId(itemId) ||
+      const send = (name: LearnEventRequest['name'], itemId: TourId, stepId?: string) => {
+        // A practice trade from a lesson card is no tour of its own (the lesson's screens report)
+        if (!isTourId(itemId)) return;
         learnApi
           .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
           .catch(() => undefined);
+      };
+      // A step's own id (`<tour>.<n>` over every step), not its place among this screen size's
+      const stepIdAt = (id: TourId, index: number, wide: boolean) =>
+        tourSteps(getTour(id), wide)[index]?.id;
       // A finish, a replay of a finished tour included (`completed` doesn't change then)
       // (a reset sets the count back to 0: that's no finish)
       const finished = state.finishes > prev.finishes ? prev.activeId : null;
@@ -135,12 +140,12 @@ export function useTourProgress(): void {
       const { activeId, stepIndex } = state;
       if (activeId !== null && activeId !== prev.activeId) {
         send('tour_started', activeId);
-        send('tour_step', activeId, `${activeId}.1`);
+        send('tour_step', activeId, stepIdAt(activeId, 0, state.wide));
       } else if (activeId !== null && stepIndex !== prev.stepIndex) {
-        send('tour_step', activeId, `${activeId}.${stepIndex + 1}`);
+        send('tour_step', activeId, stepIdAt(activeId, stepIndex, state.wide));
       } else if (activeId === null && prev.activeId !== null && !finished) {
         // Closed (Skip, ✕, Esc) on the step it was showing
-        send('tour_closed', prev.activeId, `${prev.activeId}.${prev.stepIndex + 1}`);
+        send('tour_closed', prev.activeId, stepIdAt(prev.activeId, prev.stepIndex, prev.wide));
       }
     });
   }, [accessToken]);

@@ -283,9 +283,7 @@ function TourBubble({
   // An accepted order empties the amount field (the form's own signal); a refused one doesn't
   useEffect(() => {
     if (!awaiting) return;
-    // Accepted: the amount clears, or (on a phone) the order sheet closes and takes it away; a
-    // refused order leaves the form open with the amount still in it
-    if (awaiting.hadValue && (tracked.doneValue === '' || tracked.doneValue === null)) {
+    if (awaiting.hadValue && tracked.doneValue === '') {
       // The step is replaced (and this bubble unmounted) by the move on
       advance();
       return;

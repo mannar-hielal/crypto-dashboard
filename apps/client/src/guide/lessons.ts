@@ -648,8 +648,9 @@ const lessonOwnership: Lesson = {
   title: 'Money nobody controls',
   stage: 'Getting started',
   minutes: LESSON_02_MINUTES,
-  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 21 on
-  stepBase: 20,
+  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on, past
+  // its earlier versions' 1–20 and 21–40
+  stepBase: 60,
   tryWidget: 'block-chain',
   tryIntro:
     'Your turn: change a number in an old block and watch what happens to every block after it.',

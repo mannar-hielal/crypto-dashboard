@@ -1,7 +1,7 @@
 /**
  * The welcome card: offered once, on a dashboard where the account has not finished Lesson 1 (or
  * the primer) and has not dismissed it. Start opens Lesson 1 on any screen size — its cards work
- * on phones; only its "try it" part needs a larger screen (owner, 2026-10-22). Dismissal is saved
+ * on phones, its practice trades and "try it" too (owner, 2026-11-16). Dismissal is saved
  * on the account.
  */
 
@@ -11,11 +11,6 @@ import styles from './LearnCard.module.css';
 import { getLesson } from './lessons';
 import { useLessonStore } from './lessonStore';
 import { useTourStore } from './tourStore';
-
-/** Tours need the order form docked beside the chart: lg and up (design.md, responsive layout) */
-import { TOUR_WIDE_QUERY } from './tours';
-
-export const TOUR_MIN_WIDTH = TOUR_WIDE_QUERY;
 
 export function LearnCard() {
   const loaded = useTourStore((s) => s.loaded);

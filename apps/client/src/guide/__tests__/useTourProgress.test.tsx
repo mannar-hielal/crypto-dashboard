@@ -202,7 +202,11 @@ describe('useTourProgress', () => {
       act(() => useTourStore.getState().close());
 
       expect(names()).toEqual([
-        { name: 'tour_closed', itemId: 'buy-first-coin', stepId: 'buy-first-coin.2' },
+        {
+          name: 'tour_closed',
+          itemId: 'buy-first-coin', // The second desktop step is step 3: step 1 is the phone's (2026-11-16, ids over every step)
+          stepId: 'buy-first-coin.3',
+        },
       ]);
     });
 
@@ -370,7 +374,7 @@ describe('useTourProgress', () => {
 
       act(() => useLessonStore.getState().next());
       expect(calls()).toEqual([
-        { name: 'tour_step', itemId: 'lesson-ownership', stepId: 'lesson-ownership.23' },
+        { name: 'tour_step', itemId: 'lesson-ownership', stepId: 'lesson-ownership.63' },
       ]);
     });
 
@@ -402,7 +406,7 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       act(() => useLessonStore.getState().start('lesson-02', 4));
       expect(calls()).toEqual([
-        { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.22' },
+        { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.62' },
         { name: 'tour_started', itemId: 'lesson-02' },
         { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.65' },
       ]);

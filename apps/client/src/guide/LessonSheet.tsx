@@ -36,7 +36,6 @@ import { BuySellView } from './BuySellView';
 import { StreakView } from './StreakView';
 import { MatchQuiz } from './MatchQuiz';
 import { OrderQuiz } from './OrderQuiz';
-import { TOUR_MIN_WIDTH } from './LearnCard';
 import {
   afterNote,
   saveJournalLine,
@@ -56,7 +55,7 @@ import {
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
-import { getTour } from './tours';
+import { getTour, TOUR_WIDE_QUERY } from './tours';
 
 const NOTE_MAX = 500;
 
@@ -458,7 +457,7 @@ function CloseView({ lesson }: { lesson: Lesson }) {
 
 export function LessonSheet() {
   const navigate = useNavigate();
-  const desktop = useMediaQuery(TOUR_MIN_WIDTH);
+  const desktop = useMediaQuery(TOUR_WIDE_QUERY);
   const activeId = useLessonStore((s) => s.activeId);
   const screenIndex = useLessonStore((s) => s.screen);
   const answers = useLessonStore((s) => s.answers);
@@ -483,6 +482,8 @@ export function LessonSheet() {
    * step ids don't move.
    */
   const [streakThen, setStreakThen] = useState<{ run: number; go: () => void } | null>(null);
+  // ✕ and Esc on the streak screen still do what the close's button was pressed for (a finish)
+  const streakGo = streakThen?.run === run ? streakThen.go : null;
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
@@ -516,11 +517,12 @@ export function LessonSheet() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (peekOpen) setPeek(null);
+      else if (streakGo) streakGo();
       else afterNote(() => useLessonStore.getState().close());
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeId, inTour, articleOpen, mapOpen, peekOpen]);
+  }, [activeId, inTour, articleOpen, mapOpen, peekOpen, streakGo]);
 
   // Each new screen takes the focus, so a screen reader reads it from the top
   useEffect(() => {
@@ -579,7 +581,7 @@ export function LessonSheet() {
 
   if (!screen) return null;
   const { next, back, answer } = useLessonStore.getState();
-  const close = () => afterNote(() => useLessonStore.getState().close());
+  const close = () => (streakGo ? streakGo() : afterNote(() => useLessonStore.getState().close()));
   const goBack = () => {
     setPeek(null);
     back();
@@ -606,7 +608,9 @@ export function LessonSheet() {
   // The close's next step: the next lesson (any screen), or a tour (a larger screen only)
   const nextStep = lesson.next;
   // During a look back, the way on is back to the lesson the learner came from
-  const offerNext = !!returnTo || (!!nextStep && (nextStep.kind === 'lesson' || desktop));
+  const offerNext =
+    !!returnTo ||
+    (!!nextStep && (nextStep.kind === 'lesson' || desktop || !!getTour(nextStep.id).phoneReady));
   const nextLabel = returnTo
     ? `Back to Lesson ${getLesson(returnTo.lesson).number}: ${getLesson(returnTo.lesson).title}`
     : !nextStep
@@ -615,7 +619,7 @@ export function LessonSheet() {
         ? `Lesson ${getLesson(nextStep.id).number}: ${getLesson(nextStep.id).title}`
         : getTour(nextStep.id).title;
   // The close's buttons show the streak first (a signed-in finish only, not from a look back)
-  const streakShown = streakThen?.run === run;
+  const streakShown = streakGo !== null;
   const viaStreak = (go: () => void) => () => {
     if (accessToken && !returnTo) setStreakThen({ run, go });
     else go();
@@ -658,7 +662,15 @@ export function LessonSheet() {
       const card = lesson.cards[screen.index];
       heading = card.title;
       if (card.quiz) {
-        body = <QuestionBody q={card.quiz} answer={answers[screenIndex]} onAnswer={answer} />;
+        // A fresh chart per screen: back-to-back quizzes never share one's candles
+        body = (
+          <QuestionBody
+            key={`${run}:${screenIndex}`}
+            q={card.quiz}
+            answer={answers[screenIndex]}
+            onAnswer={answer}
+          />
+        );
         break;
       }
       body = card.meet ? (
@@ -751,7 +763,12 @@ export function LessonSheet() {
     case 'check':
       heading = screen.kind === 'moment' ? 'Your call' : 'Check yourself';
       body = question && (
-        <QuestionBody q={question} answer={answers[screenIndex]} onAnswer={answer} />
+        <QuestionBody
+          key={`${run}:${screenIndex}`}
+          q={question}
+          answer={answers[screenIndex]}
+          onAnswer={answer}
+        />
       );
       break;
     case 'try':

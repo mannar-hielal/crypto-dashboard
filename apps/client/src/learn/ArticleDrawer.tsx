@@ -12,7 +12,7 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
-import { TOUR_MIN_WIDTH } from '@/guide/LearnCard';
+import { TOUR_WIDE_QUERY } from '@/guide/tours';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson } from '@/guide/lessons';
 import { startLesson, startTour } from '@/guide/afterNote';
@@ -117,7 +117,7 @@ function Block({ block }: { block: ArticleBlock }): ReactNode {
 
 export function ArticleDrawer() {
   const navigate = useNavigate();
-  const desktop = useMediaQuery(TOUR_MIN_WIDTH);
+  const desktop = useMediaQuery(TOUR_WIDE_QUERY);
   const openId = useArticleStore((s) => s.openId);
   const from = useArticleStore((s) => s.from);
   const section = useArticleStore((s) => s.section);

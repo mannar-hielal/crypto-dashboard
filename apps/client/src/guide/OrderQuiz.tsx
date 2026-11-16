@@ -43,8 +43,12 @@ export function OrderQuiz({
   };
   const onDrop = (e: DragEvent, slot: number) => {
     e.preventDefault();
-    const step = Number(e.dataTransfer.getData(DRAG_TYPE));
-    if (!answered && Number.isInteger(step)) place(slot, step);
+    // Only one of this board's steps (a dropped text or image carries no step)
+    const data = e.dataTransfer.getData(DRAG_TYPE);
+    const step = Number(data);
+    if (!answered && data !== '' && Number.isInteger(step) && step >= 0 && step < steps.length) {
+      place(slot, step);
+    }
   };
   const check = () => onAnswer(slots.every((x, i) => x === i) ? 0 : 1);
 

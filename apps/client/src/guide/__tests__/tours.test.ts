@@ -7,7 +7,6 @@ import {
   isTourId,
   PRACTICE_TOURS,
   PRACTICE_TOUR_IDS,
-  isPracticeTourId,
   tourSteps,
 } from '@/guide/tours';
 
@@ -96,7 +95,6 @@ describe('tours', () => {
     expect(PRACTICE_TOURS.map((t) => t.id)).toEqual([...PRACTICE_TOUR_IDS]);
     for (const t of PRACTICE_TOURS) {
       expect(isTourId(t.id)).toBe(false);
-      expect(isPracticeTourId(t.id)).toBe(true);
       expect(t.next).toBeUndefined();
     }
     expect(getTour('practice-short').startUrl).toBe('/dashboard/usdt/BTCUSDT');

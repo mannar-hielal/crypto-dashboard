@@ -325,75 +325,48 @@ with paper money, and then picks up where it left off.
    **resumes the lesson on the screen after the card**, not at the start, with the answers and
    progress kept (`lessonStore` in memory, the furthest screen synced to the account).
 
-### How to build it with what exists
+### How it works (built 2026-11-16)
 
-- **Tour engine:** tours live in `apps/client/src/guide/tours.ts` (`TOUR_IDS`, `Tour`, `TourStep`),
-  drawn by `GuideOverlay.tsx` (the ring and bubble, placed by `bubblePlacement.ts`) on anchors set
-  with `guide()` and listed in `lib/guideAnchors.ts`. Reuse the shared step builders in `steps.ts`
-  (`chooseType`, `openTab`, `submit`), so a control is described in one wording everywhere.
-- **Base tours:** `buy-first-coin` (Spot market buy of $100) and `sell-and-review` (sell it back,
-  read the fees). For long/short, base a new perp tour on the `perp-market-long` scenario
-  (`apps/client/src/guide/scenarios/perpMarketLong.ts`, `/dashboard/usdt/BTCUSDT`). A practice tour has **no `next`**:
-  the chain must end back in the lesson, not in another tour.
-- **Per-card tour (proposed shape, doesn't exist yet):** a card field in `lessons.ts` such as
-  `practice?: TourId`, typed against `TOUR_IDS`. A card field keeps `lessonScreens` the same, so
-  the funnel's step ids and `stepBase` don't move; a new screen kind would shift them.
-- **Starting and resuming, today's mechanism:** `LessonSheet.tsx` starts the lesson's tour with
-  `startTour` ("Show me" / "Skip this part" on the `try` screen), `lessonStore.enterTour()` hides
-  the sheet, and a subscription to `tourStore` calls `leaveTour()` when that tour stops (finished,
-  skipped or closed). Three changes are needed for a card's practice:
-  - `startTour` in `apps/client/src/guide/afterNote.ts` hands a tour over to a lesson through its
-    `own()` helper, on two branches: the open lesson (`activeId`), and a lesson the learner looked
-    back from (`returnTo.lesson`, which runs `returnBack()` then `enterTour()`). Any other tour
-    closes the lesson. Teach `own()` itself that the card's `practice` tour belongs to the lesson,
-    so both branches resume, not just the first;
-  - the `LessonSheet` subscription watches only `lesson.tour`; it must watch the practice tour that
-    was started;
-  - `leaveTour()` advances only when the current screen is the `try` screen; it must also advance
-    from a card that carries `practice`, so the lesson resumes on the next screen.
-- **Phone (below `lg`, 1024 px):** today a lesson's tour is desktop only (`desktop` =
-  `TOUR_MIN_WIDTH`, defined in `apps/client/src/guide/LearnCard.tsx` and imported by `LessonSheet`;
-  phones see "This part needs a larger screen"). The expected
-  phone path: the first step points at `MobileTradeBar` (`trade.mobile.buy` / `trade.mobile.sell`,
-  "Buy / Long", "Sell / Short") to open the order form, then the arrow on the form's controls as on
-  desktop. This changes what a screen looks like, so it needs the visual Q&A
-  (`.claude/rules/design.md`) before it's built. Until then, a phone offers Skip only, or hides the
-  offer, and says the practice is on a larger screen.
+- **A card offers one** with `practice: { tour, label }` (`lessons.ts`, a `PracticeTourId`): the
+  sheet shows the label as a button under the card's text. A card field, so `lessonScreens`, the
+  funnel's step ids and `stepBase` don't move.
+- **The practice tours** are in `apps/client/src/guide/tours.ts` (`PRACTICE_TOURS`,
+  `PRACTICE_TOUR_IDS`): `practice-buy` (spot, `/dashboard/spot/BTC/USDT`), `practice-long` and
+  `practice-short` (USDT Perpetual, `/dashboard/usdt/BTCUSDT`). Each opens the form, picks Market,
+  USDT and $100, and places the order. **No `next`**: the chain ends back in the lesson. A new
+  practice tour gets its entry there, built with the `practice()` helper and the shared step builders
+  (`steps.ts`).
+- **Handing over and resuming:** `startTour` (`afterNote.ts`) treats a card's practice tour as the
+  lesson's own (`own()`), so the lesson waits. `LessonSheet` resumes when **no tour runs any
+  more** (a chain such as `buy-first-coin → sell-and-review` included), and `lessonStore.leaveTour()`
+  moves on from the Try screen or from the card that offered the practice.
+- **Phones (owner 2026-11-16):** a step may be `screen: 'phone'` or `'desktop'`; `tourStore` reads the
+  width (`TOUR_WIDE_QUERY`, lg) when a tour starts and runs only those steps (`tourSteps`). A
+  phone-ready tour (`phoneReady: true`) opens the form from `MobileTradeBar` (`trade.mobile.buy` /
+  `trade.mobile.sell`); a lesson's Try and the close's way on are then offered on phones too. The
+  primer's hover steps need a pointer, so it isn't phone-ready.
 
 ### Rules
 
 - Optional, never required: Skip is always there, and a skipped practice never blocks finishing.
 - Paper money only, and the offer says so ("practice money, nothing real").
 - No profit promises, no price predictions: the tour teaches the steps, not a winning trade.
-- Small: a fixed small amount (like the $100 of the buy tour), and the tour shows how to close it.
-- A step whose anchor can't be found fails gracefully: the bubble's `missingHint` says what to
-  open, and closing the tour returns to the lesson on the next screen, never a dead end.
-- It counts as a learning day for the streak, through its `tour_step` events, and its finish or
-  skip is saved, but **only once the server accepts the tour id on both learn routes**
-  (`apps/server/src/constants.ts`):
-  - **events** (`tour_started`, `tour_step`) are checked against `LEARN_EVENT_ITEM_IDS` (today
-    `LEARN_TOUR_IDS` + `LEARN_LESSON_IDS`); an unknown id gets a 400 and the day isn't counted;
-  - **progress** (`useTourProgress` saves `completed` or `dismissed` for every finished or skipped
-    tour) is checked against `LEARN_ITEM_IDS`, mirrored in the SDK; an unknown id gets a 400 that the
-    client swallows, so the completion is silently lost on reload or another device.
-  - So add the practice id to both, via a separate `LEARN_PRACTICE_TOUR_IDS` that feeds
-    `LEARN_EVENT_ITEM_IDS` and `LEARN_ITEM_IDS` (server and SDK), and **keep it out of the
-    `all-tours` badge** in `services/Habits.ts` (its target is `LEARN_TOUR_IDS.length`), so an
-    optional practice never becomes required for that badge.
+- Small: a fixed small amount ($100).
+- A step whose anchor can't be found fails gracefully: its `missingHint` says what to open (on a phone,
+  to close the panel hiding the bottom bar), and closing the tour returns to the lesson on the next
+  screen, never a dead end.
+- **Not saved or reported on its own** (`useTourProgress` skips ids that aren't `isTourId`): the
+  lesson's own screens report the funnel and count the learning day, and practice tours stay out of
+  the server's tour lists and the `all-tours` badge.
 
-### Tests and docs when building it
+### Tests when adding one
 
-- The tour in `tours.test.ts` and its scenario in `scenarios.test.ts` (every anchor exists).
-- `LessonSheet.test.tsx` / `lessonStore.test.ts`: the offer shows on the card; Skip goes to the
-  next screen; finishing or closing the tour resumes on the screen after the card, answers kept.
-- `lessons.test.ts`: `practice` only on a trade-action card, and only a known `TourId`.
-- Server: the learn route accepts the practice tour's events (route test), and `Habits` counts its
-  day for the streak but not toward `all-tours` (`apps/server/src/__tests__/habits.test.ts` and `__tests__/int/habits.int.test.ts`).
-- The id lists are pinned: `apps/server/src/__tests__/learn.test.ts` asserts that
-  `LEARN_EVENT_ITEM_IDS` is exactly tours + lessons, and that `LEARN_ITEM_IDS` matches the SDK's
-  (`generated/CDSDK/types/index.ts`, `LEARN_ITEM_IDS` / `LearnItemId`). Adding practice ids means
-  updating those assertions, the SDK list and the SDK contract fixtures in the same change.
-- An e2e scenario for the practice path and its steps in `docs/UI_REPRODUCTIONS.md`.
+- `tours.test.ts`: at most five steps on each screen size, registered anchors, phone and desktop
+  first steps, no `next`.
+- `LessonSheet.test.tsx`: the practice button hands over and the lesson resumes one screen on; a
+  chain keeps the lesson waiting.
+- `lessons.test.ts`: the cards that offer a practice, and which tour.
+- The steps in `docs/UI_REPRODUCTIONS.md`.
 
 ## Linking terms to articles
 
