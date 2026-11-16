@@ -394,7 +394,7 @@ const lesson01: Lesson = {
   minutes: LESSON_01_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–20 and 21–40
-  stepBase: 60,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (the lessons test holds them together)
   // Open a paper trade, then close it (owner 2026-11-16): the buy tour hands over to the sell tour
   tour: 'buy-first-coin',
   tryIntro:
@@ -651,7 +651,7 @@ const lessonOwnership: Lesson = {
   minutes: LESSON_02_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on, past
   // its earlier versions' 1–20 and 21–40
-  stepBase: 60,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (the lessons test holds them together)
   tryWidget: 'block-chain',
   tryIntro:
     'Your turn: change a number in an old block and watch what happens to every block after it.',
@@ -979,7 +979,7 @@ const lesson02: Lesson = {
   minutes: LESSON_03_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–40 and 41–60
-  stepBase: 60,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (the lessons test holds them together)
   tour: 'primer',
   tryIntro:
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
@@ -1261,6 +1261,21 @@ export type LessonScreen =
   | { kind: 'check'; index: number }
   | { kind: 'summary' }
   | { kind: 'close' };
+
+/**
+ * The tour a screen hands over: the Try screen's tour, or a card's practice trade (owner
+ * 2026-11-16). The one place that says which tours are a lesson's own
+ */
+export function screenTour(lesson: Lesson, screen: LessonScreen | undefined): TourId | undefined {
+  if (screen?.kind === 'try') return lesson.tour;
+  if (screen?.kind === 'card') return lesson.cards[screen.index].practice?.tour;
+  return undefined;
+}
+
+/** A tour one of the lesson's screens hands over */
+export function lessonOwnsTour(lesson: Lesson, tour: TourId): boolean {
+  return lessonScreens(lesson).some((screen) => screenTour(lesson, screen) === tour);
+}
 
 export function lessonScreens(lesson: Lesson): LessonScreen[] {
   const cards = lesson.cards.map((_, index) => ({ kind: 'card' as const, index }));

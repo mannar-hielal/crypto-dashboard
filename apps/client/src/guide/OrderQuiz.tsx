@@ -57,12 +57,12 @@ export function OrderQuiz({
     <>
       <p className={styles.question}>{q.question}</p>
       <ol className={styles.slots}>
-        {/* A slot is a fixed numbered place that never moves: its number is its identity */}
         {shown.map((step, slot) => {
           const mark =
             answered && !revisit && step !== null ? (step === slot ? 'right' : 'wrong') : null;
           return (
-            <li key={slot}>
+            // Keyed by the step that belongs in the slot: unique in a question (lessons test)
+            <li key={steps[slot]}>
               <button
                 type="button"
                 className={`${styles.slot} ${step === null ? styles.empty : ''} ${
@@ -99,9 +99,8 @@ export function OrderQuiz({
           {pool
             .filter((step) => !placed.has(step))
             .map((step) => (
-              // A step's index in `q.steps` is its id: it never changes for a question
               <button
-                key={step}
+                key={steps[step]}
                 type="button"
                 draggable
                 className={`${styles.card} ${picked === step ? styles.picked : ''}`}

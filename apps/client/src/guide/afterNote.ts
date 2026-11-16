@@ -18,7 +18,7 @@
  * here too, for the one-on-screen rule; they never find a line to save.
  */
 
-import { getLesson, type LessonId } from './lessons';
+import { getLesson, type LessonId, lessonOwnsTour } from './lessons';
 import { useLessonStore, noteToSave, type JournalWrite } from './lessonStore';
 import { useTourStore } from './tourStore';
 import { getTour, type TourId } from './tours';
@@ -85,9 +85,7 @@ export function startTour(tour: TourId, navigate: (url: string) => void) {
   afterNote(() => {
     const lessons = useLessonStore.getState();
     // The lesson's own tour: its Try tour, or a card's practice trade (owner 2026-11-16)
-    const own = (id: LessonId | null | undefined) =>
-      !!id &&
-      (getLesson(id).tour === tour || getLesson(id).cards.some((c) => c.practice?.tour === tour));
+    const own = (id: LessonId | null | undefined) => !!id && lessonOwnsTour(getLesson(id), tour);
     if (own(lessons.activeId)) {
       // The lesson on screen (a look back's too, from its Try step) waits where it is; only its
       // Try step moves on when the tour ends

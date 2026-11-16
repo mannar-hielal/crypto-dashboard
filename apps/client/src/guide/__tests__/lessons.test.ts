@@ -12,6 +12,8 @@ import {
   questionGuide,
   BITCOIN_BIRTH,
   type LessonQuestion,
+  lessonOwnsTour,
+  screenTour,
 } from '@/guide/lessons';
 import { daySeconds } from '@/guide/lessonChartData';
 import { isTourId } from '@/guide/tours';
@@ -368,6 +370,36 @@ describe('lessons', () => {
     // The server refuses a start or finish below it (a client on an earlier version): the SDK's
     // LESSON_FIRST_STEPS is the shared number, and a server test holds its copy to it too
     for (const l of LESSONS) expect((l.stepBase ?? 0) + 1, l.id).toBe(LESSON_FIRST_STEPS[l.id]);
+  });
+
+  it('should give each drag-and-drop step and each match a text of its own (their keys)', () => {
+    for (const l of LESSONS) {
+      for (const q of [
+        ...l.checks,
+        ...(l.cards.map((c) => c.quiz).filter(Boolean) as LessonQuestion[]),
+      ]) {
+        if (q.steps) expect(new Set(q.steps).size, q.question).toBe(q.steps.length);
+        if (q.pairs) {
+          expect(new Set(q.pairs.map((p) => p.term)).size, q.question).toBe(q.pairs.length);
+          expect(new Set(q.pairs.map((p) => p.meaning)).size, q.question).toBe(q.pairs.length);
+        }
+      }
+    }
+  });
+
+  it('should say which tours are a lesson’s own: its Try tour and its cards’ practice trades', () => {
+    expect(lessonOwnsTour(getLesson('lesson-01'), 'buy-first-coin')).toBe(true);
+    expect(lessonOwnsTour(getLesson('lesson-01'), 'practice-buy')).toBe(true);
+    expect(lessonOwnsTour(getLesson('lesson-01'), 'primer')).toBe(false);
+    expect(lessonOwnsTour(getLesson('lesson-02'), 'primer')).toBe(true);
+    const l1 = getLesson('lesson-01');
+    expect(
+      screenTour(
+        l1,
+        lessonScreens(l1).find((s) => s.kind === 'try')
+      )
+    ).toBe('buy-first-coin');
+    expect(screenTour(l1, { kind: 'close' })).toBeUndefined();
   });
 
   it('should only tease a next lesson that the close really offers', () => {

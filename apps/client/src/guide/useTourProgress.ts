@@ -26,6 +26,9 @@ import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './to
 /** Set while the server's furthest screens are merged in: they're already stored, so never sent */
 let applyingServer = false;
 
+/** What an API from before 2026-11-16 answers a finish that carries a step */
+const OLD_API_FINISH_REFUSAL = 'Only a start takes a step';
+
 /** A lesson's screen as its funnel step number (the server tells the lesson's versions apart by it) */
 const stepNumber = (id: LessonId, screen: number) => lessonStepNumber(getLesson(id), screen);
 
@@ -214,7 +217,13 @@ export function useTourProgress(): void {
         const last = lessonScreens(getLesson(finished)).length - 1;
         learnApi
           .setProgress(finished, 'completed', accessToken, stepNumber(finished, last))
-          .catch(() => undefined);
+          .catch((err: unknown) => {
+            // An API from before 2026-11-16 (rolled back on its own) takes a finish without a
+            // step only: the finish still counts there
+            if (err instanceof Error && err.message === OLD_API_FINISH_REFUSAL) {
+              learnApi.setProgress(finished, 'completed', accessToken).catch(() => undefined);
+            }
+          });
         send('tour_completed', finished);
       }
 

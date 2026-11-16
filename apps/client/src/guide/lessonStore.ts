@@ -11,7 +11,7 @@
 
 import type { TourId } from './tours';
 import { create } from 'zustand';
-import { getLesson, lessonScreens, type LessonId } from './lessons';
+import { getLesson, lessonScreens, type LessonId, screenTour } from './lessons';
 
 /** The journal line on the last screen: typed, on its way, or in the journal */
 export type NoteStatus = 'draft' | 'saving' | 'saved';
@@ -246,10 +246,7 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     // brings the learner back to the same screen
     const lesson = getLesson(activeId);
     const at = lessonScreens(lesson)[screen];
-    const own =
-      (at?.kind === 'try' && tourFrom === lesson.tour) ||
-      (at?.kind === 'card' && !!tourFrom && lesson.cards[at.index].practice?.tour === tourFrom);
-    if (own) get().next();
+    if (tourFrom !== null && screenTour(lesson, at) === tourFrom) get().next();
   },
 
   rate: (rating) => set({ rating }),

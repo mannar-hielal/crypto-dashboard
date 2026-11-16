@@ -182,19 +182,6 @@ export async function learnRoutes(app: FastifyInstance) {
         if (!lessonId || step === undefined) {
           return reply.status(400).send({ error: 'A start needs a lesson and its step' });
         }
-        // A row from an earlier version of the lesson (finished or begun there) is today's start
-        const replaced = await app.prisma.learningProgress.updateMany({
-          where: {
-            userId,
-            itemId,
-            // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
-            OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
-          },
-          data: { status, step },
-        });
-        if (replaced.count === 1) {
-          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
-        }
         // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
         // lesson is unfinished (a completed row is left as it is)
         const created = await app.prisma.learningProgress.createMany({
@@ -215,6 +202,21 @@ export async function learnRoutes(app: FastifyInstance) {
           data: { step },
         });
         if (raisedRows.count === 1) {
+          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
+        }
+        // Not raised: finished, or a step no higher. A finish from an earlier version of the lesson
+        // is today's start (an earlier version's begun row was raised above). Only here, off the
+        // path every screen takes
+        const replaced = await app.prisma.learningProgress.updateMany({
+          where: {
+            userId,
+            itemId,
+            // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
+            OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
+          },
+          data: { status, step },
+        });
+        if (replaced.count === 1) {
           return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
         }
         const row = await app.prisma.learningProgress.findUnique({

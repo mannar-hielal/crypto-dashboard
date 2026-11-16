@@ -123,6 +123,16 @@ describe('streakEndingAt', () => {
     expect(zurich(new Date('2026-10-25T23:30:00Z'))).toBe(day(2026, 10, 26));
   });
 
+  it('should change the day exactly at local midnight, in a zone with a 45-minute offset', () => {
+    // Kathmandu is UTC+5:45: its midnight on 24 Oct is 18:15 UTC on 23 Oct
+    const day = (d: number) => Date.UTC(2026, 9, d) / 86_400_000;
+    const kathmandu = dayCounter('Asia/Kathmandu');
+    expect(kathmandu(new Date('2026-10-23T18:14:59Z'))).toBe(day(23));
+    expect(kathmandu(new Date('2026-10-23T18:15:00Z'))).toBe(day(24));
+    // The same quarter hour again: the same day (formatted once)
+    expect(kathmandu(new Date('2026-10-23T18:29:59Z'))).toBe(day(24));
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);

@@ -24,8 +24,13 @@ const MAX_ROWS = 500;
 export function dayCounter(zone = 'UTC'): (d: Date) => number {
   const format = zoneFormat(zone);
   if (!format) return (d) => Math.floor(d.getTime() / DAY_MS);
+  // A date is the same all through a quarter hour (every zone's offset is a whole number of
+  // quarter hours), so each quarter hour is formatted once per request
+  const seen = new Map<number, number>();
   return (d) => {
-    // One formatting a date: year, month and day read from the same parts
+    const quarter = Math.floor(d.getTime() / QUARTER_HOUR_MS);
+    const known = seen.get(quarter);
+    if (known !== undefined) return known;
     let year = 0;
     let month = 0;
     let day = 0;
@@ -34,20 +39,32 @@ export function dayCounter(zone = 'UTC'): (d: Date) => number {
       else if (p.type === 'month') month = Number(p.value);
       else if (p.type === 'day') day = Number(p.value);
     }
-    return Date.UTC(year, month - 1, day) / DAY_MS;
+    const index = Date.UTC(year, month - 1, day) / DAY_MS;
+    seen.set(quarter, index);
+    return index;
   };
 }
 
-/** 🔐 Formatters by zone, so a request doesn't build one; capped (zones in use are a few dozen) */
-const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat | null>();
+const QUARTER_HOUR_MS = 15 * 60_000;
+
+/**
+ * 🔐 Formatters by known zone, so a request doesn't build one; capped (zones in use are a few dozen),
+ * least recently used out first. An unknown zone is never kept: made-up names can't push real ones out
+ */
+const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
 const MAX_ZONE_FORMATS = 200;
 
 /** The zone's date formatter, or null for UTC and for a zone this runtime doesn't know */
 function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   if (zone === 'UTC') return null;
   const known = ZONE_FORMATS.get(zone);
-  if (known !== undefined) return known;
-  let format: Intl.DateTimeFormat | null;
+  if (known) {
+    // Used again: to the back of the line
+    ZONE_FORMATS.delete(zone);
+    ZONE_FORMATS.set(zone, known);
+    return known;
+  }
+  let format: Intl.DateTimeFormat;
   try {
     format = new Intl.DateTimeFormat('en-US', {
       timeZone: zone,
@@ -56,9 +73,9 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
       day: 'numeric',
     });
   } catch {
-    format = null;
+    return null;
   }
-  // Full: the oldest goes first (the cap bounds memory whatever is sent)
+  // Full: the least recently used goes first (the cap bounds memory whatever is sent)
   if (ZONE_FORMATS.size >= MAX_ZONE_FORMATS) {
     const oldest = ZONE_FORMATS.keys().next().value;
     if (oldest !== undefined) ZONE_FORMATS.delete(oldest);
