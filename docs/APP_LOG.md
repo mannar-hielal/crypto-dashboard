@@ -4677,7 +4677,8 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   before the old API machines are gone, so the reads guard it too: `GET /progress` leaves out a lesson row with no
   step or an earlier one, and a start replaces such a row (only once a start neither creates nor raises a row, so
   the write every screen makes costs no extra query). A lesson can't be dismissed (such a row would have no
-  version). **Rolling this release back: the API and the web app together** (both steps of `git.md`'s
+  version). An old-version Lesson 1 finish that lands after the migration still keeps the welcome card shut (GET
+  answers a dismissal for it, as the migration does for earlier finishes). **Rolling this release back: the API and the web app together** (both steps of `git.md`'s
   emergency playbook). The API deploys before the web app, so a release never mixes them; an API rolled back on
   its own would refuse the new app's lesson finishes (they carry a step), and the finishes it took without one
   would read as an earlier version afterwards.

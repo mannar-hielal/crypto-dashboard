@@ -32,12 +32,6 @@ export function isTourId(value: string): value is PathTourId {
   return (TOUR_IDS as readonly string[]).includes(value);
 }
 
-/**
- * The width from which tours use the desktop layout: the order form docked beside the chart, lg and
- * up (design.md, responsive layout). Below it, phone-ready tours open the form from the bottom bar.
- */
-export const TOUR_WIDE_QUERY = WIDE_LAYOUT_QUERY;
-
 export type TourStepKind = 'observe' | 'click' | 'type' | 'quiz' | 'hover';
 
 export interface TourQuiz {
@@ -134,7 +128,7 @@ function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
 /** The tours' desktop layout applies now (outside React: the tour store) */
 export function isWideScreen(): boolean {
   // No matchMedia (tests, old browsers): the desktop layout
-  return typeof window.matchMedia !== 'function' || window.matchMedia(TOUR_WIDE_QUERY).matches;
+  return typeof window.matchMedia !== 'function' || window.matchMedia(WIDE_LAYOUT_QUERY).matches;
 }
 
 /** A tour can run here: a larger screen, or a phone when the tour is phone-ready */

@@ -1,5 +1,5 @@
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { TOUR_WIDE_QUERY } from './tours';
+import { WIDE_LAYOUT_QUERY } from '@/lib/breakpoints';
 
 /**
  * The tours' desktop layout applies (a larger screen): which of a tour's steps run, and whether a
@@ -7,5 +7,5 @@ import { TOUR_WIDE_QUERY } from './tours';
  * the tour store's own fallback (`isWideScreen`): no matchMedia counts as desktop.
  */
 export function useTourWide(): boolean {
-  return useMediaQuery(TOUR_WIDE_QUERY, true);
+  return useMediaQuery(WIDE_LAYOUT_QUERY, true);
 }

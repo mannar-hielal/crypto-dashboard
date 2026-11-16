@@ -77,7 +77,9 @@ model LearningProgress {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   itemId    String   @db.VarChar(40)
   status    String   @db.VarChar(20) // "completed" | "dismissed" | "started" (a lesson begun)
-  // A begun lesson's furthest screen, as its funnel step number (the map's progress ring)
+  // A lesson's funnel step number: begun, its furthest screen (the map's progress ring); finished,
+  // its last screen's. Either way it says which version of the lesson the row is from: the API
+  // ignores a lesson row with none or an earlier one (LESSON_FIRST_STEP), so never null it
   step      Int?     @db.SmallInt
   updatedAt DateTime @updatedAt
 

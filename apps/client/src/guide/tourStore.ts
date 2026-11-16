@@ -135,7 +135,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
     set({
       fillOfferDismissed,
       completed: Object.fromEntries(completed.map((id) => [id, true])) as Partial<
-        Record<TourId, true>
+        Record<PathTourId, true>
       >,
       cardDismissed,
       loaded: true,

@@ -106,7 +106,19 @@ export async function learnRoutes(app: FastifyInstance) {
         where: { userId },
         select: ROW,
       });
-      return reply.send({ items: rows.filter((r) => !isStaleLessonRow(r)).map(toItem) });
+      const items = rows.filter((r) => !isStaleLessonRow(r)).map(toItem);
+      // Lesson 1 finished in its earlier version but after the reset (an old API machine during the
+      // rollout): the welcome card stays dismissed, as the reset migration does for earlier finishes
+      const oldLesson1Done = rows.some(
+        (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleLessonRow(r)
+      );
+      if (oldLesson1Done && !rows.some((r) => r.itemId === 'welcome-card')) {
+        const at = rows.find((r) => r.itemId === 'lesson-01')?.updatedAt ?? new Date();
+        items.push(
+          toItem({ itemId: 'welcome-card', status: 'dismissed', step: null, updatedAt: at })
+        );
+      }
+      return reply.send({ items });
     }
   );
 
@@ -158,34 +170,29 @@ export async function learnRoutes(app: FastifyInstance) {
       const { status, step } = request.body as { status: LearnStatus; step?: number };
       const lessonId = lessonOf(itemId);
 
-      // 🔐 A step belongs to a lesson's start or finish only: a dismissal, or a tour's finish,
-      // carrying one is a bad request
-      if (step !== undefined && (status === 'dismissed' || !lessonId)) {
-        return reply.status(400).send({ error: 'Only a lesson’s start or finish takes a step' });
-      }
-      // 🔐 A lesson is begun or finished, never dismissed (such a row would have no version)
-      if (lessonId && status === 'dismissed') {
-        return reply.status(400).send({ error: 'A lesson can’t be dismissed' });
-      }
-      // 🔐 A lesson's start and finish say which screen; one from an earlier version of the lesson
-      // (no step, or a step below its first) is refused, so a stale client can't undo the reset
-      if (lessonId) {
-        if (step === undefined) {
-          return status === 'started'
-            ? reply.status(400).send({ error: 'A start needs a lesson and its step' })
-            : reply.status(409).send({ error: 'An earlier version of this lesson' });
-        }
+      // 🔐 One check of what each kind of item may send, before any write:
+      // - a dismissal (an offer, a tour skipped) carries no step, and a lesson is never dismissed
+      //   (such a row would have no version);
+      // - a tour or a checkpoint has no screens: no start, no step;
+      // - a lesson's start and finish say which screen, and one from an earlier version of the
+      //   lesson (no step, or below its first) is refused, so a stale client can't undo the reset
+      const bad = (error: string) => reply.status(400).send({ error });
+      const earlier = () => reply.status(409).send({ error: 'An earlier version of this lesson' });
+      if (status === 'dismissed') {
+        if (lessonId) return bad('A lesson can’t be dismissed');
+        if (step !== undefined) return bad('Only a lesson’s start or finish takes a step');
+      } else if (!lessonId) {
+        if (status === 'started') return bad('A start needs a lesson and its step');
+        if (step !== undefined) return bad('Only a lesson’s start or finish takes a step');
+      } else if (step === undefined) {
+        return status === 'started' ? bad('A start needs a lesson and its step') : earlier();
         // eslint-disable-next-line security/detect-object-injection -- lessonId is from the fixed list
-        if (step < LESSON_FIRST_STEP[lessonId]) {
-          return reply.status(409).send({ error: 'An earlier version of this lesson' });
-        }
+      } else if (step < LESSON_FIRST_STEP[lessonId]) {
+        return earlier();
       }
 
-      if (status === 'started') {
-        // 🔐 Only a lesson has screens, and a start always says how far
-        if (!lessonId || step === undefined) {
-          return reply.status(400).send({ error: 'A start needs a lesson and its step' });
-        }
+      // (checked above: a start is a lesson's, with its step; this only narrows the types)
+      if (status === 'started' && lessonId && step !== undefined) {
         // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
         // lesson is unfinished (a completed row is left as it is)
         const created = await app.prisma.learningProgress.createMany({
@@ -235,7 +242,9 @@ export async function learnRoutes(app: FastifyInstance) {
       if (status === 'completed') {
         const row = await app.prisma.learningProgress.upsert({
           where: { userId_itemId: { userId, itemId } },
-          // A lesson's finish keeps its step: the version it was finished in (a tour's: none)
+          // A lesson's finish keeps its step: the version it was finished in (a tour's: none). Any
+          // step of the current version counts: progress is the learner's own, so a client claiming
+          // a finish it didn't reach only changes its own path
           create: { userId, itemId, status, step: step ?? null },
           update: { status, step: step ?? null },
           select: ROW,
@@ -355,6 +364,7 @@ export async function learnRoutes(app: FastifyInstance) {
               },
             },
           },
+          400: errorResponse,
           401: errorResponse,
         },
       },

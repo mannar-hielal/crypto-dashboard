@@ -121,7 +121,20 @@ describe('/api/learn/progress', () => {
         // A finish answers without its step
         { itemId: 'lesson-02', status: 'completed', updatedAt: AT.toISOString() },
         { itemId: 'primer', status: 'completed', updatedAt: AT.toISOString() },
+        // The hidden Lesson 1 finish still keeps the welcome card shut (the next test)
+        { itemId: 'welcome-card', status: 'dismissed', updatedAt: AT.toISOString() },
       ],
+    });
+  });
+
+  it('GET: keeps the welcome card dismissed for an earlier version’s Lesson 1 finish', async () => {
+    // Finished on an old API machine after the reset migration ran: hidden, but the card stays shut
+    vi.mocked(app.prisma.learningProgress.findMany).mockResolvedValueOnce([
+      { itemId: 'lesson-01', status: 'completed', step: null, updatedAt: AT },
+    ] as never);
+    const res = await app.inject({ method: 'GET', url: '/api/learn/progress', headers: auth() });
+    expect(res.json()).toEqual({
+      items: [{ itemId: 'welcome-card', status: 'dismissed', updatedAt: AT.toISOString() }],
     });
   });
 

@@ -341,7 +341,7 @@ with paper money, and then picks up where it left off.
   more** (a chain such as `buy-first-coin → sell-and-review` included), and `lessonStore.leaveTour()`
   moves on from the Try screen or from the card that offered the practice.
 - **Phones (owner 2026-11-16):** a step may be `screen: 'phone'` or `'desktop'`; `tourStore` reads the
-  width (`TOUR_WIDE_QUERY`, lg) when a tour starts and runs only those steps (`tourSteps`). A
+  width (`WIDE_LAYOUT_QUERY` in `lib/breakpoints.ts`, lg; `useTourWide` in components) when a tour starts and runs only those steps (`tourSteps`). A
   phone-ready tour (`phoneReady: true`) opens the form from `MobileTradeBar` (`trade.mobile.buy` /
   `trade.mobile.sell`); a lesson's Try and the close's way on are then offered on phones too. The
   primer's hover steps need a pointer, so it isn't phone-ready.
