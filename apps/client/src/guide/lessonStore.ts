@@ -61,8 +61,11 @@ interface LessonState extends LessonRun {
   returnTo: ReturnPlace | null;
   /** Counts every change of run, so a save that lands after the learner moved on changes nothing */
   run: number;
-  /** The run already counted as finished (`markFinished`): its close is no second finish */
-  doneRun: number | null;
+  /**
+   * The lesson start already counted as finished (`markFinished`): its close is no second finish.
+   * By `starts`, which a look back and the way back from it don't change (`run` does)
+   */
+  doneAt: { id: LessonId; starts: number } | null;
   /** Counts every `start()`: how the funnel tells a lesson started from the way back from a look back */
   starts: number;
   /**
@@ -152,7 +155,7 @@ const initial = {
   completed: {},
   reached: {},
   finishes: 0,
-  doneRun: null,
+  doneAt: null,
   returnTo: null,
   run: 0,
   starts: 0,
@@ -285,7 +288,7 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       return;
     }
     set((s) => {
-      const counted = s.doneRun === s.run;
+      const counted = s.doneAt?.id === activeId && s.doneAt.starts === s.starts;
       return {
         ...freshRun(null),
         completed: { ...s.completed, [activeId]: true },
@@ -297,12 +300,12 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
   },
 
   markFinished: () => {
-    const { activeId, returnTo, run, doneRun } = get();
-    if (!activeId || returnTo || doneRun === run) return;
+    const { activeId, returnTo, starts, doneAt } = get();
+    if (!activeId || returnTo || (doneAt?.id === activeId && doneAt.starts === starts)) return;
     set((s) => ({
       completed: { ...s.completed, [activeId]: true },
       finishes: s.finishes + 1,
-      doneRun: run,
+      doneAt: { id: activeId, starts },
     }));
   },
 

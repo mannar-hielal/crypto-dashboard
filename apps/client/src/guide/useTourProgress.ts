@@ -26,12 +26,10 @@ import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './to
 /** Set while the server's furthest screens are merged in: they're already stored, so never sent */
 let applyingServer = false;
 
-/** A lesson's screen as its funnel step number (the server tells the lesson's versions apart by it) */
-const stepNumber = (id: LessonId, screen: number) => lessonStepNumber(getLesson(id), screen);
-
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
-  learnApi.setProgress(id, 'started', accessToken, stepNumber(id, screen)).catch(() => undefined);
+  const step = lessonStepNumber(getLesson(id), screen);
+  learnApi.setProgress(id, 'started', accessToken, step).catch(() => undefined);
 }
 
 export function useTourProgress(): void {
@@ -213,10 +211,9 @@ export function useTourProgress(): void {
         // With its last screen's step: the server refuses a finish from an earlier version. (An API
         // from before 2026-11-16 refuses the step instead: this release rolls back API and web
         // together, git.md's emergency playbook)
-        const last = lessonScreens(getLesson(finished)).length - 1;
-        learnApi
-          .setProgress(finished, 'completed', accessToken, stepNumber(finished, last))
-          .catch(() => undefined);
+        const lesson = getLesson(finished);
+        const last = lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
+        learnApi.setProgress(finished, 'completed', accessToken, last).catch(() => undefined);
         send('tour_completed', finished);
       }
 
@@ -232,7 +229,8 @@ export function useTourProgress(): void {
           ? { id: prev.activeId, screen: prev.screen }
           : null;
       // (a run already counted as finished, its streak screen then left, is no close)
-      const alreadyDone = prev.doneRun !== null && prev.doneRun === prev.run && !prev.returnTo;
+      const alreadyDone =
+        !prev.returnTo && prev.doneAt?.id === prev.activeId && prev.doneAt?.starts === prev.starts;
       const closeHome = () => {
         if (home && !alreadyDone) {
           send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));

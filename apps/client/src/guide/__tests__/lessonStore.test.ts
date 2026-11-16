@@ -233,4 +233,15 @@ describe('lessonStore', () => {
     st().reset();
     expect(st().reached).toEqual({});
   });
+
+  it('should count a finish once when a look back comes between the streak and the close', () => {
+    s().start('lesson-01');
+    s().markFinished();
+    expect(s().finishes).toBe(1);
+    s().visit('lesson-ownership', 2); // a look back from the streak screen's lesson
+    s().returnBack();
+    s().markFinished(); // pressed again: still the same finish
+    s().finish();
+    expect(s()).toMatchObject({ finishes: 1, activeId: null, completed: { 'lesson-01': true } });
+  });
 });
