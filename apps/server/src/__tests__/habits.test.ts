@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   computeHabits,
   streakEndingAt,
@@ -166,6 +166,11 @@ describe('streakEndingAt', () => {
       );
     }
     expect(zoneFormatsKept()).toBe(before + 1);
+    // A spelling seen before finds its formatter without building one
+    const built = vi.spyOn(Intl, 'DateTimeFormat');
+    dayCounter('europe/vienna');
+    expect(built).not.toHaveBeenCalled();
+    built.mockRestore();
   });
 
   it('should count in UTC for no time zone or an unknown one', () => {

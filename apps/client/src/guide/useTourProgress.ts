@@ -231,8 +231,12 @@ export function useTourProgress(): void {
         : prev.activeId !== null
           ? { id: prev.activeId, screen: prev.screen }
           : null;
+      // (a run already counted as finished, its streak screen then left, is no close)
+      const alreadyDone = prev.doneRun !== null && prev.doneRun === prev.run && !prev.returnTo;
       const closeHome = () => {
-        if (home) send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));
+        if (home && !alreadyDone) {
+          send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));
+        }
       };
       if (started) {
         if (!finished) closeHome();

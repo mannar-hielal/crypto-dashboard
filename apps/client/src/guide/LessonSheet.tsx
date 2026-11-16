@@ -633,10 +633,18 @@ export function LessonSheet() {
     : `${returnTo ? 'Back to ' : ''}Lesson ${getLesson(wayOn).number}: ${getLesson(wayOn).title}`;
   // The close's buttons show the streak first: a signed-in finish only, not from a look back, and
   // once per run
+  // The finish and the journal line are saved at the press, before the streak shows: leaving from
+  // the streak screen (a closed tab) loses neither. Continue, ✕ or Esc then only leave
   const viaStreak = (go: () => void) => () => {
     if (accessToken && !returnTo && streakSeenRun !== run) {
       setStreakSeenRun(run);
-      setStreakThen({ run, go });
+      afterNote(
+        () => {
+          useLessonStore.getState().markFinished();
+          setStreakThen({ run, go });
+        },
+        { finishing: true }
+      );
     } else go();
   };
   const startNext = () =>

@@ -179,7 +179,7 @@ describe('AdminMetricsPage', () => {
     expect(screen.getByText('Screen 6 (an earlier version of the lesson)')).not.toBeNull();
   });
 
-  it('lists a tour’s steps in the order it runs them, marking the phone-only and desktop-only ones', async () => {
+  it('should list a tour’s steps in the order it runs them, marking the phone-only and desktop-only ones', async () => {
     mockGetMetrics.mockResolvedValue(
       metrics({
         tourFunnel: [

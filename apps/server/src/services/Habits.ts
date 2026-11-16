@@ -54,15 +54,20 @@ const QUARTER_HOUR_MS = 15 * 60_000;
  */
 const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
 const MAX_ZONE_FORMATS = 200;
+/** 🔐 Other spellings → their canonical zone name; capped like the formatters */
+const ZONE_ALIASES = new Map<string, string>();
 
 /** The zone's date formatter, or null for UTC and for a zone this runtime doesn't know */
 function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   if (zone === 'UTC') return null;
-  const known = ZONE_FORMATS.get(zone);
+  // Another spelling of a zone already built: its canonical name (a capped map of its own, so
+  // spellings only ever push out spellings)
+  const zoneName = ZONE_ALIASES.get(zone) ?? zone;
+  const known = ZONE_FORMATS.get(zoneName);
   if (known) {
     // Used again: to the back of the line
-    ZONE_FORMATS.delete(zone);
-    ZONE_FORMATS.set(zone, known);
+    ZONE_FORMATS.delete(zoneName);
+    ZONE_FORMATS.set(zoneName, known);
     return known;
   }
   let format: Intl.DateTimeFormat;
@@ -79,8 +84,19 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   // Kept under the zone's own name (Intl takes `eUROPE/zurich` too): spellings of one zone share
   // one entry, so they can't push the other zones out
   const canonical = format.resolvedOptions().timeZone;
+  if (canonical !== zone) {
+    if (ZONE_ALIASES.size >= MAX_ZONE_FORMATS) {
+      const oldest = ZONE_ALIASES.keys().next().value;
+      if (oldest !== undefined) ZONE_ALIASES.delete(oldest);
+    }
+    ZONE_ALIASES.set(zone, canonical);
+  }
   const same = ZONE_FORMATS.get(canonical);
-  if (same) return same;
+  if (same) {
+    ZONE_FORMATS.delete(canonical);
+    ZONE_FORMATS.set(canonical, same);
+    return same;
+  }
   // Full: the least recently used goes first (the cap bounds memory whatever is sent)
   if (ZONE_FORMATS.size >= MAX_ZONE_FORMATS) {
     const oldest = ZONE_FORMATS.keys().next().value;

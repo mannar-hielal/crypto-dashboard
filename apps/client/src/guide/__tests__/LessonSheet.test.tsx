@@ -87,9 +87,13 @@ describe('LessonSheet', () => {
     // A keyboard press: the focus sits on the button that is about to go
     act(() => finishBtn().focus());
     fireEvent.click(finishBtn());
-    // The lesson waits on the streak screen; nothing has finished yet
-    expect(useLessonStore.getState().activeId).toBe('lesson-02');
     await waitFor(() => expect(screen.getByText('2-day streak')).toBeTruthy());
+    // The lesson waits on the streak screen, already counted as finished: a closed tab loses nothing
+    expect(useLessonStore.getState()).toMatchObject({
+      activeId: 'lesson-02',
+      completed: { 'lesson-02': true },
+      finishes: 1,
+    });
     // The pressed button is gone: the sheet takes the focus, so the streak is read out
     expect(document.activeElement).toBe(sheet());
     fireEvent.click(document.querySelector('[data-guide="lesson.streak.continue"]')!);

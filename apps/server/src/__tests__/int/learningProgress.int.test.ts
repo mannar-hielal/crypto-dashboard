@@ -89,7 +89,7 @@ describe('LearningProgress (Postgres)', () => {
     expect(await db.learningProgress.count({ where: { userId } })).toBe(0);
   });
 
-  it('resets every learner’s Lessons 1–3, begun and finished, and nothing else (owner 2026-11-16)', async () => {
+  it('should reset every learner’s Lessons 1–3, begun and finished, and nothing else (owner 2026-11-16)', async () => {
     const userId = await createUser(db);
     await db.learningProgress.createMany({
       data: [

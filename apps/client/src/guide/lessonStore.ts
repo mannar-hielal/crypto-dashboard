@@ -61,6 +61,8 @@ interface LessonState extends LessonRun {
   returnTo: ReturnPlace | null;
   /** Counts every change of run, so a save that lands after the learner moved on changes nothing */
   run: number;
+  /** The run already counted as finished (`markFinished`): its close is no second finish */
+  doneRun: number | null;
   /** Counts every `start()`: how the funnel tells a lesson started from the way back from a look back */
   starts: number;
   /**
@@ -96,6 +98,11 @@ interface LessonState extends LessonRun {
   saveNote: (write: JournalWrite, retry?: boolean) => Promise<boolean>;
   /** The last screen's Finish: the lesson is done (during a look back: back to the lesson) */
   finish: () => void;
+  /**
+   * The lesson is done, but the sheet stays (the streak screen shows first): counted and saved now,
+   * so leaving from the streak screen loses nothing. A `finish()` after it only closes
+   */
+  markFinished: () => void;
   /** Close without finishing: ✕ or Esc (during a look back: back to the lesson) */
   close: () => void;
   setCompleted: (ids: LessonId[]) => void;
@@ -145,6 +152,7 @@ const initial = {
   completed: {},
   reached: {},
   finishes: 0,
+  doneRun: null,
   returnTo: null,
   run: 0,
   starts: 0,
@@ -276,12 +284,25 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       get().returnBack();
       return;
     }
+    set((s) => {
+      const counted = s.doneRun === s.run;
+      return {
+        ...freshRun(null),
+        completed: { ...s.completed, [activeId]: true },
+        finishes: counted ? s.finishes : s.finishes + 1,
+        returnTo: null,
+        run: s.run + 1,
+      };
+    });
+  },
+
+  markFinished: () => {
+    const { activeId, returnTo, run, doneRun } = get();
+    if (!activeId || returnTo || doneRun === run) return;
     set((s) => ({
-      ...freshRun(null),
       completed: { ...s.completed, [activeId]: true },
       finishes: s.finishes + 1,
-      returnTo: null,
-      run: s.run + 1,
+      doneRun: run,
     }));
   },
 

@@ -15,7 +15,7 @@
 
 .count {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.75rem; /* the streak number: no token this size yet (owner's visual Q&A) */
   font-weight: 700;
   color: var(--color-brand-white);
   font-variant-numeric: tabular-nums;
@@ -35,7 +35,7 @@
   align-items: center;
   gap: 6px;
   color: var(--color-brand-muted);
-  font-size: 0.8125rem;
+  font-size: var(--text-xs11);
 }
 
 .dot {
@@ -59,7 +59,7 @@
 .continue {
   min-width: 180px;
   border: none;
-  border-radius: 25px; /* radius.button */
+  border-radius: var(--radius-btn);
   padding: 12px 24px;
   background: var(--color-brand-purple-dark);
   color: var(--color-brand-white);

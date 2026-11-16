@@ -99,10 +99,10 @@ it would also be a way around it for a mistake. The break-glass options work wit
    - API: redeploy the previous image. `fly releases --image -a <app>` lists them; then run
      `fly deploy --image <previous image ref> -a <app>`.
    - Web: Cloudflare Pages → Deployments → the previous one → "Rollback to this deployment".
-   - **Both together** when the release changed what the web app sends the API: the previous API
-     may refuse the new app's calls. The release's APP_LOG entry says so (first: the Lessons 1–3
-     rewrite, 2026-11-16, whose lesson finishes carry a step). Rolling back the web app alone is
-     always safe: the API deploys first and keeps answering the previous app.
+   - **Both together** when the release changed the contract between the web app and the API:
+     either one alone may refuse the other's calls. The release's APP_LOG entry says so. First: the
+     Lessons 1–3 rewrite (2026-11-16). Its app sends a step with each lesson finish, which the
+     previous API refuses; its API refuses the previous app's lesson saves as an earlier version.
 2. **The deploy itself failed** (a flaky prod smoke, a Fly hiccup) → re-run that Deploy run
    (`gh run rerun <run id> --failed`). The gate checks the same release PR again. If the release PR's
    full set was red or flaky, re-run that check on the PR first.

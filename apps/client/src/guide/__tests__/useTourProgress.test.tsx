@@ -281,6 +281,27 @@ describe('useTourProgress', () => {
       );
     });
 
+    it('should save a finish when the streak screen shows, and send no close when it is left', async () => {
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().markFinished());
+      expect(setProgress).toHaveBeenCalledWith(
+        'lesson-01',
+        'completed',
+        'tok',
+        LESSON_01_LAST_STEP
+      );
+      expect(calls()).toEqual([{ name: 'tour_completed', itemId: 'lesson-01' }]);
+      // Continue (or ✕) leaves: no second finish, no close
+      setProgress.mockClear();
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().finish());
+      expect(setProgress).not.toHaveBeenCalled();
+      expect(calls()).toEqual([]);
+      expect(useLessonStore.getState()).toMatchObject({ activeId: null, finishes: 1 });
+    });
+
     it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {
       await loaded([
         { ...item('lesson-02', 'started'), step: 66 },

@@ -107,7 +107,7 @@ describe('/api/learn/progress', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('GET: leaves out a lesson row from an earlier version of the lesson', async () => {
+  it('GET: should leave out a lesson row when it is from an earlier version of the lesson', async () => {
     // Written by an old client or an old API machine during the rollout: never counted
     vi.mocked(app.prisma.learningProgress.findMany).mockResolvedValueOnce([
       { itemId: 'lesson-01', status: 'completed', step: null, updatedAt: AT },
@@ -127,7 +127,7 @@ describe('/api/learn/progress', () => {
     });
   });
 
-  it('GET: keeps the welcome card dismissed for an earlier version’s Lesson 1 finish', async () => {
+  it('GET: should keep the welcome card dismissed when Lesson 1 was finished in an earlier version', async () => {
     // Finished on an old API machine after the reset migration ran: hidden, but the card stays shut
     vi.mocked(app.prisma.learningProgress.findMany).mockResolvedValueOnce([
       { itemId: 'lesson-01', status: 'completed', step: null, updatedAt: AT },
@@ -141,6 +141,18 @@ describe('/api/learn/progress', () => {
       data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
       skipDuplicates: true,
     });
+  });
+
+  it('GET: should still answer the dismissal when saving it fails', async () => {
+    vi.mocked(app.prisma.learningProgress.findMany).mockResolvedValueOnce([
+      { itemId: 'lesson-01', status: 'completed', step: null, updatedAt: AT },
+    ] as never);
+    vi.mocked(app.prisma.learningProgress.createMany).mockRejectedValueOnce(new Error('db down'));
+    const res = await app.inject({ method: 'GET', url: '/api/learn/progress', headers: auth() });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([
+      expect.objectContaining({ itemId: 'welcome-card', status: 'dismissed' }),
+    ]);
   });
 
   it('GET: returns only the caller’s items, as ISO dates', async () => {
@@ -301,7 +313,7 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.learningProgress.updateMany).toHaveBeenCalledTimes(1);
   });
 
-  it('PUT started: takes over a row from an earlier version of the lesson', async () => {
+  it('PUT started: should take over a row when it is from an earlier version of the lesson', async () => {
     // Finished in the old lesson (an old API machine during the rollout): today's start replaces it
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany)
@@ -394,11 +406,11 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
   });
 
-  it('holds each lesson’s first step to the SDK’s, which the client’s lessons test holds too', () => {
+  it('should hold each lesson’s first step to the SDK’s, as the client’s lessons test does', () => {
     expect(LESSON_FIRST_STEP).toEqual(LESSON_FIRST_STEPS);
   });
 
-  it('PUT refuses a lesson’s start or finish from an earlier version of it, before any write', async () => {
+  it('PUT: should refuse a lesson’s start or finish when it is from an earlier version, before any write', async () => {
     // A tab or a cached PWA still on the old Lessons 1–3 can't undo the reset (2026-11-16)
     const put = (url: string, payload: unknown) =>
       app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
@@ -417,7 +429,7 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
   });
 
-  it('PUT completed: a tour finishes without a step', async () => {
+  it('PUT completed: should finish a tour when it carries no step', async () => {
     vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
       itemId: 'primer',
       status: 'completed',
@@ -433,7 +445,7 @@ describe('/api/learn/progress', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('PUT completed: a finished lesson answers without a furthest screen, and stores its version', async () => {
+  it('PUT completed: should answer a finished lesson without a furthest screen, and store its version', async () => {
     vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
       itemId: 'lesson-02',
       status: 'completed',

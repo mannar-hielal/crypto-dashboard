@@ -4679,9 +4679,9 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   the write every screen makes costs no extra query). A lesson can't be dismissed (such a row would have no
   version). An old-version Lesson 1 finish that lands after the migration still keeps the welcome card shut (GET
   answers a dismissal for it, as the migration does for earlier finishes). **Rolling this release back: the API and the web app together** (both steps of `git.md`'s
-  emergency playbook). The API deploys before the web app, so a release never mixes them; an API rolled back on
-  its own would refuse the new app's lesson finishes (they carry a step), and the finishes it took without one
-  would read as an earlier version afterwards.
+  emergency playbook). Neither alone is safe: the previous API refuses the new app's lesson finishes (they carry a
+  step), and the new API refuses the previous app's lesson saves as an earlier version. A normal release deploys
+  the API just before the web app; the old app's saves in between are the ones the reset was made to refuse.
 - **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
   writer against our Bybit candles): profit up or down, Buy and Sell, two Choose buy or sell quizzes, a worked long
   (BTC 2 Oct 2023 → 13 Mar 2024, spot) and short (10 Nov 2021 → 18 Jun 2022, perpetual: a contract, with

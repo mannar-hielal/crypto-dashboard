@@ -8,6 +8,7 @@ import {
   LEARN_LESSON_IDS,
   LESSON_FIRST_STEP,
 } from '../../constants.js';
+import { logger } from '../../logger.js';
 import { loadHabits } from '../../services/Habits.js';
 import { recordLearningEvent } from '../../services/LearningEvents.js';
 
@@ -41,6 +42,8 @@ interface ItemRow {
 
 // A finished lesson keeps its finish's step in the row (its version), but answers without one: it
 // no longer has a "furthest screen"
+const log = logger.child({ route: 'learn' });
+
 const toItem = (r: ItemRow) => ({
   itemId: r.itemId as LearnItemId,
   status: r.status as LearnStatus,
@@ -115,10 +118,16 @@ export async function learnRoutes(app: FastifyInstance) {
         (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleLessonRow(r)
       );
       if (oldLesson1Done && !rows.some((r) => r.itemId === 'welcome-card')) {
-        await app.prisma.learningProgress.createMany({
-          data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
-          skipDuplicates: true,
-        });
+        // A failed save never fails the read: the dismissal is answered anyway, and the next read
+        // tries again
+        try {
+          await app.prisma.learningProgress.createMany({
+            data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
+            skipDuplicates: true,
+          });
+        } catch (err) {
+          log.warn({ err }, 'Saving the welcome card’s dismissal failed');
+        }
         items.push(
           toItem({ itemId: 'welcome-card', status: 'dismissed', step: null, updatedAt: new Date() })
         );

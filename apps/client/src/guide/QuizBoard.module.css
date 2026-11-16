@@ -106,7 +106,7 @@
 .check {
   align-self: flex-start;
   border: none;
-  border-radius: 25px; /* radius.button */
+  border-radius: var(--radius-btn);
   padding: 10px 22px;
   background: var(--color-brand-purple-dark);
   color: var(--color-brand-white);
