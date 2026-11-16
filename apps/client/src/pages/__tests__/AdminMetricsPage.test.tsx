@@ -152,7 +152,7 @@ describe('AdminMetricsPage', () => {
     expect(screen.getByText(/rated 4.3 \/ 5 by 3/)).not.toBeNull();
   });
 
-  it('should name Lesson 1’s steps from 21 on as today’s screens, and earlier ones as an earlier version', async () => {
+  it('should name Lesson 1’s steps from 61 on as today’s screens, and earlier ones as an earlier version', async () => {
     mockGetMetrics.mockResolvedValue(
       metrics({
         tourFunnel: [
@@ -162,7 +162,7 @@ describe('AdminMetricsPage', () => {
             completed: 1,
             steps: [
               { stepId: 'lesson-01.6', viewers: 2, closedHere: 0 },
-              { stepId: 'lesson-01.21', viewers: 3, closedHere: 0 },
+              { stepId: 'lesson-01.61', viewers: 3, closedHere: 0 },
             ],
           },
         ],

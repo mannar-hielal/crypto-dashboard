@@ -329,15 +329,15 @@ describe('useTourProgress', () => {
       act(() => useLessonStore.getState().close());
       expect(calls()).toEqual([
         { name: 'tour_started', itemId: 'lesson-01' },
-        // Lesson 1's screens count from 21 (`stepBase`): 1–20 are its earlier version's
-        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.21' },
-        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.22' },
-        { name: 'tour_closed', itemId: 'lesson-01', stepId: 'lesson-01.22' },
+        // Lesson 1's screens count from 61 (`stepBase`): 1–60 are its earlier versions'
+        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.61' },
+        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.62' },
+        { name: 'tour_closed', itemId: 'lesson-01', stepId: 'lesson-01.62' },
       ]);
       // How far it got, once per new furthest screen (the map's ring, 2026-11-12); no finish
       expect(setProgress.mock.calls).toEqual([
-        ['lesson-01', 'started', 'tok', 21],
-        ['lesson-01', 'started', 'tok', 22],
+        ['lesson-01', 'started', 'tok', 61],
+        ['lesson-01', 'started', 'tok', 62],
       ]);
       setProgress.mockClear();
 

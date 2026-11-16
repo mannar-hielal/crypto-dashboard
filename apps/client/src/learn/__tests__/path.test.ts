@@ -182,7 +182,9 @@ describe('the map', () => {
 
   it('should mark what is done on the real chart: the practice, and Lesson 3', () => {
     // Owner 2026-11-12: the dumbbell icon
-    expect(onChart({ kind: 'lesson', id: 'lesson-01', access: FREE })).toBe(false);
+    // Lesson 1's Try is a paper trade on the real chart since the rewrite (owner 2026-11-16)
+    expect(onChart({ kind: 'lesson', id: 'lesson-01', access: FREE })).toBe(true);
+    expect(onChart({ kind: 'lesson', id: 'lesson-ownership', access: FREE })).toBe(false);
     expect(onChart({ kind: 'lesson', id: 'lesson-02', access: FREE })).toBe(true);
     expect(onChart({ kind: 'tour', id: 'buy-first-coin', access: FREE })).toBe(true);
     expect(onChart({ kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE })).toBe(false);

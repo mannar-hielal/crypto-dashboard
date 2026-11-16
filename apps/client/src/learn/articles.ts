@@ -657,6 +657,8 @@ const money101: Article = {
   minutes: 2,
   checked: '2026-10-23',
   access: FREE,
+  // Lesson 1's money-and-trust cards moved to a later lesson in the rewrite (owner 2026-11-16)
+  practiceSoon: 'a later lesson on money and trust',
   blocks: [
     { kind: 'h', text: 'Three jobs' },
     {

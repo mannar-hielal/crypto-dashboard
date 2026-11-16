@@ -46,7 +46,8 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     id: 'ch1',
     number: 1,
-    title: 'Foundations of crypto',
+    // Owner 2026-11-16: our own title (the old one was too close to the benchmark's unit name)
+    title: 'Start here: crypto and trading basics',
     tone: 'purpleDark',
     access: FREE,
     status: 'open',

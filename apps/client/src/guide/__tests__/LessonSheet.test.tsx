@@ -384,13 +384,13 @@ describe('LessonSheet', () => {
     fireEvent.keyDown(sheet()!, { key: 'Enter' });
     expect(useLessonStore.getState().screen).toBe(0);
     expect(nextBtn()!.dataset.ready).toBe('true');
-    expect(nextBtn()!.textContent).toBe('Unlock the story of Bitcoin →');
+    expect(nextBtn()!.textContent).toBe('Unlock how trading works →');
 
     fireEvent.keyDown(sheet()!, { key: 'ArrowRight' });
     expect(useLessonStore.getState().screen).toBe(1);
     expect(sheet()!.textContent).toContain('I’m Pulin.');
-    expect(sheet()!.textContent).toContain('what one record keeper could get away with');
-    expect(nextBtn()!.textContent).toBe('Start with money itself →');
+    expect(sheet()!.textContent).toContain('how you can win when a price goes up or down');
+    expect(nextBtn()!.textContent).toBe('Show me the up-or-down trick →');
 
     // Back to the cold open: it doesn't play again
     fireEvent.click(screen.getByText('← Back'));
@@ -447,25 +447,37 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState().screen).toBe(7);
   });
 
-  // ── Lesson 1: "Try it" inside the sheet, then on to Lesson 2 ─────────────────
+  // ── Lesson 1 (rewritten 2026-11-16): practice trades, a "Try it" on the chart, then Lesson 2 ──
 
-  it('should run Lesson 1’s “Try it” inside the sheet, on a phone as well', () => {
-    desktop = false;
-    at(6, 'lesson-01');
+  it('should hand a card’s practice trade to the tour, then carry on at the next screen', () => {
+    at(3, 'lesson-01'); // Buy and Sell
     renderSheet();
-    expect(sheet()!.textContent).toContain('be Nora');
-    expect(screen.queryByText('Show me')).toBeNull();
-    fireEvent.change(document.querySelector('[data-guide="article.nora.amount"]')!, {
-      target: { value: '30' },
-    });
-    expect(sheet()!.textContent).toContain('still add up to 15');
+    fireEvent.click(document.querySelector('[data-guide="lesson.practice"]')!);
+    expect(navigate).toHaveBeenCalledWith('/dashboard/spot/BTC/USDT');
+    expect(useTourStore.getState().activeId).toBe('practice-buy');
+    expect(useLessonStore.getState().inTour).toBe(true);
+    // The tour ends (finished, skipped or closed): back to the lesson, one screen on
+    act(() => useTourStore.getState().close());
+    expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 4 });
+  });
+
+  it('should offer Lesson 1’s “Try it” on a phone too, and wait for the whole buy → sell chain', () => {
+    desktop = false;
+    at(18, 'lesson-01');
+    renderSheet();
+    expect(sheet()!.textContent).not.toContain('needs a larger screen');
     fireEvent.click(document.querySelector('[data-guide="lesson.try"]')!);
-    expect(useLessonStore.getState().screen).toBe(7);
+    expect(useTourStore.getState().activeId).toBe('buy-first-coin');
+    // The buy tour hands over to the sell tour: the lesson keeps waiting
+    act(() => useTourStore.setState({ activeId: 'sell-and-review', stepIndex: 0 }));
+    expect(useLessonStore.getState()).toMatchObject({ inTour: true, screen: 18 });
+    act(() => useTourStore.getState().close());
+    expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 19 });
   });
 
   it('should finish Lesson 1 and open Lesson 2 from its close, on any screen', () => {
     desktop = false;
-    at(11, 'lesson-01');
+    at(20, 'lesson-01');
     renderSheet();
     const nextLesson = document.querySelector('[data-guide="lesson.next-lesson"]')!;
     expect(nextLesson.textContent).toBe('Lesson 2: What is Bitcoin?');
@@ -475,25 +487,17 @@ describe('LessonSheet', () => {
     expect(sheet()!.textContent).toContain('A hard drive in the bin');
   });
 
-  it('should sum Lesson 1 up as the problem, then the story of 2008, then go on', () => {
-    at(10, 'lesson-01');
+  it('should sum Lesson 1 up in five lines, a Read more only where an article exists', () => {
+    at(19, 'lesson-01');
     renderSheet();
-    expect(document.querySelector('#lesson-heading')!.textContent).toBe('The problem');
-    expect(sheet()!.textContent).not.toContain('You can now');
-    // A Read more on each problem while it's on screen; none at the very end (owner 2026-11-12:
-    // Lesson 2 goes on)
-    expect(document.querySelectorAll('[data-guide="lesson.recap"]')).toHaveLength(2);
-    // Only now, with the problem on the table, does the lesson name Satoshi: in the story, which
-    // ends on the Bitcoin mark and the last line (owner 2026-11-12)
-    const story = document.querySelector('[data-guide="lesson.genesis"]')!;
-    expect(story.textContent).toContain('Satoshi Nakamoto');
+    expect(document.querySelector('#lesson-heading')!.textContent).toBe('What you learned');
+    // Owner 2026-11-16: four lines have no article yet (plain text); price swings has one
+    expect(document.querySelectorAll('[data-guide="lesson.recap"]')).toHaveLength(1);
+    expect(document.querySelector('[data-guide="lesson.genesis"]')).toBeNull();
     const highlight = document.querySelector('[data-guide="lesson.highlight"]')!;
-    expect(highlight.textContent).toContain('That was the birth of Bitcoin.');
-    // No rule, no teaser, no stars here: they're gone, or on the last screen
-    expect(document.querySelector('[data-guide="lesson.rating"]')).toBeNull();
-    expect(document.querySelector('[data-guide="lesson.finish-line"]')).toBeNull();
-
+    expect(highlight.textContent).toContain('Decide when and why before you click.');
     expect(highlight.querySelector('button')).toBeNull();
+    expect(nextBtn()!.dataset.ready).toBe('true');
   });
 
   it('should open the Bitcoin card’s Read more on Lesson 2’s story article', () => {
@@ -505,7 +509,7 @@ describe('LessonSheet', () => {
   });
 
   it('should tease the next lesson on the close, but not on a look back', () => {
-    at(11, 'lesson-01');
+    at(20, 'lesson-01');
     renderSheet();
     expect(document.querySelector('[data-guide="lesson.teaser"]')!.textContent).toBe(
       getLesson('lesson-01').teaser
@@ -518,22 +522,6 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
   });
 
-  it('should hold Continue while the birth of Bitcoin plays, show it all on Enter, and not replay it', () => {
-    at(10, 'lesson-01');
-    renderSheet();
-    expect(document.querySelector('[data-guide="lesson.genesis"]')).not.toBeNull();
-    expect(nextBtn()!.dataset.ready).toBe('false');
-    fireEvent.keyDown(sheet()!, { key: 'Enter' });
-    expect(useLessonStore.getState().screen).toBe(10);
-    expect(nextBtn()!.dataset.ready).toBe('true');
-    fireEvent.keyDown(sheet()!, { key: 'Enter' });
-    expect(useLessonStore.getState().screen).toBe(11);
-    // Back to it (the last screen has no Back button of its own): complete, Continue there at once
-    act(() => useLessonStore.getState().back());
-    expect(useLessonStore.getState().screen).toBe(10);
-    expect(nextBtn()!.dataset.ready).toBe('true');
-  });
-
   it('should show a summary with no genesis at once', () => {
     at(12); // Lesson 3
     renderSheet();
@@ -542,11 +530,10 @@ describe('LessonSheet', () => {
   });
 
   it('should end Lesson 1 on the ribbon, the journal, the rating and the way to Lesson 2', () => {
-    at(10, 'lesson-01');
+    at(19, 'lesson-01');
     renderSheet();
-    fireEvent.keyDown(sheet()!, { key: 'Enter' });
     fireEvent.click(nextBtn()!);
-    expect(useLessonStore.getState().screen).toBe(11);
+    expect(useLessonStore.getState().screen).toBe(20);
     expect(document.querySelector('[data-guide="lesson.finish-line"]')).not.toBeNull();
     expect(document.querySelector('[data-guide="lesson.note"]')).not.toBeNull();
     expect(document.querySelectorAll('[data-guide="lesson.rating"]')).toHaveLength(5);
@@ -576,27 +563,31 @@ describe('LessonSheet', () => {
   });
 
   it('should show where Lesson 1 taught a term, open that card, and come back', () => {
-    at(2, 'lesson-ownership'); // One ledger, thousands of copies
+    at(6, 'lesson-02'); // Big swings, both ways
     renderSheet();
-    fireEvent.click(document.querySelector('[data-guide="lesson.term"][data-guide-key="ledger"]')!);
+    fireEvent.click(
+      document.querySelector('[data-guide="lesson.term"][data-guide-key="volatility"]')!
+    );
     const from = document.querySelector('[data-guide="lesson.peek.from"]')!;
-    expect(from.textContent).toBe('From Lesson 1: A notebook, not coins →');
-    // A term first taught here says nothing of the kind
-    fireEvent.click(document.querySelector('[data-guide="lesson.term"][data-guide-key="node"]')!);
-    expect(document.querySelector('[data-guide="lesson.peek.from"]')).toBeNull();
-
-    fireEvent.click(document.querySelector('[data-guide="lesson.term"][data-guide-key="ledger"]')!);
-    fireEvent.click(document.querySelector('[data-guide="lesson.peek.from"]')!);
-    expect(useLessonStore.getState()).toMatchObject({ activeId: 'lesson-01', screen: 3 });
+    expect(from.textContent).toBe('From Lesson 1: Smaller coins swing harder →');
+    fireEvent.click(from);
+    expect(useLessonStore.getState()).toMatchObject({ activeId: 'lesson-01', screen: 16 });
     const back = document.querySelector('[data-guide="lesson.return"]')!;
-    expect(back.textContent).toBe('← Back to Lesson 2');
+    expect(back.textContent).toBe('← Back to Lesson 3');
     fireEvent.click(back);
     expect(useLessonStore.getState()).toMatchObject({
-      activeId: 'lesson-ownership',
-      screen: 2,
+      activeId: 'lesson-02',
+      screen: 6,
       returnTo: null,
     });
     expect(document.querySelector('[data-guide="lesson.return"]')).toBeNull();
+  });
+
+  it('should say nothing of the kind for a term first taught on that card', () => {
+    at(2, 'lesson-ownership'); // One ledger, thousands of copies
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.term"][data-guide-key="ledger"]')!);
+    expect(document.querySelector('[data-guide="lesson.peek.from"]')).toBeNull();
   });
 
   it('should save a journal line typed on a look back’s last screen when Esc leads back', async () => {
@@ -725,26 +716,28 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.peek"]')).toBeNull();
   });
 
-  it('should keep Lesson 2’s answers through a look back, and offer the way back at its end', () => {
-    at(2, 'lesson-ownership');
+  it('should keep Lesson 3’s answers through a look back, and offer the way back at its end', () => {
+    at(6, 'lesson-02');
     act(() => {
-      useLessonStore.setState({ answers: { 8: 0 } });
+      useLessonStore.setState({ answers: { 5: 0 } });
     });
     renderSheet();
-    fireEvent.click(document.querySelector('[data-guide="lesson.term"][data-guide-key="ledger"]')!);
+    fireEvent.click(
+      document.querySelector('[data-guide="lesson.term"][data-guide-key="volatility"]')!
+    );
     fireEvent.click(document.querySelector('[data-guide="lesson.peek.from"]')!);
 
-    // Lesson 1's last screen leads back to Lesson 2, not on to it from the start
+    // Lesson 1's last screen leads back to Lesson 3, not on to Lesson 2
     const last = lessonScreens(getLesson('lesson-01')).length - 1;
     act(() => useLessonStore.setState({ screen: last }));
     const way = document.querySelector('[data-guide="lesson.next-lesson"]')!;
-    expect(way.textContent).toBe('Back to Lesson 2: What is Bitcoin?');
+    expect(way.textContent).toBe('Back to Lesson 3: Who sets the price?');
     expect(screen.queryByText('Finish for now')).toBeNull();
     fireEvent.click(way);
     expect(useLessonStore.getState()).toMatchObject({
-      activeId: 'lesson-ownership',
-      screen: 2,
-      answers: { 8: 0 },
+      activeId: 'lesson-02',
+      screen: 6,
+      answers: { 5: 0 },
       finishes: 0,
     });
   });

@@ -132,8 +132,9 @@ describe('ArticleDrawer', () => {
     open('suncoin');
     fireEvent.click(document.querySelector('[data-guide="article.practice"]')!);
     expect(drawer()).toBeNull();
-    expect(useLessonStore.getState().activeId).toBe('lesson-01');
-    expect(useLessonStore.getState().screen).toBe(3);
+    // Lesson 2's ledger card (Lesson 1's notebook moved to a later lesson, 2026-11-16)
+    expect(useLessonStore.getState().activeId).toBe('lesson-ownership');
+    expect(useLessonStore.getState().screen).toBe(2);
   });
 
   it('should take a look back home when the practice link is the lesson it came from', () => {

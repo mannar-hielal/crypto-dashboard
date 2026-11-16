@@ -61,10 +61,10 @@ describe('PathDrawer', () => {
     renderDrawer();
 
     expect(screen.getByRole('dialog', { name: 'Crypto trading path' })).toBeTruthy();
-    expect(screen.getByText('Foundations of crypto')).toBeTruthy();
+    expect(screen.getByText('Start here: crypto and trading basics')).toBeTruthy();
     expect(screen.getByText('Start')).toBeTruthy();
     expect(nodeButton('lesson:lesson-01').getAttribute('aria-label')).toBe(
-      'Lesson: What is the problem?, next step'
+      'Lesson, on the real chart: Up, down and your first trade, next step'
     );
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText('Trade with a plan')).toBeTruthy();
@@ -90,9 +90,11 @@ describe('PathDrawer', () => {
     );
     expect(lesson1.getAttribute('aria-label')).toContain(`, 5 of ${screens} screens`);
     // A lesson is a book, with no badge; what's done on the real chart is a dumbbell: the
-    // practice, and Lesson 3, whose "Try it" is there
-    expect(lesson1.querySelector('.lucide-book-open')).not.toBeNull();
-    expect(lesson1.querySelector('.lucide-dumbbell')).toBeNull();
+    // practice, and Lessons 1 and 3, whose "Try it" is there (Lesson 1's since 2026-11-16)
+    expect(lesson1.querySelector('.lucide-dumbbell')).not.toBeNull();
+    const lesson2 = nodeButton('lesson:lesson-ownership');
+    expect(lesson2.querySelector('.lucide-book-open')).not.toBeNull();
+    expect(lesson2.querySelector('.lucide-dumbbell')).toBeNull();
     expect(nodeButton('lesson:lesson-02').querySelector('.lucide-dumbbell')).not.toBeNull();
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-label')).toContain(
       'Lesson, on the real chart: Who sets the price?'

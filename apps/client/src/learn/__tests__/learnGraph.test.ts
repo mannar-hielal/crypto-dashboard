@@ -52,20 +52,16 @@ describe('the learning graph', () => {
   });
 
   it('should send the lessons’ terms to their articles and the articles back to the cards', () => {
-    // Lesson 1 card 4 marks the ledger, and Lesson 2 card 3 comes back to it; Lesson 3 card 2 the
-    // exchange and the last price
-    expect(lessonPlacesOf('ledger')).toEqual([
-      { lesson: 'lesson-01', screen: 3 },
-      { lesson: 'lesson-ownership', screen: 2 },
-    ]);
+    // Lesson 2 card 3 marks the ledger (Lesson 1's notebook moved to a later lesson, 2026-11-16);
+    // Lesson 3 card 2 the exchange and the last price
+    expect(lessonPlacesOf('ledger')).toEqual([{ lesson: 'lesson-ownership', screen: 2 }]);
     expect(lessonPlacesOf('last-price')).toEqual([{ lesson: 'lesson-02', screen: 1 }]);
 
-    expect(practiceFor('money-101')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-01', screen: 2, label: 'Lesson 1: Money runs on trust' },
-    ]);
-    // SunCoin lays out the problem; the network article is the answer the next cards give
+    // Money 101's cards moved to a later lesson (it says so: practiceSoon)
+    expect(practiceFor('money-101')).toEqual([]);
+    expect(getArticle('money-101').practiceSoon).toMatch(/later lesson/);
+    // The network article is the answer Lesson 2's cards give
     expect(practiceFor('suncoin')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-01', screen: 3, label: 'Lesson 1: A notebook, not coins' },
       {
         kind: 'lesson',
         lesson: 'lesson-ownership',
@@ -108,6 +104,19 @@ describe('the learning graph', () => {
     ]);
     // Rebuilt Lesson 3 (2026-11-12): the volatility card sits after the moment, screen 6
     expect(practiceFor('price-swings')).toEqual([
+      // Lesson 1 (2026-11-16): the 24/7 card and the smaller-coins card (after Your call)
+      {
+        kind: 'lesson',
+        lesson: 'lesson-01',
+        screen: 15,
+        label: 'Lesson 1: The market never sleeps',
+      },
+      {
+        kind: 'lesson',
+        lesson: 'lesson-01',
+        screen: 16,
+        label: 'Lesson 1: Smaller coins swing harder',
+      },
       {
         kind: 'lesson',
         lesson: 'lesson-02',
@@ -118,6 +127,7 @@ describe('the learning graph', () => {
       { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
     ]);
     expect(practiceFor('spot-a-scam')).toEqual([
+      { kind: 'lesson', lesson: 'lesson-01', screen: 17, label: 'Lesson 1: Big swings, big risks' },
       { kind: 'lesson', lesson: 'lesson-02', screen: 7, label: 'Lesson 3: Check before you trust' },
     ]);
     // Owner 2026-11-12: Lesson 2's Bitcoin card opens it with its Read more, so it practises it
@@ -165,7 +175,9 @@ describe('the learning graph', () => {
           expect(getArticle(concept.article).access, concept.article).toBe(FREE);
         }
       }
-      for (const item of lesson.canDo) expect(getArticle(item.article).access).toBe(FREE);
+      for (const item of lesson.canDo) {
+        if (item.article) expect(getArticle(item.article).access).toBe(FREE);
+      }
       // Every other link a free lesson makes: a card's Read more, the recap and its highlight
       for (const card of lesson.cards) {
         if (card.more) expect(getArticle(card.more.article).access, card.title).toBe(FREE);
@@ -192,7 +204,7 @@ describe('the learning graph', () => {
   it('should link a can-do line to a section its article really has', () => {
     for (const lesson of LESSONS) {
       for (const item of lesson.canDo) {
-        if (!item.section) continue;
+        if (!item.section || !item.article) continue;
         const ids = getArticle(item.article).blocks.flatMap((b) =>
           b.kind === 'h' && b.id ? [b.id] : []
         );

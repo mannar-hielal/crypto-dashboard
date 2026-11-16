@@ -320,17 +320,20 @@ function ReadMore({
   screen: number;
   anchor?: 'lesson.recap' | 'lesson.can-do' | 'lesson.more';
 }) {
+  // A line with no article yet is plain text (owner 2026-11-16)
+  const article = item.article;
+  if (!article) return null;
   return (
     <button
       type="button"
       className={styles.link}
       onClick={() =>
-        useArticleStore.getState().open(item.article, {
+        useArticleStore.getState().open(article, {
           section: item.section,
           from: { lesson: lesson.id, screen },
         })
       }
-      {...guide(anchor, item.section ?? item.article)}
+      {...guide(anchor, item.section ?? article)}
     >
       Read more →
     </button>

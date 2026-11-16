@@ -4642,6 +4642,39 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-16 — Lessons 1–3 rewrite: new quiz formats, practice trades, the streak screen, and Lesson 1
+
+The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan and drafts in the git-ignored
+`guided-learning-topics/notes/`): the same concepts and length as the benchmark course, in our words and examples.
+
+- **Quiz formats** (visual Q&A, owner): **Choose buy or sell** (the chart with the plan's price as a dashed line,
+  the plan, Buy and Sell filled like the phone trade bar; the Why points at the plan; a frozen chart then plays on,
+  "What happened next (the plan doesn't depend on it)"), **Drag and drop** (numbered slots; drag, or tap a step then
+  a slot) and **Match boxes** (two columns, tap to pair, numbered chips). Quizzes can sit between cards
+  (`LessonCard.quiz`). Each format's rules are in `lessons.test`.
+- **The caps are raised** (owner): up to 16 teaching cards and 2–6 questions a lesson (were 6 and 2–3).
+- **Practice trades from a card** (owner): a Buy, Long or Short card offers a guided paper trade on the real chart
+  (`practice-buy` on spot, `practice-long` / `practice-short` on the USDT Perpetual); the lesson waits and then goes on
+  at the next screen. Not saved or reported as tours of their own. The lesson waits through a tour chain
+  (buy → sell) too.
+- **Tours on phones** (owner): steps can be phone- or desktop-only; phone-ready tours open the form from the
+  bottom bar, so a lesson's Try is offered on phones; the primer (hover steps) still needs a larger screen. An order
+  step counts as done when the phone's order sheet closes after the submit.
+- **The streak screen** (visual Q&A, owner): after a signed-in learner presses the close's button: a flame, the
+  streak counting up, this week's days (`GET /api/learn/habits` adds `thisWeek`), then Continue. Not a screen of its
+  own (the funnel's steps don't move).
+- **Everyone's progress on Lessons 1–3 is reset** (owner: begun and finished alike), by the data migration
+  `20261116200000_reset_lessons_1_3`; the ids stay.
+- **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
+  writer against our Bybit candles): profit up or down, Buy and Sell, two Choose buy or sell quizzes, a worked long
+  (BTC 2 Oct 2023 → 13 Mar 2024, spot) and short (10 Nov 2021 → 18 Jun 2022, perpetual: a contract, with
+  liquidation), closing a position, long/short/stay out, Your call "decide when and why before you click", 24/7, BTC
+  vs SOL (−19% vs −29%), risks and scams, a Try it that opens and closes a paper trade. `stepBase` 60. Its money and
+  trust cards (Nora's notebook) move to a later lesson; their articles stay (`money-101` says so). Four summary lines
+  have no article yet (plain text, owner). Unit 1 is now **"Start here: crypto and trading basics"**.
+- **Release** (owner): the new Lesson 1 ships as soon as it's written, which ends the voice-pilot measurement early;
+  the funnel before and after still shows the pilot's first days.
+
 ### 2026-11-16 — The benchmark-name check: local git hooks; CI test steps
 
 🔐 IP: nothing committed or pushed may name the benchmark course (owner 2026-11-16: git checks only).

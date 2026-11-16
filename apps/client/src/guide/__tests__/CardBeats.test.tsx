@@ -45,7 +45,7 @@ describe('CardBeats', () => {
     expect(text).toContain('10,000 bitcoin');
     // The counter's words are its finished line, whatever the number on screen shows
     expect(text).toContain('In 2025: over $1 billion.');
-    expect(text).toContain('worth over $1 billion!');
+    expect(text).toContain('Those same coins later passed $1 billion. Prices move. A lot.');
   });
 
   it('should bring the lines in one by one, then say the reveal is over', () => {

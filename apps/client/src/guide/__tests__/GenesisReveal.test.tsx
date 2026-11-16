@@ -8,10 +8,11 @@ vi.mock('framer-motion', async (importOriginal) => ({
 }));
 
 import { GenesisReveal } from '@/guide/GenesisReveal';
-import { getLesson } from '@/guide/lessons';
+import { BITCOIN_BIRTH } from '@/guide/lessons';
 import { guideSelector } from '@/lib/guideAnchors';
 
-const story = getLesson('lesson-01').recap!.genesis!;
+// The birth story Lesson 1 told until the rewrite; Lesson 2 tells it now (2026-11-16)
+const story = BITCOIN_BIRTH;
 // Steps: two problems, the clear, one per story line, the mark, the end line
 const mark = 4 + story.lines.length;
 const end = mark + 1;
