@@ -79,10 +79,15 @@ jobs:
         # Run `pnpm audit --fix` locally to auto-resolve where possible.
         run: pnpm run audit
 
+      # One step a package, each run even when another fails, so a run reports every type error. The
+      # client has none here: its build step runs `tsc -b` on the same tsconfig.app.json
       - name: Type-check (server)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm type-check
-        working-directory: apps/server
+        run: pnpm --filter @crypto-dashboard/server type-check
+
+      - name: Type-check (e2e)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @crypto-dashboard/e2e type-check
 
       - name: Format check
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -95,8 +100,16 @@ jobs:
       - name: Test (with coverage thresholds)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # test:coverage runs the same suites as `pnpm test` and fails below the floors in each
-        # package's vitest.config.ts; the hook tests run separately
-        run: pnpm test:coverage && pnpm test:hooks && pnpm test:scripts
+        # package's vitest.config.ts
+        run: pnpm test:coverage
+
+      - name: Hook tests (.claude/hooks)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm test:hooks
+
+      - name: Script tests (scripts/*.test.mjs, the benchmark-name check)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm test:scripts
 
       - name: Case-ID coverage (tags cite real rows; no ⬜ row that has a test)
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -123,10 +136,6 @@ jobs:
       # Playwright on the app with the fake Bybit feed and the test hooks (T3, docs/TRADING_TEST_PLAN.md
       # roadmap P2, M4): sign-up + verify, a Spot market buy, a perp long opened and closed. The hooks' secret is
       # generated per run.
-      - name: Type-check the e2e package
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm --filter @crypto-dashboard/e2e type-check
-
       - name: Install Chromium
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium

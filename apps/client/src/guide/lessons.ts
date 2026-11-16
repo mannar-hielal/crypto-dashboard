@@ -336,8 +336,7 @@ const lesson01: Lesson = {
       title: 'Money runs on trust',
       art: 'money',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      // Owner 2026-11-13 (the friendlier voice, guided-learning-topics/09): a question first, then the
-      // guides' double act
+      // Owner 2026-11-13 (Lesson 1's friendlier copy): a question first, then the guides' double act
       text: 'Quick question: why is a banknote worth anything? It’s paper. It works because we all trust [[someone in charge|money]]: a government, a bank, a game company.',
       lines: [
         { speaker: 'tick', text: 'So whoever’s in charge can just… print more?' },
@@ -521,7 +520,7 @@ const lessonOwnership: Lesson = {
           kind: 'fact',
           text: 'It went to the landfill. Without that key, nobody can move that bitcoin. Not even him.',
         },
-        // Owner 2026-11-12 (the Finelo review): the lesson says what it will teach
+        // Owner 2026-11-12 (the benchmark review): the lesson says what it will teach
         {
           kind: 'fact',
           text: `In the next ${LESSON_02_MINUTES} minutes: what Bitcoin is, how you receive and send it, and why that key is everything.`,
@@ -536,7 +535,7 @@ const lessonOwnership: Lesson = {
       title: 'Money that no one controls',
       art: 'bitcoin',
       presenter: { who: 'tick', mood: 'grin' },
-      // Owner 2026-11-12 (the Finelo gaps): the word "decentralized", tappable
+      // Owner 2026-11-12 (the benchmark gaps): the word "decentralized", tappable
       text: 'Bitcoin is [[decentralized]] digital money, with no bank or boss. What makes it different:',
       points: [
         {
@@ -663,11 +662,11 @@ const lessonOwnership: Lesson = {
 };
 
 // ─── Lesson 3 — Who sets the price? ──────────────────────────────────────────
-// Rebuilt 2026-11-12 (guided-learning-topics/08-lesson-3-plan.md, owner: "cover Finelo's Lesson 3 and
-// top it"): a true cold open, the price as people (queues, liquidity, candles, news), the moment,
-// then the postponed volatility card and a short "check before you trust". Every dated price is
-// checked against Bybit's candles (noted beside it); the Binance.US and Squid Game facts against the
-// reporting (CoinDesk, The Block). The spread moved to the article and the buy tour's live note.
+// Rebuilt 2026-11-12 to the owner's brief for Lesson 3: a true cold open, the price as people
+// (queues, liquidity, candles, news), the moment, then the postponed volatility card and a short
+// "check before you trust". Every dated price is checked against Bybit's candles (noted beside it);
+// the Binance.US and Squid Game facts against the reporting (CoinDesk, The Block). The spread moved
+// to the article and the buy tour's live note.
 
 /** Lesson 3's length: its cold open says it */
 const LESSON_03_MINUTES = 8;

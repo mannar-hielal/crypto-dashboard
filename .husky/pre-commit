@@ -1,5 +1,4 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
 
 # 1. Visual Reminder of Manual Checks
 echo "\033[0;33m📋 REVIEW CHECKLIST REMINDER\033[0m"
@@ -11,6 +10,10 @@ echo "Full list: .claude/skills/bug-sweep/SKILL.md (138 items, P1-P12)"
 echo "---------------------------------------"
 
 # 2. Automated Enforcement Gates
+
+# 🔐 IP: no staged line or file name may name the benchmark course (scripts/denylist-check.sh).
+#    Cheap and local, so it runs before the audit and fails fast.
+sh "$(dirname "$0")/denylist.sh" staged || exit 1
 
 # 🔐 Dependency CVE check — fails on high/critical advisories
 pnpm run audit

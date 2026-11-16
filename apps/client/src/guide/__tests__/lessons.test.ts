@@ -239,7 +239,7 @@ describe('lessons', () => {
     expect(JSON.stringify(l)).not.toMatch(/\$\d/);
   });
 
-  it('should carry the Finelo review’s small wins (owner 2026-11-12)', () => {
+  it('should carry the benchmark review’s small wins (owner 2026-11-12)', () => {
     const l1 = getLesson('lesson-01');
     const l2 = getLesson('lesson-ownership');
     // A concrete 2008: Lehman Brothers
@@ -269,7 +269,7 @@ describe('lessons', () => {
     expect(l2.teaser).toMatch(/^Next: who decides/);
   });
 
-  it('should name block, hash, mining and decentralized in Lesson 2 (the Finelo gaps)', () => {
+  it('should name block, hash, mining and decentralized in Lesson 2 (the benchmark gaps)', () => {
     const l2 = getLesson('lesson-ownership');
     const card = (title: string) => l2.cards.find((c) => c.title === title)!;
     expect(card('Money that no one controls').text).toContain('[[decentralized]]');
@@ -384,7 +384,7 @@ describe('lessons', () => {
   it('should show what goes wrong with someone in charge before Lesson 1 names Satoshi', () => {
     const trust = getLesson('lesson-01').cards[2];
     expect(trust.title).toBe('Money runs on trust');
-    // The friendlier voice (owner 2026-11-13): a question, then the guides' double act says it
+    // Lesson 1's friendlier copy (owner 2026-11-13): a question, then the guides' double act says it
     const said = [trust.text, ...(trust.lines ?? []).map((l) => l.text)].join(' ');
     expect(said).toMatch(/print more|change the rules/);
     expect(said).not.toMatch(/satoshi/i);

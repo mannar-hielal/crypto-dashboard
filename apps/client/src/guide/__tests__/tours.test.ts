@@ -54,7 +54,7 @@ describe('tours', () => {
     expect(getTour('sell-and-review').next).toBeUndefined();
   });
 
-  it('should teach going long, a position, closing it and taking a profit (the Finelo gaps)', () => {
+  it('should teach going long, a position, closing it and taking a profit (the benchmark gaps)', () => {
     const buy = getTour('buy-first-coin').steps;
     const sell = getTour('sell-and-review').steps;
     expect(buy[0].text).toMatch(/Buy if you expect the price to rise, Sell to get out/);

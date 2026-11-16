@@ -44,7 +44,12 @@ prisma/migrations/
 # Internal docs — not for version control
 docs/PRE_LAUNCH_LEGAL.md
 
-# HTTP archive recordings — never committed
+# The owner's private notes and reports (repo root only) — never committed; Prettier skips them
+# through this file too, ESLint through its own ignores (eslint.config.js)
+/reports/
+/guided-learning-topics/
+
+# HTTP archive recordings (they capture cookies and tokens) — never committed
 *.har
 
 # OS

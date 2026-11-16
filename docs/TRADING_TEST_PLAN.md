@@ -637,6 +637,9 @@ symbol, arrange the charts, and tell the Sell (best bid) and Buy (best ask) pric
 | 8.12 | Reset account fails (server error / offline)                         | The modal stays open with "⚠ Reset failed — your account is unchanged. Try again."; the account is untouched; the button offers "Reset account" again           | ✅     | T2 · RTL     | NEW-8-1. `OrderAccountManagementPanel.test` "[8.12] should keep the modal open with an inline error…". Fixed 2026-09-28 (was: the modal closed as if the reset worked; approved in the visual gate).                                                                                          |
 | 8.13 | Reset in flight                                                      | The button reads **Resetting…** (disabled) and the modal stays open until the server answers — ✕, Done and the backdrop do nothing meanwhile; success closes it | ✅     | T2 · RTL     | `OrderAccountManagementPanel.test` "[8.13] should show \"Resetting…\"…".                                                                                                                                                                                                                      |
 
+> **The reset in e2e** (2026-11-14, #294): `reset.spec` and `engine/twoTabs.spec` reset through `resetAccount`
+> (`apps/e2e/helpers.ts`), which retries the two-step confirm when its 3 s window runs out on a slow WebKit runner.
+
 ### Section 14 — Markets, Bybit fees and fill prices (Bybit Parity BP-2) _(part: 14.1 — the rest of Section 14 is in Stages 1, 3 and 6)_
 
 > Two markets: **Spot** (coin balances, 1×, no shorting) and **USDT Perpetual** (positions, per-symbol leverage).
