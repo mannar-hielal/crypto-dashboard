@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { computeHabits, streakEndingAt, type HabitInput, dayCounter } from '../services/Habits.js';
+import {
+  computeHabits,
+  streakEndingAt,
+  type HabitInput,
+  dayCounter,
+  zoneFormatsKept,
+} from '../services/Habits.js';
 
 const NOW = new Date('2026-10-14T12:00:00Z');
 const day = (iso: string) => new Date(`${iso}T09:00:00Z`);
@@ -149,6 +155,17 @@ describe('streakEndingAt', () => {
       }
     }
     expect(odd).toEqual([]);
+  });
+
+  it('should keep one formatter per zone, however its name is spelt', () => {
+    const before = zoneFormatsKept();
+    dayCounter('Europe/Vienna');
+    for (const name of ['europe/vienna', 'EUROPE/VIENNA', 'eUROPE/vIENNA', 'Europe/VIENNA']) {
+      expect(dayCounter(name)(new Date('2026-10-23T22:30:00Z'))).toBe(
+        Date.UTC(2026, 9, 24) / 86_400_000
+      );
+    }
+    expect(zoneFormatsKept()).toBe(before + 1);
   });
 
   it('should count in UTC for no time zone or an unknown one', () => {

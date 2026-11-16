@@ -76,13 +76,23 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   } catch {
     return null;
   }
+  // Kept under the zone's own name (Intl takes `eUROPE/zurich` too): spellings of one zone share
+  // one entry, so they can't push the other zones out
+  const canonical = format.resolvedOptions().timeZone;
+  const same = ZONE_FORMATS.get(canonical);
+  if (same) return same;
   // Full: the least recently used goes first (the cap bounds memory whatever is sent)
   if (ZONE_FORMATS.size >= MAX_ZONE_FORMATS) {
     const oldest = ZONE_FORMATS.keys().next().value;
     if (oldest !== undefined) ZONE_FORMATS.delete(oldest);
   }
-  ZONE_FORMATS.set(zone, format);
+  ZONE_FORMATS.set(canonical, format);
   return format;
+}
+
+/** How many zones' formatters are kept (tests) */
+export function zoneFormatsKept(): number {
+  return ZONE_FORMATS.size;
 }
 
 export interface HabitInput {

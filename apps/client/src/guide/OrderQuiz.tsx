@@ -10,6 +10,7 @@ import { useMemo, useState, type DragEvent } from 'react';
 import { Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
 import { shuffledOrder, type LessonQuestion } from './lessons';
+import { BoardFooter } from './BoardFooter';
 import styles from './QuizBoard.module.css';
 
 const DRAG_TYPE = 'text/x-lesson-step';
@@ -114,24 +115,14 @@ export function OrderQuiz({
             ))}
         </div>
       )}
-      {!answered && (
-        <button
-          type="button"
-          className={styles.check}
-          disabled={slots.some((x) => x === null)}
-          onClick={check}
-          {...guide('lesson.check')}
-        >
-          Check
-        </button>
-      )}
-      {revisit && <p className={styles.explain}>The right order:</p>}
-      {answered && (
-        <p className={styles.explain} role="status">
-          <strong>{answer === 0 ? 'Right. ' : 'Not quite. '}</strong>
-          {q.explain}
-        </p>
-      )}
+      <BoardFooter
+        answer={answer}
+        ready={slots.every((x) => x !== null)}
+        onCheck={check}
+        revisit={revisit}
+        revisitLabel="The right order:"
+        explain={q.explain}
+      />
     </>
   );
 }

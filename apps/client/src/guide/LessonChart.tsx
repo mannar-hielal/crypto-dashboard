@@ -6,7 +6,7 @@
  * the card keeps its drawn picture, so a lesson never waits on data.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, useMemo } from 'react';
 import {
   CandlestickSeries,
   createChart,
@@ -99,7 +99,11 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
   const ready = bars !== null;
   // By the coin's price level, not its name: whole dollars from $1,000 (Bitcoin's "$57,459", not
   // "57459.00"), cents below it (Solana's "$182.57")
-  const cents = !!bars && bars.length > 0 && Math.max(...bars.map((b) => b.high)) < 1000;
+  // (once per data load: the sheet re-renders often, and no spread into Math.max)
+  const cents = useMemo(
+    () => !!bars && bars.length > 0 && bars.reduce((top, b) => Math.max(top, b.high), 0) < 1000,
+    [bars]
+  );
   useEffect(() => {
     const el = containerRef.current;
     if (!ready || !el) return;

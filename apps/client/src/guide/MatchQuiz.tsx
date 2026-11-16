@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
 import { shuffledOrder, type LessonQuestion } from './lessons';
+import { BoardFooter } from './BoardFooter';
 import styles from './QuizBoard.module.css';
 
 /** The links without the given term's pair */
@@ -129,24 +130,14 @@ export function MatchQuiz({
           })}
         </div>
       </div>
-      {!answered && (
-        <button
-          type="button"
-          className={styles.check}
-          disabled={!complete}
-          onClick={check}
-          {...guide('lesson.check')}
-        >
-          Check
-        </button>
-      )}
-      {revisit && <p className={styles.explain}>The right pairs:</p>}
-      {answered && (
-        <p className={styles.explain} role="status">
-          <strong>{answer === 0 ? 'Right. ' : 'Not quite. '}</strong>
-          {q.explain}
-        </p>
-      )}
+      <BoardFooter
+        answer={answer}
+        ready={complete}
+        onCheck={check}
+        revisit={revisit}
+        revisitLabel="The right pairs:"
+        explain={q.explain}
+      />
     </>
   );
 }

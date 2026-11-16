@@ -210,7 +210,9 @@ export function useTourProgress(): void {
       // (a reset sets the count back to 0: that's no finish)
       const finished = state.finishes > prev.finishes ? prev.activeId : null;
       if (finished) {
-        // With its last screen's step: the server refuses a finish from an earlier version
+        // With its last screen's step: the server refuses a finish from an earlier version. (An API
+        // from before 2026-11-16 refuses the step instead: this release rolls back API and web
+        // together, git.md's emergency playbook)
         const last = lessonScreens(getLesson(finished)).length - 1;
         learnApi
           .setProgress(finished, 'completed', accessToken, stepNumber(finished, last))

@@ -108,14 +108,19 @@ export async function learnRoutes(app: FastifyInstance) {
       });
       const items = rows.filter((r) => !isStaleLessonRow(r)).map(toItem);
       // Lesson 1 finished in its earlier version but after the reset (an old API machine during the
-      // rollout): the welcome card stays dismissed, as the reset migration does for earlier finishes
+      // rollout): the welcome card is dismissed and saved, as the reset migration does for earlier
+      // finishes, so it stays shut once a start replaces that row. Once per account: the row then
+      // exists (and a duplicate is skipped)
       const oldLesson1Done = rows.some(
         (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleLessonRow(r)
       );
       if (oldLesson1Done && !rows.some((r) => r.itemId === 'welcome-card')) {
-        const at = rows.find((r) => r.itemId === 'lesson-01')?.updatedAt ?? new Date();
+        await app.prisma.learningProgress.createMany({
+          data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
+          skipDuplicates: true,
+        });
         items.push(
-          toItem({ itemId: 'welcome-card', status: 'dismissed', step: null, updatedAt: at })
+          toItem({ itemId: 'welcome-card', status: 'dismissed', step: null, updatedAt: new Date() })
         );
       }
       return reply.send({ items });

@@ -101,15 +101,18 @@ export const useTourStore = create<TourState>()((set, get) => ({
       set({ wide: next });
       return;
     }
-    // The same step if both sizes show it; on a step only the old size had, back to the first step
-    // after the last shared one, so the new size's own steps (a phone opening the form) still run
+    // Rotated to a phone: its own steps before this one never ran (opening the form from its bar,
+    // which a phone needs before any form step), so back to the first of them. (A larger screen
+    // docks the form: nothing to catch up.) Otherwise the same step if both sizes show it, or, on
+    // a step only the old size had, the first step after the last shared one
     const tour = getTour(activeId);
     const all = tour.steps.map((s) => s.id);
     const current = all.indexOf(tourSteps(tour, wide)[stepIndex]?.id ?? '');
+    const missed = next ? -1 : tour.steps.findIndex((s, i) => i < current && s.screen === 'phone');
     const shared = tour.steps[current] && !tour.steps[current].screen;
     let lastShared = -1;
     for (let i = 0; i <= current; i++) if (!tour.steps[i].screen) lastShared = i;
-    const from = shared ? current : lastShared + 1;
+    const from = missed !== -1 ? missed : shared ? current : lastShared + 1;
     const shown = tourSteps(tour, next).map((s) => all.indexOf(s.id));
     const at = shown.findIndex((i) => i >= from);
     set({ wide: next, stepIndex: at === -1 ? shown.length - 1 : at });

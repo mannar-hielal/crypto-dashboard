@@ -122,7 +122,7 @@ describe('/api/learn/progress', () => {
         { itemId: 'lesson-02', status: 'completed', updatedAt: AT.toISOString() },
         { itemId: 'primer', status: 'completed', updatedAt: AT.toISOString() },
         // The hidden Lesson 1 finish still keeps the welcome card shut (the next test)
-        { itemId: 'welcome-card', status: 'dismissed', updatedAt: AT.toISOString() },
+        expect.objectContaining({ itemId: 'welcome-card', status: 'dismissed' }),
       ],
     });
   });
@@ -133,8 +133,13 @@ describe('/api/learn/progress', () => {
       { itemId: 'lesson-01', status: 'completed', step: null, updatedAt: AT },
     ] as never);
     const res = await app.inject({ method: 'GET', url: '/api/learn/progress', headers: auth() });
-    expect(res.json()).toEqual({
-      items: [{ itemId: 'welcome-card', status: 'dismissed', updatedAt: AT.toISOString() }],
+    expect(res.json().items).toEqual([
+      expect.objectContaining({ itemId: 'welcome-card', status: 'dismissed' }),
+    ]);
+    // Saved, so it stays shut after a start replaces the old finish
+    expect(app.prisma.learningProgress.createMany).toHaveBeenCalledWith({
+      data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
+      skipDuplicates: true,
     });
   });
 

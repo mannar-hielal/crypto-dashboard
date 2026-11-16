@@ -86,18 +86,40 @@ describe('tourStore', () => {
     }
   });
 
-  it('should keep the step when the screen crosses the tours’ width mid-tour', () => {
+  it('should keep the step when the screen widens mid-tour, and open the form first when it narrows', () => {
     s().start('buy-first-coin'); // desktop: the side button first
     s().next(); // Market
     const market = tourSteps(getTour('buy-first-coin'), true)[1].id;
-    s().setWide(false); // rotated to a phone: the same step, at its place in the phone's list
+    // Rotated to a phone: its form is closed, so back to tapping Buy / Long (review 2026-11-16)
+    s().setWide(false);
+    expect(tourSteps(getTour('buy-first-coin'), false)[s().stepIndex].anchor).toBe(
+      'trade.mobile.buy'
+    );
+    s().next(); // the form open on the phone: Market
     expect(tourSteps(getTour('buy-first-coin'), false)[s().stepIndex].id).toBe(market);
+    // Widened again: the form is docked, so the same step
     s().setWide(true);
     expect(tourSteps(getTour('buy-first-coin'), true)[s().stepIndex].id).toBe(market);
   });
 
   it('should not skip the phone’s open-the-form step when rotated on a desktop-only step', () => {
     s().start('practice-buy'); // desktop: the side button first (a desktop-only step)
+    s().setWide(false);
+    expect(tourSteps(getTour('practice-buy'), false)[s().stepIndex].anchor).toBe(
+      'trade.mobile.buy'
+    );
+  });
+
+  it('should run the phone’s own form step when rotated to a phone on a shared step', () => {
+    // Desktop: the side button, then a step both sizes share (the form docked, open)
+    s().start('practice-buy');
+    s().next();
+    expect(
+      getTour('practice-buy').steps.find(
+        (st) => st.id === tourSteps(getTour('practice-buy'), true)[1].id
+      )?.screen
+    ).toBeUndefined();
+    // On a phone that form is closed: back to tapping Buy / Long
     s().setWide(false);
     expect(tourSteps(getTour('practice-buy'), false)[s().stepIndex].anchor).toBe(
       'trade.mobile.buy'
