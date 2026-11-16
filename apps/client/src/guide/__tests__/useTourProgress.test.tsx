@@ -269,8 +269,8 @@ describe('useTourProgress', () => {
 
     it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {
       await loaded([
-        { ...item('lesson-02', 'started'), step: 46 },
-        // Lesson 1's steps 1–20 were its earlier version's: no screen today
+        { ...item('lesson-02', 'started'), step: 66 },
+        // Lesson 1's steps 1–60 were its earlier versions': no screen today
         { ...item('lesson-01', 'started'), step: 5 },
       ]);
       expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
@@ -284,13 +284,13 @@ describe('useTourProgress', () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
       await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 44]]);
+      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 64]]);
       // The server's answer doesn't send it again
       expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 3 });
     });
 
     it('should forget the furthest screens on sign-out, so the next account starts clean', async () => {
-      await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
+      await loaded([{ ...item('lesson-02', 'started'), step: 66 }]);
       expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
       token = null; // signed out
       renderHook(() => useTourProgress());
@@ -301,19 +301,19 @@ describe('useTourProgress', () => {
     it('should not echo the server’s furthest screen back while a lesson is open (review on #280)', async () => {
       // Lesson 3 open at screen 1 when the answer arrives with screen 5: nothing to send
       act(() => useLessonStore.getState().start('lesson-02', 1));
-      getProgress.mockResolvedValue({ items: [{ ...item('lesson-02', 'started'), step: 46 }] });
+      getProgress.mockResolvedValue({ items: [{ ...item('lesson-02', 'started'), step: 66 }] });
       renderHook(() => useTourProgress());
       await waitFor(() => expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 }));
       expect(setProgress).not.toHaveBeenCalled();
     });
 
     it('should never send a lower screen than the furthest one', async () => {
-      await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
+      await loaded([{ ...item('lesson-02', 'started'), step: 66 }]);
       act(() => useLessonStore.getState().start('lesson-02', 2));
       act(() => useLessonStore.getState().next());
       expect(setProgress).not.toHaveBeenCalled();
       act(() => useLessonStore.getState().start('lesson-02', 6));
-      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 47]]);
+      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 67]]);
     });
 
     it('should load finished lessons, and treat Lesson 1 as the offer being done with', async () => {
@@ -382,7 +382,7 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       setProgress.mockClear();
       act(() => useLessonStore.getState().start('lesson-02', 4));
-      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.45' }]);
+      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.65' }]);
 
       act(() => useLessonStore.getState().reset());
       expect(calls().some((c) => c.name === 'tour_completed')).toBe(false);
@@ -391,7 +391,7 @@ describe('useTourProgress', () => {
       expect(calls().at(-1)).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',
-        stepId: 'lesson-02.45',
+        stepId: 'lesson-02.65',
       });
     });
 
@@ -404,7 +404,7 @@ describe('useTourProgress', () => {
       expect(calls()).toEqual([
         { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.22' },
         { name: 'tour_started', itemId: 'lesson-02' },
-        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.45' },
+        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.65' },
       ]);
 
       // A start outside a look back closes the lesson it replaces too
@@ -413,7 +413,7 @@ describe('useTourProgress', () => {
       expect(calls()[0]).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',
-        stepId: 'lesson-02.45',
+        stepId: 'lesson-02.65',
       });
 
       act(() => useLessonStore.getState().start('lesson-02', 4));
@@ -421,7 +421,7 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       act(() => useLessonStore.getState().reset());
       expect(calls()).toEqual([
-        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.45' },
+        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.65' },
       ]);
     });
   });

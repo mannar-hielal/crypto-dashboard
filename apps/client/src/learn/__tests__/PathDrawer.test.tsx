@@ -97,7 +97,7 @@ describe('PathDrawer', () => {
     expect(lesson2.querySelector('.lucide-dumbbell')).toBeNull();
     expect(nodeButton('lesson:lesson-02').querySelector('.lucide-dumbbell')).not.toBeNull();
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-label')).toContain(
-      'Lesson, on the real chart: Who sets the price?'
+      'Lesson, on the real chart: News, swings and traps'
     );
     expect(nodeButton('tour:buy-first-coin').querySelector('.lucide-dumbbell')).not.toBeNull();
     // A lesson not begun has no ring
@@ -118,7 +118,7 @@ describe('PathDrawer', () => {
     fireEvent.click(nodeButton('lesson:lesson-02'));
     expect(useLessonStore.getState().activeId).toBeNull();
     expect(useTourStore.getState().panelOpen).toBe(true);
-    expect(screen.getByText('Finish “What is Bitcoin?” first.')).toBeTruthy();
+    expect(screen.getByText('Finish “Money nobody controls” first.')).toBeTruthy();
   });
 
   it('should never make a coming-soon stop focusable', () => {
@@ -169,8 +169,10 @@ describe('PathDrawer', () => {
     renderDrawer();
     fireEvent.click(document.querySelector(guideSelector('path.chapter.info', 'ch1'))!);
     const overview = document.querySelector(guideSelector('path.chapter.overview'))!;
-    expect(overview.textContent).toContain('Who sets the price?');
-    expect(overview.textContent).toContain('After this chapter you can');
+    expect(overview.textContent).toContain('News, swings and traps');
+    // Each lesson's summary lines (the lessons sum up there since 2026-11-16)
+    expect(overview.textContent).toContain('What you’ll learn');
+    expect(overview.textContent).toContain('Closing a position makes the result real.');
   });
 
   it('should show the streak, and keep the library and habits in their own tab', async () => {

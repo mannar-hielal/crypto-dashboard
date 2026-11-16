@@ -589,6 +589,8 @@ const mailboxesKeys: Article = {
   minutes: 3,
   checked: '2026-11-12',
   access: FREE,
+  // Lesson 2's keys and custody cards moved to a later lesson in the rewrite (owner 2026-11-16)
+  practiceSoon: 'a later lesson on keys and custody',
   // Owner 2026-11-08: the Many notebooks recipe, one line of text and a graphic to tap
   blocks: [
     { kind: 'h', text: 'Two things, two rules', id: 'key' },
@@ -837,6 +839,8 @@ const gettingBitcoin: Article = {
   minutes: 3,
   checked: '2026-11-12',
   access: FREE,
+  // Lesson 2's keys and custody cards moved to a later lesson in the rewrite (owner 2026-11-16)
+  practiceSoon: 'a later lesson on keys and custody',
   blocks: [
     { kind: 'h', text: '1. Buy it on an exchange' },
     {

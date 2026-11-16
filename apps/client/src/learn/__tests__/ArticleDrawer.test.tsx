@@ -96,17 +96,18 @@ describe('ArticleDrawer', () => {
     expect(
       document.querySelector('[aria-label="Sofia’s stamp and the stamp-checker"]')
     ).toBeTruthy();
-    expect(drawer()!.textContent).toContain('Lesson 2: One ledger, thousands of copies →');
+    expect(drawer()!.textContent).toContain('Lesson 2: One record, many copies →');
   });
 
-  it('should step through a payment with the mailbox, and point to the card that teaches it', () => {
+  it('should step through a payment with the mailbox, and say a later lesson practises it', () => {
     renderDrawer();
     open('mailboxes-keys');
     fireEvent.click(
       document.querySelector('[data-guide="article.mailbox.step"][data-guide-key="3"]')!
     );
     expect(drawer()!.textContent).toContain('The box is locked');
-    expect(drawer()!.textContent).toContain('Lesson 2: A mailbox and a key →');
+    // Keys and custody moved to a later lesson (2026-11-16)
+    expect(drawer()!.textContent).toContain('a later lesson on keys and custody');
   });
 
   it('should send the story article back to the Lesson 2 card whose Read more opens it', () => {
@@ -114,7 +115,7 @@ describe('ArticleDrawer', () => {
     open('bitcoin-story');
     // Owner 2026-11-12: no "Coming in a later lesson" once a lesson card links here
     expect(drawer()!.textContent).not.toContain('Coming in a later lesson');
-    expect(drawer()!.textContent).toContain('Lesson 2: Money that no one controls');
+    expect(drawer()!.textContent).toContain('Lesson 2: A paper, then a block');
     expect(drawer()!.textContent).toContain('Satoshi');
   });
 
@@ -134,7 +135,7 @@ describe('ArticleDrawer', () => {
     expect(drawer()).toBeNull();
     // Lesson 2's ledger card (Lesson 1's notebook moved to a later lesson, 2026-11-16)
     expect(useLessonStore.getState().activeId).toBe('lesson-ownership');
-    expect(useLessonStore.getState().screen).toBe(2);
+    expect(useLessonStore.getState().screen).toBe(4);
   });
 
   it('should take a look back home when the practice link is the lesson it came from', () => {
@@ -144,8 +145,8 @@ describe('ArticleDrawer', () => {
       useLessonStore.getState().visit('lesson-01', 3);
     });
     renderDrawer();
-    open('mailboxes-keys', { from: { lesson: 'lesson-01', screen: 3 } });
-    fireEvent.click(screen.getByText('Lesson 2: A mailbox and a key →'));
+    open('bitcoin-network', { from: { lesson: 'lesson-01', screen: 3 } });
+    fireEvent.click(screen.getByText('Lesson 2: One record, many copies →'));
     // Home, answers kept, at the card the link teaches
     expect(useLessonStore.getState()).toMatchObject({
       activeId: 'lesson-ownership',

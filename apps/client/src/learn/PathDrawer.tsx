@@ -49,11 +49,16 @@ function Connector({ index }: { index: number }) {
   );
 }
 
-/** What a chapter teaches: its stops with their minutes, and what each lesson lets you do */
+/**
+ * What a chapter teaches: its stops with their minutes, and what each lesson teaches (its summary's
+ * lines; a lesson with no summary, its "You can now" lines)
+ */
 function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
-  const canDo = nodes.flatMap((v) =>
-    v.node.kind === 'lesson' ? getLesson(v.node.id).canDo.map((c) => c.text) : []
-  );
+  const learned = nodes.flatMap((v) => {
+    if (v.node.kind !== 'lesson') return [];
+    const lesson = getLesson(v.node.id);
+    return (lesson.recap?.points ?? lesson.canDo).map((c) => c.text);
+  });
   return (
     <div className={styles.overview} {...guide('path.chapter.overview')}>
       <ul className={styles.overviewList}>
@@ -64,11 +69,11 @@ function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
           </li>
         ))}
       </ul>
-      {canDo.length > 0 && (
+      {learned.length > 0 && (
         <>
-          <p className={styles.overviewHead}>After this chapter you can</p>
+          <p className={styles.overviewHead}>What you’ll learn</p>
           <ul className={styles.overviewList}>
-            {canDo.map((text) => (
+            {learned.map((text) => (
               <li key={text}>{text}</li>
             ))}
           </ul>

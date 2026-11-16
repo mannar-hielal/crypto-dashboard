@@ -6,12 +6,8 @@ import { GuideAvatar, LessonArt } from '@/guide/LessonArt';
 import { MOODS, type LessonArtId } from '@/guide/lessons';
 
 const ARTS: LessonArtId[] = [
-  'money',
-  'notebook',
   'ledger',
-  'mailbox',
-  'queues',
-  'tesla',
+  'bitcoin',
   'etf',
   'flashCrash',
   'staircase',
@@ -86,23 +82,8 @@ describe('LessonArt', () => {
     }
   });
 
-  it('should draw the private key as the articles’ stamp on the mailbox card', () => {
-    const { container } = render(
-      <LessonArt id="mailbox" presenter={{ who: 'tock', mood: 'wink' }} />
-    );
-    expect(container.querySelectorAll('svg[data-stamp]')).toHaveLength(1);
-  });
-
-  it('should show the ledger, not coins, beside the phone and its recovery words', () => {
-    const { container } = render(<LessonArt id="keyHolders" />);
-    // Owner 2026-11-12: bitcoin has no coins; a balance is the ledger added up
-    expect(container.textContent).toContain('the ledger');
-    expect(container.textContent).toContain('your balance = the ledger, added up');
-    expect(container.textContent).not.toMatch(/coins/);
-  });
-
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {
-    const { container } = render(<LessonArt id="tesla" />);
+    const { container } = render(<LessonArt id="etf" />);
     expect(container.querySelector('[data-mood]')).toBeNull();
   });
 

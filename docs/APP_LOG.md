@@ -4672,6 +4672,21 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   vs SOL (−19% vs −29%), risks and scams, a Try it that opens and closes a paper trade. `stepBase` 60. Its money and
   trust cards (Nora's notebook) move to a later lesson; their articles stay (`money-101` says so). Four summary lines
   have no article yet (plain text, owner). Unit 1 is now **"Start here: crypto and trading basics"**.
+- **Lesson 2, "Money nobody controls"** (owner-approved outline and draft, fact-checked): the genesis block's
+  headline as the cold open, 2008, the white paper and block 0, one ledger with many copies (a class score sheet),
+  sending, the two checks, blocks, proof of work, the hash, a Drag and drop (a payment's journey), decentralized
+  (21 million, an open ledger), Match boxes (network parts; Bitcoin's features), borderless, liquidity, programmable
+  networks, NFTs, Your call (one copy against thousands), the `block-chain` Try it, and the birth story staged in the
+  summary. `stepBase` 20. Its keys and custody cards (James Howells, Sneaky Sam, the phone in the sea) move to a
+  later lesson; `mailboxes-keys` and `getting-bitcoin` say so; the Howells photo and the drawings only those cards
+  used are deleted (git keeps them).
+- **Lesson 3, "News, swings and traps"** (owner-approved, fact-checked against our candles): the $8,200 cold open
+  and the volatility card kept; news, the April 2024 halving both ways, the ETF Your call kept, hype, candles, FTX
+  (November 2022, −23%), a plan beats panic, April → July 2021 (−53%), thin or deep, the $8,200 moment explained,
+  Bitcoin is deep, Match boxes (situations), a rug pull told generally, the checklist, and a Drag and drop (a rug
+  pull's steps). `stepBase` 60. The benchmark's company and token examples are gone; the two-queues card moves to a
+  later lesson (the order-book widget and its article stay).
+- **The path's chapter overview** lists each lesson's summary lines ("What you'll learn").
 - **Release** (owner): the new Lesson 1 ships as soon as it's written, which ends the voice-pilot measurement early;
   the funnel before and after still shows the pilot's first days.
 

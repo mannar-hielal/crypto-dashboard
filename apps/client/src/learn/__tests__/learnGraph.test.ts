@@ -52,106 +52,45 @@ describe('the learning graph', () => {
   });
 
   it('should send the lessons’ terms to their articles and the articles back to the cards', () => {
-    // Lesson 2 card 3 marks the ledger (Lesson 1's notebook moved to a later lesson, 2026-11-16);
-    // Lesson 3 card 2 the exchange and the last price
-    expect(lessonPlacesOf('ledger')).toEqual([{ lesson: 'lesson-ownership', screen: 2 }]);
-    expect(lessonPlacesOf('last-price')).toEqual([{ lesson: 'lesson-02', screen: 1 }]);
-
-    // Money 101's cards moved to a later lesson (it says so: practiceSoon)
-    expect(practiceFor('money-101')).toEqual([]);
-    expect(getArticle('money-101').practiceSoon).toMatch(/later lesson/);
-    // The network article is the answer Lesson 2's cards give
-    expect(practiceFor('suncoin')).toEqual([
-      {
-        kind: 'lesson',
-        lesson: 'lesson-ownership',
-        screen: 2,
-        label: 'Lesson 2: One ledger, thousands of copies',
-      },
+    // Lesson 2's "One record, many copies" marks the ledger (rewritten 2026-11-16)
+    expect(lessonPlacesOf('ledger')).toEqual([{ lesson: 'lesson-ownership', screen: 4 }]);
+    const labels = (id: Parameters<typeof practiceFor>[0]) => practiceFor(id).map((p) => p.label);
+    // The cards moved to later lessons say so instead (practiceSoon)
+    for (const id of ['money-101', 'mailboxes-keys', 'getting-bitcoin'] as const) {
+      expect(practiceFor(id), id).toEqual([]);
+      expect(getArticle(id).practiceSoon, id).toMatch(/later lesson/);
+    }
+    expect(labels('suncoin')).toEqual(['Lesson 2: One record, many copies']);
+    expect(labels('bitcoin-network')).toEqual([
+      'Lesson 2: One record, many copies',
+      'Lesson 2: Two checks, then a block',
+      'Lesson 2: The hash links the chain',
+      'Lesson 2: No one in charge',
     ]);
-    expect(practiceFor('bitcoin-network').map((p) => p.label)).toEqual([
-      'Lesson 2: Money that no one controls',
-      'Lesson 2: One ledger, thousands of copies',
-      'Lesson 2: A stamp only you hold',
-      'Lesson 2: Your bitcoin isn’t in your phone',
+    expect(labels('bitcoin-story')).toEqual([
+      'Lesson 2: A paper, then a block',
+      'Lesson 2: Two checks, then a block',
+      'Lesson 2: Sealed by hard work',
     ]);
-    expect(practiceFor('mailboxes-keys')).toEqual([
-      {
-        kind: 'lesson',
-        lesson: 'lesson-ownership',
-        screen: 3,
-        label: 'Lesson 2: A mailbox and a key',
-      },
+    expect(labels('exchange-price')).toEqual([
+      'Lesson 2: Liquidity, briefly',
+      'Lesson 3: Thin or deep',
+      'Lesson 3: Bitcoin is deep',
+      'What you’re looking at',
+      'Buy your first coin',
     ]);
-    expect(practiceFor('getting-bitcoin')).toEqual([
-      {
-        kind: 'lesson',
-        lesson: 'lesson-ownership',
-        screen: 6,
-        label: 'Lesson 2: Who holds your key?',
-      },
+    expect(labels('price-swings')).toEqual([
+      'Lesson 1: The market never sleeps',
+      'Lesson 1: Smaller coins swing harder',
+      'Lesson 3: Big swings, both ways',
+      'Lesson 3: News moves it, fast',
+      'Lesson 3: Thousands of deals, one candle',
+      'What you’re looking at',
     ]);
-    expect(practiceFor('exchange-price')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-02', screen: 1, label: 'Lesson 3: Two queues meet' },
-      {
-        kind: 'lesson',
-        lesson: 'lesson-02',
-        screen: 2,
-        label: 'Lesson 3: When the queue runs thin',
-      },
-      { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
-      { kind: 'tour', tour: 'buy-first-coin', label: 'Buy your first coin' },
-    ]);
-    // Rebuilt Lesson 3 (2026-11-12): the volatility card sits after the moment, screen 6
-    expect(practiceFor('price-swings')).toEqual([
-      // Lesson 1 (2026-11-16): the 24/7 card and the smaller-coins card (after Your call)
-      {
-        kind: 'lesson',
-        lesson: 'lesson-01',
-        screen: 15,
-        label: 'Lesson 1: The market never sleeps',
-      },
-      {
-        kind: 'lesson',
-        lesson: 'lesson-01',
-        screen: 16,
-        label: 'Lesson 1: Smaller coins swing harder',
-      },
-      {
-        kind: 'lesson',
-        lesson: 'lesson-02',
-        screen: 3,
-        label: 'Lesson 3: Thousands of deals, one candle',
-      },
-      { kind: 'lesson', lesson: 'lesson-02', screen: 6, label: 'Lesson 3: Big swings, both ways' },
-      { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
-    ]);
-    expect(practiceFor('spot-a-scam')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-01', screen: 17, label: 'Lesson 1: Big swings, big risks' },
-      { kind: 'lesson', lesson: 'lesson-02', screen: 7, label: 'Lesson 3: Check before you trust' },
-    ]);
-    // Owner 2026-11-12: Lesson 2's Bitcoin card opens it with its Read more, so it practises it
-    expect(practiceFor('bitcoin-story')).toEqual([
-      {
-        kind: 'lesson',
-        lesson: 'lesson-ownership',
-        screen: 1,
-        label: 'Lesson 2: Money that no one controls',
-      },
-      // The ledger card's Read more opens the mining section (owner 2026-11-12)
-      {
-        kind: 'lesson',
-        lesson: 'lesson-ownership',
-        screen: 2,
-        label: 'Lesson 2: One ledger, thousands of copies',
-      },
-      // The stamp card's [[miners|mining]] (review: the mining concept opens from a lesson again)
-      {
-        kind: 'lesson',
-        lesson: 'lesson-ownership',
-        screen: 4,
-        label: 'Lesson 2: A stamp only you hold',
-      },
+    expect(labels('spot-a-scam')).toEqual([
+      'Lesson 1: Big swings, big risks',
+      'Lesson 3: A rug pull',
+      'Lesson 3: Check before you trust',
     ]);
   });
 

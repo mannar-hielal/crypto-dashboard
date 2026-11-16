@@ -17,7 +17,6 @@
 import { FREE, type Entitlement } from '@/learn/access';
 import type { ArticleId, WidgetId } from '@/learn/articles';
 import { plainText } from '@/learn/terms';
-import howellsLandfill from '@/assets/lessons/howells-landfill.jpg';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId, PracticeTourId } from './tours';
 
@@ -30,18 +29,9 @@ export function isLessonId(value: string): value is LessonId {
 
 /** The pictures `LessonArt` can draw, all from our own tokens */
 export type LessonArtId =
-  | 'money'
-  | 'notebook'
-  | 'oneNora'
   | 'ledger'
   /** Lesson 2's Bitcoin card: the mark rising with its burst */
   | 'bitcoin'
-  | 'mailbox'
-  | 'stamp'
-  | 'keyHolders'
-  | 'custody'
-  | 'queues'
-  | 'tesla'
   | 'etf'
   /** Lesson 3's cold open without a photo: Bybit's quiet minute candles, and Binance.US's wick */
   | 'flashCrash'
@@ -646,212 +636,260 @@ const lesson01: Lesson = {
 // what makes bitcoin yours. A term first taught in Lesson 1 says so in the card's words.
 
 /** Lesson 2's length: its stated objective says it too */
-const LESSON_02_MINUTES = 8;
+const LESSON_02_MINUTES = 9;
+
+// ─── Lesson 2 — Money nobody controls (rewritten 2026-11-16) ─────────────────
 
 const lessonOwnership: Lesson = {
+  // The id stays, as accounts store it (it held "what makes coins yours" until the rewrite)
   id: 'lesson-ownership',
   number: 2,
-  // Owner 2026-11-12: renamed from "Who owns a bitcoin?"
-  title: 'What is Bitcoin?',
+  // Owner 2026-11-16: our own title
+  title: 'Money nobody controls',
   stage: 'Getting started',
   minutes: LESSON_02_MINUTES,
-  // Owner 2026-11-12: the Bitcoin card went in as card 2, so today's screens are steps 21 on and
-  // earlier ones keep 1–20 (Lesson 1 too)
+  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 21 on
   stepBase: 20,
-  tryWidget: 'stamp-check',
-  tryIntro: 'Now be Sneaky Sam, a stranger: try to spend Sofia’s bitcoin without her stamp.',
+  tryWidget: 'block-chain',
+  tryIntro:
+    'Your turn: change a number in an old block and watch what happens to every block after it.',
   cards: [
     {
-      // Decrypt and DL News, January 2025: in 2013 a hard drive holding the wallet for 8,000 BTC
-      // that James Howells mined in 2009 was thrown out by mistake and went to Newport's landfill;
-      // the High Court refused his bid to dig it up. No dollar figure: the hindsight rule of card 1
-      // of Lesson 1
-      title: 'A hard drive in the bin',
-      // Owner 2026-11-12: the real photo, no drawing and no guide, as Lesson 1's cold open. The
-      // owner confirmed they hold the rights to publish it (docs/APP_LOG.md, "Lesson 2 opens on
-      // the real photo"); they gave no credit line, so none is shown
-      photo: {
-        src: howellsLandfill,
-        // The card shows the photo's top (the frame matches Lesson 1's), so the alt names what's in view
-        alt: 'A digger on a huge landfill heap; inset, a portrait of James Howells.',
-        credit: null,
-      },
+      // Block 0, created 3 January 2009; its coinbase text: "The Times 03/Jan/2009 Chancellor on brink
+      // of second bailout for banks" (mempool.space/block/0; fact-checked 2026-11-16)
+      title: 'A headline in the first block',
+      art: 'bitcoin',
       beats: [
-        { kind: 'kicker', text: '2013 · Newport, Wales' },
-        { kind: 'headline', text: 'An old hard drive was thrown out by mistake.' },
+        { kind: 'kicker', text: '3 January 2009 · The first block' },
         {
           kind: 'headline',
-          text: 'On it: the key to 8,000 bitcoin James Howells mined in 2009.',
-          emphasis: '8,000 bitcoin',
+          text: 'Bitcoin’s very first block carries a newspaper headline.',
+          emphasis: 'newspaper headline',
         },
         {
           kind: 'fact',
-          text: 'It went to the landfill. Without that key, nobody can move that bitcoin. Not even him.',
+          text: '“Chancellor on brink of second bailout for banks”, from The Times that morning.',
         },
-        // Owner 2026-11-12 (the benchmark review): the lesson says what it will teach
+        {
+          kind: 'headline',
+          text: 'Someone wrote it into the record on purpose. Why?',
+          emphasis: 'Why?',
+        },
         {
           kind: 'fact',
-          text: `In the next ${LESSON_02_MINUTES} minutes: what Bitcoin is, how you receive and send it, and why that key is everything.`,
+          text: `In the next ${LESSON_02_MINUTES} minutes: why Bitcoin exists, how thousands of computers keep one record, and what makes it different.`,
         },
       ],
-      nextLabel: 'Unlock what Bitcoin really is',
+      nextLabel: 'Unlock why Bitcoin exists',
     },
     {
-      // Owner 2026-11-12: the mark from the end of Lesson 1, then what makes Bitcoin different. The
-      // 21 million cap comes from Bitcoin's issuance rules (the block reward halves every 210,000
-      // blocks; bitcoin.org FAQ); the ledger is public (the public-ledger widget)
-      title: 'Money that no one controls',
-      art: 'bitcoin',
-      presenter: { who: 'tick', mood: 'grin' },
-      // Owner 2026-11-12 (the benchmark gaps): the word "decentralized", tappable
-      text: 'Bitcoin is [[decentralized]] digital money, with no bank or boss. What makes it different:',
-      points: [
+      title: 'From the price to the thing',
+      presenter: { who: 'tick', mood: 'curious', pose: 'stand' },
+      lines: [
         {
-          label: 'No one in charge.',
-          text: 'No bank, company or government runs it, so nobody can freeze it or change the rules alone.',
+          speaker: 'tick',
+          text: 'In Lesson 1 I traded Bitcoin’s price. But what is the thing I was trading?',
         },
         {
-          label: 'A fixed supply.',
-          text: 'No more than 21 million bitcoin will ever exist. Nobody can print more.',
-        },
-        {
-          label: 'Open to check.',
-          text: 'Every payment sits in a public ledger anyone can read.',
-        },
-        {
-          label: 'Yours, with a key.',
-          text: 'Whoever holds the key can spend it: no permission needed.',
+          speaker: 'tock',
+          text: 'Money that nobody controls. To see why anyone wanted that, go back to 2008.',
         },
       ],
-      more: { article: 'bitcoin-story' },
-      nextLabel: 'So who keeps the ledger?',
+      nextLabel: 'What happened in 2008?',
     },
     {
-      // Owner 2026-11-12: no Nora here (a learner may come back days later), only Lesson 1's point.
-      // The buttons from here walk the process: receive, send (and the check), where it is
-      title: 'One ledger, thousands of copies',
-      art: 'ledger',
-      presenter: { who: 'tick', mood: 'grin' },
-      text: 'Trusting one record keeper is a risk: whoever holds the only [[ledger]] can change it, freeze it or simply lose it. Bitcoin solves this by keeping copies everywhere. Thousands of computers around the world, called [[nodes|node]], each hold the full ledger and check every new payment. Each page, called a block, is added by miners and sealed to the one before with a fingerprint called a hash, so nobody can quietly rewrite the past.',
-      // Owner 2026-11-12: mining here, with its Read more on the story article's mining section
-      more: { article: 'bitcoin-story', section: 'mining' },
-      nextLabel: 'How do I receive bitcoin?',
-    },
-    {
-      title: 'A mailbox and a key',
-      art: 'mailbox',
-      presenter: { who: 'tock', mood: 'wink' },
-      // Owner 2026-11-12: one payment, Sofia → Leo, runs through the next cards (Lesson 1's friends)
-      text: 'Say Sofia wants to pay Leo 2 bitcoin. Leo shares his [[address]], and only his [[private key|private-key]] can spend what arrives there. Think of a mailbox with a lock:',
-      points: [
-        {
-          label: 'Address.',
-          text: 'The slot in Leo’s mailbox. Anyone can pay in, so he can safely share it with Sofia, or with anyone.',
-        },
-        {
-          label: 'Private key.',
-          text: 'The only key that can spend what’s paid in. Whoever has it controls that bitcoin, so Leo never shares it.',
-        },
-      ],
-      nextLabel: 'How do I send it?',
-    },
-    {
-      title: 'A stamp only you hold',
-      art: 'stamp',
-      presenter: { who: 'tick', mood: 'curious' },
-      text: 'Now Sofia sends. Her wallet stamps “Sofia → Leo, 2” with her private key, a mark only she can make. The payment carries the matching checker, her public key, so every [[node]] can confirm the mark is hers, and that she has 2 bitcoin to send, before it goes into the ledger. Nobody can copy the stamp, and once the nodes accept it, [[miners|mining]] add it to a new block.',
-      nextLabel: 'So where is my bitcoin?',
-    },
-    {
-      // Owner 2026-11-12: no coin pictures or "the coins": bitcoin has no coins, a balance is the
-      // ledger's entries added up
-      title: 'Your bitcoin isn’t in your phone',
-      art: 'keyHolders',
+      // Lehman Brothers, founded 1850, filed for bankruptcy on 15 September 2008 (bitcoin-story)
+      title: '2008: trust broke',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'Here’s the surprise: nothing moved, because there are no coins anywhere. The [[blockchain]] just gained a line, “Sofia → Leo, 2”, and a balance is what the payments to and from an address add up to. Your phone holds only the key that spends them, and a list of recovery words backs that key up. Lose the phone but keep the words, and you’re fine. Lose both, like James Howells, and nobody can ever spend that bitcoin again.',
-      nextLabel: 'Can someone hold my key for me?',
+      text: 'In September 2008 Lehman Brothers, a bank founded in 1850, collapsed. Others nearly followed. Governments rushed to rescue the banks with taxpayers’ money and newly created money. Many people asked a hard question: if the people in charge of money can get it this wrong, why must we trust them?',
+      nextLabel: 'Did anyone answer?',
     },
     {
-      // Mt. Gox, Feb 2014: about 850,000 BTC reported missing (learn/articles.ts, "Getting bitcoin")
-      title: 'Who holds your key?',
-      art: 'custody',
-      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
-      text: 'You don’t have to hold the key yourself. Leave bitcoin on an exchange and it holds the key for you: that’s [[custody]]. It’s handy, and it’s how most people start. But your bitcoin is then only as safe as the company. When Mt. Gox failed in 2014, its customers’ bitcoin went with it. Here, nothing is real bitcoin: your balance is virtual practice money, so nothing is at risk while you learn.',
+      // The paper is dated 31 October 2008 (bitcoin.org/bitcoin.pdf); block 0 was created on 3 January
+      // 2009 and the network launched on 9 January (fact-checked 2026-11-16)
+      title: 'A paper, then a block',
+      presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
+      text: 'On 31 October 2008 someone called **Satoshi Nakamoto** shared a short paper: *Bitcoin: A Peer-to-Peer Electronic Cash System*. Money that people send each other directly, with no bank in the middle. On 3 January 2009 the first block was created, with that newspaper headline inside. Nobody knows who Satoshi is.',
+      more: { article: 'bitcoin-story', section: 'timeline' },
+      nextLabel: 'How can money work without a bank?',
+    },
+    {
+      title: 'One record, many copies',
+      art: 'ledger',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      text: 'Picture a class score sheet. Instead of one teacher keeping it, every pupil has a copy on their laptop. Change your own copy and it won’t match the others, so nobody accepts it. Bitcoin works like that: one [[ledger]] of every payment, copied on thousands of computers called [[nodes|node]].',
+      lines: [
+        { speaker: 'tick', text: 'So there’s no one teacher to bribe.' },
+        { speaker: 'tock', text: 'Exactly. And no one teacher to lose the sheet.' },
+      ],
+      more: { article: 'bitcoin-network', section: 'three-jobs' },
+      nextLabel: 'So how do I send bitcoin?',
+    },
+    {
+      title: 'Sending bitcoin',
+      presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
+      text: 'When you send bitcoin, your wallet signs the payment with your private key, a secret that only its holder can use, a bit like a signature nobody else can copy. Then it shares the payment with the network. Nodes pass it on to each other, and within seconds thousands of computers have seen it.',
+      nextLabel: 'Does anyone check it?',
+    },
+    {
+      title: 'Two checks, then a block',
+      presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
+      text: 'Nodes make two key checks: is the signature really yours, and do you still have those coins, not already spent? A payment that fails is dropped. [[Miners|mining]] then pick waiting payments, mostly by fee, and bundle them into a **block**, a new page of the ledger, on average every 10 minutes.',
+      more: { article: 'bitcoin-network', section: 'checks' },
+      nextLabel: 'What stops someone editing a page?',
+    },
+    {
+      // Proof of work (white paper §4, §11): costly to redo, not impossible (fact check 2026-11-16)
+      title: 'Sealed by hard work',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
+      text: 'Each block is sealed with a code that took huge computing work to find. Change one number in an old block and the code changes. To fake it, you’d have to redo that work for the block and every block after it, faster than all the other miners together. Practically, nobody can.',
+      more: { article: 'bitcoin-story', section: 'mining' },
+      nextLabel: 'And how do pages stay in order?',
+    },
+    {
+      title: 'The hash links the chain',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      text: 'Every block carries the **hash** of the block before it: a short code that works like a fingerprint. Change anything in an earlier block and its fingerprint changes, so the next block no longer matches, and the next. That’s why it’s called a [[blockchain]].',
+      more: { article: 'bitcoin-network', section: 'blocks' },
+      nextLabel: 'Let’s put it in order',
+    },
+    {
+      title: 'Quick check',
+      quiz: {
+        format: 'order',
+        question: 'Put a payment’s journey in order.',
+        steps: [
+          'You sign the payment',
+          'Nodes check it',
+          'It goes into a block',
+          'The block is sealed and linked to the block before',
+          'Every copy of the ledger adds the block',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Sign, check, bundle, seal, share. No one in the middle approves it: the network does.',
+      },
+      nextLabel: 'So who’s in charge?',
+    },
+    {
+      title: 'No one in charge',
+      presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
+      text: 'That’s what [[decentralized]] means: no one in charge. No bank can freeze the ledger and no single company can switch it off. There will never be more than 21 million bitcoin, nobody can print more, and anyone can read the whole ledger. Changing the rules needs most of the network to adopt the change.',
+      nextLabel: 'Who does what again?',
+    },
+    {
+      title: 'Quick check',
+      quiz: {
+        format: 'match',
+        question: 'Match each part of the network to its job.',
+        pairs: [
+          { term: 'Node', meaning: 'Keeps a full copy and checks payments' },
+          { term: 'Miner', meaning: 'Bundles payments into a new block' },
+          { term: 'Hash', meaning: 'Links each block to the one before' },
+          { term: 'Signature', meaning: 'Proves the owner approved the payment' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Nodes check, miners bundle, the hash links, and your signature proves it’s yours.',
+      },
+      nextLabel: 'Does it work everywhere?',
+    },
+    {
+      title: 'No borders',
+      presenter: { who: 'tick', mood: 'surprised', pose: 'stand' },
+      text: 'Bitcoin follows the same rules everywhere. Sending it from Lisbon to Lagos works like sending it next door: no bank holidays, no opening hours. The network itself has no borders.',
+      nextLabel: 'Can I always buy and sell it?',
+    },
+    {
+      title: 'Liquidity, briefly',
+      presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
+      text: 'How easily you can buy or sell something without moving its price is called [[liquidity]]. Bitcoin has lots of buyers and sellers, so it usually trades smoothly. Smaller coins have fewer, and prices jump more. Lesson 3 shows what that looks like.',
+      nextLabel: 'Is crypto only money?',
+    },
+    {
+      title: 'Money that runs code',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
+      text: 'Bitcoin is mostly money. Other networks let people write small programs on top: rules that run by themselves, like “pay this person when that happens”. That’s why those networks are called programmable. Code can have bugs, though, so new and clever doesn’t mean safe.',
+      nextLabel: 'Then what’s an NFT?',
+    },
+    {
+      // EIP-721: the token points to metadata, usually off-chain (fact check 2026-11-16)
+      title: 'NFTs, briefly',
+      presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
+      text: 'An NFT is a unique token on a blockchain, often linked to a digital ticket or a piece of art. The token usually points to the item rather than holding it, and holding it doesn’t always mean you own the item or its copyright. Like any collectible, its price is whatever someone will pay, and that can be nothing.',
+      nextLabel: 'Your call',
+    },
+    {
+      title: 'Quick check',
+      quiz: {
+        format: 'match',
+        question: 'Match each feature of Bitcoin to what it means.',
+        pairs: [
+          { term: 'Decentralized', meaning: 'No one is in charge' },
+          { term: 'Fixed supply', meaning: 'Never more than 21 million' },
+          { term: 'Open to check', meaning: 'Anyone can read the ledger' },
+          { term: 'Borderless', meaning: 'The same rules in every country' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Together they make money that no one controls, no one can print, and anyone can check.',
+      },
+      nextLabel: 'Now try it yourself',
     },
   ],
+  momentAfter: 15,
   moment: {
-    context: 'Your phone falls in the sea. Your recovery words are safe at home.',
-    question: 'What happens to your bitcoin?',
+    context:
+      'Your friend’s copy of the ledger says you paid Leo twice. Thousands of other copies say once.',
+    question: 'Which do you trust?',
     presenter: { who: 'tock', mood: 'thinking' },
-    options: ['It’s gone', 'Restore it on a new phone', 'The exchange refunds it'],
-    correct: 1,
+    options: [
+      'The thousands of copies that agree',
+      'Your friend’s copy: they’re your friend',
+      'Neither: ask a bank',
+    ],
+    correct: 0,
     explain:
-      'Your bitcoin was never in the phone: it’s recorded on the blockchain. The recovery words rebuild the key on any new phone.',
+      'Every copy checks the same rules, so one that disagrees is wrong or edited. When thousands of independent copies agree, that’s the ledger. No bank needed, and that’s the whole point.',
   },
-  checks: [
-    {
-      question:
-        'Someone from “support” asks for your recovery phrase to fix your wallet. What do you do?',
-      // A warning, not a punishment: the only place a guide looks worried
-      presenter: { who: 'tock', mood: 'worried' },
-      options: ['Send it: they’re support', 'Send only half of it', 'Never share it'],
-      correct: 2,
-      explain:
-        'A recovery phrase restores your private keys, and whoever has it controls your bitcoin. Real support never asks for it.',
-    },
-    {
-      question:
-        'In 2014 the Mt. Gox exchange collapsed and customers’ bitcoin went missing. What failed?',
-      options: ['Bitcoin itself', 'The exchange that held their keys', 'The internet'],
-      correct: 1,
-      explain:
-        'The blockchain kept working. A company that held its customers’ keys failed: the risk of letting someone else hold them.',
-    },
-    {
-      question: 'What can a stranger do with your address?',
-      options: ['Send you bitcoin', 'Spend your bitcoin', 'See your private key'],
-      correct: 0,
-      explain: 'An address is a mailbox slot: anyone can pay in, and only your key opens it.',
-    },
-  ],
-  notePrompt: 'What would you like to understand better about owning bitcoin?',
-  teaser: 'Next: who decides what one bitcoin costs, on the real chart.',
-  canDo: [
-    { text: 'Tell an address from a private key', article: 'mailboxes-keys', section: 'key' },
-    { text: 'Say why recovery words stay secret', article: 'mailboxes-keys', section: 'phone' },
-    {
-      text: 'Explain how nodes know it’s really you',
-      article: 'bitcoin-network',
-      section: 'checks',
-    },
-  ],
+  // The quizzes sit between the cards (owner 2026-11-16)
+  checks: [],
+  notePrompt: 'In your own words: why does Bitcoin need thousands of copies?',
+  teaser: 'Next: why prices swing so hard, and how to spot a trap.',
+  canDo: [],
+  // The birth story Lesson 1 told until the rewrite, staged here (owner 2026-11-16: "our genesis reveal
+  // can stay")
+  recap: {
+    title: 'Why Bitcoin exists',
+    points: [
+      {
+        text: 'Bitcoin keeps one ledger, copied on thousands of computers.',
+        article: 'bitcoin-network',
+        section: 'three-jobs',
+      },
+      {
+        text: 'Nodes check every payment, and blocks are linked by their hash.',
+        article: 'bitcoin-network',
+        section: 'blocks',
+      },
+      {
+        text: 'No one is in charge: the network agrees.',
+        article: 'bitcoin-story',
+        section: 'timeline',
+      },
+    ],
+    genesis: BITCOIN_BIRTH,
+    highlight: { text: 'That was the birth of Bitcoin.' },
+  },
   next: { kind: 'lesson', id: 'lesson-02' },
   access: FREE,
 };
 
-// ─── Lesson 3 — Who sets the price? ──────────────────────────────────────────
-// Rebuilt 2026-11-12 to the owner's brief for Lesson 3: a true cold open, the price as people
-// (queues, liquidity, candles, news), the moment, then the postponed volatility card and a short
-// "check before you trust". Every dated price is checked against Bybit's candles (noted beside it);
-// the Binance.US and Squid Game facts against the reporting (CoinDesk, The Block). The spread moved
-// to the article and the buy tour's live note.
-
 /** Lesson 3's length: its cold open says it */
-const LESSON_03_MINUTES = 8;
-
-const TESLA_2021: ChartScene = {
-  symbol: 'BTCUSDT',
-  end: '2021-05-20',
-  bars: 116,
-  markers: [
-    { date: '2021-02-08', text: 'Tesla buys', position: 'below' },
-    { date: '2021-02-21', text: '$57,459', position: 'above' },
-    { date: '2021-05-12', text: 'Tesla stops', position: 'above' },
-  ],
-  label:
-    'Bitcoin daily candles from late January to May 2021: a climb after 8 February, then a sharp fall on 12 May.',
-  fallback: 'tesla',
-};
+const LESSON_03_MINUTES = 9;
 
 const ETF_2024: ChartScene = {
   symbol: 'BTCUSDT',
@@ -882,23 +920,69 @@ const MAY_2021: ChartScene = {
   fallback: 'swings',
 };
 
+// The halving, 20 April 2024 (block 840,000): 19 Apr closed 63,774.8; 1 May 58,298.5 (the lowest close
+// after it); 20 May 71,436.9 (fact-checked 2026-11-16)
+const HALVING_2024: ChartScene = {
+  symbol: 'BTCUSDT',
+  end: '2024-05-31',
+  bars: 61,
+  markers: [
+    { date: '2024-04-20', text: 'Halving', position: 'above' },
+    { date: '2024-05-01', text: '$58,299', position: 'below' },
+    { date: '2024-05-20', text: '$71,437', position: 'above' },
+  ],
+  label:
+    'Bitcoin daily candles from April to May 2024: the halving on 20 April, a fall to $58,299 by 1 May, then a rise to $71,437 by 20 May.',
+  fallback: 'swings',
+};
+
+// FTX halted withdrawals on 8 Nov 2022: 7 Nov closed 20,582.5, 9 Nov 15,891.5 (−22.8%)
+const FTX_2022: ChartScene = {
+  symbol: 'BTCUSDT',
+  end: '2022-11-21',
+  bars: 21,
+  markers: [
+    { date: '2022-11-08', text: 'FTX in trouble', position: 'above' },
+    { date: '2022-11-09', text: '$15,892', position: 'below' },
+  ],
+  label:
+    'Bitcoin daily candles from 1 to 21 November 2022: a fall from $20,583 on 7 November to $15,892 on 9 November as FTX stopped paying out.',
+  fallback: 'swings',
+};
+
+// 13 Apr 2021 closed 63,587.5 (a record close then); 20 Jul 2021 closed 29,765 (−53%); back above
+// on 19 Oct 2021
+const PEAK_2021: ChartScene = {
+  symbol: 'BTCUSDT',
+  end: '2021-07-31',
+  bars: 122,
+  markers: [
+    { date: '2021-04-13', text: '$63,588', position: 'above' },
+    { date: '2021-07-20', text: '$29,765', position: 'below' },
+  ],
+  label:
+    'Bitcoin daily candles from April to July 2021: a record close of $63,588 on 13 April, then $29,765 on 20 July.',
+  fallback: 'swings',
+};
+
+// ─── Lesson 3 — News, swings and traps (rewritten 2026-11-16) ────────────────
+
 const lesson02: Lesson = {
+  // The id stays, as accounts store it (Lesson 3 since 2026-11-08)
   id: 'lesson-02',
-  // Lesson 3 since 2026-11-08; the id stays, as accounts store it
   number: 3,
-  title: 'Who sets the price?',
+  // Owner 2026-11-16: our own title
+  title: 'News, swings and traps',
   stage: 'Getting started',
   minutes: LESSON_03_MINUTES,
-  // Rebuilt on 2026-11-12 (14 screens): today's screens are steps 41 on
-  stepBase: 40,
+  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
+  // versions before used 1–40 and 41–60
+  stepBase: 60,
   tour: 'primer',
   tryIntro:
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
   cards: [
     {
-      // CoinDesk and The Block, 21 Oct 2021: 11:34 UTC, from about $65,760 to $8,200 and back within
-      // the minute, "a bug in their trading algorithm". Bybit's 1-minute candle then: 65,800 → low
-      // 64,200 (−2.4%); Bitstamp −2.3%. No photo (owner 2026-11-12): our drawing from Bybit's candles
       title: 'One bitcoin for $8,200',
       art: 'flashCrash',
       beats: [
@@ -918,73 +1002,167 @@ const lesson02: Lesson = {
         },
         {
           kind: 'fact',
-          text: `In the next ${LESSON_03_MINUTES} minutes: who sets the price, why it swings so hard, and how to stay safe while it does.`,
+          text: `In the next ${LESSON_03_MINUTES} minutes: why prices swing so hard, what moves them, and how to spot a trap.`,
         },
       ],
-      // Owner 2026-11-12: every lesson's first button starts with "Unlock"
-      nextLabel: 'Unlock who sets the price',
+      nextLabel: 'Unlock why prices swing',
     },
     {
-      title: 'Two queues meet',
-      art: 'queues',
-      presenter: { who: 'tock', mood: 'smile' },
-      text: 'An [[exchange]] is a marketplace for coins. Buyers wait in one queue, each saying what they’ll pay; sellers wait in another, saying what they’ll accept. Say Leo, from Lesson 2, will pay $65,000 for a bitcoin, and Sofia will sell one for $65,000. The exchange matches them in a split second, and their deal becomes the number on everyone’s screen: the [[last price|last-price]]. Nobody decides it. The next deal replaces it, day and night.',
-      nextLabel: 'So why did it drop to $8,200?',
+      title: 'Why so much?',
+      presenter: { who: 'tick', mood: 'curious', pose: 'stand' },
+      lines: [
+        { speaker: 'tick', text: 'Lesson 1 said prices move. Why do they move so much?' },
+        {
+          speaker: 'tock',
+          text: 'News, hype, thin markets, and sometimes a trap. Let’s take them one by one.',
+        },
+      ],
+      nextLabel: 'Show me a big swing',
     },
     {
-      // Bybit perpetuals, the 365 days of 2025: median daily (high − low) / open BTCUSDT 2.98%,
-      // DOGEUSDT 6.46% (×2.2)
-      title: 'When the queue runs thin',
-      art: 'staircase',
-      presenter: { who: 'tick', mood: 'thinking' },
-      text: 'Back to 21 October. One program sold a huge amount at once. It took the best buy offer, then the next, then the next, down a queue that ran thin fast. Each deal was lower, and each was “the price” for a moment. How many offers wait near the price is called [[liquidity]]. Bitcoin on a big exchange is usually deep. Smaller coins are thinner: in 2025 Dogecoin’s typical day swung about twice as far as Bitcoin’s.',
-      more: { article: 'exchange-price', section: 'liquidity' },
-      nextLabel: 'How does a chart show all this?',
+      title: 'Big swings, both ways',
+      presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
+      chart: MAY_2021,
+      text: 'Swings like these are [[volatility]] (Lesson 1). On 19 May 2021 bitcoin fell from about $42,900 to as low as $28,800, then closed near $36,700. It swings up just as hard, which is why no one can time it. So size for the fall: only put in what you could watch drop by a third.',
+      more: { article: 'price-swings', section: 'size' },
+      nextLabel: 'What makes it move?',
+    },
+    {
+      title: 'News moves it, fast',
+      presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
+      text: 'Crypto trades all day, every day, so news hits the price within minutes, even at 3 a.m. A new law, an exchange in trouble, a big company buying: people react, and the price moves before most of us have read the headline.',
+      more: { article: 'price-swings', section: 'news' },
+      nextLabel: 'Does good news mean up?',
+    },
+    {
+      title: 'Same news, either way',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      chart: HALVING_2024,
+      text: 'About every four years, the reward for each new block halves: the halving. It happened on 20 April 2024, expected for years. After the 19 April close at $63,775, the price fell to $58,299 by 1 May, then rose to $71,437 by 20 May. Expected news, both directions.',
+      nextLabel: 'Your call',
+    },
+    {
+      title: 'The power of hype',
+      presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
+      text: 'Hype is a crowd getting excited at once: posts, videos, “everyone’s buying”. It can push a price up fast, and it can vanish just as fast, leaving late buyers with the loss. When you feel you must buy *right now*, that’s the hype talking: a warning sign. Your plan should do the deciding.',
+      nextLabel: 'How fast is fast?',
     },
     {
       title: 'Thousands of deals, one candle',
       art: 'candleAnatomy',
       presenter: { who: 'tock', mood: 'smile' },
       text: 'Thousands of deals happen every minute, so charts sum them up. A [[candle]] covers one slice of time: its body runs from the first deal (the open) to the last (the close), and thin wicks reach the highest and lowest deals. Green means it closed higher than it opened; red, lower. Crypto never closes, so new candles keep coming, nights and holidays too. A candle shows what happened, never what comes next.',
-      nextLabel: 'What makes the candles jump?',
+      more: { article: 'price-swings', section: 'candles' },
+      nextLabel: 'Can one company shake it all?',
     },
     {
-      // Bybit BTCUSDT perpetual daily: 8 Feb 2021 open 38,825.5 → 21 Feb close 57,459;
-      // 12 May 2021 open 56,684 → close 49,617 (−12.5%)
-      title: 'Same company, opposite moves',
-      art: 'tesla',
-      presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
-      chart: TESLA_2021,
-      text: 'News changes what people are willing to pay. February 2021: Tesla said it had bought $1.5 billion of Bitcoin, and the price rose from about $39,000 to above $57,000 in two weeks. May 2021: Tesla said it would stop accepting it, and the price dropped 12.5% in a day. Same company, opposite moves. So can news tell you which way the price will go? Here’s one to judge yourself.',
-      nextLabel: 'Try it with real news',
+      title: 'A market shock',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      chart: FTX_2022,
+      text: 'In November 2022 FTX, then one of the biggest exchanges, ran into trouble and stopped paying people out. Bitcoin closed at $20,583 on 7 November and at $15,892 two days later, down about 23%. One company’s collapse shook the whole market.',
+      nextLabel: 'How do I not panic?',
     },
     {
-      // The postponed volatility-and-risk card (2026-11-12), after the Tesla and ETF charts. Bybit
-      // BTCUSDT perpetual daily, 19 May 2021: open 42,903.5, low 28,801, close 36,727;
-      // $100 × 28,801 / 42,903.5 = $67.13
-      title: 'Big swings, both ways',
-      presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
-      chart: MAY_2021,
-      text: 'Swings like these have a name: [[volatility]] (Lesson 1). On 19 May 2021 bitcoin fell from about $42,900 to as low as $28,800, then closed the day near $36,700. It swings up just as hard, which is why no one can time it. Bigger swings mean bigger losses too: $100 of bitcoin bought that morning was worth $67 at the low. So size for the fall: only put in what you could watch drop by a third.',
-      more: { article: 'price-swings', section: 'size' },
-      nextLabel: 'Is a big swing the only risk?',
+      title: 'A plan beats panic',
+      presenter: { who: 'tick', mood: 'calm', pose: 'stand' },
+      lines: [
+        { speaker: 'tick', text: 'If I’d held during that, I’d have panicked.' },
+        {
+          speaker: 'tock',
+          text: 'That’s why the plan comes first: your stop, your target, how much you’d risk. Then a shock is something you prepared for, not something that decides for you. And no plan says “hurry in”.',
+        },
+      ],
+      nextLabel: 'Can it go up, then down?',
     },
     {
-      // CoinDesk and Cointelegraph, 1 Nov 2021: the creators cashed out millions and vanished; the
-      // project was unrelated to Netflix. No price is quoted (reports vary; nothing on Bybit)
+      title: 'Up, then down',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      chart: PEAK_2021,
+      text: 'On 13 April 2021 bitcoin closed at $63,588, a record close at the time. Three months later, on 20 July, it closed at $29,765, down more than half. People who bought at the top waited about six months to get back to even.',
+      nextLabel: 'Why do some coins jump more?',
+    },
+    {
+      title: 'Thin or deep',
+      art: 'staircase',
+      presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
+      text: 'Remember [[liquidity]] from Lesson 2? Picture buyers and sellers waiting with their prices. When many wait close to the price, the market is **deep**: a big order barely moves it. When few wait, it’s **thin**: a big order runs through them and the price jumps.',
+      more: { article: 'exchange-price', section: 'liquidity' },
+      nextLabel: 'So what happened at $8,200?',
+    },
+    {
+      title: 'The $8,200 moment',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'Back to 21 October 2021. One program sold a huge amount at once on one exchange. It took the best buyer, then the next, then the next, down a list that ran thin fast. Each deal was lower, and each was “the price” for a moment, until buyers came back.',
+      nextLabel: 'Is Bitcoin thin?',
+    },
+    {
+      title: 'Bitcoin is deep',
+      presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
+      text: 'On the big exchanges, Bitcoin is one of the deepest markets in crypto: billions of dollars change hands every day. Smaller coins are thinner, which is one reason they swing harder. Deep doesn’t mean calm, though. It just means one order rarely moves it far.',
+      more: { article: 'exchange-price', section: 'small-coins' },
+      nextLabel: 'Let’s check',
+    },
+    {
+      title: 'Quick check',
+      quiz: {
+        format: 'match',
+        question: 'Match each situation to what usually happens.',
+        pairs: [
+          {
+            term: 'Few buyers waiting near the price',
+            meaning: 'A big order moves the price a long way',
+          },
+          { term: 'Many buyers waiting near the price', meaning: 'A big order barely moves it' },
+          {
+            term: 'Everyone suddenly wants out',
+            meaning: 'Prices fall fast, even in deep markets',
+          },
+          { term: 'A sudden wave of hype', meaning: 'Prices rise fast, then often fall back' },
+        ],
+        options: [],
+        correct: 0,
+        explain: 'Thin markets jump, deep ones absorb. Panic and hype can move even deep markets.',
+      },
+      nextLabel: 'Can a coin be a trap?',
+    },
+    {
+      title: 'A rug pull',
+      presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
+      text: 'Some coins are traps from the start. The creators hype a new coin, people buy, the price climbs, and then the creators sell everything at once or make sure buyers can’t sell. The price collapses and the creators vanish with the money. That’s a [[rug pull|rug-pull]] (Lesson 1), a scam.',
+      more: { article: 'spot-a-scam', section: 'rug-pull' },
+      nextLabel: 'How do I avoid it?',
+    },
+    {
       title: 'Check before you trust',
       art: 'checkCoin',
       presenter: { who: 'tock', mood: 'frank' },
-      text: 'Not every risk is a swing. In October 2021 a token named after the series Squid Game climbed for days. Buyers then found they couldn’t sell it, and on 1 November its creators cashed out millions and vanished: a [[rug pull|rug-pull]] (Lesson 1). A price on a screen only means someone traded. Before you trust any coin, check who runs it, whether you can sell it, and whether it promises easy profits.',
+      text: 'Before you trust any coin, check: who runs it, and are they named? Can you actually sell it? Does anyone promise easy or sure profits? A rising price only means people traded. It doesn’t mean the coin is real.',
       more: { article: 'spot-a-scam', section: 'checklist' },
+      nextLabel: 'Put a trap in order',
+    },
+    {
+      title: 'Quick check',
+      quiz: {
+        format: 'order',
+        question: 'Put a rug pull’s steps in order.',
+        steps: [
+          'Creators hype a new coin',
+          'People rush to buy',
+          'The price climbs',
+          'The creators sell everything',
+          'The price collapses',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Hype, buying, a climb, the creators cash out, the collapse. The first two steps are your chance to check and stay out.',
+      },
       nextLabel: 'Now try it on the real chart',
     },
   ],
-  // After the Tesla card: the ETF question, then the volatility and scam cards
+  // Your call follows the halving card (owner-approved outline: screen 6)
   momentAfter: 4,
   moment: {
-    // Bybit BTCUSDT perpetual daily: 10 Jan 2024 close 46,659.9 → 23 Jan close 39,900.1 (−14.5%).
-    // The chart stops on the 10th until the learner has answered
     context:
       '10 January 2024: the US approves the first funds that hold Bitcoin directly, widely called the year’s biggest crypto news. The chart stops on that day.',
     question: 'What happened to the price next?',
@@ -992,83 +1170,39 @@ const lesson02: Lesson = {
     options: ['It went up', 'It went down', 'No one could know in advance'],
     correct: 2,
     explain:
-      'It fell about 15% in two weeks, but that’s hindsight: on the day, no one could know, and Tesla’s news in 2021 went the other way. Careful traders plan for both directions before they act.',
+      'It fell about 15% in two weeks, but that’s hindsight: on the day, no one could know, and the halving went both ways. Careful traders plan for both directions before they act.',
     chart: ETF_2024,
   },
-  checks: [
-    {
-      question:
-        'Few people trade a small coin, and someone sells a large amount at once. What’s most likely?',
-      options: [
-        'It all sells at the last price',
-        'Each deal is lower than the one before',
-        'The exchange holds the price still',
-      ],
-      correct: 1,
-      explain:
-        'In a thin queue, a big order takes the best buyer, then the next, at worse and worse prices. That’s how bitcoin briefly sold for $8,200 on Binance.US.',
-    },
-    {
-      question: 'You plan to put practice money into bitcoin. Which plan sizes for the fall?',
-      presenter: { who: 'tick', mood: 'thinking' },
-      options: [
-        'An amount I could watch drop by a third',
-        'More than usual, since it rose last week',
-        'No plan: big swings even out',
-      ],
-      correct: 0,
-      explain:
-        'On 19 May 2021 bitcoin fell about a third within the day. Size each trade so a fall like that would sting, not sink you. Last week’s rise says nothing about tomorrow.',
-    },
-    {
-      question:
-        'A new coin is up 80% this week, and its website promises 2% a day. What do you check first?',
-      options: [
-        'Who runs it, and whether you can sell it',
-        'How many people are posting about it',
-        'Nothing: the rise proves it’s real',
-      ],
-      correct: 0,
-      explain:
-        'A rising price only means people traded. The Squid Game token rose for days before buyers found they couldn’t sell. A promised return is a warning sign, not a reason.',
-    },
-  ],
-  notePrompt: 'What is one thing you want to understand before your first trade?',
+  // The quizzes sit between the cards (owner 2026-11-16)
+  checks: [],
+  notePrompt: 'Which check will you always do before buying a new coin?',
   teaser: 'Next: spend $100 of practice money on Bitcoin, at a price you can now read.',
-  canDo: [
-    { text: 'Say who set the price you see', article: 'exchange-price', section: 'last-deal' },
-    {
-      text: 'Explain why a thin queue makes big jumps',
-      article: 'exchange-price',
-      section: 'liquidity',
-    },
-    { text: 'Size a trade for the fall', article: 'price-swings', section: 'size' },
-  ],
+  canDo: [],
   recap: {
-    title: 'Who sets the price?',
+    title: 'What moves a price',
     points: [
       {
-        text: 'Nobody sets the price: it’s the last deal between a buyer and a seller.',
-        article: 'exchange-price',
-        section: 'last-deal',
+        text: 'Prices swing hard, both ways: size for the fall.',
+        article: 'price-swings',
+        section: 'size',
       },
       {
-        text: 'Thin queues make big jumps, and smaller coins are thinner than Bitcoin.',
+        text: 'News, shocks and hype move prices, often fast.',
+        article: 'price-swings',
+        section: 'news',
+      },
+      {
+        text: 'Thin markets jump; deep ones absorb.',
         article: 'exchange-price',
         section: 'liquidity',
       },
       {
-        text: 'News can move the price either way, and the swings are big: size every trade for the fall.',
-        article: 'price-swings',
-        section: 'volatility',
-      },
-      {
-        text: 'A price only means someone traded. Check who runs a coin, and whether you can sell it.',
+        text: 'Check who runs a coin and whether you can sell it.',
         article: 'spot-a-scam',
         section: 'checklist',
       },
     ],
-    highlight: { text: 'The price is people, trading every second.' },
+    highlight: { text: 'Your plan decides, not the headline.' },
   },
   next: { kind: 'tour', id: 'buy-first-coin' },
   access: FREE,
