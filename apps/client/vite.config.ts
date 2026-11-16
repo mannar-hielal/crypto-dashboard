@@ -100,7 +100,9 @@ export default defineConfig(({ mode }) => ({
       // Keeping it always-on causes cached assets to persist across reloads even
       // after config changes, which makes local debugging confusing.
       //
-      // To enable: add VITE_PWA_DEV_SW=true to apps/client/.env.local
+      // To enable: start Vite with VITE_PWA_DEV_SW=true in the shell environment. The config reads
+      // process.env, which never sees .env files, so a value in .env.local has no effect (on
+      // purpose: a forgotten line there can't switch the worker on unnoticed)
       // To disable again: remove the flag or set it to false, then clear site
       // data in DevTools → Application → Storage → Clear site data.
       devOptions: {
