@@ -34,8 +34,10 @@
 # commit, so edit it (`git revert --edit`, `git cherry-pick --edit`) when that subject names a term.
 #
 # Added lines only: removing a mention, editing a file whose name already holds one, or deleting it
-# is always allowed. Binary files are read as raw bytes with NUL bytes removed, so text in a PDF, an
-# image's metadata or a UTF-16 file is caught; text drawn inside an image can't be. If git fails,
+# is always allowed. Binary files are read as raw bytes with NUL bytes removed, so plain text inside
+# them is caught (uncompressed metadata, a UTF-16 file). Compressed text isn't: most PDF page text,
+# .docx/.xlsx (zip), PNG zTXt/iTXt, .svgz, and text drawn inside an image. Don't commit such files
+# about the benchmark; the lesson-authoring skill keeps its material git-ignored. If git fails,
 # the check blocks rather than pass with nothing scanned. Warnings go to stderr. A missing list warns
 # rather than blocks: a fresh clone has no notes. DENYLIST_FILE overrides the list's location (the
 # tests).
@@ -322,10 +324,13 @@ case "$1" in
       if is_zero "$remote_sha" && printf '%s\n' "$remote_ref" | grep -qiF -e "$TERMS"; then
         blocked "The name of the ref being pushed"
       fi
-      if [ "$(git cat-file -t "$local_sha" 2>/dev/null)" = tag ]; then
-        git cat-file -p "$local_sha" | sed '1,/^$/d' | grep -qiF -e "$TERMS" &&
+      # An annotated tag's message, and each inner tag's when it points at another tag
+      obj=$local_sha
+      while [ "$(git cat-file -t "$obj" 2>/dev/null)" = tag ]; do
+        git cat-file -p "$obj" | sed '1,/^$/d' | grep -qiF -e "$TERMS" &&
           blocked "The tag being pushed ($local_ref)"
-      fi
+        obj=$(git cat-file -p "$obj" | sed -n 's/^object //p;/^$/q')
+      done
       KNOWN=
       case " $KNOWN_ALL " in *" $remote_sha "*) KNOWN=$remote_sha ;; esac
       # The commits new to the remote pushed to

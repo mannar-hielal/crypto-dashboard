@@ -1098,3 +1098,19 @@ test("push: copy detection doesn't depend on log.abbrevCommit", () => {
   });
   assert.equal(status, 0);
 });
+
+test("push: a tag pointing at another annotated tag has the inner tag's message checked too", () => {
+  const status = checkStaged(({ git, write, rev }) => {
+    write('a.md', 'x\n');
+    git('add', '.');
+    git('commit', '-qm', 'clean');
+    git('tag', '-a', 'inner', '-m', 'acmecourse notes');
+    git('tag', '-a', 'outer', '-m', 'release', 'inner');
+    const outer = rev(['rev-parse', 'outer']);
+    return {
+      args: ['push', 'origin'],
+      input: `refs/tags/outer ${outer} refs/tags/outer ${'0'.repeat(40)}\n`,
+    };
+  });
+  assert.equal(status, 1);
+});
