@@ -40,10 +40,10 @@ interface ItemRow {
   updatedAt: Date;
 }
 
-// A finished lesson keeps its finish's step in the row (its version), but answers without one: it
-// no longer has a "furthest screen"
 const log = logger.child({ route: 'learn' });
 
+// A finished lesson keeps its finish's step in the row (its version), but answers without one: it
+// no longer has a "furthest screen"
 const toItem = (r: ItemRow) => ({
   itemId: r.itemId as LearnItemId,
   status: r.status as LearnStatus,
@@ -242,6 +242,14 @@ export async function learnRoutes(app: FastifyInstance) {
           data: { status, step },
         });
         if (replaced.count === 1) {
+          // That row was a finish (a begun row is raised above): Lesson 1 finished in its earlier
+          // version keeps the welcome card shut, as the migration and GET do
+          if (itemId === 'lesson-01') {
+            await app.prisma.learningProgress.createMany({
+              data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
+              skipDuplicates: true,
+            });
+          }
           return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
         }
         const row = await app.prisma.learningProgress.findUnique({
@@ -317,7 +325,7 @@ export async function learnRoutes(app: FastifyInstance) {
       }
       // 🔐 A rating is a lesson's, and a whole number 1–5 — nothing else rides on this event
       if (body.name === 'lesson_rated') {
-        const isLesson = (LEARN_LESSON_IDS as readonly string[]).includes(body.itemId);
+        const isLesson = lessonOf(body.itemId) !== null;
         const rating = body.stepId ? Number(body.stepId.slice(body.itemId.length + 1)) : NaN;
         if (!isLesson || !Number.isInteger(rating) || rating < 1 || rating > 5) {
           return reply.status(400).send({ error: 'a rating is a lesson and 1–5' });

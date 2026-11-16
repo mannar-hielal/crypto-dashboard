@@ -331,6 +331,11 @@ describe('/api/learn/progress', () => {
       data: { status: 'started', step: 64 },
     });
     expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
+    // It was Lesson 1's earlier finish: the welcome card stays shut
+    expect(app.prisma.learningProgress.createMany).toHaveBeenLastCalledWith({
+      data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
+      skipDuplicates: true,
+    });
   });
 
   it('PUT started: a finished lesson stays finished', async () => {
