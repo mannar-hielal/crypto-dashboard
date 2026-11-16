@@ -1,5 +1,9 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+
+# 🔐 IP: nothing being pushed may name the benchmark course (scripts/denylist-check.sh). Checks every
+#    outgoing commit's message, added lines and file names, so commits no other hook saw (a
+#    cherry-pick, a rebase, `git am`) are covered too. Cheap and local, so it runs before the audit.
+sh "$(dirname "$0")/denylist.sh" push "$1" || exit 1
 
 # 🔐 Dependency CVE check — catches what pre-commit might have missed
 pnpm run audit

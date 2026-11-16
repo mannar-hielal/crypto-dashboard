@@ -122,22 +122,29 @@ correct without depending on real infrastructure, and the suite stays fast and d
 
 ## Gates — what "passing" means before a commit/PR
 
-Pre-commit hook (`.husky/pre-commit`), in order: `audit` → `type-check` (server + client + e2e) →
-`test:coverage` + `test:hooks` + `test:scripts` → `case-coverage --strict` → `lint-staged` → `lint`.
+Pre-commit hook: the gates are the commands in `.husky/pre-commit`, in its order (read the hook; it
+is the list). The table below says what each command checks, in no particular order; it is not a
+second gate list.
 `case-coverage --strict` (`scripts/caseCoverage.mjs`) fails when a test title's `[x.y.z]` cites no
 row of `docs/TRADING_TEST_PLAN.md`, or a ⬜ row has a test: flip the row in the same commit. CI (`ci.yml`) additionally runs
 `format:check`, `build` and the Postgres integration job (`test:int`, CI only — it needs a database).
 A change is not ready to push until all of these are green locally — don't rely on CI to catch a
 gate that `pnpm test`/`pnpm lint`/`pnpm type-check` would have caught first.
 
-| Command                                             | What it verifies                                               |
-| --------------------------------------------------- | -------------------------------------------------------------- |
-| `pnpm run audit`                                    | No high/critical CVEs in dependencies                          |
-| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean, plus the SDK-typed contract fixtures |
-| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)                 |
-| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors         |
-| `pnpm format:check`                                 | Prettier formatting is consistent                              |
-| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages          |
+| Command                                             | What it verifies                                                                                                           |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `sh .husky/denylist.sh staged`                      | No staged line or new file name names the benchmark course (the git-ignored list; pre-push checks every pushed commit too) |
+| `pnpm run audit`                                    | No high/critical CVEs in dependencies                                                                                      |
+| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean, plus the SDK-typed contract fixtures                                                             |
+| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)                                                                             |
+| `pnpm --filter @crypto-dashboard/e2e type-check`    | The Playwright specs, helpers and fixtures compile clean                                                                   |
+| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors                                                                     |
+| `pnpm test:hooks`                                   | The Claude Code hooks' Python tests                                                                                        |
+| `pnpm test:scripts`                                 | The repo scripts' tests (`scripts/*.test.mjs`)                                                                             |
+| `pnpm case-coverage --strict`                       | Every cited `[x.y.z]` case ID exists; no ⬜ row has a test                                                                 |
+| `pnpm lint-staged`                                  | Prettier and ESLint on the staged files only                                                                               |
+| `pnpm format:check`                                 | Prettier formatting is consistent (CI; the hook's lint-staged covers staged files)                                         |
+| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages                                                                      |
 
 ## Cross-references
 
