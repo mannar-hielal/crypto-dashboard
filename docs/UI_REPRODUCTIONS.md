@@ -250,7 +250,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      $58,000 ("Your exit line") → Sell.
    - Screens 7–13: **Going long** (practice-long on `/dashboard/usdt/BTCUSDT`), **A real long** (markers "Buy
      $27,484" 2 Oct 2023, "Sell $73,133" 13 Mar 2024), **The result** ([lesson.term `hindsight`]), **Close it to
-     keep it**, **Going short** (practice-short: the form's Sell / Short, a phone's **Sell / Short**), **A real
+     keep it**, **Going short** (practice-short on `/dashboard/usdt/ETHUSDT`: the form's Sell / Short, a phone's **Sell / Short**), **A real
      short** (10 Nov 2021 → 18 Jun 2022), **The catch** (Berwyn worried: no ceiling, liquidation).
    - Screen 14: **Quick check** (long, short or stay out) → "Stay out for now" is right; screen 15: **Your call**.
    - Screens 16–18: **The market never sleeps** ([lesson.term `slippage`], Read more → _Price swings_, always

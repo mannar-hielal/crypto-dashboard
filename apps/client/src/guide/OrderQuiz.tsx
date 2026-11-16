@@ -28,8 +28,9 @@ export function OrderQuiz({
   const pool = useMemo(() => shuffledOrder(steps.length, q.question), [steps.length, q.question]);
   const [slots, setSlots] = useState<(number | null)[]>(() => steps.map(() => null));
   const [picked, setPicked] = useState<number | null>(null);
-  // Answered on an earlier visit: no placements in memory, so the right order is shown
-  const shown = answered && slots.some((x) => x === null) ? steps.map((_, i) => i) : slots;
+  // Answered on an earlier visit: no placements in memory, so the right order is shown, unmarked
+  const revisit = answered && slots.some((x) => x === null);
+  const shown = revisit ? steps.map((_, i) => i) : slots;
   const placed = new Set(shown.filter((x): x is number => x !== null));
 
   const place = (slot: number, step: number) => {
@@ -57,7 +58,8 @@ export function OrderQuiz({
       <p className={styles.question}>{q.question}</p>
       <ol className={styles.slots}>
         {shown.map((step, slot) => {
-          const mark = answered && step !== null ? (step === slot ? 'right' : 'wrong') : null;
+          const mark =
+            answered && !revisit && step !== null ? (step === slot ? 'right' : 'wrong') : null;
           return (
             <li key={slot}>
               <button
@@ -122,6 +124,7 @@ export function OrderQuiz({
           Check
         </button>
       )}
+      {revisit && <p className={styles.explain}>The right order:</p>}
       {answered && (
         <p className={styles.explain} role="status">
           <strong>{answer === 0 ? 'Right. ' : 'Not quite. '}</strong>

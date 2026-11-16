@@ -82,4 +82,14 @@ describe('tourStore', () => {
       delete window.matchMedia;
     }
   });
+
+  it('should keep the step when the screen crosses the tours’ width mid-tour', () => {
+    s().start('buy-first-coin'); // desktop: the side button first
+    s().next(); // Market
+    const market = tourSteps(getTour('buy-first-coin'), true)[1].id;
+    s().setWide(false); // rotated to a phone: the same step, at its place in the phone's list
+    expect(tourSteps(getTour('buy-first-coin'), false)[s().stepIndex].id).toBe(market);
+    s().setWide(true);
+    expect(tourSteps(getTour('buy-first-coin'), true)[s().stepIndex].id).toBe(market);
+  });
 });

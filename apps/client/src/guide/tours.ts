@@ -114,8 +114,20 @@ function fromDraft(draft: StepDraft, over: Partial<TourStep> = {}): Omit<TourSte
   };
 }
 
+/**
+ * Step ids `<tour>.<n>`, stable for the funnel: steps for every screen size and desktop-only steps are
+ * numbered 1, 2, … in order (the ids the tours had before phones, 2026-11-16); phone-only steps are
+ * numbered from 51, so adding one never renumbers a step whose events are already stored
+ */
 function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
-  return steps.map((s, i) => ({ ...s, id: `${id}.${i + 1}` }));
+  let main = 0;
+  let phone = 50;
+  return steps.map((s) => ({ ...s, id: `${id}.${s.screen === 'phone' ? ++phone : ++main}` }));
+}
+
+/** A tour can run here: a larger screen, or a phone when the tour is phone-ready */
+export function runsHere(id: TourId, wide: boolean): boolean {
+  return wide || !!getTour(id).phoneReady;
 }
 
 /** The steps a tour shows on this screen size (`wide`: the desktop layout) */
@@ -363,13 +375,15 @@ const practiceLong = practice(
   'On the USDT Perpetual market, Buy / Long opens a long: you gain if the price rises.',
   'Place the order. You now hold a long position. Your lesson carries on next.'
 );
+// On Ethereum: one position per symbol (one-way), so a short on Bitcoin would only close the
+// practice long instead of opening a short
 const practiceShort = practice(
   'practice-short',
   'Practice: go short',
-  '/dashboard/usdt/BTCUSDT',
+  '/dashboard/usdt/ETHUSDT',
   'sell',
-  'On the USDT Perpetual market, Sell / Short opens a short: you gain if the price falls.',
-  'Place the order. You now hold a short position. Your lesson carries on next.'
+  'On the USDT Perpetual market, Sell / Short opens a short: you gain if the price falls. This one is on Ethereum.',
+  'Place the order. You now hold a short position on Ethereum. Your lesson carries on next.'
 );
 
 export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview];

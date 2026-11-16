@@ -204,8 +204,8 @@ describe('useTourProgress', () => {
       expect(names()).toEqual([
         {
           name: 'tour_closed',
-          itemId: 'buy-first-coin', // The second desktop step is step 3: step 1 is the phone's (2026-11-16, ids over every step)
-          stepId: 'buy-first-coin.3',
+          itemId: 'buy-first-coin', // The second desktop step keeps its id: the phone's step is numbered apart (51)
+          stepId: 'buy-first-coin.2',
         },
       ]);
     });

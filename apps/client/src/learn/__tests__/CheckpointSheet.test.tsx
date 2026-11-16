@@ -110,7 +110,7 @@ describe('CheckpointSheet', () => {
     expect(useLessonStore.getState().activeId).toBe('lesson-02');
   });
 
-  it('should send a missed tour question to the tour on a larger screen, and only name it on a phone', () => {
+  it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
@@ -123,10 +123,10 @@ describe('CheckpointSheet', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
+    // sell-and-review is phone-ready (2026-11-16): the phone gets the button as well
     expect(
       document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))
-    ).toBeNull();
-    expect(screen.getByText(/on a larger screen/)).toBeTruthy();
+    ).not.toBeNull();
   });
 
   it('should close from ✕ or Esc back to the path', () => {

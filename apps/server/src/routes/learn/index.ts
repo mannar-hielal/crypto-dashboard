@@ -220,7 +220,7 @@ export async function learnRoutes(app: FastifyInstance) {
           properties: {
             name: { type: 'string', enum: [...LEARN_EVENT_NAMES] },
             itemId: { type: 'string', enum: [...LEARN_EVENT_ITEM_IDS], maxLength: 40 },
-            stepId: { type: 'string', pattern: '^[a-z0-9-]+\\.[0-9]{1,2}$', maxLength: 40 },
+            stepId: { type: 'string', pattern: '^[a-z0-9-]+\\.[0-9]{1,3}$', maxLength: 40 },
           },
         },
         response: { 204: { type: 'null' }, 400: errorResponse, 401: errorResponse },

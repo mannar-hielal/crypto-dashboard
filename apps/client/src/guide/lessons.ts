@@ -1205,6 +1205,9 @@ const lesson02: Lesson = {
     ],
     highlight: { text: 'Your plan decides, not the headline.' },
   },
+  // The path's next stop (chapter 1: the lessons, then the buy and sell tours, then the checkpoint).
+  // Lesson 1's Try runs the same tour; where the practice stops sit is the owner's call (the
+  // lesson-authoring skill: the path follows the benchmark's order until the owner places them)
   next: { kind: 'tour', id: 'buy-first-coin' },
   access: FREE,
 };

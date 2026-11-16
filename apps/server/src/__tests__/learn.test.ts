@@ -410,7 +410,16 @@ describe('POST /api/learn/events', () => {
     expect((await post({ name: 'tour_step', itemId: 'primer', stepId: 'x y' })).statusCode).toBe(
       400
     );
+    // At most three digits (room for many lesson rebuilds, 2026-11-16)
+    expect(
+      (await post({ name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.1000' })).statusCode
+    ).toBe(400);
     expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('should accept a three-digit lesson step (a rebuilt lesson’s screens past 99)', async () => {
+    const res = await post({ name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.101' });
+    expect(res.statusCode).toBe(204);
   });
 
   it('should refuse a step that belongs to another tour', async () => {

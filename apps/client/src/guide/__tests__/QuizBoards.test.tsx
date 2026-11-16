@@ -101,9 +101,11 @@ describe('OrderQuiz (Drag and drop)', () => {
     expect(el('lesson.step', 0)).toBeTruthy();
   });
 
-  it('should show the right order and the result when an answered question is shown again', () => {
+  it('should show the right order, unmarked, and the result when an answered question is shown again', () => {
     render(<OrderQuiz q={order} answer={1} onAnswer={() => {}} />);
-    expect(el('lesson.slot', 0).getAttribute('aria-label')).toBe('Slot 1: First, right');
+    // Not every slot ticked under "Not quite.": the right order, labelled as such
+    expect(el('lesson.slot', 0).getAttribute('aria-label')).toBe('Slot 1: First');
+    expect(screen.getByText('The right order:')).toBeTruthy();
     expect(status()).toBe('Not quite. First comes first.');
     expect(document.querySelector(guideSelector('lesson.check'))).toBeNull();
   });
@@ -176,9 +178,10 @@ describe('MatchQuiz (Match boxes)', () => {
     expect(el('lesson.match-meaning', 2).getAttribute('aria-label')).toBe('The third, pair 2');
   });
 
-  it('should show the right pairs and the result when an answered question is shown again', () => {
+  it('should show the right pairs, unmarked, and the result when an answered question is shown again', () => {
     render(<MatchQuiz q={match} answer={0} onAnswer={() => {}} />);
-    expect(el('lesson.match-term', 1).getAttribute('aria-label')).toBe('Beta, pair 2, right');
+    expect(el('lesson.match-term', 1).getAttribute('aria-label')).toBe('Beta, pair 2');
+    expect(screen.getByText('The right pairs:')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toBe('Right. They go in order.');
   });
 });

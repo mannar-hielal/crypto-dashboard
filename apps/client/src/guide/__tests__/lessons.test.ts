@@ -539,7 +539,7 @@ describe('lessons', () => {
   it('should keep every funnel step id within the server’s pattern, past each earlier version', () => {
     for (const lesson of LESSONS) {
       const ids = lessonScreens(lesson).map((_, i) => lessonStepId(lesson, i));
-      for (const id of ids) expect(id).toMatch(/^[a-z0-9-]+\.[0-9]{1,2}$/);
+      for (const id of ids) expect(id).toMatch(/^[a-z0-9-]+\.[0-9]{1,3}$/);
       // A step names today's screen, and nothing below the base does
       expect(lessonScreenOfStep(lesson, (lesson.stepBase ?? 0) + 1)).toBe(0);
       if (lesson.stepBase) expect(lessonScreenOfStep(lesson, lesson.stepBase)).toBeNull();

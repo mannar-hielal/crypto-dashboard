@@ -114,5 +114,18 @@ describe('LearningProgress (Postgres)', () => {
       orderBy: { itemId: 'asc' },
     });
     expect(rows.map((r) => r.itemId)).toEqual(['checkpoint-ch1', 'primer', 'welcome-card']);
+    // A learner who finished Lesson 1 without dismissing the welcome card keeps it dismissed
+    const other = await createUser(db);
+    await db.learningProgress.create({
+      data: { userId: other, itemId: 'lesson-01', status: 'completed' },
+    });
+    const again = prismaCli(['db', 'execute', '--file', file], process.env.DATABASE_URL as string);
+    expect(again.status, again.output).toBe(0);
+    expect(
+      await db.learningProgress.findMany({
+        where: { userId: other },
+        select: { itemId: true, status: true },
+      })
+    ).toEqual([{ itemId: 'welcome-card', status: 'dismissed' }]);
   });
 });

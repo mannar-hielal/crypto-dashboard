@@ -145,23 +145,17 @@ describe('PathDrawer', () => {
     expect(useTourStore.getState()).toMatchObject({ panelOpen: false, activeId: 'buy-first-coin' });
   });
 
-  it('should let a phone skip a tour for now, which opens the next stop', () => {
+  it('should start a phone-ready tour on a phone, with no "larger screen" note', () => {
+    // The path's tours open the form from the phone's bar since 2026-11-16; a tour that isn't
+    // phone-ready still gets the note and its "skip for now"
     wide = false;
     useLessonStore.getState().setCompleted(['lesson-01', 'lesson-ownership', 'lesson-02']);
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
 
     fireEvent.click(nodeButton('tour:buy-first-coin'));
-    expect(useTourStore.getState().activeId).toBeNull();
-    expect(screen.getByText(/needs a laptop or tablet/)).toBeTruthy();
-
-    fireEvent.click(document.querySelector(guideSelector('path.tour.skip', 'buy-first-coin'))!);
-    expect(usePathStore.getState().skippedTours).toEqual({ 'buy-first-coin': true });
-    expect(
-      document
-        .querySelector(guideSelector('path.node', 'tour:sell-and-review'))!
-        .getAttribute('data-state')
-    ).toBe('current');
+    expect(useTourStore.getState().activeId).toBe('buy-first-coin');
+    expect(screen.queryByText(/needs a laptop or tablet/)).toBeNull();
   });
 
   it('should show what a chapter covers from its book button', () => {

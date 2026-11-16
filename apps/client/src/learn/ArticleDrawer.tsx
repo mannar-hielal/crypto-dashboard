@@ -12,7 +12,7 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
-import { TOUR_WIDE_QUERY } from '@/guide/tours';
+import { TOUR_WIDE_QUERY, runsHere } from '@/guide/tours';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson } from '@/guide/lessons';
 import { startLesson, startTour } from '@/guide/afterNote';
@@ -215,7 +215,7 @@ export function ArticleDrawer() {
         {practice.length > 0 ? (
           <ul className={styles.practice}>
             {practice.map((link) => {
-              const tourOnPhone = link.kind === 'tour' && !desktop;
+              const tourOnPhone = link.kind === 'tour' && !runsHere(link.tour, desktop);
               const key = link.kind === 'lesson' ? `${link.lesson}:${link.screen}` : link.tour;
               return (
                 <li key={key}>

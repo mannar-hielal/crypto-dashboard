@@ -26,6 +26,8 @@ interface TourState {
   /** The Learn panel is open */
   panelOpen: boolean;
   start: (id: TourId) => void;
+  /** The screen crossed the tours' width (a rotation, a resize): its steps from the current one */
+  setWide: (wide: boolean) => void;
   next: () => void;
   back: () => void;
   /** Close without finishing: Skip, ✕ or Esc */
@@ -59,6 +61,10 @@ const initial = {
   panelOpen: false,
 } as const;
 
+/** The desktop layout's width (no matchMedia, as in tests: the desktop) */
+const isWide = () =>
+  typeof window.matchMedia !== 'function' || window.matchMedia(TOUR_WIDE_QUERY).matches;
+
 export const useTourStore = create<TourState>()((set, get) => ({
   ...initial,
 
@@ -67,7 +73,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
       activeId: id,
       stepIndex: 0,
       quizAnswer: null,
-      wide: typeof window.matchMedia !== 'function' || window.matchMedia(TOUR_WIDE_QUERY).matches,
+      wide: isWide(),
     }),
 
   next: () => {
@@ -78,14 +84,32 @@ export const useTourStore = create<TourState>()((set, get) => ({
       set({ stepIndex: stepIndex + 1, quizAnswer: null });
       return;
     }
-    // Last step: the tour is done; hand over to the next chapter when there is one
+    // Last step: the tour is done; hand over to the next chapter when there is one (its steps for
+    // the screen as it is now)
     set((s) => ({
       completed: { ...s.completed, [activeId]: true },
       finishes: s.finishes + 1,
       activeId: tour.next ?? null,
       stepIndex: 0,
       quizAnswer: null,
+      wide: tour.next ? isWide() : s.wide,
     }));
+  },
+
+  setWide: (next) => {
+    const { activeId, stepIndex, wide } = get();
+    if (next === wide) return;
+    if (!activeId) {
+      set({ wide: next });
+      return;
+    }
+    // The same step if this size shows it, else the first step after it that it shows
+    const tour = getTour(activeId);
+    const all = tour.steps.map((s) => s.id);
+    const current = all.indexOf(tourSteps(tour, wide)[stepIndex]?.id ?? '');
+    const shown = tourSteps(tour, next).map((s) => all.indexOf(s.id));
+    const at = shown.findIndex((i) => i >= current);
+    set({ wide: next, stepIndex: at === -1 ? shown.length - 1 : at });
   },
 
   back: () => {

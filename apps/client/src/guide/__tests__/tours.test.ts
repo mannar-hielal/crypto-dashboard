@@ -26,10 +26,12 @@ describe('tours', () => {
         }
       });
 
-      it('should number its steps <id>.1, <id>.2, … in order', () => {
-        expect(tour.steps.map((s) => s.id)).toEqual(
-          tour.steps.map((_, i) => `${tour.id}.${i + 1}`)
-        );
+      it('should number its steps <id>.1, <id>.2, … in order, phone-only steps from 51', () => {
+        // Phone-only steps numbered apart, so adding one never renumbers stored steps (2026-11-16)
+        const main = tour.steps.filter((s) => s.screen !== 'phone');
+        const phone = tour.steps.filter((s) => s.screen === 'phone');
+        expect(main.map((s) => s.id)).toEqual(main.map((_, i) => `${tour.id}.${i + 1}`));
+        expect(phone.map((s) => s.id)).toEqual(phone.map((_, i) => `${tour.id}.${51 + i}`));
       });
 
       it('should use registered anchors only and give every step text', () => {
@@ -97,7 +99,9 @@ describe('tours', () => {
       expect(isTourId(t.id)).toBe(false);
       expect(t.next).toBeUndefined();
     }
-    expect(getTour('practice-short').startUrl).toBe('/dashboard/usdt/BTCUSDT');
+    // On Ethereum: one position per symbol, so a short on Bitcoin would only close the practice long
+    expect(getTour('practice-long').startUrl).toBe('/dashboard/usdt/BTCUSDT');
+    expect(getTour('practice-short').startUrl).toBe('/dashboard/usdt/ETHUSDT');
     expect(tourSteps(getTour('practice-short'), false)[0].anchor).toBe('trade.mobile.sell');
   });
 });

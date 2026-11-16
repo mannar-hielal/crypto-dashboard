@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { startLesson, startTour } from '@/guide/afterNote';
-import { TOUR_WIDE_QUERY } from '@/guide/tours';
+import { TOUR_WIDE_QUERY, runsHere } from '@/guide/tours';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
 import { getLesson } from '@/guide/lessons';
@@ -42,8 +42,8 @@ interface MissedProps {
 }
 
 function Missed({ q, wide, onReview }: MissedProps) {
-  // A tour runs on a larger screen only: a phone gets its name without a button
-  const canGo = q.taughtIn.kind === 'lesson' || wide;
+  // A tour that can't run here (a phone, unless it's phone-ready) gets its name without a button
+  const canGo = q.taughtIn.kind === 'lesson' || runsHere(q.taughtIn.id, wide);
   return (
     <li>
       <p className={styles.text}>{q.question}</p>

@@ -41,8 +41,8 @@ export function LearnCard() {
         </button>
       </div>
       <p className={styles.text}>
-        Start with a {getLesson('lesson-01').minutes}-minute lesson: why money needs someone you
-        trust, and what goes wrong when one keeper holds the record. No real money.
+        Start with a {getLesson('lesson-01').minutes}-minute lesson: how you can win when a price
+        goes up or down, and your first practice trade. No real money.
       </p>
       <div className={styles.foot}>
         <button

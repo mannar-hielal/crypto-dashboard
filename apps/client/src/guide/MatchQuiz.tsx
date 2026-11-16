@@ -38,9 +38,11 @@ export function MatchQuiz({
   const [links, setLinks] = useState<Record<number, number>>({});
   const [selected, setSelected] = useState<number | null>(null);
   const complete = Object.keys(links).length === pairs.length;
-  // Answered on an earlier visit: no pairs in memory, so the right pairs are shown
-  const shown: Record<number, number> =
-    answered && !complete ? Object.fromEntries(pairs.map((_, i) => [i, i])) : links;
+  // Answered on an earlier visit: no pairs in memory, so the right pairs are shown, unmarked
+  const revisit = answered && !complete;
+  const shown: Record<number, number> = revisit
+    ? Object.fromEntries(pairs.map((_, i) => [i, i]))
+    : links;
   const termOf = (meaning: number) => {
     const t = Object.entries(shown).find(([, m]) => m === meaning)?.[0];
     return t === undefined ? null : Number(t);
@@ -75,7 +77,8 @@ export function MatchQuiz({
         <div className={styles.column}>
           {pairs.map((p, t) => {
             const m = shown[t];
-            const mark = answered && m !== undefined ? (m === t ? 'right' : 'wrong') : null;
+            const mark =
+              answered && !revisit && m !== undefined ? (m === t ? 'right' : 'wrong') : null;
             return (
               <button
                 key={p.term}
@@ -138,6 +141,7 @@ export function MatchQuiz({
           Check
         </button>
       )}
+      {revisit && <p className={styles.explain}>The right pairs:</p>}
       {answered && (
         <p className={styles.explain} role="status">
           <strong>{answer === 0 ? 'Right. ' : 'Not quite. '}</strong>

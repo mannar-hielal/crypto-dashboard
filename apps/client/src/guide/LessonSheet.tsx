@@ -55,7 +55,7 @@ import {
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
-import { getTour, TOUR_WIDE_QUERY } from './tours';
+import { getTour, TOUR_WIDE_QUERY, runsHere } from './tours';
 
 const NOTE_MAX = 500;
 
@@ -483,12 +483,18 @@ export function LessonSheet() {
    */
   const [streakThen, setStreakThen] = useState<{ run: number; go: () => void } | null>(null);
   // ✕ and Esc on the streak screen still do what the close's button was pressed for (a finish)
-  const streakGo = streakThen?.run === run ? streakThen.go : null;
+  const streakGo =
+    streakThen?.run === run
+      ? () => {
+          setStreakThen(null);
+          streakThen.go();
+        }
+      : null;
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
   // A tour that works on phones too (owner 2026-11-16): its Try is offered on every screen
-  const lessonTourPhone = !!lessonTour && !!getTour(lessonTour).phoneReady;
+  const lessonTourPhone = !!lessonTour && runsHere(lessonTour, false);
 
   // While a tour handed over from the lesson runs (its Try tour, a card's practice trade), the tour
   // store has the screen; when no tour runs any more — finished, skipped or closed, after a chain
@@ -609,8 +615,7 @@ export function LessonSheet() {
   const nextStep = lesson.next;
   // During a look back, the way on is back to the lesson the learner came from
   const offerNext =
-    !!returnTo ||
-    (!!nextStep && (nextStep.kind === 'lesson' || desktop || !!getTour(nextStep.id).phoneReady));
+    !!returnTo || (!!nextStep && (nextStep.kind === 'lesson' || runsHere(nextStep.id, desktop)));
   const nextLabel = returnTo
     ? `Back to Lesson ${getLesson(returnTo.lesson).number}: ${getLesson(returnTo.lesson).title}`
     : !nextStep
