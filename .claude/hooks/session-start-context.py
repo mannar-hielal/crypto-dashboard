@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SessionStart — injects the process non-negotiables + current branch state
 as context, so every session starts with them loaded rather than depending
-on the model choosing to read AGENTS.md / session-bootstrap on its own.
+on the model choosing to read session-bootstrap on its own.
 Source: .claude/skills/session-bootstrap/SKILL.md, .claude/rules/git.md.
 """
 import json

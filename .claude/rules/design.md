@@ -19,12 +19,13 @@ fintech dashboard (Exgen visual system) — Tailwind v4 + CSS Modules + `lightwe
    (file key `XnbW6uGFwCVYzz3MGGCjFM`) — the canonical _visual_ source of truth for anything not
    yet in `tokens.ts`:
    `https://www.figma.com/design/XnbW6uGFwCVYzz3MGGCjFM/Exgen-–-Crypto-Exchange-Dashboard-Template-–-Fintech---AI`
-   Access it via the Figma MCP (`figma_*` tools, declared in `opencode.json`), never by guessing
+   Access it through Claude Code's Figma connector (`create_session` first, then
+   `get_metadata` / `get_screenshot` / `get_design_context` / `get_variable_defs`), never by guessing
    values from memory. See `.claude/skills/figma-theme-source` for the full frame/node-ID map
    (landing, sign-in, spot/futures trade panels, markets, etc.) and the sampling workflow.
 3. **Never** sample from the loose root-level `Screenshot 2026-07-14 *.png` files or from
-   `docs/screenshots/theme/` — the latter is referenced by `docs/APP_LOG.md`/`AGENTS.md` but does
-   not exist in the repo. Treat any such reference as stale and redirect to Figma.
+   `docs/screenshots/theme/` — the latter is referenced by `docs/APP_LOG.md` but does not exist in
+   the repo. Treat any such reference as stale and redirect to Figma.
    (`docs/markup-reference/` — the former secondary reference for component anatomy/interaction
    structure — was removed 2026-09-24; Figma now covers that ground too.)
 
