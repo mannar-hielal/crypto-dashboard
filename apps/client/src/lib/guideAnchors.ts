@@ -299,6 +299,14 @@ export const GUIDE_ANCHORS = [
   'lesson.option',
   // Choose buy or sell: the Buy or Sell button (variant `buy` / `sell`)
   'lesson.side',
+  // Drag and drop: a numbered slot (variant: its index), a step to place (variant: its index)
+  'lesson.slot',
+  'lesson.step',
+  // Match boxes: a term and a meaning (variant: its index in the question's pairs)
+  'lesson.match-term',
+  'lesson.match-meaning',
+  // Drag and drop / Match boxes: the Check button that grades the board
+  'lesson.check',
   'lesson.try',
   'lesson.note',
   'lesson.note.save',

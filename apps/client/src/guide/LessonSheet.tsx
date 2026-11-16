@@ -32,6 +32,8 @@ import { GuidesMeet } from './GuidesMeet';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
 import { BuySellView } from './BuySellView';
+import { MatchQuiz } from './MatchQuiz';
+import { OrderQuiz } from './OrderQuiz';
 import { TOUR_MIN_WIDTH } from './LearnCard';
 import {
   afterNote,
@@ -152,7 +154,7 @@ function TermPeek({
 
 /**
  * A question screen's body: its chart (a frozen one plays on once answered), then the multiple
- * choice or, for `format: 'buy-sell'`, Buy and Sell under the plan (owner's visual Q&A 2026-11-16)
+ * choice, Buy and Sell under the plan, Drag and drop or Match boxes (owner's visual Q&A 2026-11-16)
  */
 function QuestionBody({
   q,
@@ -174,6 +176,10 @@ function QuestionBody({
       )}
       {q.format === 'buy-sell' ? (
         <BuySellView q={q} answer={answer} onAnswer={onAnswer} />
+      ) : q.format === 'order' ? (
+        <OrderQuiz q={q} answer={answer} onAnswer={onAnswer} />
+      ) : q.format === 'match' ? (
+        <MatchQuiz q={q} answer={answer} onAnswer={onAnswer} />
       ) : (
         <QuestionView q={q} answer={answer} onAnswer={onAnswer} />
       )}

@@ -302,6 +302,22 @@ describe('lessons', () => {
     }
   });
 
+  it('should give every Drag and drop or Match boxes question 3+ items, no options and correct 0 (owner 2026-11-16)', () => {
+    for (const l of LESSONS) {
+      const questions = [
+        l.moment,
+        ...l.checks,
+        ...l.cards.flatMap((c) => (c.quiz ? [c.quiz] : [])),
+      ];
+      for (const q of questions.filter((x) => x.format === 'order' || x.format === 'match')) {
+        const items = q.format === 'order' ? q.steps : q.pairs?.map((p) => p.term);
+        expect(items?.length ?? 0, `${l.id}: ${q.question}`).toBeGreaterThanOrEqual(3);
+        expect(new Set(items).size, `${l.id}: ${q.question}`).toBe(items?.length);
+        expect([q.options, q.correct], `${l.id}: ${q.question}`).toEqual([[], 0]);
+      }
+    }
+  });
+
   it('should keep a card that is a quiz to its question alone (no text, lines, beats or meeting)', () => {
     for (const l of LESSONS) {
       for (const c of l.cards.filter((x) => x.quiz)) {

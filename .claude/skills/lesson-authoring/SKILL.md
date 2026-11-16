@@ -262,6 +262,20 @@ rewritten, and to quizzes, Whys, summaries and titles.
   plan or rule in the situation (the same honesty rule as "Your call").
 - **Quizzes can sit between cards** (owner 2026-11-16), not only at the end: the Lesson 1 outline
   puts them mid-lesson.
+- **Decided designs, reused without a new visual Q&A (owner 2026-11-16):**
+  - **Drag and drop:** numbered empty slots on top, cards below. Drag a card into a slot, or tap a
+    card then tap a slot (keyboard: Tab to a card, Enter to pick, Tab to a slot, Enter to place).
+    "Check" grades: each slot turns green with ✓ or red with ✕, then "Right." / "Not quite." and the
+    Why. No retry (as with the other quizzes).
+  - **Match boxes:** two columns, terms on the left, meanings on the right (shuffled). Tap a term, then
+    its meaning: the pair gets the same numbered chip (①②③), so colour is never the only cue; tap a
+    paired box to undo. "Check" marks each pair ✓ / ✕, then "Right." / "Not quite." and the Why.
+    Phones keep the two columns.
+  - **Streak screen** (after the close): a flame with today's streak counting up ("3-day streak"), this
+    week's 7 days as dots (done days filled amber), one line ("Come back tomorrow to keep it going"),
+    and Continue. The Learn panel's counter updates at the same time. Reduced motion: no count-up.
+  - **Practice trades on phones and tablets:** guided too. The arrow points at the phone's Buy / Long
+    and Sell / Short bar, then the order sheet; after the trade the lesson reopens on the next screen.
 - **Building a new format** (owner: build it, after the visual Q&A):
   1. Visual Q&A first: layout on phone and laptop, how a drop or a match is shown, keyboard and
      screen-reader use (drag and drop needs a non-drag path: tap to pick, tap to place).

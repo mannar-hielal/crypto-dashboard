@@ -1,0 +1,126 @@
+/* Drag and drop and Match boxes (owner's visual Q&A, 2026-11-16): colours from tokens.ts via
+   index.css; the box look matches LessonSheet's multiple-choice options */
+
+.question {
+  margin: 0;
+  color: var(--color-brand-white);
+}
+
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slot,
+.box,
+.card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* border.input */
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--color-bg-footer); /* bg.modal */
+  color: var(--color-brand-white);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.slot:disabled,
+.box:disabled {
+  cursor: default;
+}
+
+/* An empty slot: dashed, its hint muted */
+.empty {
+  border-style: dashed;
+  color: var(--color-brand-muted);
+}
+
+.number {
+  flex: none;
+  min-width: 1.5em;
+  font-weight: 700;
+  color: var(--color-brand-muted);
+}
+
+.slotText {
+  flex: 1;
+}
+
+.pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card {
+  width: auto;
+  cursor: grab;
+}
+
+/* Picked, waiting for its slot or its meaning */
+.picked {
+  border-color: var(--color-brand-purple-dark);
+  box-shadow: 0 0 0 1px var(--color-brand-purple-dark);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.box {
+  justify-content: space-between;
+  min-height: 44px;
+}
+
+.chip {
+  flex: none;
+  font-weight: 700;
+  color: var(--color-brand-purple);
+}
+
+/* Right / wrong: the border colour plus ✓ / ✕ and the words, never colour alone */
+.right {
+  border-color: var(--color-brand-green);
+}
+
+.wrong {
+  border-color: var(--color-brand-red);
+}
+
+.check {
+  align-self: flex-start;
+  border: none;
+  border-radius: 25px; /* radius.button */
+  padding: 10px 22px;
+  background: var(--color-brand-purple-dark);
+  color: var(--color-brand-white);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.check:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.explain {
+  margin: 0;
+  color: var(--color-brand-muted);
+}

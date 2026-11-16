@@ -211,14 +211,21 @@ export interface CanDo {
  * How a question is answered: a list of options (multiple choice), or Buy and Sell side by side
  * under a chart and a stated plan (owner's visual Q&A, 2026-11-16). A buy-or-sell question's
  * options are exactly `['Buy', 'Sell']` and its answer follows from the plan, never a guess.
+ * Drag and drop (`order`) puts `steps` into numbered slots; Match boxes (`match`) pairs each
+ * `pairs` term with its meaning. Those two have no `options` and `correct: 0`: the stored answer is
+ * 0 when every slot or pair was right, 1 otherwise.
  */
-export type QuestionFormat = 'choice' | 'buy-sell';
+export type QuestionFormat = 'choice' | 'buy-sell' | 'order' | 'match';
 
 export interface LessonQuestion {
   /** Default `choice` */
   format?: QuestionFormat;
   /** A buy-or-sell question's plan, shown under the chart ("Your plan: … Today it closed at …") */
   plan?: string;
+  /** Drag and drop: the steps in their right order (shown shuffled) */
+  steps?: string[];
+  /** Match boxes: each term with its meaning (the meanings are shown shuffled) */
+  pairs?: { term: string; meaning: string }[];
   question: string;
   /** A short context line above the question (a headline, a situation) */
   context?: string;
@@ -939,6 +946,24 @@ export function getLesson(id: LessonId): Lesson {
  * right answer gets their grin; "Not quite" gets them calm, never sad or worried (red is never the
  * villain).
  */
+/**
+ * A fixed shuffle for Drag and drop and Match boxes: the same order on every visit (seeded by the
+ * question's words), and never the right order itself, so nothing is answered before a move.
+ */
+export function shuffledOrder(n: number, seed: string): number[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  const order = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    const j = h % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  // Still in the right order (it happens for small n): turn it by one
+  if (n > 1 && order.every((v, i) => v === i)) order.push(order.shift()!);
+  return order;
+}
+
 export function questionGuide(q: LessonQuestion, answer: number | undefined): Presenter {
   const asker = q.presenter ?? { who: 'tock', mood: 'thinking' };
   if (answer === undefined) return asker;
