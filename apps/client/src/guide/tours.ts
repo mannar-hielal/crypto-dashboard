@@ -166,7 +166,8 @@ const buyFirstCoin: Tour = {
       { suggest: '100', missingHint: FORM_HINT }
     ),
     fromDraft(
-      // Owner 2026-11-12 (the Finelo gaps): what you hold now, and that it's only on paper until closed
+      // Owner 2026-11-12 (the benchmark gaps): what you hold now, and that it's only on paper until
+      // closed
       submit({
         explain:
           'Place the order. It fills immediately and the amount field clears. You now hold a position: $100 of Bitcoin, long. Its profit or loss is only on paper until you close it by selling, in the next tour.',
