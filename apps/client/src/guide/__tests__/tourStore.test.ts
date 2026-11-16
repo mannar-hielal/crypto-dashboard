@@ -125,4 +125,19 @@ describe('tourStore', () => {
       'trade.mobile.buy'
     );
   });
+
+  it('should not replay the phone’s form step when it was already done in this run', () => {
+    window.matchMedia = ((q: string) => ({ matches: false, media: q })) as never;
+    try {
+      s().start('practice-buy'); // a phone: Tap Buy / Long first
+      s().next(); // the form open: Market
+      const market = tourSteps(getTour('practice-buy'), false)[s().stepIndex].id;
+      s().setWide(true); // rotated to landscape
+      s().setWide(false); // and back: the form step was done, so the same step
+      expect(tourSteps(getTour('practice-buy'), false)[s().stepIndex].id).toBe(market);
+    } finally {
+      // @ts-expect-error -- jsdom has no matchMedia: back to that
+      delete window.matchMedia;
+    }
+  });
 });

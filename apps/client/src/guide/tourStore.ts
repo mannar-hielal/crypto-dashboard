@@ -11,6 +11,8 @@ interface TourState {
   stepIndex: number;
   /** The screen was wide when the tour started: which of its steps run (`tourSteps`) */
   wide: boolean;
+  /** The step ids this run has shown: a rotation never replays one the learner already did */
+  seen: readonly string[];
   /** The option chosen on a quiz step, or null */
   quizAnswer: number | null;
   /** Tours finished, from the server and this session */
@@ -52,6 +54,7 @@ const initial = {
   activeId: null,
   stepIndex: 0,
   wide: true,
+  seen: [],
   quizAnswer: null,
   completed: {},
   finishes: 0,
@@ -64,20 +67,28 @@ const initial = {
 export const useTourStore = create<TourState>()((set, get) => ({
   ...initial,
 
-  start: (id) =>
+  start: (id) => {
+    const wide = isWideScreen();
     set({
       activeId: id,
       stepIndex: 0,
       quizAnswer: null,
-      wide: isWideScreen(),
-    }),
+      wide,
+      seen: [tourSteps(getTour(id), wide)[0]?.id ?? ''],
+    });
+  },
 
   next: () => {
     const { activeId, stepIndex, wide } = get();
     if (!activeId) return;
     const tour = getTour(activeId);
-    if (stepIndex < tourSteps(tour, wide).length - 1) {
-      set({ stepIndex: stepIndex + 1, quizAnswer: null });
+    const steps = tourSteps(tour, wide);
+    if (stepIndex < steps.length - 1) {
+      set((s) => ({
+        stepIndex: stepIndex + 1,
+        quizAnswer: null,
+        seen: [...s.seen, steps[stepIndex + 1].id],
+      }));
       return;
     }
     // Last step: the tour is done; hand over to the next chapter when there is one (its steps for
@@ -91,6 +102,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
       stepIndex: 0,
       quizAnswer: null,
       wide: tour.next ? isWideScreen() : s.wide,
+      seen: tour.next ? [tourSteps(getTour(tour.next), isWideScreen())[0]?.id ?? ''] : [],
     }));
   },
 
@@ -101,21 +113,27 @@ export const useTourStore = create<TourState>()((set, get) => ({
       set({ wide: next });
       return;
     }
-    // Rotated to a phone: its own steps before this one never ran (opening the form from its bar,
-    // which a phone needs before any form step), so back to the first of them. (A larger screen
-    // docks the form: nothing to catch up.) Otherwise the same step if both sizes show it, or, on
-    // a step only the old size had, the first step after the last shared one
+    // Rotated to a phone: its own steps before this one that this run never showed (opening the
+    // form from its bar, which a phone needs before any form step), so back to the first of them;
+    // one already done isn't replayed (the form may still be open, the bar hidden). (A larger
+    // screen docks the form: nothing to catch up.) Otherwise the same step if both sizes show it,
+    // or, on a step only the old size had, the first step after the last shared one
     const tour = getTour(activeId);
     const all = tour.steps.map((s) => s.id);
     const current = all.indexOf(tourSteps(tour, wide)[stepIndex]?.id ?? '');
-    const missed = next ? -1 : tour.steps.findIndex((s, i) => i < current && s.screen === 'phone');
+    const { seen } = get();
+    const missed = next
+      ? -1
+      : tour.steps.findIndex((s, i) => i < current && s.screen === 'phone' && !seen.includes(s.id));
     const shared = tour.steps[current] && !tour.steps[current].screen;
     let lastShared = -1;
     for (let i = 0; i <= current; i++) if (!tour.steps[i].screen) lastShared = i;
     const from = missed !== -1 ? missed : shared ? current : lastShared + 1;
     const shown = tourSteps(tour, next).map((s) => all.indexOf(s.id));
     const at = shown.findIndex((i) => i >= from);
-    set({ wide: next, stepIndex: at === -1 ? shown.length - 1 : at });
+    const stepIndexNow = at === -1 ? shown.length - 1 : at;
+    const nowId = tourSteps(tour, next)[stepIndexNow]?.id ?? '';
+    set({ wide: next, stepIndex: stepIndexNow, seen: [...seen, nowId] });
   },
 
   back: () => {
