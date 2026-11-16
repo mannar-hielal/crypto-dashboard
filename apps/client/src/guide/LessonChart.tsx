@@ -97,6 +97,9 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
 
   // ── The chart itself, once there is data ───────────────────────────────────
   const ready = bars !== null;
+  // Whole dollars for Bitcoin ("$57,459", not "57459.00"); cents for a coin priced in the hundreds
+  // (Solana's "$182.57")
+  const cents = scene.symbol !== 'BTCUSDT';
   useEffect(() => {
     const el = containerRef.current;
     if (!ready || !el) return;
@@ -127,8 +130,9 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
       borderVisible: false,
       priceLineVisible: false,
       lastValueVisible: false,
-      // Whole dollars: a lesson reads "$57,459", not "57459.00"
-      priceFormat: { type: 'price', precision: 0, minMove: 1 },
+      priceFormat: cents
+        ? { type: 'price', precision: 2, minMove: 0.01 }
+        : { type: 'price', precision: 0, minMove: 1 },
     });
     chartRef.current = chart;
     seriesRef.current = series;
@@ -139,7 +143,7 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
       chartRef.current = null;
       chart.remove();
     };
-  }, [ready]);
+  }, [ready, cents]);
 
   // ── A Choose buy or sell plan's price, as a dashed line (owner 2026-11-16) ──
   const planPrice = scene.planLine?.price;

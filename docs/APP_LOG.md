@@ -4662,7 +4662,9 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   step counts as done when the phone's order sheet closes after the submit.
 - **The streak screen** (visual Q&A, owner): after a signed-in learner presses the close's button: a flame, the
   streak counting up, this week's days (`GET /api/learn/habits` adds `thisWeek`), then Continue. Not a screen of its
-  own (the funnel's steps don't move).
+  own (the funnel's steps don't move). Once per lesson run; ✕ or Esc on it only finish. The days are the learner's
+  own: the client sends its offset from UTC (`?tz=`, minutes east, −720…840), so the dots, the streak and the
+  learning days all follow the learner's clock (UTC when absent).
 - **Everyone's progress on Lessons 1–3 is reset** (owner: begun and finished alike), by the data migration
   `20261116200000_reset_lessons_1_3`; the ids stay.
 - **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
@@ -4685,7 +4687,14 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   (November 2022, −23%), a plan beats panic, April → July 2021 (−53%), thin or deep, the $8,200 moment explained,
   Bitcoin is deep, Match boxes (situations), a rug pull told generally, the checklist, and a Drag and drop (a rug
   pull's steps). `stepBase` 60. The benchmark's company and token examples are gone; the two-queues card moves to a
-  later lesson (the order-book widget and its article stay).
+  later lesson (the order-book widget and its article stay). **No way on from its close** (review): Lesson 1's Try
+  already runs the buy and sell tours, so the close just finishes and the path shows what's next. A lesson's way on
+  is now only ever the next lesson (`next: LessonId`); the close's tour way on and `lesson.next-tour` are deleted.
+- **The Chapter 1 checkpoint** (was "Foundations checkpoint"): its recovery-phrase question went with keys and
+  custody to a later lesson; in its place, "your plan says sell below $50,000" (taught in Lesson 1).
+- **The admin funnel**: a tour's steps in the order it runs them, phone-only and desktop-only steps marked; a
+  rewritten lesson's started / finished totals are labelled "(totals: all versions)", since those events carry no
+  step (the old versions' events are kept, as they were for the pilot).
 - **The path's chapter overview** lists each lesson's summary lines ("What you'll learn").
 - **Release** (owner): the new Lesson 1 ships as soon as it's written, which ends the voice-pilot measurement early;
   the funnel before and after still shows the pilot's first days.

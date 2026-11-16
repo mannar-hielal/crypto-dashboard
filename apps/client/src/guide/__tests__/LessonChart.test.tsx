@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   getCandles: vi.fn(),
   createPriceLine: vi.fn(),
   removePriceLine: vi.fn(),
+  seriesOptions: vi.fn(),
 }));
 
 vi.mock('lightweight-charts', () => ({
@@ -16,11 +17,14 @@ vi.mock('lightweight-charts', () => ({
   LineStyle: { Dashed: 2 },
   TickMarkType: { Year: 0, Month: 1, DayOfMonth: 2, Time: 3, TimeWithSeconds: 4 },
   createChart: () => ({
-    addSeries: () => ({
-      setData: h.setData,
-      createPriceLine: h.createPriceLine,
-      removePriceLine: h.removePriceLine,
-    }),
+    addSeries: (_type: unknown, options: unknown) => {
+      h.seriesOptions(options);
+      return {
+        setData: h.setData,
+        createPriceLine: h.createPriceLine,
+        removePriceLine: h.removePriceLine,
+      };
+    },
     timeScale: () => ({ setVisibleLogicalRange: h.range }),
     remove: h.remove,
   }),
@@ -142,5 +146,20 @@ describe('LessonChart', () => {
     render(<LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />);
     await waitFor(() => expect(h.setData).toHaveBeenCalled());
     expect(h.createPriceLine).not.toHaveBeenCalled();
+  });
+
+  it('should show whole dollars for Bitcoin and cents for Solana', async () => {
+    const format = () =>
+      (h.seriesOptions.mock.calls.at(-1)?.[0] as { priceFormat: { precision: number } }).priceFormat
+        .precision;
+    render(<LessonChart scene={scene} revealed fallback={<p>picture</p>} />);
+    await waitFor(() => expect(h.seriesOptions).toHaveBeenCalled());
+    expect(format()).toBe(0);
+    cleanup();
+    clearLessonChartCache();
+    render(
+      <LessonChart scene={{ ...scene, symbol: 'SOLUSDT' }} revealed fallback={<p>picture</p>} />
+    );
+    await waitFor(() => expect(format()).toBe(2));
   });
 });

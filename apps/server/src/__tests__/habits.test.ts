@@ -104,4 +104,13 @@ describe('streakEndingAt', () => {
   it('should stop at the first gap', () => {
     expect(streakEndingAt(new Set([t, t - 1, t - 3]), t)).toBe(2);
   });
+
+  it('should count the learner’s own days (tz east of UTC)', () => {
+    // 22:30 UTC on Sunday 11 Oct is 08:30 on Monday 12 Oct in UTC+10
+    const sundayUtc = new Date('2026-10-11T22:30:00Z');
+    const utc = computeHabits({ ...base, tourTimes: [sundayUtc] }, NOW);
+    const sydney = computeHabits({ ...base, tourTimes: [sundayUtc] }, NOW, 600);
+    expect(utc.thisWeek[0]).toBe(false);
+    expect(sydney.thisWeek[0]).toBe(true); // Monday, where the learner is
+  });
 });

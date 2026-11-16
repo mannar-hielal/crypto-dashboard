@@ -148,7 +148,10 @@ describe('AdminMetricsPage', () => {
     renderPage();
 
     await waitFor(() =>
-      expect(screen.getByText('Lesson 3: News, swings and traps')).not.toBeNull()
+      // Its totals count the old Lesson 3 too (the events carry no step); its screens don't
+      expect(
+        screen.getByText('Lesson 3: News, swings and traps (totals: all versions)')
+      ).not.toBeNull()
     );
     expect(screen.getByText('19. Try it on the real screen')).not.toBeNull();
     expect(screen.getByText(/rated 4.3 \/ 5 by 3/)).not.toBeNull();

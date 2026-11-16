@@ -14,6 +14,7 @@ import { placeBubble, type Box } from './bubblePlacement';
 import { matchesHover, newestCandleBox, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
 import { getTour, type TourStep, tourSteps, TOUR_WIDE_QUERY } from './tours';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import styles from './GuideOverlay.module.css';
 
 const RING_PAD = 3;
@@ -459,13 +460,10 @@ export function GuideOverlay() {
   const activeId = useTourStore((s) => s.activeId);
   const stepIndex = useTourStore((s) => s.stepIndex);
   // A rotation or resize across the tours' width mid-tour: that layout's steps, from this one on
+  const wide = useMediaQuery(TOUR_WIDE_QUERY, true);
   useEffect(() => {
-    if (!activeId || typeof window.matchMedia !== 'function') return;
-    const query = window.matchMedia(TOUR_WIDE_QUERY);
-    const follow = () => useTourStore.getState().setWide(query.matches);
-    query.addEventListener?.('change', follow);
-    return () => query.removeEventListener?.('change', follow);
-  }, [activeId]);
+    if (activeId) useTourStore.getState().setWide(wide);
+  }, [activeId, wide]);
   if (!activeId) return null;
   return <StepView key={activeId} stepIndex={stepIndex} />;
 }

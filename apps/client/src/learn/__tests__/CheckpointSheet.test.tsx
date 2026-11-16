@@ -92,10 +92,13 @@ describe('CheckpointSheet', () => {
 
     expect(screen.getByText('Not yet')).toBeTruthy();
     expect(usePathStore.getState().checkpoints).toEqual({});
-    const reviews = document.querySelectorAll(
-      guideSelector('checkpoint.review', 'lesson-ownership')
+    // The two missed questions: the record's copies (Lesson 2) and the plan's rule (Lesson 1)
+    expect(
+      document.querySelectorAll(guideSelector('checkpoint.review', 'lesson-ownership'))
+    ).toHaveLength(1);
+    expect(document.querySelectorAll(guideSelector('checkpoint.review', 'lesson-01'))).toHaveLength(
+      1
     );
-    expect(reviews).toHaveLength(2);
 
     fireEvent.click(document.querySelector(guideSelector('checkpoint.retry'))!);
     expect(screen.getByText('1 / 5')).toBeTruthy();

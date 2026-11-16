@@ -122,11 +122,10 @@ describe('lessons', () => {
         if (lesson.tryWidget) expect(isWidgetId(lesson.tryWidget)).toBe(true);
       });
 
-      it('should lead to a real next lesson or tour, and say no hype', () => {
-        if (lesson.next?.kind === 'tour') expect(isTourId(lesson.next.id)).toBe(true);
-        if (lesson.next?.kind === 'lesson') {
-          expect(isLessonId(lesson.next.id)).toBe(true);
-          expect(lesson.next.id).not.toBe(lesson.id);
+      it('should lead to a real next lesson, and say no hype', () => {
+        if (lesson.next) {
+          expect(isLessonId(lesson.next)).toBe(true);
+          expect(lesson.next).not.toBe(lesson.id);
         }
         const all = JSON.stringify(lesson);
         for (const h of HYPE) expect(all, String(h)).not.toMatch(h);
@@ -200,7 +199,7 @@ describe('lessons', () => {
     const l = getLesson('lesson-01');
     expect(l.tour).toBe('buy-first-coin');
     expect(l.tryWidget).toBeUndefined();
-    expect(l.next).toEqual({ kind: 'lesson', id: 'lesson-ownership' });
+    expect(l.next).toBe('lesson-ownership');
     expect(l.cards.map((c) => c.title)).toEqual([
       'Two pizzas',
       'Meet your guides',
@@ -258,7 +257,7 @@ describe('lessons', () => {
   it('should teach Lesson 2’s why and how of Bitcoin in the approved order (owner 2026-11-16)', () => {
     const l = getLesson('lesson-ownership');
     expect(l.tryWidget).toBe('block-chain');
-    expect(l.next).toEqual({ kind: 'lesson', id: 'lesson-02' });
+    expect(l.next).toBe('lesson-02');
     expect(l.cards.map((c) => c.title)).toEqual([
       'A headline in the first block',
       'From the price to the thing',
@@ -302,7 +301,7 @@ describe('lessons', () => {
     expect(BITCOIN_BIRTH.lines[1].text).toMatch(/Lehman Brothers, a 158-year-old bank/);
     expect(getLesson('lesson-01').teaser).toMatch(/^Next: where Bitcoin came from/);
     expect(getLesson('lesson-ownership').teaser).toMatch(/^Next: why prices swing/);
-    expect(getLesson('lesson-02').teaser).toMatch(/^Next: spend \$100/);
+    expect(getLesson('lesson-02').teaser).toBeUndefined();
   });
 
   it('should name the ledger, nodes, mining, the blockchain and decentralized in Lesson 2', () => {
@@ -365,13 +364,9 @@ describe('lessons', () => {
   });
 
   it('should only tease a next lesson that the close really offers', () => {
-    // A teaser names what the close really offers (review #275): the next lesson, or the tour it
-    // leads to (Lesson 3's first buy, 2026-11-12)
-    for (const l of LESSONS) {
-      if (!l.teaser) continue;
-      expect(l.next, l.id).toBeDefined();
-      if (l.next?.kind === 'tour') expect(l.teaser, l.id).toMatch(/\$100|buy/i);
-    }
+    // A teaser names what the close really offers (review #275): the next lesson. A close with no
+    // way on has no teaser (Lesson 3 since the rewrite)
+    for (const l of LESSONS) expect(!!l.teaser, l.id).toBe(!!l.next);
   });
 
   it('should start every lesson with an "Unlock" button on its first card', () => {
@@ -445,10 +440,11 @@ describe('lessons', () => {
     expect(l.recap?.highlight?.text).toBe('Decide when and why before you click.');
   });
 
-  it('should teach Lesson 3’s swings, news and traps in the approved order, and lead to the first buy (owner 2026-11-16)', () => {
+  it('should teach Lesson 3’s swings, news and traps in the approved order, and end on the path (owner 2026-11-16)', () => {
     const l = getLesson('lesson-02');
     expect(l.tour).toBe('primer');
-    expect(l.next).toEqual({ kind: 'tour', id: 'buy-first-coin' });
+    // No way on from the close: Lesson 1's Try already ran the buy and sell tours (review 2026-11-16)
+    expect(l.next).toBeUndefined();
     expect(l.cards.map((c) => c.title)).toEqual([
       'One bitcoin for $8,200',
       'Why so much?',

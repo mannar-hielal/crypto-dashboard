@@ -174,7 +174,7 @@ export interface HabitsResponse {
   learningDays: number;
   /** Consecutive learning days up to today (or yesterday, so a streak survives until midnight) */
   streakDays: number;
-  /** This week's days (UTC), Monday first: a learning day or not (the streak screen's dots) */
+  /** This week's days (the learner's, by `tz`), Monday first: a learning day or not (the streak screen's dots) */
   thisWeek: boolean[];
 }
 

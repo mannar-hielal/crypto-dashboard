@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { getTour, tourSteps, TOUR_WIDE_QUERY, type TourId } from './tours';
+import { getTour, isWideScreen, tourSteps, type TourId } from './tours';
 
 interface TourState {
   activeId: TourId | null;
@@ -61,10 +61,6 @@ const initial = {
   panelOpen: false,
 } as const;
 
-/** The desktop layout's width (no matchMedia, as in tests: the desktop) */
-const isWide = () =>
-  typeof window.matchMedia !== 'function' || window.matchMedia(TOUR_WIDE_QUERY).matches;
-
 export const useTourStore = create<TourState>()((set, get) => ({
   ...initial,
 
@@ -73,7 +69,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
       activeId: id,
       stepIndex: 0,
       quizAnswer: null,
-      wide: isWide(),
+      wide: isWideScreen(),
     }),
 
   next: () => {
@@ -92,7 +88,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
       activeId: tour.next ?? null,
       stepIndex: 0,
       quizAnswer: null,
-      wide: tour.next ? isWide() : s.wide,
+      wide: tour.next ? isWideScreen() : s.wide,
     }));
   },
 

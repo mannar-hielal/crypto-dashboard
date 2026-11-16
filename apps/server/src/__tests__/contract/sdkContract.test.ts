@@ -357,6 +357,12 @@ const CALLS: Call[] = [
     response: f.habitsResponse,
   },
   {
+    name: 'learnApi.getHabits (the learner’s time zone)',
+    run: () => learnApi.getHabits(T, 120),
+    status: 200,
+    response: f.habitsResponse,
+  },
+  {
     name: 'learnApi.getProgress',
     run: () => learnApi.getProgress(T),
     status: 200,

@@ -128,6 +128,12 @@ function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
   return steps.map((s) => ({ ...s, id: `${id}.${s.screen === 'phone' ? ++phone : ++main}` }));
 }
 
+/** The tours' desktop layout applies now (outside React: the tour store) */
+export function isWideScreen(): boolean {
+  // No matchMedia (tests, old browsers): the desktop layout
+  return typeof window.matchMedia !== 'function' || window.matchMedia(TOUR_WIDE_QUERY).matches;
+}
+
 /** A tour can run here: a larger screen, or a phone when the tour is phone-ready */
 export function runsHere(id: TourId, wide: boolean): boolean {
   return wide || !!getTour(id).phoneReady;
@@ -253,7 +259,7 @@ const sellAndReview: Tour = {
     fromDraft(
       openTab('assets', {
         explain:
-          'You now own Bitcoin. Spot takes its 0.1% fee in the coin you receive, so you got a hair less than $100 worth.',
+          'You now own Bitcoin. Spot takes its 0.1% fee in the coin you receive, so you got a hair less than you paid for.',
       }),
       { missingHint: 'Open the account panel under the chart, then the Assets tab.' }
     ),
@@ -267,7 +273,7 @@ const sellAndReview: Tour = {
     fromDraft(
       submit({
         explain:
-          'Place the sell order. Selling everything you bought closes your position. It fills at the Sell price.',
+          'Place the sell order. Selling all of your Bitcoin closes your position (any you bought in a practice trade too). It fills at the Sell price.',
       }),
       {
         doneWhenEmpty: 'trade.amount',

@@ -325,7 +325,6 @@ export const GUIDE_ANCHORS = [
   'lesson.finish-line',
   'lesson.rating',
   'lesson.finish',
-  'lesson.next-tour',
   'lesson.next-lesson',
   'lesson.term',
   'lesson.peek',

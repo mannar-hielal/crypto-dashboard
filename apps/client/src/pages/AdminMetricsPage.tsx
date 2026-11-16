@@ -155,8 +155,10 @@ function inTourOrder(tour: TourFunnelTour): TourFunnelTour['steps'] {
 
 function FunnelRows({ tour }: { tour: TourFunnelTour }) {
   const lesson = LESSONS.find((l) => l.id === tour.itemId);
+  // A lesson's started / finished totals count every version of it (the events carry no step);
+  // its screen rows are today's version only (stepBase)
   const title = lesson
-    ? `Lesson ${lesson.number}: ${lesson.title}`
+    ? `Lesson ${lesson.number}: ${lesson.title}${lesson.stepBase ? ' (totals: all versions)' : ''}`
     : (TOURS.find((t) => t.id === tour.itemId)?.title ?? tour.itemId);
   return (
     <>

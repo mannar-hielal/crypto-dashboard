@@ -55,7 +55,7 @@ import {
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
-import { getTour, TOUR_WIDE_QUERY, runsHere } from './tours';
+import { TOUR_WIDE_QUERY, runsHere } from './tours';
 
 const NOTE_MAX = 500;
 
@@ -534,10 +534,11 @@ export function LessonSheet() {
     return () => window.removeEventListener('keydown', onKey);
   }, [activeId, inTour, articleOpen, mapOpen, peekOpen, streakActive]);
 
-  // Each new screen takes the focus, so a screen reader reads it from the top
+  // Each new screen takes the focus, so a screen reader reads it from the top (the streak screen
+  // too: the button pressed to reach it is gone)
   useEffect(() => {
     dialogRef.current?.focus();
-  }, [screenIndex, activeId, inTour, articleOpen]);
+  }, [screenIndex, activeId, inTour, articleOpen, streakActive]);
 
   // When the map closes over the sheet, the sheet takes the focus back (so Tab stays trapped in
   // it), unless what the map opened has taken it (a checkpoint's sheet)
@@ -618,18 +619,13 @@ export function LessonSheet() {
     if (lesson.tour) startTourShared(lesson.tour, navigate);
   };
 
-  // The close's next step: the next lesson (any screen), or a tour (a larger screen only)
-  const nextStep = lesson.next;
-  // During a look back, the way on is back to the lesson the learner came from
-  const offerNext =
-    !!returnTo || (!!nextStep && (nextStep.kind === 'lesson' || runsHere(nextStep.id, desktop)));
-  const nextLabel = returnTo
-    ? `Back to Lesson ${getLesson(returnTo.lesson).number}: ${getLesson(returnTo.lesson).title}`
-    : !nextStep
-      ? ''
-      : nextStep.kind === 'lesson'
-        ? `Lesson ${getLesson(nextStep.id).number}: ${getLesson(nextStep.id).title}`
-        : getTour(nextStep.id).title;
+  // The close's way on: the next lesson; during a look back, the lesson the learner came from
+  const nextLesson = lesson.next;
+  const offerNext = !!returnTo || !!nextLesson;
+  const wayOn = returnTo?.lesson ?? nextLesson;
+  const nextLabel = !wayOn
+    ? ''
+    : `${returnTo ? 'Back to ' : ''}Lesson ${getLesson(wayOn).number}: ${getLesson(wayOn).title}`;
   // The close's buttons show the streak first: a signed-in finish only, not from a look back, and
   // once per run
   const viaStreak = (go: () => void) => () => {
@@ -646,13 +642,9 @@ export function LessonSheet() {
           useLessonStore.getState().finish();
           return;
         }
-        if (!nextStep) return;
+        if (!nextLesson) return;
         useLessonStore.getState().finish();
-        if (nextStep.kind === 'lesson') {
-          useLessonStore.getState().start(nextStep.id);
-          return;
-        }
-        startTourShared(nextStep.id, navigate);
+        useLessonStore.getState().start(nextLesson);
       },
       { finishing: true }
     );
@@ -970,13 +962,7 @@ export function LessonSheet() {
               className={`${styles.primary} ${styles.nextButton}`}
               data-ready="true"
               onClick={viaStreak(offerNext ? startNext : finish)}
-              {...guide(
-                !offerNext
-                  ? 'lesson.finish'
-                  : returnTo || nextStep?.kind === 'lesson'
-                    ? 'lesson.next-lesson'
-                    : 'lesson.next-tour'
-              )}
+              {...guide(offerNext ? 'lesson.next-lesson' : 'lesson.finish')}
             >
               {offerNext ? nextLabel : 'Finish'}
             </button>

@@ -32,7 +32,7 @@ export function StreakView({
   useEffect(() => {
     let cancelled = false;
     learnApi
-      .getHabits(accessToken)
+      .getHabits(accessToken, -new Date().getTimezoneOffset())
       .then((r) => {
         if (!cancelled) setHabits(r);
       })

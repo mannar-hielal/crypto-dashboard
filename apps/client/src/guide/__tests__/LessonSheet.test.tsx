@@ -38,6 +38,8 @@ import { useAuthStore } from '@/store/authStore';
 const lesson = getLesson('lesson-02');
 const sheet = () => document.querySelector('[data-guide="lesson.sheet"]');
 const nextBtn = () => document.querySelector<HTMLButtonElement>('[data-guide="lesson.next"]');
+/** The close's Finish (Lesson 3's close: its only button) */
+const finishBtn = () => document.querySelector<HTMLButtonElement>('[data-guide="lesson.finish"]')!;
 const option = (i: number) =>
   document.querySelector<HTMLButtonElement>(`[data-guide="lesson.option"][data-guide-key="${i}"]`)!;
 
@@ -48,7 +50,7 @@ const renderSheet = () =>
     </MemoryRouter>
   );
 
-/** Jump straight to a screen of Lesson 1 */
+/** Jump straight to a screen of a lesson (Lesson 3 by default) */
 const at = (screen: number, id: LessonId = 'lesson-02') => {
   act(() => {
     useLessonStore.getState().start(id);
@@ -82,10 +84,14 @@ describe('LessonSheet', () => {
     });
     at(lessonScreens(lesson).length - 1);
     renderSheet();
-    fireEvent.click(screen.getByText('Finish for now'));
+    // A keyboard press: the focus sits on the button that is about to go
+    act(() => finishBtn().focus());
+    fireEvent.click(finishBtn());
     // The lesson waits on the streak screen; nothing has finished yet
     expect(useLessonStore.getState().activeId).toBe('lesson-02');
     await waitFor(() => expect(screen.getByText('2-day streak')).toBeTruthy());
+    // The pressed button is gone: the sheet takes the focus, so the streak is read out
+    expect(document.activeElement).toBe(sheet());
     fireEvent.click(document.querySelector('[data-guide="lesson.streak.continue"]')!);
     await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
     expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
@@ -101,7 +107,7 @@ describe('LessonSheet', () => {
     });
     at(lessonScreens(lesson).length - 1);
     renderSheet();
-    fireEvent.click(screen.getByText('Finish for now'));
+    fireEvent.click(finishBtn());
     await waitFor(() => expect(screen.getByText('1-day streak')).toBeTruthy());
     fireEvent.click(screen.getByLabelText('Close the lesson'));
     await waitFor(() => expect(useLessonStore.getState().completed['lesson-02']).toBe(true));
@@ -124,19 +130,10 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState().activeId).toBeNull();
   });
 
-  it('should offer the close’s way on to a phone-ready tour on a phone', () => {
-    desktop = false;
-    at(lessonScreens(lesson).length - 1); // Lesson 3: on to buy-first-coin
-    renderSheet();
-    expect(document.querySelector('[data-guide="lesson.next-tour"]')!.textContent).toBe(
-      'Buy your first coin'
-    );
-  });
-
   it('should finish straight away for a guest (no streak to show)', async () => {
     at(lessonScreens(lesson).length - 1);
     renderSheet();
-    fireEvent.click(screen.getByText('Finish for now'));
+    fireEvent.click(finishBtn());
     await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
     expect(getHabits).not.toHaveBeenCalled();
   });
@@ -249,7 +246,7 @@ describe('LessonSheet', () => {
     fireEvent.click(screen.getByText('Save to journal'));
     await waitFor(() => expect(sheet()!.textContent).toContain('Could not save'));
     expect(screen.queryByText('Skip')).toBeNull();
-    fireEvent.click(screen.getByText('Finish for now'));
+    fireEvent.click(finishBtn());
     await waitFor(() => expect(useLessonStore.getState().completed['lesson-02']).toBe(true));
     // the failed line isn't sent again on the way out
     expect(addJournalNote).toHaveBeenCalledTimes(1);
@@ -262,7 +259,7 @@ describe('LessonSheet', () => {
     fireEvent.change(document.querySelector('[data-guide="lesson.note"]')!, {
       target: { value: ' Fees come off the top ' },
     });
-    fireEvent.click(screen.getByText('Finish for now'));
+    fireEvent.click(finishBtn());
     expect(addJournalNote).toHaveBeenCalledWith('Fees come off the top');
     await waitFor(() => expect(useLessonStore.getState().completed['lesson-02']).toBe(true));
   });
@@ -278,7 +275,7 @@ describe('LessonSheet', () => {
     await waitFor(() =>
       expect(screen.getByRole('status').textContent).toBe('✓ Saved to your journal')
     );
-    fireEvent.click(screen.getByText('Finish for now'));
+    fireEvent.click(finishBtn());
     await waitFor(() => expect(useLessonStore.getState().completed['lesson-02']).toBe(true));
     expect(addJournalNote).toHaveBeenCalledTimes(1);
   });
@@ -288,23 +285,18 @@ describe('LessonSheet', () => {
     renderSheet();
     expect(document.querySelector('[data-guide="lesson.finish-line"]')).not.toBeNull();
     expect(document.querySelector('[data-guide="lesson.note"]')).not.toBeNull();
+    // Lesson 3 offers no way on: one Finish, and the path shows what comes next
+    expect(finishBtn().textContent).toBe('Finish');
+    expect(document.querySelector('[data-guide="lesson.next-lesson"]')).toBeNull();
+    expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('4 of 5'));
     expect(useLessonStore.getState().rating).toBe(4);
     expect(screen.getByLabelText('4 of 5').getAttribute('aria-pressed')).toBe('true');
 
-    fireEvent.click(screen.getByText('Finish for now'));
+    fireEvent.click(finishBtn());
     expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
     expect(sheet()).toBeNull();
-  });
-
-  it('should finish and start the next tour from the close', () => {
-    at(20);
-    renderSheet();
-    fireEvent.click(screen.getByText('Buy your first coin'));
-    expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
-    expect(useTourStore.getState().activeId).toBe('buy-first-coin');
-    expect(navigate).toHaveBeenCalledWith('/dashboard/spot/BTC/USDT');
   });
 
   it('should close with the ✕ and with Esc, without finishing', () => {
@@ -691,7 +683,7 @@ describe('LessonSheet', () => {
     fireEvent.change(document.querySelector('[data-guide="lesson.note"]')!, {
       target: { value: 'Slow line' },
     });
-    fireEvent.click(screen.getByText('Finish for now'));
+    fireEvent.click(finishBtn());
     expect(useLessonStore.getState().noteStatus).toBe('saving');
     expect(document.querySelector('[data-guide="lesson.note.save"]')!.textContent).toBe(
       'Saving your line…'

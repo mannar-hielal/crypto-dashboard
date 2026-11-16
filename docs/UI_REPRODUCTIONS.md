@@ -307,8 +307,8 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      pull's five steps in order).
    - Desktop: **Try it** → [lesson.try] Show me → the primer's three tasks, then the summary. A phone gets Continue
      and "needs a larger screen" (the primer's hover steps).
-   - **What moves a price**: four lines with Read more and "Your plan decides, not the headline."; the close with
-     [lesson.teaser] "Next: spend $100 of practice money on Bitcoin…" and **Buy your first coin**.
+   - **What moves a price**: four lines with Read more and "Your plan decides, not the headline."; the close with no
+     teaser and one button, [lesson.finish] **Finish** (Lesson 1's Try already ran the buy and sell tours).
 5. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of nine articles;
    [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
    In **When the queue runs thin**, [article.queue.size] to 10 → Expect the thin queue down to 90; [article.queue.limit]

@@ -35,8 +35,9 @@ export const learnApi = {
     }),
 
   /** The account's habit badges and learning streak, counted from what is already stored */
-  getHabits: (accessToken: string) =>
-    request<HabitsResponse>('/api/learn/habits', {
+  /** `tzMin`: the learner's offset from UTC in minutes (east positive), so days are their own */
+  getHabits: (accessToken: string, tzMin?: number) =>
+    request<HabitsResponse>(`/api/learn/habits${tzMin === undefined ? '' : `?tz=${tzMin}`}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
 

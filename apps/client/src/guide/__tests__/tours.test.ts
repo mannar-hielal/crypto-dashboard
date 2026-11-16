@@ -77,6 +77,15 @@ describe('tours', () => {
     expect(sell.map((s) => s.text).join(' ')).toMatch(/taken a profit/);
   });
 
+  it('should not assume the sell tour sells exactly $100 (a practice buy may come first)', () => {
+    // Lesson 1's practice buy and its Try both buy $100 of Bitcoin (review 2026-11-16)
+    const text = getTour('sell-and-review')
+      .steps.map((st) => st.text)
+      .join(' ');
+    expect(text).not.toMatch(/\$100/);
+    expect(text).toMatch(/Selling all of your Bitcoin closes your position/);
+  });
+
   it('should have the buy tour type dollars, not coins', () => {
     const steps = getTour('buy-first-coin').steps;
     expect(steps.some((s) => s.anchor === 'trade.amount-unit' && s.key === 'usdt')).toBe(true);

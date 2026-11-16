@@ -16,7 +16,8 @@ const DAY_MS = 86_400_000;
 /** 🔐 Bounds on the rows read for one user (the journal is capped at 200 per user anyway) */
 const MAX_ROWS = 500;
 
-const dayIndex = (d: Date) => Math.floor(d.getTime() / DAY_MS);
+/** The day a moment falls on, in the learner's own time zone (`tzMin`: minutes east of UTC) */
+const dayIndexAt = (d: Date, tzMin: number) => Math.floor((d.getTime() + tzMin * 60_000) / DAY_MS);
 
 export interface HabitInput {
   /** User-placed orders that carried a stop-loss */
@@ -49,14 +50,19 @@ export function streakEndingAt(days: ReadonlySet<number>, today: number): number
   return n;
 }
 
-/** This week's learning days, Monday first (UTC days, as the streak counts them) */
+/** This week's learning days, Monday first (the learner's days, as the streak counts them) */
 export function weekDays(days: ReadonlySet<number>, today: number): boolean[] {
   // Day 0 (1 Jan 1970) was a Thursday: Monday is 3 days after it
   const monday = today - ((today + 3) % 7);
   return Array.from({ length: 7 }, (_, i) => days.has(monday + i));
 }
 
-export function computeHabits(input: HabitInput, now: Date): HabitsResponse {
+/**
+ * `tzMin`: the learner's offset from UTC in minutes (east positive), so a day, the streak and the
+ * week's dots are the learner's own days (UTC when not given)
+ */
+export function computeHabits(input: HabitInput, now: Date, tzMin = 0): HabitsResponse {
+  const dayIndex = (d: Date) => dayIndexAt(d, tzMin);
   const noteDays = new Set(input.noteTimes.map(dayIndex));
   const learningDays = new Set([...noteDays, ...input.tourTimes.map(dayIndex)]);
 
@@ -84,7 +90,8 @@ export function computeHabits(input: HabitInput, now: Date): HabitsResponse {
 export async function loadHabits(
   prisma: Prisma,
   userId: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  tzMin = 0
 ): Promise<HabitsResponse> {
   const [stopLossOrders, notes, events, toursCompleted] = await Promise.all([
     prisma.order.count({
@@ -118,6 +125,7 @@ export async function loadHabits(
       tourTimes: events.map((e) => e.at),
       toursCompleted,
     },
-    now
+    now,
+    tzMin
   );
 }

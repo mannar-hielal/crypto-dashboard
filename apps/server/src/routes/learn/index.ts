@@ -257,8 +257,17 @@ export async function learnRoutes(app: FastifyInstance) {
         summary: 'Habit badges and the learning streak',
         description:
           'Counted from rows the account already has. Badges are careful habits (a stop-loss, a ' +
-          'journal, a tour) — never profit or how often someone trades.',
+          'journal, a tour) — never profit or how often someone trades. Days are the learner’s ' +
+          'own (`tz`: minutes east of UTC; UTC when absent).',
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            // 🔐 Bounded: the world's offsets run from UTC−12 to UTC+14
+            tz: { type: 'integer', minimum: -720, maximum: 840 },
+          },
+        },
         response: {
           200: {
             type: 'object',
@@ -284,7 +293,7 @@ export async function learnRoutes(app: FastifyInstance) {
                 items: { type: 'boolean' },
                 minItems: 7,
                 maxItems: 7,
-                description: 'This week (UTC), Monday first: a learning day or not',
+                description: 'This week (the learner’s days), Monday first: a learning day or not',
               },
             },
           },
@@ -296,7 +305,8 @@ export async function learnRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
-      return reply.send(await loadHabits(app.prisma, userId));
+      const { tz } = request.query as { tz?: number };
+      return reply.send(await loadHabits(app.prisma, userId, new Date(), tz ?? 0));
     }
   );
 }

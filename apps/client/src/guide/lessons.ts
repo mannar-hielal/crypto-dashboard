@@ -272,8 +272,11 @@ export interface Lesson {
     highlight?: { text: string; article?: ArticleId; section?: string };
     genesis?: BirthStory;
   };
-  /** What the close offers next: the next lesson, or a tour */
-  next?: LessonNext;
+  /**
+   * The lesson the close offers next. None: the path shows what comes next (Lesson 3 since the
+   * rewrite: Lesson 1's Try already runs the buy and sell tours)
+   */
+  next?: LessonId;
   access: Entitlement;
   /**
    * Added to the screen number in the funnel's step ids (`lesson-01.21` = screen 1), so steps
@@ -281,8 +284,6 @@ export interface Lesson {
    */
   stepBase?: number;
 }
-
-export type LessonNext = { kind: 'lesson'; id: LessonId } | { kind: 'tour'; id: TourId };
 
 // ─── Lesson 1 — Up, down and your first trade ────────────────────────────────
 // From the owner's notes on Kevin and Colt's lectures (Drive docs 01–06), rewritten in our voice;
@@ -627,7 +628,7 @@ const lesson01: Lesson = {
     ],
     highlight: { text: 'Decide when and why before you click.' },
   },
-  next: { kind: 'lesson', id: 'lesson-ownership' },
+  next: 'lesson-ownership',
   access: FREE,
 };
 
@@ -885,7 +886,7 @@ const lessonOwnership: Lesson = {
     genesis: BITCOIN_BIRTH,
     highlight: { text: 'That was the birth of Bitcoin.' },
   },
-  next: { kind: 'lesson', id: 'lesson-02' },
+  next: 'lesson-02',
   access: FREE,
 };
 
@@ -1177,7 +1178,8 @@ const lesson02: Lesson = {
   // The quizzes sit between the cards (owner 2026-11-16)
   checks: [],
   notePrompt: 'Which check will you always do before buying a new coin?',
-  teaser: 'Next: spend $100 of practice money on Bitcoin, at a price you can now read.',
+  // No teaser and no way on (review 2026-11-16): Lesson 1's Try already runs the buy and sell
+  // tours, so the path, not this close, shows what comes next
   canDo: [],
   recap: {
     title: 'What moves a price',
@@ -1205,10 +1207,6 @@ const lesson02: Lesson = {
     ],
     highlight: { text: 'Your plan decides, not the headline.' },
   },
-  // The path's next stop (chapter 1: the lessons, then the buy and sell tours, then the checkpoint).
-  // Lesson 1's Try runs the same tour; where the practice stops sit is the owner's call (the
-  // lesson-authoring skill: the path follows the benchmark's order until the owner places them)
-  next: { kind: 'tour', id: 'buy-first-coin' },
   access: FREE,
 };
 
