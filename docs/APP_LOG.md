@@ -867,31 +867,48 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 
 ### ✅ Completed (added 2026-11-13 — Guided learning, PWA, sessions)
 
-Details in the dated entries further down (2026-10-22 → 2026-11-13).
+Details in the dated entries further down (2026-10-22 → 2026-11-14). Everything below is in production; the last
+of it shipped in release #289 on 2026-11-14.
 
 - **Guided learning path**: three lessons, presented by the guides Pulin and Berwyn. Lesson 1 is "What is the
-  problem?", Lesson 2 is "Who sets the price?" and Lesson 3 is about price swings and checking before you trust. A
-  zig-zag path, Duolingo-style, has progress rings synced to the server (`LearningProgress.step`), a dumbbell icon
-  for the lessons done on the chart, a checkpoint, and knowledge-base articles with interactive widgets.
-- **The friendlier voice, Phase 0–1**: the tone guide is agreed, and Lesson 1 is rewritten as the pilot (#286).
-  Phases 2–4 are planned below.
+  problem?", Lesson 2 is "What is Bitcoin?" and Lesson 3 is "Who sets the price?" (price swings, and checking before
+  you trust). A zig-zag path, Duolingo-style, has progress rings synced to the server (`LearningProgress.step`), a
+  dumbbell icon for the lessons done on the chart, a checkpoint, and knowledge-base articles with interactive
+  widgets.
+- **Lesson 1's friendlier copy** (#286): shorter sentences, the guides' double act, new Whys. The tone for lessons is
+  now the beginner tone in `.claude/skills/lesson-authoring` (owner 2026-11-16).
+- **Lesson screens** (#291, #292): a question's Why opens on Right. or Not quite. with no "You picked" line; every
+  screen's main button is full width; the guides' hellos wrap instead of being cropped.
 - **PWA readiness**: the home-screen name "CryptoPaperTrade", install steps for every browser, safe-area insets,
   offline handling with a `/health` probe, and a same-origin-only service-worker cache (#284).
 - **Session resilience**: a 30 s reuse window for rotated refresh tokens, token families, a reuse cap of 4, the
-  theft signal after the window, and the client's reconnect deadline with Try again (#288, #290).
+  theft signal after the window, and the client's reconnect deadline with Try again (#288, #290, #293, #296,
+  #297).
+- **Accessibility** (#298): the order form's Buy / Sell button and the leverage chip are named by their visible text
+  (axe 4.14).
+- **Dependencies** (#295): every package on its newest minor or patch, and most majors; TypeScript 7 and Prisma 8
+  held back.
 - **Test automation (`TRADING_TEST_PLAN.md` A8) P1–P5**: Postgres integration tests and coverage floors (P1),
   Playwright on the fake feed (P2), testnet parity plus feed parity and spec drift (P3), fast-check and Stryker
   (P4), the prod smoke and log alerts (P5).
 
 ### 📋 Planned (Next)
 
-- **Friendlier voice, Phases 2–4** (plan in the git-excluded `guided-learning-topics/09-fun-friendly-tone-plan.md`;
-  tone guide in the 2026-11-13 entry):
-  - Phase 2: new devices, one PR each, each through the visual Q&A gate: a "Careful" callout and "Ask anything",
-    the Patrick Hand font, chart notes, "Two sides" chats, a "Who does what?" match.
-  - Phase 3: Lessons 2–3, then articles and tours.
-  - Phase 4: Lessons 4+ written in the voice from the start.
-  - Before any of that, measure the pilot: Lesson 1's funnel and rating, 4 weeks before vs 4 weeks after its release.
+- **Lessons 1–3 makeover** (owner 2026-11-16, `.claude/skills/lesson-authoring`; not built yet). Plan in the
+  git-ignored `guided-learning-topics/notes/11-lessons-1-3-makeover-plan.md`.
+  - New concepts for Lessons 1–3 as set out in the owner's notes, at a longer length, in our beginner tone with our own wording
+    and examples (never their text). The lesson caps are raised to fit.
+  - Our extras move to later lessons: money and trust (Nora's notebook), keys and custody (Sneaky Sam), the order
+    book's two queues.
+  - New quiz types: choose buy or sell, drag and drop, match boxes.
+  - Practice paper trades from a card, with a guided arrow and resume.
+  - A streak screen on the lesson close, with the Learn panel's counter refreshed after a lesson. A lesson
+    already counts as a learning day: its screens send `tour_step` events, which `Habits` counts.
+  - Learners part-way through a lesson have their progress reset. The new Lesson 1 ships as soon as it's written,
+    which ends the pilot's 4-week measurement early.
+  - The path follows the topic order with our own titles and look; the owner places the practice (dumbbell) lessons
+    later. Every unit and lesson title is rewritten in our own words, including today's unit 1 title. Illustrations
+    are decided per lesson (no library chosen yet).
 - **Lesson 4** of the guided path.
 - **Hardening** (`docs/HARDENING_PLAN.md`): H0 done; H1–H11 deferred by the owner (2026-09-30).
 - **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
@@ -2176,7 +2193,7 @@ Dashboard-only changes following the CFWA CSP fix (#121/#122):
 
 - **New skill `.claude/skills/add-page/SKILL.md`** — 9-step checklist: classify the page (public-indexable / transactional / authenticated / admin), process gates, route + lazy import + layout + `SeoHead`, sitemap/robots/internal links, legal & CSP impact, tests, APP_LOG/SEO_READINESS + PR, post-deploy indexing (Search Console URL Inspection, Bing/IndexNow), and rename/remove via `_redirects` 301. Includes a "known site-wide gaps" list (no prerendering, SVG `og:image`, soft-404 catch-all) to delete items from as they're fixed.
 - **Moved all 16 existing skills `.agents/skills/` → `.claude/skills/`** (`git mv`, history preserved) and removed `.agents/`. Claude Code now auto-loads all 17 project skills, each invocable as `/<name>`.
-- **All path references updated** (`.agents/skills` → `.claude/skills`): `CLAUDE.md`, `AGENTS.md`, all `.claude/conventions/*.md`, `.claude/hooks/session-start-context.py` (SessionStart context), `.husky/pre-commit` (bug-sweep hint), skills cross-references, and current-state lines in this log. Historical log entries that mention the old path describe past state and were updated too, so the log has no dead paths.
+- **All path references updated** (`.agents/skills` → `.claude/skills`): `CLAUDE.md`, `AGENTS.md` (merged into `CLAUDE.md` and deleted 2026-11-16), all `.claude/conventions/*.md` (since moved to `.claude/rules/*.md`), `.claude/hooks/session-start-context.py` (SessionStart context), `.husky/pre-commit` (bug-sweep hint), skills cross-references, and current-state lines in this log. Historical log entries that mention the old path describe past state and were updated too, so the log has no dead paths.
 - `session-bootstrap` task-specific list and `.claude/conventions/README.md` now point to `add-page`.
 
 ---
@@ -4260,7 +4277,8 @@ no fill ever matched. The unit tests built their events by hand with the same id
 
 - `pnpm.overrides`: `follow-redirects >=1.16.1` (new; via `bybit-api` → `axios`), `undici ^7.30.1` (via `jsdom`),
   `body-parser >=2.4.0` (via the Figma MCP server's `express`);
-- `vite ^8.1.6` (client dev server), `zod ^4.6.6` (client and `mcp-servers/figma`);
+- `vite ^8.1.6` (client dev server), `zod ^4.6.6` (client and `mcp-servers/figma`). (The Figma MCP server and the
+  `body-parser` override were deleted on 2026-11-16.)
 - the lockfile was re-resolved with `--lockfile-only --ignore-scripts`, then a normal install ran the audit gate green
   (no high or critical findings). All suites pass and the client builds; the lockfile resolves `vite` to 8.3.5 within the range.
 
@@ -4348,7 +4366,7 @@ screen on phones), the real mini chart in the picture's slot, and terms marked w
 
 **Context:** the owner found one lesson mixing two sources messy. Lesson 1 now draws on the owner's notes from Kevin
 and Colt's lectures (the Drive docs), each card's terms opening the matching article; Lesson 2 is the price lesson,
-modelled on Finelo's concise style, with what Lesson 1 covers stripped out. Owner answers: a Pizza Day hook, one
+modelled on the benchmark's concise style, with what Lesson 1 covers stripped out. Owner answers: a Pizza Day hook, one
 bridge sentence back to Lesson 1, "Nora cheats" as Lesson 1's "Try it", one article per Drive doc. Unreleased, so
 the ids were renumbered freely (`lesson-01` = Bitcoin, `lesson-02` = price).
 
@@ -4358,7 +4376,7 @@ the ids were renumbered freely (`lesson-01` = Bitcoin, `lesson-02` = price).
   where a balance lives, a recovery-phrase scam and Mt. Gox. Rule: "Bitcoin replaces 'trust me' with 'check it'."
   Its close opens Lesson 2 on any screen (`next: { kind: 'lesson' }`).
 - **Lesson 2:** "What crypto is" removed; "What a price is" gains one bridge sentence; a new card, "A market that
-  never closes" (24/7, liquidity, spread, from Finelo's Lesson 2 without its hype); Tesla and ETF charts unchanged.
+  never closes" (24/7, liquidity, spread, from the benchmark's Lesson 2 without its hype); Tesla and ETF charts unchanged.
 - **Articles:** three new ones, one per Drive doc: _Money 101_ (02), _Bitcoin's story, and its plan in plain words_
   (04: timeline, the whitepaper in six steps, mining, satoshis), _Getting bitcoin: three ways_ (05; the custody,
   Mt. Gox and Bybit section moved here from _Mailboxes and keys_). New concepts: money, Satoshi Nakamoto, satoshi,
@@ -4373,7 +4391,7 @@ the ids were renumbered freely (`lesson-01` = Bitcoin, `lesson-02` = price).
 ### feat: lesson visuals — Phosphor duotone icons, Tick and Tock presenting every card with moods, a dotted world map (2026-10-24) ✅
 
 **Context:** the owner found the hand-drawn shapes too primitive and wanted each card presented by a guide, as
-Finelo's mascot points at its scene. Visual Q&A: Phosphor duotone, the guide inside the scene pointing, a dotted
+the benchmark's mascot points at its scene. Visual Q&A: Phosphor duotone, the guide inside the scene pointing, a dotted
 world map, eight moods (`worried` for warnings only).
 
 - **New dependency:** `@phosphor-icons/react` 2.1.10 (MIT, no install scripts, no dependencies, exact pin), for
@@ -4415,7 +4433,7 @@ world map, eight moods (`worried` for warnings only).
 ### 2026-10-24 — The learning map: its own Route button, chapters, locks and a checkpoint
 
 **Context:** the owner liked the Learn panel but wanted the user menu kept for settings and auth, and the learning
-content shown as a map, like Finelo's "Crypto path", unlocked lesson by lesson. Phones first, and ready for a future
+content shown as a map, unlocked lesson by lesson. Phones first, and ready for a future
 paid tier. Visual Q&A: lucide `Route` with an amber dot; a 400 px right drawer, full screen on phones; strict locks
 plus "test out"; the built chapter plus the next one as "Coming soon".
 
@@ -4463,8 +4481,8 @@ card; each card's button names the question the next card answers.
   amber (owner 2026-10-28: no counter, no Tock line): "Nobody in that room knew those pizzas would one day be worth
   over $1 billion!" Next reads "Unlock your learning journey →". The `counter` beat kind stays in `CardBeats` for a
   later card. This replaces the "no
-  worth $X today" rule (`guided-learning-topics/04-two-lessons-plan.md`); no other dollar figure is in the lesson,
-  and a test holds both.
+  worth $X today" rule (from the owner's session-3 plan note, deleted 2026-11-16); no other dollar figure is in the
+  lesson, and a test holds both.
 - **Meet your guides** (`guide/GuidesMeet.tsx`, the owner's own staging): Tick slides in from the left with "Hi,
   I'm Tick.", Tock from the right with "Hi, I'm Tock.", they meet in the middle with a small lean, then "In the next
   7 minutes you'll learn:" and three ✓ lines fade in. Same rules as the cold open: Next waits, a tap or Enter shows
@@ -4590,7 +4608,7 @@ wrong with one Nora?": one big idea per lesson, each ending on the question the 
 ### 2026-11-08 — Lesson 1 closes on the problem, a finish ribbon and an invitation
 
 The owner wanted "What is Bitcoin?" to end on what led to Bitcoin, with an outro that pulls the learner on and an
-animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi named here, the recap in place of
+animated finish that isn't the benchmark's cup. Their Q&A: a finish ribbon, Satoshi named here, the recap in place of
 "You can now", and the ribbon on every lesson.
 
 - **The finish ribbon** (`guide/FinishLine.tsx`): Pulin and Berwyn run in and break a ribbon; its halves swing
@@ -4606,12 +4624,72 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-14 — Release #289 in production
+
+The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke passed (7 of 7). It carried:
+
+- **Session resilience:** the refresh-token reuse window (30 s), token families, the reuse cap of 4 and the theft
+  signal after the window (#288); a reuse whose user lookup fails gives its cap slot back (#293); the client's
+  reconnect deadline and Try again (#290), counted from the reconnect cycle's first refresh, dropped once the latest
+  send is past the window, with send times merged (#296); the family migration sets its default before the backfill
+  (#297).
+- **Lessons:** Lesson 1's friendlier copy, the pilot (#286); questions say Right. or Not quite. with no "You picked"
+  line, and full-width buttons (#291); the guides' hellos wrap (#292).
+- **Accessibility:** the order form's Buy / Sell button and the leverage chip are named by their visible text, as
+  axe 4.14's `label-content-name-mismatch` asks (#298). The Buy / Sell button has no `aria-label` any more (it was
+  "Execute buy market order"); the chip reads "Cross 10x leverage" (was "Leverage 10x, cross margin").
+- **Tests:** the e2e `resetAccount` helper retries the account reset's two-step confirm when its 3 s window runs
+  out on a slow WebKit runner (#294).
+- **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
+
+### 2026-11-16 — The benchmark-name check: local git hooks; CI test steps
+
+🔐 IP: nothing committed or pushed may name the benchmark course (owner 2026-11-16: git checks only).
+
+- **`scripts/denylist-check.sh`** reads the owner's git-ignored list (`guided-learning-topics/notes/denylist.txt`;
+  a worktree falls back to the main checkout's). The hooks call it through `.husky/denylist.sh`, which runs the copy
+  in the checkout being committed in:
+  - `pre-commit` (`staged`): added lines and new file names; during a merge, only the person's resolution;
+  - `commit-msg` (`msg`): an early check that skips comment lines;
+  - `pre-push` (`push`), the authority: every new commit's stored message, added lines and new file names, an
+    annotated tag's message, and a new ref's name. What `origin` (and the remote pushed to) already has isn't new; a
+    rebased copy of a public commit (the same verbatim patch id) isn't rescanned.
+  - Not covered: what `gh` publishes, `--no-verify`, the web editor, a clone without the list. The lesson-authoring
+    skill says how to write that text.
+  - Tests: `scripts/denylistCheck.test.mjs` (`pnpm test:scripts`).
+- **Hook setup unchanged:** the hooks run where husky is set up (`core.hooksPath`). A `prepare` installer was tried
+  and dropped: rewriting a path that every worktree shares caused more failures than it fixed.
+- **CI:** the type-check is a step per package (server, e2e; the client's runs in its build), and `test:coverage`,
+  `test:hooks` and `test:scripts` are separate steps, so one failing never hides another.
+- **Overrides:** `pnpm-workspace.yaml`'s `overrides:` block was deleted. pnpm used `package.json`'s list (the
+  lockfile matched it, not the block), so it pinned nothing.
+
+### 2026-11-16 — Claude Code only: AGENTS.md merged into CLAUDE.md; the opencode leftovers deleted
+
+The owner develops with Claude Code only, so the cross-tool and opencode files went (owner's rule: delete what we
+drop):
+
+- **`CLAUDE.md` is the one entry point.** It now holds `AGENTS.md`'s quick commands, monorepo layout, chart and
+  drawing architecture, and chart and environment quirks, refreshed (the CI line, the skill count). What the rules in
+  `.claude/rules/` already load (TypeScript strict mode, code style, Zustand, tests, design tokens) isn't repeated.
+  `AGENTS.md` is deleted, and every reference to it updated (`CONVENTIONS.md`, `git.md`, `design.md`, the
+  session-start hook, the skills, `TV_LICENSE_MIGRATION_PLAN.md`).
+- **Deleted:** `opencode.json`, and `mcp-servers/figma`, the local Figma MCP server only opencode started (its
+  workspace entry, and the overrides that existed only for its dependencies: `@modelcontextprotocol/sdk`, `hono`,
+  `@hono/node-server`, and `body-parser` and `proxy-addr` for its `express`). The `js-yaml` override went too: it
+  already pinned nothing (no package in the lockfile). The audit stays clean.
+- **Figma:** `design.md` and `figma-theme-source` now use Claude Code's Figma connector (`create_session`, then
+  `get_metadata` / `get_screenshot` / `get_design_context` / `get_variable_defs`).
+- **`technical-analyst`** reads a pasted chart directly (it routed images through an opencode plugin and a Grok
+  sub-agent). **`session-bootstrap`** names Claude Code's tools and points at `CLAUDE.md` for the quick commands.
+
 ### 2026-11-13 — Housekeeping: the TradingView mirror deleted, dependencies updated
 
 - **`tv-website-full/` deleted** (owner). It was a 15 MB local copy of tradingview.com, git-ignored and used by no
   code. The sale-readiness report had flagged it as an IP risk. Its entries are gone from `.gitignore`,
-  `.prettierignore` and `eslint.config.js`. `*.har` stays ignored: the 27 MB `www.tradingview.com.har` recording is
-  still on the owner's disk, and the same report suggests deleting it too.
+  `.prettierignore` and `eslint.config.js`. The 27 MB `www.tradingview.com.har` recording of its network traffic,
+  which the same report flagged, was deleted on 2026-11-16 (owner), with its `.prettierignore` and `eslint.config.js`
+  entries. `*.har` stays git-ignored as a safeguard: a HAR recording captures cookies and tokens.
 - **Dependencies:** every package moved to its newest minor or patch version (`pnpm update -r`), skipping releases
   younger than 7 days (`--config.minimum-release-age=10080`, a guard against a freshly compromised version). The
   audit shows no high or critical findings.
@@ -4637,6 +4715,9 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Local dev after switching branches:** a branch that adds migrations needs `npx prisma migrate deploy` (in
   `apps/server`) on the dev database. The owner's login answered 500 ("column `reuseCount` does not exist") until
   the three new migrations were applied. Production is unaffected: Fly runs the migrations before each deploy.
+  - **Update 2026-11-16:** run Prisma from `apps/server`, or as
+    `pnpm --filter @crypto-dashboard/server exec prisma migrate deploy` from the root. Never `npx prisma` from the
+    repo root: there is no local Prisma there, so npx fetches the newest one (Prisma 8).
 
 ### 2026-11-13 — Meet your guides: the hellos wrap instead of being cropped
 
@@ -4649,7 +4730,7 @@ Checked at 390 and 1280 px.
 
 Owner's request:
 
-- **No "You picked …" line.** The line under a question's answer (added 2026-11-12 from the Finelo review) is gone.
+- **No "You picked …" line.** The line under a question's answer (added 2026-11-12 from the benchmark review) is gone.
   The Why opens on **Right.** or **Not quite.**, since the chosen option is already marked. This covers every
   lesson's questions, the "Your call" moment and the checkpoint, which share `QuestionView`. The `lesson.picked`
   anchor and the `.picked` style are removed.
@@ -4700,6 +4781,9 @@ signed that device out. The owner approved a server fix:
       a warning.
     - The family column has a database default (`gen_random_uuid()`), so the previous build, still
       serving while the migration runs, never fails a login.
+      **Update 2026-11-14 (#297):** the migration now adds the column bare, sets the default with `ALTER COLUMN`
+      (no table rewrite) _before_ the backfill, backfills only the rows still empty, then sets NOT NULL. A token the
+      previous build inserts mid-migration gets its own family instead of failing the NOT NULL.
     - The trade-off is recorded in `security.md`.
     - The client's reconnect retries stop at a deadline (window − one request timeout − 2 s, counted from the reconnect cycle's first refresh), so an honest late retry rarely reads as theft. The count starts at that first refresh, which the server may have rotated before its reply was lost, not when the connection came back: slow `/health` probes (up to ~31 s) can't push a retry past the window (review on #289). The window starts at whichever refresh rotated, possibly a later one, so the cycle keeps its first and latest send times. Once even the latest send is past the window, the count starts afresh: a rotation by any of them would already be refused (a 401, never retried), and otherwise retries are safe, so a 502 after a long offline gap is still retried. Send times from a second offline wait are merged, not dropped (reviews on #296). A learner's Try again starts a new cycle. Running out of retries, or the API not answering, doesn't send the learner straight to /login: protected pages offer **Try again**. It's honest about the outcome: if the original reply was lost, a tap after the window reads as theft and ends that sign-in (this device only), so the screen says they may be asked to sign in (owner 2026-11-13, reviews on #289/#290). The window and the request timeout are SDK constants (`SESSION_REUSE_WINDOW_MS`, `SDK_REQUEST_TIMEOUT_MS`), and a server test keeps `REFRESH_REUSE_WINDOW_MS` equal (review on #289).
   - It lives in the database, so every Fly machine agrees. The per-process 5 s
@@ -4716,55 +4800,28 @@ signed that device out. The owner approved a server fix:
   - `session.test`: retries.
   - Test plan row 19.11 updated.
 
-### 2026-11-13 — A friendlier voice: the tone guide, and Lesson 1 as the pilot
+### 2026-11-13 — Lesson 1's friendlier copy (the pilot)
 
-The owner liked Head First's voice: friendly, funny, never a lecture. A technical-writer review of the book is in
-`guided-learning-topics/09-fun-friendly-tone-plan.md` (git-excluded). The owner approved all six recommendations and
-asked for the humour to be **a notch more noticeable** than the plan's "light".
+Lesson 1's copy was rewritten to be friendlier, with no new components and the same screens (#286):
 
-**The tone guide** (the brief for every new card, peek, article, Why and tour bubble):
+- **"Money runs on trust"** opens on a question, then Pulin and Berwyn act it out in four lines: the first double
+  act.
+- **Meet your guides:** new hellos for both guides.
+- **The notebook and Nora cards:** shorter sentences, the term after the idea ("That list has a name: a ledger").
+- **The moment's and questions' Whys,** the try-it intro, the teaser, and the first lines of _Money 101_ and
+  _SunCoin_.
 
-- **Who talks:** two friends who learned this and remember being confused. Pulin (green) is curious and asks the
-  "dumb" question out loud; Berwyn (red) is calm, dry and patient. They like each other. Red is never the villain.
-- **Do:**
-  - Talk to "you", with contractions and short sentences (one idea, 15 words or fewer where you can).
-  - Ask before you tell: a question every card or two.
-  - Introduce a term after the idea ("That list has a name: a ledger").
-  - Admit when something is strange. Make it concrete (Nora, Leo, $100, a date).
-  - Humour: a noticeable smile on most cards (a callback, a playful verb, a dry one-liner, a double act). The fact
-    comes first, and the joke decorates it.
-  - Celebrate understanding.
-- **Don't:**
-  - Open with a definition, stack terms, or use the conditional perfect ("Had…, you'd have…").
-  - Use idioms a translation app would mangle.
-  - Use hype or profit framing, even ironically.
-  - Joke about the learner, about losses or money won, or in a warning or a recap.
-  - Use more than one exclamation mark a card.
-- **Rules that don't change:** ≤80 words and ≤2 terms a card, no HYPE words, the honest answer praised, a worried
-  face only for a warning.
-- **Not borrowed:** the book's text, pictures and characters (techniques only); streaks, guilt, fake urgency, rewards
-  tied to trading results.
+**Updates:**
 
-**The pilot: Lesson 1, copy only** (no new components, the same screens, so its funnel steps stay comparable):
-
-- **"Money runs on trust"** opens on a question ("why is a banknote worth anything? It's paper"). Pulin and Berwyn
-  then act it out in four lines: the first double act. Its term and the art stay.
-- **Meet your guides:** "I ask the questions you're too polite to ask." / "I answer them. Usually."
-- **The notebook and Nora cards:**
-  - shorter sentences;
-  - "That list has a name: a ledger. Remember it. It's coming back.";
-  - Nora is "Lovely person. But picture a bad day…";
-  - "Sofia never agreed. The ink doesn't care."
-- **The moment's and questions' Whys,** for example "One pen, one boss. Even a lovely, honest Nora can have a bad day,
-  spill her coffee or get leaned on." Also the try-it intro and a teaser ending on a spoiler.
-- **Articles:** the first lines of _Money 101_ and _SunCoin_.
-- **Measuring:**
-  - **Baseline:** the admin funnel for `lesson-01` (per-screen reach, start → finish) and its average rating, over the
-    4 weeks to the release.
-  - **After:** the same, 4 weeks after.
-  - **Bar:** the finish rate and rating don't fall, and the journal lines show no new confusion.
-  - **Then:** Phase 2 (the hand font, "Ask anything", chart notes, "two sides" chats), each in its own PR through the
-    visual gate, then Lessons 2 and 3.
+- **2026-11-16 (owner):** the tone guide written for this pilot, and its plan, are retired and deleted. Lessons now
+  follow the beginner tone in `.claude/skills/lesson-authoring` (simple English, fun, friendly, analogies welcome).
+- **2026-11-16 (owner), a reversed rule:** the retired guide also ruled out streaks, guilt and fake urgency. The owner
+  reversed the streak part: the Lessons 1–3 makeover adds a streak screen on the lesson close and a working streak
+  counter. Guilt, fake urgency and rewards tied to trading results stay out. The guide's copyright rule
+  stays too, now in the skill: from a reference book or course, techniques and facts only, never its text,
+  pictures or characters.
+- **The measurement** (Lesson 1's funnel and rating, 4 weeks before and after) ends early: the new Lesson 1 from the
+  makeover ships as soon as it's written.
 
 ### 2026-11-13 — PWA readiness: the name, every browser's install steps, the notch and home bar, offline
 
@@ -4852,8 +4909,8 @@ on the newest candle.
 
 ### 2026-11-12 — Lesson 3 rebuilt: who sets the price, why it swings, and check before you trust
 
-The owner's brief: cover Finelo's Lesson 3 and top it, with an attractive intro and 3–4-minute articles with
-something to do. The plan is `guided-learning-topics/08-lesson-3-plan.md` (revision 2026-11-12); the owner took its
+The owner's brief: cover the benchmark's Lesson 3 and top it, with an attractive intro and 3–4-minute articles with
+something to do. The plan (revision 2026-11-12) was the owner's working note, deleted 2026-11-16; the owner took its
 recommendations, and chose our own drawing over a photo for the cold open.
 
 - **Cold open, "One bitcoin for $8,200":** the Binance.US flash crash (21 Oct 2021, 11:34 UTC, a trader's algorithm
@@ -4891,8 +4948,8 @@ recommendations, and chose our own drawing over a photo for the cold open.
 
 ### 2026-11-12 — Crypto trading path: our own rail, hands-on stops, and the arrow on the newest candle
 
-- **Renamed** "Crypto path" → **"Crypto trading path"** (owner).
-- **Our own look, not Finelo's** (owner's visual Q&A): the zig-zag of 3D stops, the dashed links and Tick over the next
+- **Renamed** the path to **"Crypto trading path"** (owner).
+- **Our own look, not the benchmark's** (owner's visual Q&A): the zig-zag of 3D stops, the dashed links and Tick over the next
   stop are gone. Each chapter is a straight vertical **rail**: a marker on the rail and a card beside it (title, kind,
   minutes), one button per stop, a **Start/Continue** chip on the next one. Notes and "Take the checkpoint" sit under
   the cards.
@@ -4951,9 +5008,9 @@ recommendations, and chose our own drawing over a photo for the cold open.
   ("one bitcoin splits into 100,000,000 satoshis… $100 simply buys a fraction"), and a test checks that every
   concept's article really mentions its term.
 
-### 2026-11-12 — The Finelo content gaps closed
+### 2026-11-12 — The benchmark content gaps closed
 
-- The owner's choices on what Finelo's first two lessons teach and ours didn't:
+- The owner's choices on what the benchmark's first two lessons teach and ours didn't:
   - **Trading basics in the buy/sell tours:** "Buy your first coin" now opens on the two choices (Buy if you expect
     a rise, Sell to get out) and names buying for a rise **going long**; its last step says you now hold a
     **position**, $100 of Bitcoin long, only on paper until you **close** it by selling. "Sell it and read the result"
@@ -4963,15 +5020,17 @@ recommendations, and chose our own drawing over a photo for the cold open.
   - **Lesson 2 words:** **decentralized** (tappable) on the Bitcoin card; **block** and **hash** in plain words on
     the ledger card ("Each page, called a block, is sealed … with a fingerprint called a hash"); **mining** (tappable,
     "miners") on the stamp card. _Many notebooks, no Nora_ (the network article) now links back to the Bitcoin card too.
-  - **Beyond Bitcoin** is planned, not built: `guided-learning-topics/07-beyond-bitcoin-plan.md`.
+  - **Beyond Bitcoin** was planned, not built. Its plan was deleted 2026-11-16: the next lessons follow the
+    topic order (`.claude/skills/lesson-authoring`).
 
-### 2026-11-12 — The Finelo review's small wins (S items)
+### 2026-11-12 — The benchmark review's small wins (S items)
 
 - Lesson 1's 2008 line names Lehman Brothers; Lesson 2's cold open ends on its objective ("In the next 8 minutes: …",
   from the lesson's own length); one payment, Sofia → Leo 2 bitcoin, runs through the mailbox, stamp and phone cards;
   the custody card says the app's bitcoin is practice money it holds; each close has a teaser above the way on
   (`lesson.teaser`, not on a look back); every Why opens with "You picked “…”." (`lesson.picked`).
-- Review: `guided-learning-topics/06-finelo-comparison.md` (the owner's folder, not committed).
+- Review: the owner's senior-educator comparison note (git-ignored; deleted 2026-11-16, replaced by the Lessons 1–3
+  side-by-side comparison).
 - Code review of #275: the custody line no longer says the app holds your bitcoin (it holds none; the balance is
   virtual, as the Terms say): "Here, nothing is real bitcoin: your balance is virtual practice money…"; "You picked"
   is set apart in italics (its muted colour matched the Why around it); a test keeps every teaser on a lesson whose
