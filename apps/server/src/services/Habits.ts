@@ -49,6 +49,13 @@ export function streakEndingAt(days: ReadonlySet<number>, today: number): number
   return n;
 }
 
+/** This week's learning days, Monday first (UTC days, as the streak counts them) */
+export function weekDays(days: ReadonlySet<number>, today: number): boolean[] {
+  // Day 0 (1 Jan 1970) was a Thursday: Monday is 3 days after it
+  const monday = today - ((today + 3) % 7);
+  return Array.from({ length: 7 }, (_, i) => days.has(monday + i));
+}
+
 export function computeHabits(input: HabitInput, now: Date): HabitsResponse {
   const noteDays = new Set(input.noteTimes.map(dayIndex));
   const learningDays = new Set([...noteDays, ...input.tourTimes.map(dayIndex)]);
@@ -70,6 +77,7 @@ export function computeHabits(input: HabitInput, now: Date): HabitsResponse {
     badges,
     learningDays: learningDays.size,
     streakDays: streakEndingAt(learningDays, dayIndex(now)),
+    thisWeek: weekDays(learningDays, dayIndex(now)),
   };
 }
 

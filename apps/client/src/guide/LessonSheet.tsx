@@ -19,6 +19,7 @@ import { guide } from '@/lib/guideAnchors';
 import { trapFocus } from '@/lib/trapFocus';
 import { getArticle } from '@/learn/articles';
 import { useArticleStore } from '@/learn/articleStore';
+import { useAuthStore } from '@/store/authStore';
 import { ArticleWidget } from '@/learn/ArticleWidgets';
 import type { Concept } from '@/learn/concepts';
 import { conceptFor, lessonPlaceLabel, lessonPlacesOf } from '@/learn/graph';
@@ -32,6 +33,7 @@ import { GuidesMeet } from './GuidesMeet';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
 import { BuySellView } from './BuySellView';
+import { StreakView } from './StreakView';
 import { MatchQuiz } from './MatchQuiz';
 import { OrderQuiz } from './OrderQuiz';
 import { TOUR_MIN_WIDTH } from './LearnCard';
@@ -471,6 +473,13 @@ export function LessonSheet() {
   const run = useLessonStore((s) => s.run);
   /** Cold-open cards whose lines are all in (`lesson:screen`): Back to one doesn't replay it */
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
+  const accessToken = useAuthStore((s) => s.accessToken);
+  /**
+   * The streak screen after the close (owner's visual Q&A, 2026-11-16): the close's button pressed
+   * waits here, on this run, and Continue then does it. Not a screen of its own, so the funnel's
+   * step ids don't move.
+   */
+  const [streakThen, setStreakThen] = useState<{ run: number; go: () => void } | null>(null);
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
@@ -599,6 +608,12 @@ export function LessonSheet() {
       : nextStep.kind === 'lesson'
         ? `Lesson ${getLesson(nextStep.id).number}: ${getLesson(nextStep.id).title}`
         : getTour(nextStep.id).title;
+  // The close's buttons show the streak first (a signed-in finish only, not from a look back)
+  const streakShown = streakThen?.run === run;
+  const viaStreak = (go: () => void) => () => {
+    if (accessToken && !returnTo) setStreakThen({ run, go });
+    else go();
+  };
   const startNext = () =>
     afterNote(
       () => {
@@ -750,6 +765,19 @@ export function LessonSheet() {
       body = <SummaryView lesson={lesson} screen={screenIndex} done={ready} onDone={reveal} />;
       break;
     case 'close':
+      if (streakShown && streakThen && accessToken) {
+        heading = 'Your streak';
+        body = (
+          <StreakView
+            accessToken={accessToken}
+            onContinue={() => {
+              setStreakThen(null);
+              streakThen.go();
+            }}
+          />
+        );
+        break;
+      }
       heading = `Lesson ${lesson.number} done`;
       body = <CloseView lesson={lesson} />;
       break;
@@ -883,14 +911,14 @@ export function LessonSheet() {
               </button>
             )}
           </div>
-        ) : screen.kind === 'close' ? (
+        ) : screen.kind === 'close' && streakShown ? null : screen.kind === 'close' ? (
           // The way on first, as big as the cards' Next; finishing for now under it (2026-11-08)
           <div className={styles.footStack}>
             <button
               type="button"
               className={`${styles.primary} ${styles.nextButton}`}
               data-ready="true"
-              onClick={offerNext ? startNext : finish}
+              onClick={viaStreak(offerNext ? startNext : finish)}
               {...guide(
                 !offerNext
                   ? 'lesson.finish'
@@ -905,7 +933,7 @@ export function LessonSheet() {
               <button
                 type="button"
                 className={styles.link}
-                onClick={finish}
+                onClick={viaStreak(finish)}
                 {...guide('lesson.finish')}
               >
                 Finish for now

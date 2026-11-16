@@ -307,6 +307,9 @@ export const GUIDE_ANCHORS = [
   'lesson.match-meaning',
   // Drag and drop / Match boxes: the Check button that grades the board
   'lesson.check',
+  // The streak screen after a lesson's close, and its Continue
+  'lesson.streak',
+  'lesson.streak.continue',
   'lesson.try',
   'lesson.note',
   'lesson.note.save',

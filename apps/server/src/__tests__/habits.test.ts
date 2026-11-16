@@ -70,6 +70,21 @@ describe('computeHabits', () => {
     expect(r.streakDays).toBe(2); // 12th and 13th, ending yesterday
   });
 
+  it('should mark this week’s learning days, Monday first (UTC)', () => {
+    // NOW is Wednesday 14 Oct 2026: Monday the 12th, Tuesday the 13th, and last week's Sunday the 11th
+    const r = computeHabits(
+      { ...base, tourTimes: [day('2026-10-12'), day('2026-10-14'), day('2026-10-11')] },
+      NOW
+    );
+    expect(r.thisWeek).toEqual([true, false, true, false, false, false, false]);
+  });
+
+  it('should start the week on Monday even on a Sunday', () => {
+    const sunday = new Date('2026-10-18T22:00:00Z');
+    const r = computeHabits({ ...base, tourTimes: [day('2026-10-12'), day('2026-10-18')] }, sunday);
+    expect(r.thisWeek).toEqual([true, false, false, false, false, false, true]);
+  });
+
   it('should have no badge that depends on profit or on how often someone trades', () => {
     // The set of ids is the contract: a profit / frequency badge would have to be added here
     const ids = computeHabits(base, NOW).badges.map((b) => b.id.toString());

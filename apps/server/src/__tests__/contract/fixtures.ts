@@ -134,6 +134,7 @@ export const habitsResponse: HabitsResponse = {
   badges: [{ id: 'first-stop-loss', earned: true, progress: 1, target: 1 }],
   learningDays: 3,
   streakDays: 2,
+  thisWeek: [true, true, false, false, false, false, false],
 };
 
 export const notificationSettings = { fillEmail: true } as const;

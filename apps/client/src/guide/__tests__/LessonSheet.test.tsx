@@ -13,8 +13,10 @@ vi.mock('react-router', async (importOriginal) => ({
 
 // The history cards' mini charts: no network in tests (they fall back to the drawn picture)
 const getCandles = vi.fn();
+const getHabits = vi.fn();
 vi.mock('@crypto-dashboard/sdk', () => ({
   marketApi: { getCandles: (...a: unknown[]) => getCandles(...a) },
+  learnApi: { getHabits: (...a: unknown[]) => getHabits(...a) },
 }));
 
 const addJournalNote = vi.fn();
@@ -31,6 +33,7 @@ import { useArticleStore } from '@/learn/articleStore';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
+import { useAuthStore } from '@/store/authStore';
 
 const lesson = getLesson('lesson-02');
 const sheet = () => document.querySelector('[data-guide="lesson.sheet"]');
@@ -64,8 +67,37 @@ describe('LessonSheet', () => {
     useLessonStore.getState().reset();
     useTourStore.getState().reset();
     useArticleStore.getState().reset();
+    useAuthStore.setState({ accessToken: null });
+    getHabits.mockReset();
   });
   afterEach(() => cleanup());
+
+  it('should show the streak after the close for a signed-in learner, then finish on Continue', async () => {
+    useAuthStore.setState({ accessToken: 'token' });
+    getHabits.mockResolvedValue({
+      badges: [],
+      learningDays: 2,
+      streakDays: 2,
+      thisWeek: [true, true, false, false, false, false, false],
+    });
+    at(lessonScreens(lesson).length - 1);
+    renderSheet();
+    fireEvent.click(screen.getByText('Finish for now'));
+    // The lesson waits on the streak screen; nothing has finished yet
+    expect(useLessonStore.getState().activeId).toBe('lesson-02');
+    await waitFor(() => expect(screen.getByText('2-day streak')).toBeTruthy());
+    fireEvent.click(document.querySelector('[data-guide="lesson.streak.continue"]')!);
+    await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
+    expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
+  });
+
+  it('should finish straight away for a guest (no streak to show)', async () => {
+    at(lessonScreens(lesson).length - 1);
+    renderSheet();
+    fireEvent.click(screen.getByText('Finish for now'));
+    await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
+    expect(getHabits).not.toHaveBeenCalled();
+  });
 
   it('should render nothing while no lesson runs', () => {
     renderSheet();
