@@ -14,8 +14,8 @@ commit does not carry forward to the next change — confirm each time.
 
 - One prefix, colon, one-line subject: `type: subject`.
 - **Canonical prefixes**: `feat:`, `fix:`, `security:`, `chore:`, `setup:`, `docs:`, `refactor:`,
-  `test:` — the union of what `AGENTS.md` documented and what the old PR-template checklist used,
-  reconciled here now that this file is the one place both lived.
+  `test:` — the union of the prefixes the old quick-reference and PR-template checklist used,
+  reconciled here: this file is the one place they live.
 - Before committing a `refactor:`, run
   [`security.md`'s refactor-safety checklist](./security.md#verify-a-refactor-is-safe) against the
   diff — "no behavior change" is a claim, not a fact, until that check has been done.
@@ -62,8 +62,11 @@ checked out.
 ## CI/CD pipeline — what a branch/PR actually triggers
 
 - `ci.yml` runs on every push to `main`/`develop` and on every PR targeting `main`/`develop`:
-  `pnpm audit` → type-check (server) → `format:check` → `lint` → `test:coverage` (the suites plus
-  the coverage floors) + `test:hooks` → `test:int` on Postgres → build → the Playwright smoke. It is
+  `pnpm audit` → type-check (server and e2e, one step each; the client's runs in its build) →
+  `format:check` → `lint` →
+  `test:coverage` (the suites plus the coverage floors) → `test:hooks` → `test:scripts` (a step
+  each) →
+  `case-coverage --strict` → `test:int` on Postgres → build → the Playwright smoke. It is
   **one job** ("CI (checks, integration, e2e smoke)"), so it pays for one checkout, one install and one
   Postgres per run. Every check runs even after another one failed (`!cancelled()`; only a
   failed install stops the rest), so a run reports all its failures at once. The checks mirror the local pre-commit hook (see
