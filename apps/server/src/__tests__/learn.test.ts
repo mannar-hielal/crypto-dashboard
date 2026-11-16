@@ -238,15 +238,15 @@ describe('/api/learn/progress', () => {
       method: 'PUT',
       url: '/api/learn/progress/lesson-02',
       headers: auth(),
-      payload: { status: 'started', step: 46 },
+      payload: { status: 'started', step: 76 },
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().item).toMatchObject({ itemId: 'lesson-02', status: 'started', step: 46 });
+    expect(res.json().item).toMatchObject({ itemId: 'lesson-02', status: 'started', step: 76 });
     expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
     // Created if missing; otherwise raised only while unfinished and only to a higher step
     expect(app.prisma.learningProgress.createMany).toHaveBeenCalledWith({
-      data: [{ userId: 'user-1', itemId: 'lesson-02', status: 'started', step: 46 }],
+      data: [{ userId: 'user-1', itemId: 'lesson-02', status: 'started', step: 76 }],
       skipDuplicates: true,
     });
     expect(app.prisma.learningProgress.updateMany).toHaveBeenCalledWith({
@@ -254,9 +254,9 @@ describe('/api/learn/progress', () => {
         userId: 'user-1',
         itemId: 'lesson-02',
         status: 'started',
-        OR: [{ step: null }, { step: { lt: 46 } }],
+        OR: [{ step: null }, { step: { lt: 76 } }],
       },
-      data: { step: 46 },
+      data: { step: 76 },
     });
     expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
   });
@@ -274,7 +274,7 @@ describe('/api/learn/progress', () => {
       method: 'PUT',
       url: '/api/learn/progress/lesson-01',
       headers: auth(),
-      payload: { status: 'started', step: 23 },
+      payload: { status: 'started', step: 83 },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().item).toEqual({
@@ -300,9 +300,12 @@ describe('/api/learn/progress', () => {
     expect(
       (await put('/api/learn/progress/lesson-02', { status: 'started', step: 1000 })).statusCode
     ).toBe(400);
-    // A step only with a start
+    // A step only with a lesson's start or finish: never a dismissal or a tour's finish
     expect(
-      (await put('/api/learn/progress/lesson-02', { status: 'completed', step: 5 })).statusCode
+      (await put('/api/learn/progress/lesson-02', { status: 'dismissed', step: 70 })).statusCode
+    ).toBe(400);
+    expect(
+      (await put('/api/learn/progress/primer', { status: 'completed', step: 2 })).statusCode
     ).toBe(400);
     expect(
       (await put('/api/learn/progress/lesson-02', { status: 'started', step: 'x' })).statusCode
@@ -317,12 +320,47 @@ describe('/api/learn/progress', () => {
       method: 'PUT',
       url: '/api/learn/progress/lesson-01',
       headers: auth(),
-      payload: { status: 'started', step: 21 },
+      payload: { status: 'started', step: 81 },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 21 });
+    expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 81 });
     expect(app.prisma.learningProgress.updateMany).not.toHaveBeenCalled();
     expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('PUT refuses a lesson’s start or finish from an earlier version of it, before any write', async () => {
+    // A tab or a cached PWA still on the old Lessons 1–3 can't undo the reset (2026-11-16)
+    const put = (url: string, payload: unknown) =>
+      app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
+    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02']) {
+      const url = `/api/learn/progress/${id}`;
+      expect((await put(url, { status: 'started', step: 21 })).statusCode, id).toBe(409);
+      expect((await put(url, { status: 'started', step: 60 })).statusCode, id).toBe(409);
+      expect((await put(url, { status: 'completed' })).statusCode, id).toBe(409);
+      expect((await put(url, { status: 'completed', step: 40 })).statusCode, id).toBe(409);
+    }
+    expect((await put('/api/learn/progress/lesson-01', { status: 'completed' })).json()).toEqual({
+      error: 'An earlier version of this lesson',
+    });
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.updateMany).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
+  });
+
+  it('PUT completed: a tour finishes without a step', async () => {
+    vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
+      itemId: 'primer',
+      status: 'completed',
+      step: null,
+      updatedAt: AT,
+    } as never);
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/primer',
+      headers: auth(),
+      payload: { status: 'completed' },
+    });
+    expect(res.statusCode).toBe(200);
   });
 
   it('PUT completed: a finished lesson drops its furthest screen', async () => {
@@ -336,7 +374,7 @@ describe('/api/learn/progress', () => {
       method: 'PUT',
       url: '/api/learn/progress/lesson-02',
       headers: auth(),
-      payload: { status: 'completed' },
+      payload: { status: 'completed', step: 81 },
     });
     expect(res.json().item).toEqual({
       itemId: 'lesson-02',
@@ -570,5 +608,20 @@ describe('GET /api/learn/habits', () => {
         stopLoss: { not: null },
       },
     });
+  });
+
+  it('should take the learner’s time zone, and refuse one that is no zone name', async () => {
+    const get = (tz: string) =>
+      app.inject({
+        method: 'GET',
+        url: `/api/learn/habits?tz=${encodeURIComponent(tz)}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+    expect((await get('Europe/Zurich')).statusCode).toBe(200);
+    expect((await get('Etc/GMT+5')).statusCode).toBe(200);
+    // An unknown name of the right shape counts in UTC
+    expect((await get('Mars/Olympus')).statusCode).toBe(200);
+    expect((await get('<script>')).statusCode).toBe(400);
+    expect((await get('x'.repeat(65))).statusCode).toBe(400);
   });
 });

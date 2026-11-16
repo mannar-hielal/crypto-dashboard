@@ -363,6 +363,12 @@ describe('lessons', () => {
     }
   });
 
+  it('should start each lesson’s steps where the server expects its current version (61)', () => {
+    // The server's LESSON_FIRST_STEP (apps/server/src/constants.ts) refuses a start or finish below
+    // it (a client on an earlier version): raise both together with a stepBase
+    for (const l of LESSONS) expect((l.stepBase ?? 0) + 1, l.id).toBe(61);
+  });
+
   it('should only tease a next lesson that the close really offers', () => {
     // A teaser names what the close really offers (review #275): the next lesson. A close with no
     // way on has no teaser (Lesson 3 since the rewrite)

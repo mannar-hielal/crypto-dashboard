@@ -50,10 +50,9 @@ export function MatchQuiz({
 
   const onTerm = (t: number) => {
     if (answered) return;
-    if (links[t] !== undefined) {
-      setLinks((cur) => unpair(cur, t));
-      setSelected(null);
-    } else setSelected(selected === t ? null : t);
+    // A paired term is unpaired; a term being picked stays picked (only an unpaired term can be)
+    if (links[t] !== undefined) setLinks((cur) => unpair(cur, t));
+    else setSelected(selected === t ? null : t);
   };
   const onMeaning = (m: number) => {
     if (answered) return;

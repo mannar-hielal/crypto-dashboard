@@ -77,6 +77,9 @@ describe('tourStore', () => {
       expect(s().activeId).toBe('practice-buy');
       s().next();
       expect(s().activeId).toBeNull();
+      // A practice trade is no tour of the path: never marked finished or counted
+      expect(s().completed).toEqual({});
+      expect(s().finishes).toBe(0);
     } finally {
       // @ts-expect-error -- jsdom has no matchMedia: back to that
       delete window.matchMedia;

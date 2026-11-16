@@ -22,10 +22,12 @@ export const TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const
  */
 export const PRACTICE_TOUR_IDS = ['practice-buy', 'practice-long', 'practice-short'] as const;
 export type PracticeTourId = (typeof PRACTICE_TOUR_IDS)[number];
-export type TourId = (typeof TOUR_IDS)[number] | PracticeTourId;
+/** The path's tours: saved, reported and counted (a practice trade is none of these) */
+export type PathTourId = (typeof TOUR_IDS)[number];
+export type TourId = PathTourId | PracticeTourId;
 
 /** A Learn panel tour (not a practice trade): what the account's progress may hold */
-export function isTourId(value: string): value is (typeof TOUR_IDS)[number] {
+export function isTourId(value: string): value is PathTourId {
   return (TOUR_IDS as readonly string[]).includes(value);
 }
 

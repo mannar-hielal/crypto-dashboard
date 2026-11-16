@@ -6,6 +6,7 @@ import {
   LEARN_EVENT_NAMES,
   LEARN_ITEM_IDS,
   LEARN_LESSON_IDS,
+  LESSON_FIRST_STEP,
 } from '../../constants.js';
 import { loadHabits } from '../../services/Habits.js';
 import { recordLearningEvent } from '../../services/LearningEvents.js';
@@ -99,7 +100,9 @@ export async function learnRoutes(app: FastifyInstance) {
         summary: 'Mark a tour finished, an offer dismissed, or how far a lesson has got',
         description:
           'Idempotent. `completed` is never downgraded: a dismissal or a start after a completion is a no-op. ' +
-          '`started` takes a lesson and its furthest screen as `step` (the funnel step number); the stored step only rises.',
+          '`started` takes a lesson and its furthest screen as `step` (the funnel step number); the stored step only rises. ' +
+          "A lesson's `completed` takes its last screen's `step` too. A lesson's start or finish from an earlier " +
+          'version of it (a step below its first) gets 409.',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
@@ -124,6 +127,7 @@ export async function learnRoutes(app: FastifyInstance) {
           },
           400: errorResponse,
           401: errorResponse,
+          409: errorResponse,
         },
       },
       config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
@@ -133,15 +137,32 @@ export async function learnRoutes(app: FastifyInstance) {
       const { userId } = request.user as { userId: string };
       const { itemId } = request.params as { itemId: LearnItemId };
       const { status, step } = request.body as { status: LearnStatus; step?: number };
+      const lessonId = (LEARN_LESSON_IDS as readonly string[]).includes(itemId)
+        ? (itemId as (typeof LEARN_LESSON_IDS)[number])
+        : null;
 
-      // 🔐 A step belongs to a start only: a finish or a dismissal carrying one is a bad request
-      if (status !== 'started' && step !== undefined) {
-        return reply.status(400).send({ error: 'Only a start takes a step' });
+      // 🔐 A step belongs to a lesson's start or finish only: a dismissal, or a tour's finish,
+      // carrying one is a bad request
+      if (step !== undefined && (status === 'dismissed' || !lessonId)) {
+        return reply.status(400).send({ error: 'Only a lesson’s start or finish takes a step' });
+      }
+      // 🔐 A lesson's start and finish say which screen; one from an earlier version of the lesson
+      // (no step, or a step below its first) is refused, so a stale client can't undo the reset
+      if (lessonId && status !== 'dismissed') {
+        if (step === undefined) {
+          return status === 'started'
+            ? reply.status(400).send({ error: 'A start needs a lesson and its step' })
+            : reply.status(409).send({ error: 'An earlier version of this lesson' });
+        }
+        // eslint-disable-next-line security/detect-object-injection -- lessonId is from the fixed list
+        if (step < LESSON_FIRST_STEP[lessonId]) {
+          return reply.status(409).send({ error: 'An earlier version of this lesson' });
+        }
       }
 
       if (status === 'started') {
         // 🔐 Only a lesson has screens, and a start always says how far
-        if (!(LEARN_LESSON_IDS as readonly string[]).includes(itemId) || step === undefined) {
+        if (!lessonId || step === undefined) {
           return reply.status(400).send({ error: 'A start needs a lesson and its step' });
         }
         // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
@@ -258,14 +279,14 @@ export async function learnRoutes(app: FastifyInstance) {
         description:
           'Counted from rows the account already has. Badges are careful habits (a stop-loss, a ' +
           'journal, a tour) — never profit or how often someone trades. Days are the learner’s ' +
-          'own (`tz`: minutes east of UTC; UTC when absent).',
+          'own (`tz`: their IANA time zone, such as Europe/Zurich; UTC when absent or unknown).',
         security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',
           additionalProperties: false,
           properties: {
-            // 🔐 Bounded: the world's offsets run from UTC−12 to UTC+14
-            tz: { type: 'integer', minimum: -720, maximum: 840 },
+            // 🔐 Bounded, and only the characters of an IANA zone name; an unknown one counts in UTC
+            tz: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9_+/-]+$' },
           },
         },
         response: {
@@ -305,8 +326,8 @@ export async function learnRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
-      const { tz } = request.query as { tz?: number };
-      return reply.send(await loadHabits(app.prisma, userId, new Date(), tz ?? 0));
+      const { tz } = request.query as { tz?: string };
+      return reply.send(await loadHabits(app.prisma, userId, new Date(), tz));
     }
   );
 }

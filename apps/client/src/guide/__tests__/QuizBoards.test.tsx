@@ -168,6 +168,19 @@ describe('MatchQuiz (Match boxes)', () => {
     expect(wrong).toHaveBeenCalledWith(1);
   });
 
+  it('should keep the term being picked when a paired term is tapped to undo it', () => {
+    render(<MatchQuiz q={match} answer={undefined} onAnswer={() => {}} />);
+    fireEvent.click(el('lesson.match-term', 0));
+    fireEvent.click(el('lesson.match-meaning', 0)); // Alpha ↔ the first
+    fireEvent.click(el('lesson.match-term', 1)); // Beta picked
+    fireEvent.click(el('lesson.match-term', 0)); // Alpha unpaired; Beta still picked
+    fireEvent.click(el('lesson.match-meaning', 0));
+    // Pairs are numbered by their term: Beta's is pair 2
+    expect(el('lesson.match-term', 1).getAttribute('aria-label')).toBe('Beta, pair 2');
+    expect(el('lesson.match-meaning', 0).getAttribute('aria-label')).toBe('The first, pair 2');
+    expect(el('lesson.match-term', 0).getAttribute('aria-label')).toBe('Alpha');
+  });
+
   it('should move a meaning to the new term when it is paired again', () => {
     render(<MatchQuiz q={match} answer={undefined} onAnswer={() => {}} />);
     fireEvent.click(el('lesson.match-term', 0));

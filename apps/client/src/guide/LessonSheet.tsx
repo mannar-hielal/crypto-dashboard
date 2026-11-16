@@ -55,7 +55,7 @@ import {
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
-import { TOUR_WIDE_QUERY, runsHere } from './tours';
+import { getTour, TOUR_WIDE_QUERY, runsHere } from './tours';
 
 const NOTE_MAX = 500;
 
@@ -502,12 +502,17 @@ export function LessonSheet() {
 
   // While a tour handed over from the lesson runs (its Try tour, a card's practice trade), the tour
   // store has the screen; when no tour runs any more — finished, skipped or closed, after a chain
-  // like buy → sell too — the lesson carries on
+  // like buy → sell too — the lesson carries on. A tour that took its place some other way (not
+  // its next chapter, not handed over by the lesson) didn't come from the lesson: its end brings
+  // the learner back to the same screen
   useEffect(() => {
     if (!inTour) return;
     return useTourStore.subscribe((s, prev) => {
-      if (prev.activeId !== null && s.activeId === null) {
-        useLessonStore.getState().leaveTour();
+      if (prev.activeId === null || s.activeId === prev.activeId) return;
+      const lessons = useLessonStore.getState();
+      if (s.activeId === null) lessons.leaveTour();
+      else if (s.activeId !== getTour(prev.activeId).next && s.activeId !== lessons.tourFrom) {
+        lessons.forgetTour();
       }
     });
   }, [inTour]);

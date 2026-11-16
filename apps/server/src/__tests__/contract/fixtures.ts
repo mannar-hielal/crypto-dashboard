@@ -143,7 +143,7 @@ export const learnProgressResponse: LearnProgressResponse = {
   items: [
     { itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' },
     // A begun lesson carries its furthest screen (2026-11-12)
-    { itemId: 'lesson-02', status: 'started', step: 46, updatedAt: '2026-11-12T00:00:00.000Z' },
+    { itemId: 'lesson-02', status: 'started', step: 76, updatedAt: '2026-11-12T00:00:00.000Z' },
   ],
 };
 
@@ -151,8 +151,12 @@ export const learnProgressItem = {
   item: { itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' },
 } as const;
 
+export const learnProgressLessonDone = {
+  item: { itemId: 'lesson-02', status: 'completed', updatedAt: '2026-11-16T00:00:00.000Z' },
+} as const;
+
 export const learnProgressStarted = {
-  item: { itemId: 'lesson-02', status: 'started', step: 46, updatedAt: '2026-11-12T00:00:00.000Z' },
+  item: { itemId: 'lesson-02', status: 'started', step: 76, updatedAt: '2026-11-12T00:00:00.000Z' },
 } as const;
 
 const cohort: RetentionCohort = {

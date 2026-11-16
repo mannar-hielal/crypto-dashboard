@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeHabits, streakEndingAt, type HabitInput } from '../services/Habits.js';
+import { computeHabits, streakEndingAt, type HabitInput, dayCounter } from '../services/Habits.js';
 
 const NOW = new Date('2026-10-14T12:00:00Z');
 const day = (iso: string) => new Date(`${iso}T09:00:00Z`);
@@ -105,12 +105,27 @@ describe('streakEndingAt', () => {
     expect(streakEndingAt(new Set([t, t - 1, t - 3]), t)).toBe(2);
   });
 
-  it('should count the learner’s own days (tz east of UTC)', () => {
+  it('should count the learner’s own days (a time zone east of UTC)', () => {
     // 22:30 UTC on Sunday 11 Oct is 08:30 on Monday 12 Oct in UTC+10
     const sundayUtc = new Date('2026-10-11T22:30:00Z');
     const utc = computeHabits({ ...base, tourTimes: [sundayUtc] }, NOW);
-    const sydney = computeHabits({ ...base, tourTimes: [sundayUtc] }, NOW, 600);
+    const sydney = computeHabits({ ...base, tourTimes: [sundayUtc] }, NOW, 'Australia/Sydney');
     expect(utc.thisWeek[0]).toBe(false);
     expect(sydney.thisWeek[0]).toBe(true); // Monday, where the learner is
+  });
+
+  it('should place each day with its own date’s offset, across a daylight-saving change', () => {
+    const day = (y: number, m: number, d: number) => Date.UTC(y, m - 1, d) / 86_400_000;
+    const zurich = dayCounter('Europe/Zurich');
+    // 00:30 on 24 Oct in Zurich (summer time, UTC+2), before the change on 25 Oct
+    expect(zurich(new Date('2026-10-23T22:30:00Z'))).toBe(day(2026, 10, 24));
+    // 00:30 on 26 Oct in Zurich (winter time, UTC+1), after it
+    expect(zurich(new Date('2026-10-25T23:30:00Z'))).toBe(day(2026, 10, 26));
+  });
+
+  it('should count in UTC for no time zone or an unknown one', () => {
+    const late = new Date('2026-10-23T22:30:00Z');
+    expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
+    expect(dayCounter('Mars/Olympus')(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
   });
 });

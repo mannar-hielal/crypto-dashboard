@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { getTour, isWideScreen, tourSteps, type TourId } from './tours';
+import { getTour, isTourId, isWideScreen, tourSteps, type TourId, type PathTourId } from './tours';
 
 interface TourState {
   activeId: TourId | null;
@@ -14,7 +14,7 @@ interface TourState {
   /** The option chosen on a quiz step, or null */
   quizAnswer: number | null;
   /** Tours finished, from the server and this session */
-  completed: Partial<Record<TourId, true>>;
+  completed: Partial<Record<PathTourId, true>>;
   /** Counts every finish this session, a replay included: what the funnel reports as completed */
   finishes: number;
   /** The account's progress has been read (the card waits for it, so it never flashes) */
@@ -37,7 +37,7 @@ interface TourState {
   setCompleted: (ids: TourId[]) => void;
   /** The account's saved progress arrived */
   setProgress: (progress: {
-    completed: TourId[];
+    completed: PathTourId[];
     cardDismissed: boolean;
     fillOfferDismissed?: boolean;
   }) => void;
@@ -81,10 +81,12 @@ export const useTourStore = create<TourState>()((set, get) => ({
       return;
     }
     // Last step: the tour is done; hand over to the next chapter when there is one (its steps for
-    // the screen as it is now)
+    // the screen as it is now). A practice trade from a lesson card is no tour of the path: it's
+    // never marked finished or counted (the lesson's own screens are)
+    const counted = isTourId(activeId);
     set((s) => ({
-      completed: { ...s.completed, [activeId]: true },
-      finishes: s.finishes + 1,
+      completed: counted ? { ...s.completed, [activeId]: true } : s.completed,
+      finishes: counted ? s.finishes + 1 : s.finishes,
       activeId: tour.next ?? null,
       stepIndex: 0,
       quizAnswer: null,

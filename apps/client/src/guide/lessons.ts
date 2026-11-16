@@ -279,7 +279,7 @@ export interface Lesson {
   next?: LessonId;
   access: Entitlement;
   /**
-   * Added to the screen number in the funnel's step ids (`lesson-01.21` = screen 1), so steps
+   * Added to the screen number in the funnel's step ids (`lesson-01.61` = screen 1 at 60), so steps
    * stored before the lesson's screens changed aren't counted as today's screens
    */
   stepBase?: number;

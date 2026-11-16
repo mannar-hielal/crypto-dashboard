@@ -55,6 +55,18 @@ export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as
 /** The lessons (cards → a tour → questions → a journal line); mirrors `LESSON_IDS` in the client */
 export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
 
+/**
+ * Each lesson's first funnel step in its current version: the client's `stepBase` + 1 (`lessons.ts`;
+ * its lessons test checks they match). 🔐 A start or a finish from below it comes from a client still
+ * on an earlier version (an open tab, a cached PWA), and is refused, so the reset of 2026-11-16
+ * (`20261116200000_reset_lessons_1_3`) holds. Raise it with the lesson's `stepBase`.
+ */
+export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number> = {
+  'lesson-01': 61,
+  'lesson-ownership': 61,
+  'lesson-02': 61,
+};
+
 /** The learning path's chapter checkpoints: progress only, never events */
 export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
 

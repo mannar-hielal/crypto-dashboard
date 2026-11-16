@@ -138,6 +138,33 @@ describe('LessonSheet', () => {
     expect(getHabits).not.toHaveBeenCalled();
   });
 
+  it('should not move on past Try when another tour took its tour’s place (review 2026-11-16)', () => {
+    const tryAt = lessonScreens(getLesson('lesson-01')).findIndex((x) => x.kind === 'try');
+    at(tryAt, 'lesson-01');
+    renderSheet();
+    act(() => {
+      useLessonStore.getState().enterTour('buy-first-coin');
+      useTourStore.getState().start('buy-first-coin');
+    });
+    // The primer starts straight over it: not the buy tour's next chapter, not handed over
+    act(() => useTourStore.getState().start('primer'));
+    act(() => useTourStore.getState().close());
+    expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: tryAt });
+  });
+
+  it('should move on past Try after the tour’s own next chapter ends (buy → sell)', () => {
+    const tryAt = lessonScreens(getLesson('lesson-01')).findIndex((x) => x.kind === 'try');
+    at(tryAt, 'lesson-01');
+    renderSheet();
+    act(() => {
+      useLessonStore.getState().enterTour('buy-first-coin');
+      useTourStore.getState().start('buy-first-coin');
+    });
+    act(() => useTourStore.getState().start('sell-and-review'));
+    act(() => useTourStore.getState().close());
+    expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: tryAt + 1 });
+  });
+
   it('should render nothing while no lesson runs', () => {
     renderSheet();
     expect(sheet()).toBeNull();

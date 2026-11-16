@@ -274,7 +274,7 @@ export function PathDrawer() {
     if (!open || !accessToken) return;
     let cancelled = false;
     learnApi
-      .getHabits(accessToken, -new Date().getTimezoneOffset())
+      .getHabits(accessToken)
       .then((r) => {
         if (cancelled) return;
         setHabits(r);

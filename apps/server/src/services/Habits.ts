@@ -16,8 +16,29 @@ const DAY_MS = 86_400_000;
 /** 🔐 Bounds on the rows read for one user (the journal is capped at 200 per user anyway) */
 const MAX_ROWS = 500;
 
-/** The day a moment falls on, in the learner's own time zone (`tzMin`: minutes east of UTC) */
-const dayIndexAt = (d: Date, tzMin: number) => Math.floor((d.getTime() + tzMin * 60_000) / DAY_MS);
+/**
+ * The learner's day counter: each moment's calendar date in their time zone (an IANA name such as
+ * `Europe/Zurich`), as days since 1 Jan 1970. By the zone, not today's offset, so a day before a
+ * daylight-saving change is placed with the offset of its own date. UTC for an unknown zone.
+ */
+export function dayCounter(zone = 'UTC'): (d: Date) => number {
+  let format: Intl.DateTimeFormat;
+  try {
+    format = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+  } catch {
+    return (d) => Math.floor(d.getTime() / DAY_MS);
+  }
+  return (d) => {
+    const part = (type: string) =>
+      Number(format.formatToParts(d).find((p) => p.type === type)?.value);
+    return Date.UTC(part('year'), part('month') - 1, part('day')) / DAY_MS;
+  };
+}
 
 export interface HabitInput {
   /** User-placed orders that carried a stop-loss */
@@ -58,11 +79,11 @@ export function weekDays(days: ReadonlySet<number>, today: number): boolean[] {
 }
 
 /**
- * `tzMin`: the learner's offset from UTC in minutes (east positive), so a day, the streak and the
- * week's dots are the learner's own days (UTC when not given)
+ * `zone`: the learner's time zone (IANA), so a day, the streak and the week's dots are the learner's
+ * own days (UTC when not given or unknown)
  */
-export function computeHabits(input: HabitInput, now: Date, tzMin = 0): HabitsResponse {
-  const dayIndex = (d: Date) => dayIndexAt(d, tzMin);
+export function computeHabits(input: HabitInput, now: Date, zone = 'UTC'): HabitsResponse {
+  const dayIndex = dayCounter(zone);
   const noteDays = new Set(input.noteTimes.map(dayIndex));
   const learningDays = new Set([...noteDays, ...input.tourTimes.map(dayIndex)]);
 
@@ -91,7 +112,7 @@ export async function loadHabits(
   prisma: Prisma,
   userId: string,
   now: Date = new Date(),
-  tzMin = 0
+  zone = 'UTC'
 ): Promise<HabitsResponse> {
   const [stopLossOrders, notes, events, toursCompleted] = await Promise.all([
     prisma.order.count({
@@ -126,6 +147,6 @@ export async function loadHabits(
       toursCompleted,
     },
     now,
-    tzMin
+    zone
   );
 }

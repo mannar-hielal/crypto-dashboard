@@ -11,17 +11,27 @@ import { isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from './lessonStore';
-import { getLesson, isLessonId, lessonScreenOfStep, lessonStepId, type LessonId } from './lessons';
+import {
+  getLesson,
+  isLessonId,
+  lessonScreenOfStep,
+  lessonScreens,
+  lessonStepId,
+  type LessonId,
+} from './lessons';
 import { useTourStore } from './tourStore';
-import { tourSteps, getTour, isTourId, type TourId } from './tours';
+import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './tours';
 
 /** Set while the server's furthest screens are merged in: they're already stored, so never sent */
 let applyingServer = false;
 
+/** A lesson's screen as its funnel step number (the server tells the lesson's versions apart by it) */
+const stepNumber = (id: LessonId, screen: number) =>
+  Number(lessonStepId(getLesson(id), screen).split('.')[1]);
+
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
-  const step = Number(lessonStepId(getLesson(id), screen).split('.')[1]);
-  learnApi.setProgress(id, 'started', accessToken, step).catch(() => undefined);
+  learnApi.setProgress(id, 'started', accessToken, stepNumber(id, screen)).catch(() => undefined);
 }
 
 export function useTourProgress(): void {
@@ -42,7 +52,7 @@ export function useTourProgress(): void {
         if (cancelled) return;
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
-          .map((i) => i.itemId as TourId);
+          .map((i) => i.itemId as PathTourId);
         const lessons = items
           .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
           .map((i) => i.itemId as LessonId);
@@ -107,9 +117,8 @@ export function useTourProgress(): void {
     return useTourStore.subscribe((state, prev) => {
       // The read above flips `loaded`: that change is the server's answer, not the learner's
       if (!prev.loaded) return;
-      for (const id of Object.keys(state.completed) as TourId[]) {
-        // A practice trade from a lesson card is no saved tour (the lesson's screens are)
-        if (!prev.completed[id] && isTourId(id)) {
+      for (const id of Object.keys(state.completed) as PathTourId[]) {
+        if (!prev.completed[id]) {
           learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
         }
       }
@@ -201,7 +210,11 @@ export function useTourProgress(): void {
       // (a reset sets the count back to 0: that's no finish)
       const finished = state.finishes > prev.finishes ? prev.activeId : null;
       if (finished) {
-        learnApi.setProgress(finished, 'completed', accessToken).catch(() => undefined);
+        // With its last screen's step: the server refuses a finish from an earlier version
+        const last = lessonScreens(getLesson(finished)).length - 1;
+        learnApi
+          .setProgress(finished, 'completed', accessToken, stepNumber(finished, last))
+          .catch(() => undefined);
         send('tour_completed', finished);
       }
 

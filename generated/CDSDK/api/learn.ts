@@ -20,6 +20,15 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
 }
 
 /** What the account remembers about the guided tours */
+/** This device's IANA time zone (`Europe/Zurich`), or none where the runtime can't say */
+function deviceTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const learnApi = {
   getProgress: (accessToken: string) =>
     request<LearnProgressResponse>('/api/learn/progress', {
@@ -27,6 +36,10 @@ export const learnApi = {
     }),
 
   /** `started` takes a lesson's furthest screen as `step` (its funnel step number) */
+  /**
+   * `step`: a lesson's funnel step number, with its start (the furthest screen) and its finish (the
+   * last screen); the server answers 409 to a step from an earlier version of the lesson
+   */
   setProgress: (itemId: LearnItemId, status: LearnStatus, accessToken: string, step?: number) =>
     request<{ item: LearnProgressItem }>(`/api/learn/progress/${encodeURIComponent(itemId)}`, {
       method: 'PUT',
@@ -35,9 +48,9 @@ export const learnApi = {
     }),
 
   /** The account's habit badges and learning streak, counted from what is already stored */
-  /** `tzMin`: the learner's offset from UTC in minutes (east positive), so days are their own */
-  getHabits: (accessToken: string, tzMin?: number) =>
-    request<HabitsResponse>(`/api/learn/habits${tzMin === undefined ? '' : `?tz=${tzMin}`}`, {
+  /** `zone`: the learner's time zone (IANA; this device's by default), so the days are their own */
+  getHabits: (accessToken: string, zone: string | undefined = deviceTimeZone()) =>
+    request<HabitsResponse>(`/api/learn/habits${zone ? `?tz=${encodeURIComponent(zone)}` : ''}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
 

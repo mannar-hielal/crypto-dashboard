@@ -79,6 +79,8 @@ interface LessonState extends LessonRun {
   answer: (option: number) => void;
   /** "Show me": hide the sheet while the lesson's tour runs */
   enterTour: (tour: TourId) => void;
+  /** Another tour took the handed-over one's place: its end brings the learner back, not on */
+  forgetTour: () => void;
   /**
    * The tour ended (finished, skipped or closed): back to the sheet, on the screen after Try if it
    * was started from there; handed over from elsewhere (an article), where the lesson was
@@ -232,6 +234,8 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
   },
 
   enterTour: (tour) => set({ inTour: true, tourFrom: tour }),
+
+  forgetTour: () => set({ tourFrom: null }),
 
   leaveTour: () => {
     const { inTour, activeId, screen, tourFrom } = get();

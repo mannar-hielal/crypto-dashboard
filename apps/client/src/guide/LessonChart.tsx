@@ -130,9 +130,6 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
       borderVisible: false,
       priceLineVisible: false,
       lastValueVisible: false,
-      priceFormat: cents
-        ? { type: 'price', precision: 2, minMove: 0.01 }
-        : { type: 'price', precision: 0, minMove: 1 },
     });
     chartRef.current = chart;
     seriesRef.current = series;
@@ -143,6 +140,16 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
       chartRef.current = null;
       chart.remove();
     };
+  }, [ready]);
+
+  // The price format follows the scene's coin on the same series (a new chart would drop its data
+  // and its plan line)
+  useEffect(() => {
+    seriesRef.current?.applyOptions({
+      priceFormat: cents
+        ? { type: 'price', precision: 2, minMove: 0.01 }
+        : { type: 'price', precision: 0, minMove: 1 },
+    });
   }, [ready, cents]);
 
   // ── A Choose buy or sell plan's price, as a dashed line (owner 2026-11-16) ──

@@ -129,7 +129,7 @@ function stepLabel(itemId: string, stepId: string): string {
   if (isLessonId(itemId)) {
     const lesson = LESSONS.find((l) => l.id === itemId);
     if (!lesson) return `Screen ${n}`;
-    // A step from before the lesson's screens changed (Lesson 1's 1–20) names no screen of today's
+    // A step from before the lesson's screens changed (below its stepBase) names no screen of today's
     const index = lessonScreenOfStep(lesson, Number(n));
     if (index === null) return `Screen ${n} (an earlier version of the lesson)`;
     return `${index + 1}. ${screenName(lesson, lessonScreens(lesson)[index])}`;
@@ -155,10 +155,10 @@ function inTourOrder(tour: TourFunnelTour): TourFunnelTour['steps'] {
 
 function FunnelRows({ tour }: { tour: TourFunnelTour }) {
   const lesson = LESSONS.find((l) => l.id === tour.itemId);
-  // A lesson's started / finished totals count every version of it (the events carry no step);
-  // its screen rows are today's version only (stepBase)
+  // A lesson's started / finished totals and its rating count every version of it (those events
+  // carry no step); its screen rows are today's version only (stepBase)
   const title = lesson
-    ? `Lesson ${lesson.number}: ${lesson.title}${lesson.stepBase ? ' (totals: all versions)' : ''}`
+    ? `Lesson ${lesson.number}: ${lesson.title}${lesson.stepBase ? ' (totals and rating: all versions)' : ''}`
     : (TOURS.find((t) => t.id === tour.itemId)?.title ?? tour.itemId);
   return (
     <>

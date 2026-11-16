@@ -4663,10 +4663,14 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
 - **The streak screen** (visual Q&A, owner): after a signed-in learner presses the close's button: a flame, the
   streak counting up, this week's days (`GET /api/learn/habits` adds `thisWeek`), then Continue. Not a screen of its
   own (the funnel's steps don't move). Once per lesson run; ✕ or Esc on it only finish. The days are the learner's
-  own: the client sends its offset from UTC (`?tz=`, minutes east, −720…840), so the dots, the streak and the
-  learning days all follow the learner's clock (UTC when absent).
+  own: the client sends its IANA time zone (`?tz=Europe/Zurich`, the SDK's default), so the dots, the streak and
+  the learning days follow the learner's calendar, each day with its own date's offset (a daylight-saving change
+  moves nothing). UTC when absent or unknown.
 - **Everyone's progress on Lessons 1–3 is reset** (owner: begun and finished alike), by the data migration
-  `20261116200000_reset_lessons_1_3`; the ids stay.
+  `20261116200000_reset_lessons_1_3`; the ids stay. So that a tab or a cached PWA still on the old lessons can't undo
+  it, a lesson's start and finish carry the funnel step (a finish: its last screen's), and the server answers 409
+  to one below the current version's first step (`LESSON_FIRST_STEP`, 61 for all three; raised with a
+  `stepBase`).
 - **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
   writer against our Bybit candles): profit up or down, Buy and Sell, two Choose buy or sell quizzes, a worked long
   (BTC 2 Oct 2023 → 13 Mar 2024, spot) and short (10 Nov 2021 → 18 Jun 2022, perpetual: a contract, with
@@ -4679,7 +4683,7 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   sending, the two checks, blocks, proof of work, the hash, a Drag and drop (a payment's journey), decentralized
   (21 million, an open ledger), Match boxes (network parts; Bitcoin's features), borderless, liquidity, programmable
   networks, NFTs, Your call (one copy against thousands), the `block-chain` Try it, and the birth story staged in the
-  summary. `stepBase` 20. Its keys and custody cards (James Howells, Sneaky Sam, the phone in the sea) move to a
+  summary. `stepBase` 60. Its keys and custody cards (James Howells, Sneaky Sam, the phone in the sea) move to a
   later lesson; `mailboxes-keys` and `getting-bitcoin` say so; the Howells photo and the drawings only those cards
   used are deleted (git keeps them).
 - **Lesson 3, "News, swings and traps"** (owner-approved, fact-checked against our candles): the $8,200 cold open

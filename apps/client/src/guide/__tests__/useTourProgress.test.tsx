@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getLesson, lessonScreens } from '@/guide/lessons';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 
 const getProgress = vi.fn();
@@ -28,6 +29,9 @@ const item = (itemId: string, status: string) => ({
   status,
   updatedAt: '2026-10-11T00:00:00Z',
 });
+
+/** Lesson 1's last screen as its funnel step: `stepBase` (60) + its screens */
+const LESSON_01_LAST_STEP = 60 + lessonScreens(getLesson('lesson-01')).length;
 
 describe('useTourProgress', () => {
   beforeEach(() => {
@@ -268,7 +272,13 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       act(() => useLessonStore.getState().finish());
       expect(calls()).toEqual([{ name: 'tour_completed', itemId: 'lesson-01' }]);
-      expect(setProgress).toHaveBeenCalledWith('lesson-01', 'completed', 'tok');
+      // With its last screen's step: the server refuses a finish from an earlier version
+      expect(setProgress).toHaveBeenCalledWith(
+        'lesson-01',
+        'completed',
+        'tok',
+        LESSON_01_LAST_STEP
+      );
     });
 
     it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {
@@ -356,7 +366,13 @@ describe('useTourProgress', () => {
       });
       expect(calls()).toContainEqual({ name: 'tour_completed', itemId: 'lesson-01' });
       expect(calls().some((c) => c.name === 'tour_closed')).toBe(false);
-      expect(setProgress).toHaveBeenCalledWith('lesson-01', 'completed', 'tok');
+      // With its last screen's step: the server refuses a finish from an earlier version
+      expect(setProgress).toHaveBeenCalledWith(
+        'lesson-01',
+        'completed',
+        'tok',
+        LESSON_01_LAST_STEP
+      );
     });
 
     it('should send nothing for a look back at an earlier lesson, nor for the way back from it', async () => {

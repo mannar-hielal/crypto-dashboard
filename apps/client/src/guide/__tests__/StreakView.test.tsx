@@ -32,8 +32,7 @@ describe('StreakView', () => {
     getHabits.mockResolvedValue(habits);
     render(<StreakView accessToken="t" onContinue={() => {}} />);
     await waitFor(() => expect(screen.getByText('3-day streak')).toBeTruthy());
-    // With the learner's offset from UTC, so the days are theirs
-    expect(getHabits).toHaveBeenCalledWith('t', -new Date().getTimezoneOffset());
+    expect(getHabits).toHaveBeenCalledWith('t');
     expect(screen.getByText('3-day learning streak')).toBeTruthy();
     expect(screen.getByText('Come back tomorrow to keep it going.')).toBeTruthy();
   });
