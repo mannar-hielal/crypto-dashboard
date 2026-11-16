@@ -55,6 +55,11 @@ export const CHAPTERS: readonly Chapter[] = [
       { kind: 'lesson', id: 'lesson-01', access: FREE },
       { kind: 'lesson', id: 'lesson-ownership', access: FREE },
       { kind: 'lesson', id: 'lesson-02', access: FREE },
+      // Deliberately kept here (open question for the owner, 2026-11-16): Lesson 1's Try now runs
+      // these two tours, so a learner who did it finds them already done. Where the practical stops
+      // sit is the owner's call (lesson-authoring skill: the path keeps its order until the owner
+      // places them); a finished stop is no blocker, and a learner who skipped Lesson 1's Try
+      // still meets them here
       { kind: 'tour', id: 'buy-first-coin', access: FREE },
       { kind: 'tour', id: 'sell-and-review', access: FREE },
       { kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE },
