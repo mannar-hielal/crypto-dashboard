@@ -300,7 +300,7 @@
 .practice {
   align-self: flex-start;
   border: 1px solid var(--color-brand-purple-dark);
-  border-radius: 25px; /* radius.button */
+  border-radius: var(--radius-btn);
   padding: 8px 18px;
   background: transparent;
   color: var(--color-brand-white);

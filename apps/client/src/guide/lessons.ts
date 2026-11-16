@@ -385,6 +385,10 @@ const SOL_2024: ChartScene = {
   fallback: 'swings',
 };
 
+// Each lesson's `stepBase` is the SDK's `LESSON_FIRST_STEPS` − 1, written out rather than imported:
+// 29 client test files mock `@crypto-dashboard/sdk` wholesale, and any of them that loads a lesson
+// would then fail to load. The server keeps its own copy too (the SDK ships TypeScript source, so the
+// server takes only types from it at runtime). A test on each side holds its copy to the SDK's.
 const lesson01: Lesson = {
   id: 'lesson-01',
   number: 1,
@@ -394,7 +398,7 @@ const lesson01: Lesson = {
   minutes: LESSON_01_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–20 and 21–40
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see LESSON_FIRST_STEPS_COPY)
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
   // Open a paper trade, then close it (owner 2026-11-16): the buy tour hands over to the sell tour
   tour: 'buy-first-coin',
   tryIntro:
@@ -651,7 +655,7 @@ const lessonOwnership: Lesson = {
   minutes: LESSON_02_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on, past
   // its earlier versions' 1–20 and 21–40
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see LESSON_FIRST_STEPS_COPY)
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
   tryWidget: 'block-chain',
   tryIntro:
     'Your turn: change a number in an old block and watch what happens to every block after it.',
@@ -979,7 +983,7 @@ const lesson02: Lesson = {
   minutes: LESSON_03_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–40 and 41–60
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see LESSON_FIRST_STEPS_COPY)
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
   tour: 'primer',
   tryIntro:
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
@@ -1250,17 +1254,6 @@ export function questionGuide(q: LessonQuestion, answer: number | undefined): Pr
 
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
-/**
- * The lesson as a run of screens, in order — what the sheet walks through and what the funnel
- * numbers (`lesson-02.<n>`, 1-based): cards, the moment, "try it", each question, the summary, the end.
- */
-/**
- * LESSON_FIRST_STEPS_COPY: each `stepBase` above is the SDK's `LESSON_FIRST_STEPS` − 1, written out
- * rather than imported because 29 client test files mock `@crypto-dashboard/sdk` wholesale, and any
- * of them that loads a lesson would then fail to load. The server keeps its own copy too (the SDK
- * ships TypeScript source, so the server takes only types from it at runtime). A test on each side
- * holds its copy to the SDK's.
- */
 export type LessonScreen =
   | { kind: 'card'; index: number }
   | { kind: 'moment' }
@@ -1284,6 +1277,10 @@ export function lessonOwnsTour(lesson: Lesson, tour: TourId): boolean {
   return lessonScreens(lesson).some((screen) => screenTour(lesson, screen) === tour);
 }
 
+/**
+ * The lesson as a run of screens, in order — what the sheet walks through and what the funnel
+ * numbers (`lesson-02.<n>`, 1-based): cards, the moment, "try it", each question, the summary, the end.
+ */
 export function lessonScreens(lesson: Lesson): LessonScreen[] {
   const cards = lesson.cards.map((_, index) => ({ kind: 'card' as const, index }));
   const split = Math.min(lesson.momentAfter ?? cards.length - 1, cards.length - 1) + 1;
