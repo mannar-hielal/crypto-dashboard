@@ -108,7 +108,8 @@ export function useTourProgress(): void {
       // The read above flips `loaded`: that change is the server's answer, not the learner's
       if (!prev.loaded) return;
       for (const id of Object.keys(state.completed) as TourId[]) {
-        if (!prev.completed[id]) {
+        // A practice trade from a lesson card is no saved tour (the lesson's screens are)
+        if (!prev.completed[id] && isTourId(id)) {
           learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
         }
       }
@@ -122,6 +123,7 @@ export function useTourProgress(): void {
 
       // The funnel (privacy policy §3 "Learning events"): started → each step → completed / closed
       const send = (name: LearnEventRequest['name'], itemId: TourId, stepId?: string) =>
+        !isTourId(itemId) ||
         learnApi
           .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
           .catch(() => undefined);
@@ -150,7 +152,7 @@ export function useTourProgress(): void {
       // The read above flips `loaded`: that change is the server's answer, not the learner's
       if (!prev.loaded) return;
       for (const id of Object.keys(state.skippedTours) as TourId[]) {
-        if (!prev.skippedTours[id]) {
+        if (!prev.skippedTours[id] && isTourId(id)) {
           learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);
         }
       }

@@ -13,7 +13,9 @@ import { useLessonStore } from './lessonStore';
 import { useTourStore } from './tourStore';
 
 /** Tours need the order form docked beside the chart: lg and up (design.md, responsive layout) */
-export const TOUR_MIN_WIDTH = '(min-width: 1024px)';
+import { TOUR_WIDE_QUERY } from './tours';
+
+export const TOUR_MIN_WIDTH = TOUR_WIDE_QUERY;
 
 export function LearnCard() {
   const loaded = useTourStore((s) => s.loaded);

@@ -13,7 +13,7 @@ import { guide, guideSelector } from '@/lib/guideAnchors';
 import { placeBubble, type Box } from './bubblePlacement';
 import { matchesHover, newestCandleBox, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
-import { getTour, type TourStep } from './tours';
+import { getTour, type TourStep, tourSteps } from './tours';
 import styles from './GuideOverlay.module.css';
 
 const RING_PAD = 3;
@@ -138,8 +138,10 @@ function StepView({ stepIndex }: { stepIndex: number }) {
   const activeId = useTourStore((s) => s.activeId);
   const quizAnswer = useTourStore((s) => s.quizAnswer);
   const { next, back, close, answerQuiz } = useTourStore.getState();
+  const wide = useTourStore((s) => s.wide);
   const tour = activeId ? getTour(activeId) : null;
-  const step = tour?.steps[stepIndex];
+  const steps = tour ? tourSteps(tour, wide) : [];
+  const step = steps[stepIndex];
 
   if (!tour || !step) return null;
   return (
@@ -148,7 +150,7 @@ function StepView({ stepIndex }: { stepIndex: number }) {
       title={tour.title}
       step={step}
       index={stepIndex}
-      total={tour.steps.length}
+      total={steps.length}
       quizAnswer={quizAnswer}
       onNext={next}
       onBack={back}
@@ -281,7 +283,9 @@ function TourBubble({
   // An accepted order empties the amount field (the form's own signal); a refused one doesn't
   useEffect(() => {
     if (!awaiting) return;
-    if (awaiting.hadValue && tracked.doneValue === '') {
+    // Accepted: the amount clears, or (on a phone) the order sheet closes and takes it away; a
+    // refused order leaves the form open with the amount still in it
+    if (awaiting.hadValue && (tracked.doneValue === '' || tracked.doneValue === null)) {
       // The step is replaced (and this bubble unmounted) by the move on
       advance();
       return;

@@ -233,7 +233,11 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     const { inTour, activeId, screen } = get();
     if (!inTour || !activeId) return;
     set({ inTour: false });
-    if (lessonScreens(getLesson(activeId))[screen]?.kind === 'try') get().next();
+    // Moves on from the Try screen, or from the card whose practice trade it was (owner 2026-11-16)
+    const lesson = getLesson(activeId);
+    const at = lessonScreens(lesson)[screen];
+    if (at?.kind === 'try' || (at?.kind === 'card' && lesson.cards[at.index].practice))
+      get().next();
   },
 
   rate: (rating) => set({ rating }),

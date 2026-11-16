@@ -19,7 +19,7 @@ import type { ArticleId, WidgetId } from '@/learn/articles';
 import { plainText } from '@/learn/terms';
 import howellsLandfill from '@/assets/lessons/howells-landfill.jpg';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
-import type { TourId } from './tours';
+import type { TourId, PracticeTourId } from './tours';
 
 export const LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
@@ -188,6 +188,11 @@ export interface LessonCard {
    * an answer.
    */
   quiz?: LessonQuestion;
+  /**
+   * A practice trade from this card (owner 2026-11-16): a guided arrow on the real chart, then the
+   * lesson carries on at the next screen
+   */
+  practice?: { tour: PracticeTourId; label: string };
 }
 
 /** One "You can now…" line on the close, with the article that goes deeper */

@@ -296,6 +296,23 @@
   flex: 1;
 }
 
+/* A card's practice trade: a secondary pill under its text (owner 2026-11-16) */
+.practice {
+  align-self: flex-start;
+  border: 1px solid var(--color-brand-purple-dark);
+  border-radius: 25px; /* radius.button */
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--color-brand-white);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.practice:hover {
+  background: var(--color-brand-purple-dark);
+}
+
 .link {
   border: 0;
   background: transparent;

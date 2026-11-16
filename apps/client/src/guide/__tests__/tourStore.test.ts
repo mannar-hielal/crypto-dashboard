@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useTourStore } from '@/guide/tourStore';
-import { getTour } from '@/guide/tours';
+import { getTour, tourSteps } from '@/guide/tours';
 
 const s = () => useTourStore.getState();
 
@@ -23,7 +23,7 @@ describe('tourStore', () => {
 
   it('should hand over to the next chapter and mark the finished one completed', () => {
     s().start('buy-first-coin');
-    const last = getTour('buy-first-coin').steps.length;
+    const last = tourSteps(getTour('buy-first-coin'), true).length;
     for (let i = 0; i < last; i++) s().next();
     expect(s().completed['buy-first-coin']).toBe(true);
     expect(s().activeId).toBe('sell-and-review');
@@ -65,5 +65,21 @@ describe('tourStore', () => {
   it('should replace the completed set from the server', () => {
     s().setCompleted(['primer', 'buy-first-coin']);
     expect(s().completed).toEqual({ primer: true, 'buy-first-coin': true });
+  });
+
+  it('should run only a phone’s steps when the tour starts on a narrow screen', () => {
+    window.matchMedia = ((q: string) => ({ matches: false, media: q })) as never;
+    try {
+      s().start('practice-buy');
+      expect(s().wide).toBe(false);
+      const phone = tourSteps(getTour('practice-buy'), false).length;
+      for (let i = 0; i < phone - 1; i++) s().next();
+      expect(s().activeId).toBe('practice-buy');
+      s().next();
+      expect(s().activeId).toBeNull();
+    } finally {
+      // @ts-expect-error -- jsdom has no matchMedia: back to that
+      delete window.matchMedia;
+    }
   });
 });

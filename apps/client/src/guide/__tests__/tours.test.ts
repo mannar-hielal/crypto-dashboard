@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { isGuideAnchor } from '@/lib/guideAnchors';
-import { TOUR_IDS, TOURS, getTour, isTourId } from '@/guide/tours';
+import {
+  TOUR_IDS,
+  TOURS,
+  getTour,
+  isTourId,
+  PRACTICE_TOURS,
+  PRACTICE_TOUR_IDS,
+  isPracticeTourId,
+  tourSteps,
+} from '@/guide/tours';
 
 describe('tours', () => {
   it('should define every tour id once', () => {
@@ -9,11 +18,13 @@ describe('tours', () => {
     expect(isTourId('nope')).toBe(false);
   });
 
-  for (const tour of TOURS) {
+  for (const tour of [...TOURS, ...PRACTICE_TOURS]) {
     describe(tour.id, () => {
-      it('should have at most five steps (completion falls fast past five)', () => {
-        expect(tour.steps.length).toBeGreaterThan(0);
-        expect(tour.steps.length).toBeLessThanOrEqual(5);
+      it('should have at most five steps on each screen size (completion falls fast past five)', () => {
+        for (const wide of [true, false]) {
+          expect(tourSteps(tour, wide).length).toBeGreaterThan(0);
+          expect(tourSteps(tour, wide).length).toBeLessThanOrEqual(5);
+        }
       });
 
       it('should number its steps <id>.1, <id>.2, … in order', () => {
@@ -55,8 +66,8 @@ describe('tours', () => {
   });
 
   it('should teach going long, a position, closing it and taking a profit (the benchmark gaps)', () => {
-    const buy = getTour('buy-first-coin').steps;
-    const sell = getTour('sell-and-review').steps;
+    const buy = tourSteps(getTour('buy-first-coin'), true);
+    const sell = tourSteps(getTour('sell-and-review'), true);
     expect(buy[0].text).toMatch(/Buy if you expect the price to rise, Sell to get out/);
     expect(buy[0].text).toMatch(/going long/);
     expect(buy.at(-1)!.text).toMatch(/You now hold a position: \$100 of Bitcoin, long/);
@@ -69,5 +80,26 @@ describe('tours', () => {
     const steps = getTour('buy-first-coin').steps;
     expect(steps.some((s) => s.anchor === 'trade.amount-unit' && s.key === 'usdt')).toBe(true);
     expect(steps.find((s) => s.kind === 'type')?.suggest).toBe('100');
+  });
+
+  it('should open the order form from the phone’s bar on a phone, and from the side button on a larger screen (owner 2026-11-16)', () => {
+    for (const tour of [getTour('buy-first-coin'), ...PRACTICE_TOURS]) {
+      expect(tourSteps(tour, false)[0].anchor, tour.id).toMatch(/^trade\.mobile\./);
+      expect(tourSteps(tour, true)[0].anchor, tour.id).toMatch(/^trade\.side\./);
+      expect(tour.phoneReady, tour.id).toBe(true);
+    }
+    // The primer's hover steps need a pointer: no phone path
+    expect(getTour('primer').phoneReady).toBeUndefined();
+  });
+
+  it('should keep practice trades out of the saved, reported tours, and chain them to nothing', () => {
+    expect(PRACTICE_TOURS.map((t) => t.id)).toEqual([...PRACTICE_TOUR_IDS]);
+    for (const t of PRACTICE_TOURS) {
+      expect(isTourId(t.id)).toBe(false);
+      expect(isPracticeTourId(t.id)).toBe(true);
+      expect(t.next).toBeUndefined();
+    }
+    expect(getTour('practice-short').startUrl).toBe('/dashboard/usdt/BTCUSDT');
+    expect(tourSteps(getTour('practice-short'), false)[0].anchor).toBe('trade.mobile.sell');
   });
 });

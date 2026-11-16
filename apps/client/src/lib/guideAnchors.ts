@@ -310,6 +310,8 @@ export const GUIDE_ANCHORS = [
   // The streak screen after a lesson's close, and its Continue
   'lesson.streak',
   'lesson.streak.continue',
+  // A card's practice trade button (variant: its practice tour id)
+  'lesson.practice',
   'lesson.try',
   'lesson.note',
   'lesson.note.save',

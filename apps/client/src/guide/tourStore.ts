@@ -4,11 +4,13 @@
  */
 
 import { create } from 'zustand';
-import { getTour, type TourId } from './tours';
+import { getTour, tourSteps, TOUR_WIDE_QUERY, type TourId } from './tours';
 
 interface TourState {
   activeId: TourId | null;
   stepIndex: number;
+  /** The screen was wide when the tour started: which of its steps run (`tourSteps`) */
+  wide: boolean;
   /** The option chosen on a quiz step, or null */
   quizAnswer: number | null;
   /** Tours finished, from the server and this session */
@@ -47,6 +49,7 @@ interface TourState {
 const initial = {
   activeId: null,
   stepIndex: 0,
+  wide: true,
   quizAnswer: null,
   completed: {},
   finishes: 0,
@@ -59,13 +62,19 @@ const initial = {
 export const useTourStore = create<TourState>()((set, get) => ({
   ...initial,
 
-  start: (id) => set({ activeId: id, stepIndex: 0, quizAnswer: null }),
+  start: (id) =>
+    set({
+      activeId: id,
+      stepIndex: 0,
+      quizAnswer: null,
+      wide: typeof window.matchMedia !== 'function' || window.matchMedia(TOUR_WIDE_QUERY).matches,
+    }),
 
   next: () => {
-    const { activeId, stepIndex } = get();
+    const { activeId, stepIndex, wide } = get();
     if (!activeId) return;
     const tour = getTour(activeId);
-    if (stepIndex < tour.steps.length - 1) {
+    if (stepIndex < tourSteps(tour, wide).length - 1) {
       set({ stepIndex: stepIndex + 1, quizAnswer: null });
       return;
     }

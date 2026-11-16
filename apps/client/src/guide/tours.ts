@@ -14,12 +14,27 @@ import type { HoverWant } from './chartHover';
 import { chooseType, openTab, submit } from './steps';
 import type { StepDraft } from './scenario';
 
+/** The Learn panel's tours: their progress is saved and they report the funnel */
 export const TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
-export type TourId = (typeof TOUR_IDS)[number];
+/**
+ * Practice trades started from a lesson card (owner 2026-11-16): a guided arrow on the real chart,
+ * then back to the lesson. Not saved or reported on their own: the lesson's screens are.
+ */
+export const PRACTICE_TOUR_IDS = ['practice-buy', 'practice-long', 'practice-short'] as const;
+export type PracticeTourId = (typeof PRACTICE_TOUR_IDS)[number];
+export type TourId = (typeof TOUR_IDS)[number] | PracticeTourId;
 
-export function isTourId(value: string): value is TourId {
+/** A Learn panel tour (not a practice trade): what the account's progress may hold */
+export function isTourId(value: string): value is (typeof TOUR_IDS)[number] {
   return (TOUR_IDS as readonly string[]).includes(value);
 }
+
+export function isPracticeTourId(value: string): value is PracticeTourId {
+  return (PRACTICE_TOUR_IDS as readonly string[]).includes(value);
+}
+
+/** The width from which tours use the desktop layout (the order form docked beside the chart) */
+export const TOUR_WIDE_QUERY = '(min-width: 1024px)';
 
 export type TourStepKind = 'observe' | 'click' | 'type' | 'quiz' | 'hover';
 
@@ -53,6 +68,12 @@ export interface TourStep {
   /** `hover`: the candle the learner must point at (guide/chartHover.ts) */
   hover?: HoverWant;
   quiz?: TourQuiz;
+  /**
+   * Only on this screen size (owner 2026-11-16: practice trades on phones too): a phone opens the
+   * order form from its Buy / Long and Sell / Short bar, a larger screen has the form beside the
+   * chart. Absent = everywhere.
+   */
+  screen?: 'phone' | 'desktop';
 }
 
 export interface Tour {
@@ -64,10 +85,18 @@ export interface Tour {
   startUrl: string;
   /** The tour the last step hands over to */
   next?: TourId;
+  /**
+   * Works on a phone too (owner 2026-11-16): its steps open the order form from the phone's bar.
+   * Others (the primer's hover steps) need a larger screen.
+   */
+  phoneReady?: true;
   steps: TourStep[];
 }
 
-const FORM_HINT = 'Open the order form with the Trade button in the bar above the chart.';
+// Owner 2026-11-16 (practice trades on phones too): the form opens from the Trade button above the
+// chart on a larger screen, from the Buy / Long or Sell / Short bar at the bottom on a phone
+const FORM_HINT =
+  'Open the order form: the Trade button above the chart, or Buy / Long at the bottom on a phone.';
 
 /** A shared scenario step as a tour step (click / type / observe, same anchor, same words) */
 function fromDraft(draft: StepDraft, over: Partial<TourStep> = {}): Omit<TourStep, 'id'> {
@@ -85,6 +114,11 @@ function fromDraft(draft: StepDraft, over: Partial<TourStep> = {}): Omit<TourSte
 
 function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
   return steps.map((s, i) => ({ ...s, id: `${id}.${i + 1}` }));
+}
+
+/** The steps a tour shows on this screen size (`wide`: the desktop layout) */
+export function tourSteps(tour: Tour, wide: boolean): TourStep[] {
+  return tour.steps.filter((s) => !s.screen || s.screen === (wide ? 'desktop' : 'phone'));
 }
 
 // ─── 1. What you're looking at ───────────────────────────────────────────────
@@ -128,7 +162,15 @@ const buyFirstCoin: Tour = {
   minutes: 2,
   startUrl: '/dashboard/spot/BTC/USDT',
   next: 'sell-and-review',
+  phoneReady: true,
   steps: numbered('buy-first-coin', [
+    // A phone opens the form from its bar (it isn't docked beside the chart there)
+    {
+      kind: 'click',
+      anchor: 'trade.mobile.buy',
+      text: 'Tap Buy / Long to open the order form. Buy if you expect the price to rise; buying to gain from a rise is called going long.',
+      screen: 'phone',
+    },
     fromDraft(
       {
         action: 'observe',
@@ -138,7 +180,7 @@ const buyFirstCoin: Tour = {
         liveNote:
           'Sell is a little lower than Buy; that gap is the spread, a small cost of every trade.',
       },
-      { missingHint: FORM_HINT }
+      { missingHint: FORM_HINT, screen: 'desktop' }
     ),
     fromDraft(chooseType('market'), {
       text: 'Choose Market: buy right now at the best available price.',
@@ -188,6 +230,7 @@ const sellAndReview: Tour = {
   blurb: 'Sell your Bitcoin back and see what the fees did.',
   minutes: 2,
   startUrl: '/dashboard/spot/BTC/USDT',
+  phoneReady: true,
   steps: numbered('sell-and-review', [
     fromDraft(
       openTab('assets', {
@@ -233,10 +276,103 @@ const sellAndReview: Tour = {
   ]),
 };
 
+// ─── Practice trades from a lesson card (owner 2026-11-16) ──────────────────
+
+/** A practice trade: open the form (the phone's bar, or the side button), Market, $100, place it */
+function practice(
+  id: PracticeTourId,
+  title: string,
+  startUrl: string,
+  side: 'buy' | 'sell',
+  sideText: string,
+  placed: string
+): Tour {
+  const phoneButton = side === 'buy' ? 'Buy / Long' : 'Sell / Short';
+  return {
+    id,
+    title,
+    blurb: 'A guided practice trade, then back to your lesson.',
+    minutes: 1,
+    startUrl,
+    phoneReady: true,
+    steps: numbered(id, [
+      {
+        kind: 'click',
+        anchor: side === 'buy' ? 'trade.mobile.buy' : 'trade.mobile.sell',
+        text: `Tap ${phoneButton} to open the order form. ${sideText}`,
+        screen: 'phone',
+      },
+      {
+        ...fromDraft(
+          {
+            action: 'click',
+            anchor: side === 'buy' ? 'trade.side.buy' : 'trade.side.sell',
+            explain: sideText,
+          },
+          { missingHint: FORM_HINT }
+        ),
+        screen: 'desktop',
+      },
+      fromDraft(chooseType('market'), {
+        text: 'Choose Market: trade right now at the best available price.',
+        missingHint: FORM_HINT,
+      }),
+      fromDraft(
+        {
+          action: 'click',
+          anchor: 'trade.amount-unit',
+          key: 'usdt',
+          explain: 'Choose USDT, so you can type dollars instead of coins.',
+        },
+        { missingHint: FORM_HINT }
+      ),
+      fromDraft(
+        {
+          action: 'type',
+          anchor: 'trade.amount',
+          value: '100',
+          explain: 'Type 100: a $100 practice trade. Nothing here is real money.',
+        },
+        { suggest: '100', missingHint: FORM_HINT }
+      ),
+      fromDraft(submit({ explain: placed }), {
+        doneWhenEmpty: 'trade.amount',
+        missingHint: FORM_HINT,
+      }),
+    ]),
+  };
+}
+
+const practiceBuy = practice(
+  'practice-buy',
+  'Practice: buy',
+  '/dashboard/spot/BTC/USDT',
+  'buy',
+  'Buy means you pay to own some coin.',
+  'Place the order. It fills right away: you now own $100 of Bitcoin. Your lesson carries on next.'
+);
+const practiceLong = practice(
+  'practice-long',
+  'Practice: go long',
+  '/dashboard/usdt/BTCUSDT',
+  'buy',
+  'On the USDT Perpetual market, Buy / Long opens a long: you gain if the price rises.',
+  'Place the order. You now hold a long position. Your lesson carries on next.'
+);
+const practiceShort = practice(
+  'practice-short',
+  'Practice: go short',
+  '/dashboard/usdt/BTCUSDT',
+  'sell',
+  'On the USDT Perpetual market, Sell / Short opens a short: you gain if the price falls.',
+  'Place the order. You now hold a short position. Your lesson carries on next.'
+);
+
 export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview];
+export const PRACTICE_TOURS: readonly Tour[] = [practiceBuy, practiceLong, practiceShort];
 
 export function getTour(id: TourId): Tour {
-  const tour = TOURS.find((t) => t.id === id);
+  const tour = TOURS.find((t) => t.id === id) ?? PRACTICE_TOURS.find((t) => t.id === id);
   if (!tour) throw new Error(`Unknown tour ${id}`);
   return tour;
 }

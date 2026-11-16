@@ -483,17 +483,20 @@ export function LessonSheet() {
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
+  // A tour that works on phones too (owner 2026-11-16): its Try is offered on every screen
+  const lessonTourPhone = !!lessonTour && !!getTour(lessonTour).phoneReady;
 
-  // While the lesson's tour runs, the tour store has the screen; when the tour stops — finished,
-  // skipped or closed — the lesson carries on with its questions
+  // While a tour handed over from the lesson runs (its Try tour, a card's practice trade), the tour
+  // store has the screen; when no tour runs any more — finished, skipped or closed, after a chain
+  // like buy → sell too — the lesson carries on
   useEffect(() => {
-    if (!inTour || !lessonTour) return;
+    if (!inTour) return;
     return useTourStore.subscribe((s, prev) => {
-      if (prev.activeId === lessonTour && s.activeId !== lessonTour) {
+      if (prev.activeId !== null && s.activeId === null) {
         useLessonStore.getState().leaveTour();
       }
     });
-  }, [inTour, lessonTour]);
+  }, [inTour]);
 
   // The journal line is typed here, so here is where `afterNote` gets its writer
   useEffect(() => {
@@ -684,6 +687,19 @@ export function LessonSheet() {
             card.art && <LessonArt id={card.art} presenter={card.presenter} />
           )}
           {card.text && <CardText text={card.text} openTerm={openTerm} onTerm={toggleTerm} />}
+          {card.practice && (
+            // A practice trade on the real chart (owner 2026-11-16): the lesson waits, then goes on
+            <button
+              type="button"
+              className={styles.practice}
+              onClick={() => {
+                if (card.practice) startTourShared(card.practice.tour, navigate);
+              }}
+              {...guide('lesson.practice', card.practice.tour)}
+            >
+              {card.practice.label}
+            </button>
+          )}
           {peekConcept && (
             <TermPeek
               concept={peekConcept}
@@ -751,7 +767,7 @@ export function LessonSheet() {
       body = (
         <>
           <p className={styles.text}>{lesson.tryIntro}</p>
-          {!desktop && (
+          {!desktop && !lessonTourPhone && (
             <p className={styles.hint}>
               This part needs a larger screen (a laptop or tablet). You can skip it for now and come
               back to it from the learning path.
@@ -787,7 +803,7 @@ export function LessonSheet() {
   const showNext = screen.kind === 'card' || screen.kind === 'summary' || isQuestion;
   // "Try it": its own main action in the same full-width footer as every screen's Next, with Skip
   // and Back under it (owner 2026-11-13)
-  const tourTry = screen.kind === 'try' && !lesson.tryWidget && desktop;
+  const tourTry = screen.kind === 'try' && !lesson.tryWidget && (desktop || lessonTourPhone);
   const nextWords = (screenCard?.nextLabel ?? 'Continue') + ' →';
 
   return createPortal(

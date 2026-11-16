@@ -84,7 +84,10 @@ function runTour(tour: TourId, navigate: (url: string) => void) {
 export function startTour(tour: TourId, navigate: (url: string) => void) {
   afterNote(() => {
     const lessons = useLessonStore.getState();
-    const own = (id: LessonId | null | undefined) => !!id && getLesson(id).tour === tour;
+    // The lesson's own tour: its Try tour, or a card's practice trade (owner 2026-11-16)
+    const own = (id: LessonId | null | undefined) =>
+      !!id &&
+      (getLesson(id).tour === tour || getLesson(id).cards.some((c) => c.practice?.tour === tour));
     if (own(lessons.activeId)) {
       // The lesson on screen (a look back's too, from its Try step) waits where it is; only its
       // Try step moves on when the tour ends
