@@ -60,7 +60,8 @@ export const CHAPTERS: readonly Chapter[] = [
     ],
   },
   {
-    // Stage 0/1 of guided-learning-topics/00-learning-path-plan.md: titles until it's written
+    // Placeholder titles until the Lessons 1–3 makeover places the next unit (the lesson-authoring
+    // skill: the path follows the topic order, with our own titles)
     id: 'ch2',
     number: 2,
     title: 'Trade with a plan',

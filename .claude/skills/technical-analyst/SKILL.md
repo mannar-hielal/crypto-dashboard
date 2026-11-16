@@ -1,6 +1,6 @@
 ---
 name: technical-analyst
-description: Use when the user provides chart screenshots or asks for technical analysis of any symbol on cryptopapertrade.com — crypto (BTCUSDT, ETHUSDT, etc.), indices, or forex. Triggers: "analyze this chart", "TA on BTC/ETH/SOL", "support / resistance", "trend identification", "what's the base case / bull case / bear case", "scenario planning for price", "weekly chart read". Reads chart images via the persisted Grok 4.5 vision subagent when needed; works on Bybit-fed weekly candles or pasted screenshots. Excludes news and fundamentals by design.
+description: Use when the user provides chart screenshots or asks for technical analysis of any symbol on cryptopapertrade.com — crypto (BTCUSDT, ETHUSDT, etc.), indices, or forex. Triggers: "analyze this chart", "TA on BTC/ETH/SOL", "support / resistance", "trend identification", "what's the base case / bull case / bear case", "scenario planning for price", "weekly chart read". Reads pasted chart images directly; works on Bybit-fed weekly candles or pasted screenshots. Excludes news and fundamentals by design.
 ---
 
 # Technical Analyst — cryptopapertrade.com (crypto-adapted)
@@ -9,7 +9,7 @@ Adapted from `tradermonty/claude-trading-skills` → `skills/technical-analyst/S
 
 ## When to use
 
-- The user pastes a chart screenshot (auto-handled by the `opencode-vision` plugin → `[vision:dropped-image]` JSON → routes to Grok 4.5).
+- The user pastes a chart screenshot: Claude Code shows the image in the conversation, and the analysis reads it directly.
 - The user asks for a weekly (or daily/4h) chart read on a symbol supported by `apps/server/src/constants.ts` `ALLOWED_SYMBOLS`.
 - The user wants probabilistic scenarios (base/bull/bear) — not a single price prediction.
 - The user explicitly excludes news and fundamentals ("just chart data").
@@ -40,11 +40,9 @@ Adapted from `tradermonty/claude-trading-skills` → `skills/technical-analyst/S
 
 ## Vision integration — pasting charts
 
-When the user pastes a chart:
-
-1. Detect `[vision:dropped-image]` token in your context.
-2. Load the global `vision` skill (`~/.config/opencode/skills/vision/SKILL.md`). Persisted model: `opencode-go/grok-4.5` (see `~/.config/opencode/vision-model-image.txt`).
-3. Delegate to the `vision-opencode-go-grok-4.5` subagent with a tailored response template like:
+When the user pastes a chart, read the image directly (no plugin or sub-agent: Claude Code passes
+the image into the conversation; a file path can be opened with `Read`). Work through it in this
+structure before writing to the user:
 
 ```json
 {
@@ -67,7 +65,9 @@ When the user pastes a chart:
 }
 ```
 
-4. Parse returned JSON, summarize to the user with cited evidence. Never break scenario-probability sum = 100.
+Then summarize to the user with the evidence you read off the chart (cite what you saw: the levels,
+the moving averages, the volume). Scenario probabilities always sum to 100. Say when the image is
+unclear (a cropped axis, an unreadable timeframe) rather than guessing.
 
 ## Bybit REST fallback (instead of COT / FMP futures chain)
 

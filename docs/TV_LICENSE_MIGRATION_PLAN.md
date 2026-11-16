@@ -193,7 +193,7 @@ widget
 
 - `docs/APP_LOG.md` — mark drawing system as replaced
 - `docs/DRAWING_TOOLS.md` — replace content with "Migrated to TVP Advanced Charts"
-- `AGENTS.md` — update test commands, architecture section
+- `CLAUDE.md` — update test commands, architecture section
 
 ---
 

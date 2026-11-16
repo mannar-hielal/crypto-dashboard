@@ -275,4 +275,4 @@ The bot must respect:
 - Reference Phase 6 / 6b in APP_LOG.md when designing bot boundaries.
 - Run **`pr-review-checklist`** sections 5 (WS), 10 (perf/memory), 3 (Prisma) before any new server route or aggregator service.
 - Run **`bug-sweep`** P1 / P3 / P10 on any new bot loop — target the exact same patterns a human code change would.
-- Treat this skill as design input, not implementation. Any actual bot implementation = code change = requires user's explicit approval per the AGENTS.md rule.
+- Treat this skill as design input, not implementation. Any actual bot implementation = code change = requires user's explicit approval per the session-bootstrap rule.

@@ -14,8 +14,11 @@ export default [
       'pnpm-lock.yaml',
       'apps/server/generated/**', // 🔐 never lint auto-generated Prisma client
       'generated/**', // 🔐 never lint workspace-root generated/ (CDSDK)
-      '**/*.har', // HTTP archive files — reference only, not source code
       '.claude/worktrees/**', // agents' git worktrees: whole repo copies, linted in their own checkout
+      // The owner's private folders (also git-ignored): a throwaway script or a captured site saved
+      // there must never block `pnpm lint`
+      'reports/**',
+      'guided-learning-topics/**',
     ],
   },
   js.configs.recommended,

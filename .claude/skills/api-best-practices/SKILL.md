@@ -122,7 +122,7 @@ export class BybitApiError extends Error {
 }
 ```
 
-ESLint `no-explicit-any` is an error per AGENTS.md — `details: Record<string, unknown>` satisfies the rule. The 5xx handler in `app.ts` should check `instanceof BybitApiError` so it doesn't leak internal Bybit errors to the client (return only `{ error: 'Internal Server Error' }` — `bug-sweep` P2-31 error-handling).
+ESLint `no-explicit-any` is an error (`.claude/rules/web.md`) — `details: Record<string, unknown>` satisfies the rule. The 5xx handler in `app.ts` should check `instanceof BybitApiError` so it doesn't leak internal Bybit errors to the client (return only `{ error: 'Internal Server Error' }` — `bug-sweep` P2-31 error-handling).
 
 ## Retry + circuit breaker — fetch helper
 
@@ -308,7 +308,7 @@ Per `bug-sweep` P8-99 — switch to `log.debug({ msg_type: (msg as any).type }, 
 3. **WS listener handler not unregistered on both `'close'` and `'error'`** — Set grows; memory leak.
 4. **`socket.readyState !== 1` not checked before `socket.send`** — throws on (CLOSING/CLOSED).
 5. **Reconnect timer not `clearTimeout`'d on unmount before `.close()`** — race fires the reconnect after intentional disconnect.
-6. **`console.*` in app code** — Pino is the only logger; `console` is only OK in `config.ts` (bootstrap) per AGENTS.md.
+6. **`console.*` in app code** — Pino is the only logger; `console` is only OK in `config.ts` (bootstrap), per `.claude/rules/web.md`.
 7. **5xx returns stack trace or DB error to client** — only `{ error: 'Internal Server Error' }` is allowed (REVIEW §2).
 8. **Enum-like intervals encoded as loose strings** — use `as const` arrays or `TF_SECONDS` keys, never string literals.
 
@@ -327,4 +327,4 @@ Per `bug-sweep` P8-99 — switch to `log.debug({ msg_type: (msg as any).type }, 
 - New `Decimal` field → `@db.Decimal(20, 8)`, never `Float` (REVIEW §3).
 - New route → schema with `tags`, `summary`, `response` codes, `additionalProperties: false`, `security: [{ bearerAuth: [] }]` for protected routes (REVIEW §3).
 - Run `pnpm --filter @crypto-dashboard/server type-check` and `pnpm lint` after any server change.
-- Propose changes first — don't apply without explicit user approval per AGENTS.md "no implementation without explicit instruction" rule.
+- Propose changes first — don't apply without explicit user approval per the session-bootstrap rule "no implementation without explicit instruction".

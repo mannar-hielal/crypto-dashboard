@@ -84,12 +84,10 @@ owner accepted a narrower rule so that phones on flaky links (the PWA) don't sig
   most common npm supply-chain attack (a compromised transitive dependency running code at install
   time). Adding a new native/build dependency means deliberately adding it here, not just letting
   pnpm silently allow it.
-- **Forced-version overrides**: `package.json`'s `pnpm.overrides` pins a long list of transitive
-  dependencies (`undici`, `hono`, `brace-expansion`, `ip-address`, `fast-uri`, `js-yaml`, `axios`,
-  `sharp`, `postcss`, `body-parser`, `find-my-way`, `@fastify/static`, `nanoid`, `valibot`, `ws`,
-  `serialize-javascript`, `@hono/node-server`, `fast-jwt`, `source-map-js`, `proxy-addr`,
-  `@modelcontextprotocol/sdk`) to CVE-patched minimum versions regardless of what a
-  direct dependency requests. When `pnpm audit` flags a new transitive CVE, the fix is a new
+- **Forced-version overrides**: `package.json`'s `pnpm.overrides` (the one list; not repeated here,
+  so it can't drift) pins transitive dependencies (`undici`, `axios`, `ws` and more) to CVE-patched
+  minimum versions regardless of what a direct dependency requests. An override whose package has
+  left the lockfile is deleted with the dependency that needed it. When `pnpm audit` flags a new transitive CVE, the fix is a new
   override entry here (with a version floor, ideally a range like `existing@<fixed`: `>=fixed`),
   not a blanket `pnpm update` that may silently downgrade something else.
 - **Audit gate is a hard blocker, not advisory**: `pnpm audit --audit-level=high` runs in

@@ -294,7 +294,9 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    recovery words and the ledger notebook dropping in, "your balance = the ledger, added up", no coin picture;
    **Can someone hold my key for me? →**) and **Who holds your key?** (an exchange or you, each
    with a stamp; "Here, nothing is real bitcoin: your balance is virtual practice money…"). The moment (the phone in the sea) → "Restore it on a new phone" ✓.
-4. Try it → Expect "Now be Sneaky Sam"; [article.stamp.try `sam`] → "✗ Not Sofia's mark". [lesson.try] Continue.
+4. Try it → Expect "Now be Sneaky Sam"; [article.stamp.try `sam`] → "✗ Not Sofia's mark". [lesson.try] Continue
+   (the footer's full-width button, with ← Back under it, since 2026-11-13; Skip this part shows only on a
+   tour Try it, as in Lesson 3).
 5. The questions (the "support" scam with Berwyn worried, Mt. Gox, the address), the note (Skip), the close → Expect
    [lesson.teaser] "Next: who decides what one bitcoin costs, on the real chart." and [lesson.next-lesson] → Expect Lesson 2 ticked done and **Lesson 3 · Who
    sets the price?** at card 1.
@@ -305,7 +307,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    Then the moment: the ETF chart ending on 10 Jan 2024; answer → Expect it to play on to 23 Jan with "−14.5%".
    After it → Expect **Big swings, both ways** (May 2021: "Low $28,801" below, "+12.0%" above; Read more →
    `price-swings#size`) and **Check before you trust** (Read more → `spot-a-scam#checklist`).
-7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price] → Expect step 2's ring on the newest
+7. Desktop: Try it → [lesson.try] Show me (the footer's full-width button) → tap [symbolbar.price] → Expect step 2's ring on the newest
    candle with the arrow above it, pointing down; rest on it, hover a red one → Expect "Done ✓" after each, then the questions. A phone gets Continue instead.
    The three questions (thin queue, size for the fall, the 2%-a-day coin), then the summary **Who sets the price?**
    with four lines and "The price is people, trading every second.", then the close with [lesson.teaser] "Next: spend
@@ -343,7 +345,7 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 6. Phone width (a fresh account with Lessons 1–3 done): [path.node `tour:buy-first-coin`] → Expect the laptop note;
    [path.tour.skip `buy-first-coin`] → Expect a hollow ring and **Start** on "Sell it and read the result".
 7. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
-   only on a larger screen) and **Try again**.
+   only on a larger screen), **Back to the path** full width and **Try again** under it.
 
 **Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.

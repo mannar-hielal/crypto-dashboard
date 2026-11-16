@@ -43,7 +43,7 @@ After `git status --porcelain` + `git diff` (staged + unstaged), run only the pr
 | `apps/client/src/lib/drawing/**`, `DrawingPrimitive`, `drawingStore`, `useDrawingInteraction`                          | P-Drawing (see **`drawing-tools`** skill for detail)                                                   |
 | UI/visual changes                                                                                                      | session-bootstrap skill visual Q&A gate + `tokens.ts` discipline + `pnpm format`                       |
 
-Then run gates — `pnpm type-check` (server + client), `pnpm lint`, `pnpm format:check`, `pnpm test`. Report failures with command + first error.
+Then run gates — `pnpm type-check` (server + client + e2e), `pnpm lint`, `pnpm format:check`, `pnpm test`. Report failures with command + first error.
 
 ---
 
@@ -57,7 +57,7 @@ Then run gates — `pnpm type-check` (server + client), `pnpm lint`, `pnpm forma
 4. Discriminated unions used where a value can be one of several shapes (e.g. `WsMessage`, `OrderStatus`, `OrderDisplayRow`).
 5. New public-facing interfaces go in `generated/CDSDK/types/index.ts` — not scattered in component files.
 6. If a server response shape changes, the matching SDK type AND every consumer are updated in the same commit.
-7. `pnpm type-check` passes (server + client) — CI blocks on failures.
+7. `pnpm type-check` passes (server + client + e2e) — CI blocks on failures.
 8. Enum-like values typed as `const` arrays or `as const` objects, never loose strings — `erasableSyntaxOnly: true` prohibits `enum`.
 
 ## P2 — Security (REVIEW §2)

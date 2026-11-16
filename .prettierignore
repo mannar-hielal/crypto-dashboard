@@ -15,10 +15,5 @@ apps/*/node_modules/
 .env
 .env.*
 
-
-# HTTP Archive files — not source code
-*.har
-
-
 # Claude Code subagent worktrees
 .claude/worktrees/

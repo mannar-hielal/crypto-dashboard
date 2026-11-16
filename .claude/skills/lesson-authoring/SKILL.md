@@ -1,0 +1,403 @@
+---
+name: lesson-authoring
+description: "Use when writing or rewriting a guided lesson (cards, quizzes, the 'Your call' moment, Try it) for cryptopapertrade.com's learning path, benchmarked against a reference course (its screenshots and the comparison files live in the git-ignored guided-learning-topics/). Covers: same concepts and a similar length, never paraphrased text; the beginner tone; quiz formats (multiple choice, drag and drop, choose buy or sell, match boxes); practice paper trades from a card; linking terms to articles; the technical-writer fact check; illustrations; the learning path's order; lessons.ts rules, tests and docs. Trigger words: write a lesson, new card, rewrite Lesson N, match the benchmark, compare lessons, lesson quiz, drag and drop, buy or sell quiz, match boxes, lesson coverage, fact check a lesson, lesson illustration, path order, new unit, practice trade, paper trade from the lesson, try it on the chart."
+---
+
+# Lesson authoring — cryptopapertrade.com
+
+How to write our guided lessons so they teach at least everything a benchmark course teaches, at a
+similar length and with the same kinds of interaction, while every word, example and picture stays
+ours. Owner decisions, 2026-11-14: same topics + similar length; quiz formats multiple choice, drag
+and drop, choose buy or sell and match boxes; a missing quiz widget is built after the visual Q&A;
+the owner's Table 2 instructions come first.
+
+## Hard rule: benchmark, never copy (IP)
+
+The benchmark course is a **coverage and format benchmark**, not a source text.
+
+- **The repository is public** (since 2026-09-29): name the benchmark course only in the
+  git-ignored `guided-learning-topics/`. In tracked files (code, comments, tests, docs, skills,
+  rules, commit messages, PRs) say "the benchmark course". The working tree carries no mention of
+  it (cleaned 2026-11-16); keep it that way. **Enforced** by `scripts/denylist-check.sh`:
+  - the pre-commit hook rejects a staged added line or new file name (during a merge, only the
+    resolution: what the merged-in side brings is public already or checked at push);
+  - the commit-msg hook blocks a commit message early (it skips comment lines, so git's editor
+    template never blocks a clean message, and warns when a skipped line names a term);
+  - the pre-push hook is the authority: it rejects any outgoing commit whose stored message,
+    added lines or new file names name
+    it, so a cherry-pick, a rebase or `git am` (no other hook runs) is caught before it's public;
+  - **Local only:** a clone without the list, `--no-verify`, GitHub's web editor and a squash-merge
+    subject skip these checks, and so does a checkout where git runs no hooks (husky not set up,
+    or a relative `core.hooksPath` seen from a linked worktree, which has no `.husky/_`). A server-side check in CI (the terms in an Actions secret) would
+    cover them; that's the owner's call, not built (owner 2026-11-16: git checks only).
+  - **Not checked:** what `gh` publishes (PR titles and bodies, comments, reviews, merge subjects,
+    issues). Shell commands can't be parsed reliably enough to prove what `gh` would send (owner
+    2026-11-16: git checks only). Write that text by this rule: say "the benchmark course", write
+    it to a file first and re-read it before passing `--body-file <path>`.
+
+  The list: the git-ignored `guided-learning-topics/notes/denylist.txt`, one term a line, matched
+  case-insensitively as a substring (list distinctive names, never short or common words); `#`
+  comments allowed; case-insensitive for ASCII letters. Removing a mention, editing a file whose
+  name already holds one, or deleting it is always allowed. If git fails, the check blocks. A worktree uses
+  the main checkout's list; with no list, every check warns on stderr and passes. Text drawn
+  inside an image can't be read. Keep the list up to date. Git history can't be cleaned this way: a few older
+  commit messages and merged PR titles still name it. Renaming those PR titles is the owner's call.
+
+- **Match:** the concepts and learning goals each lesson covers; roughly the number of screens; the
+  quiz formats (generic interaction types).
+- **Never match:** the benchmark's wording, card by card paraphrase, their examples (the companies, people,
+  numbers and stories they use), their screen order inside a lesson, their images or layouts. A
+  reworded benchmark card is still a close paraphrase of their course: copyright covers expression and
+  the selection and arrangement of content, not only exact words.
+- **How to write a card:** start from the concept and our own sources (the knowledge-base articles in
+  `apps/client/src/learn/articles.ts`, the owner's notes in `guided-learning-topics/`, primary
+  sources), then write it in our voice with our own example. Never draft a card with the benchmark cell
+  open beside you as the thing being rewritten; use table 1 only to tick off concepts.
+- **Never paste** text from the comparison file's benchmark column into code, docs, tests, commit
+  messages or PRs. Refer to it by row number only ("row 1.07").
+- **Any other reference** (a book, another course, an article): the same rule. Techniques and
+  facts only, never its text, pictures or characters.
+- If the owner's instruction for a row amounts to "use their text" or "same example", say so,
+  explain the risk in one line, and propose our own example instead. Don't implement a paraphrase.
+
+## Inputs
+
+1. The comparison file for the lessons, `guided-learning-topics/notes/10-…-vs-cpt-lessons-1-3.md`
+   (git-ignored):
+   - **Table 1** — the benchmark's screens and our cards side by side, per lesson, numbered rows (1.01 …).
+   - **Table 2** — the merged plan: one row per topic, with the owner's **take / drop / rewrite**
+     instruction. **This drives the work.** Rows with an empty instruction are not started: list them
+     and ask.
+2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
+3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
+   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3).
+
+## Benchmark screenshots: where they live (owner 2026-11-14)
+
+The owner adds the benchmark's coming lessons as screenshots under `guided-learning-topics/`
+(git-ignored), one numbered folder per **unit**, one numbered sub-folder per **lesson**:
+
+```
+guided-learning-topics/
+  01-<unit-slug>/                       ← unit 1 (exists)
+    01-lesson01/   02-lesson02/   03-lesson03/
+  02-<unit-slug>/                       ← unit 2, the unit's own name in kebab case
+    01-lesson04/   02-lesson05/ …       ← lesson folders keep the course-wide lesson number
+```
+
+- Number folders with two digits (`01-`, `02-` …), in the benchmark's order. The unit slug is the
+  unit's name in kebab case; the lesson folder is `NN-lessonMM` (NN = position in the unit, MM = the
+  course-wide lesson number).
+- Screenshots sort by filename into screen order (the macOS `Screenshot <date> at <time>.png` names
+  do this). Don't rename them.
+- When a new lesson folder appears, the first step is its comparison, before any writing: a new
+  file in `guided-learning-topics/notes/`, next to the Lessons 1–3 comparison (number 10), with
+  the next free number in `notes/` (e.g. 12 for Lesson 4; 11 is the makeover plan). Comparisons and
+  plans live in `notes/` so their numbers never mix with the unit folders' numbers. The file has
+  the same two tables. Table 1 has the benchmark's screens (transcribed for the owner's reference
+  only) beside our nearest content. Table 2 has the topics, with the owner's instruction column left
+  empty. Then wait for the owner's Table 2 instructions.
+- Flag anything in a folder that isn't the benchmark (one of our own screenshots, a duplicate) rather
+  than transcribing it as theirs.
+- Screenshots and transcriptions stay in `guided-learning-topics/`: never commit them, copy them into
+  the app or `docs/`, or quote them in code, tests, commits or PRs (the IP rule above).
+
+## Workflow (per lesson)
+
+1. **Read Table 2 for the lesson.** Build a coverage checklist: every concept the owner marked
+   _take_ (from either column), every concept marked _drop_ (and why, if given). Ask about rows
+   with no instruction before writing anything.
+2. **Plan the screens** and show the owner a short outline before drafting text:
+   - the screen list: cards, the "Your call" moment, Try it, the quizzes, the summary, the close;
+   - for each quiz, its format (see below) and what it checks;
+   - the screen count next to the benchmark's for that lesson;
+   - which concepts each screen covers (every _take_ concept appears at least once).
+   - the practice trades offered: each card whose concept is a buy, sell, long or short, and the
+     tour it starts (see "Practise it for real" below).
+   - **Length vs the current caps.** `lessons.test.ts` allows at most six teaching cards of at most
+     80 words, two or three questions, at most two `[[terms]]` a card. A benchmark-length lesson
+     (~23–25 screens) doesn't fit. **Lessons 1–3:** the owner chose to raise the caps (2026-11-16) to
+     about 16 teaching cards and up to 6 quizzes. **Not done yet:** `lessons.test.ts` still allows 6
+     teaching cards and 3 checks; raising them, with the decision and date in the test, is the
+     makeover's first platform step.
+     **Later lessons:** don't silently go past the caps: offer the owner the choice for that lesson
+     — raise them, or split the topic into two lessons. A new lesson id must be added everywhere
+     that checks it, in the same change: `LESSON_IDS` (client), the path (`learn/path.ts`), the
+     server's `LEARN_LESSON_IDS` (with `LEARN_TOUR_IDS` it builds `LEARN_EVENT_ITEM_IDS`, which the
+     events route checks) and `LEARN_ITEM_IDS` (which the progress route checks), both in
+     `apps/server/src/constants.ts`, the SDK's `LEARN_ITEM_IDS` / `LearnItemId`
+     (`generated/CDSDK/types/index.ts`), the assertions in `apps/server/src/__tests__/learn.test.ts`
+     and the SDK contract fixtures. A lesson id the server doesn't know gets a 400 on every event and
+     progress write, so its rings never sync and it's missing from the funnel.
+3. **Draft the text** in the outline's order, in our voice (rules below).
+4. **Fact check by a technical-writer agent** (owner 2026-11-14), on every freshly written screen,
+   before the owner sees the draft. See "Fact check" below. Apply its corrections, then show the
+   owner the draft (a short markdown table: screen, text, quiz, links), with the agent's findings and
+   what changed, and wait for OK.
+5. **Visual Q&A** for anything that changes how a screen looks (a new quiz widget, a new art or
+   illustration, a new card layout): run it per `.claude/rules/design.md` before building
+   (`session-bootstrap` non-negotiable #2).
+6. **Implement** in `lessons.ts` (and new widgets), then tests and docs (below).
+7. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
+   with the screen that teaches it. Report any gap.
+
+## Fact check (technical-writer agent)
+
+After drafting and before the owner sees anything, spawn one subagent (the Agent tool,
+`general-purpose`) as a **technical writer and fact checker**. Give it the drafted screens (text,
+quizzes with options and Whys, linked terms) and ask it to:
+
+- verify every factual claim: dates, names, numbers, definitions, how a mechanism works (mining,
+  keys, order books, fees, leverage, liquidation …) against primary or reputable sources (protocol
+  docs, the Bitcoin white paper, exchange documentation, regulators), citing each source;
+- check each quiz: exactly one right answer, the Why really explains it, no option that is also
+  defensible;
+- check consistency with our knowledge-base articles (`apps/client/src/learn/articles.ts`) and the
+  earlier lessons: same terms, same numbers;
+- flag oversimplifications that would mislead a beginner, and unclear wording;
+- report findings as a list (screen, claim, verdict, correction, source). It must not edit files,
+  and must not use the benchmark's content as a source.
+
+Apply the corrections that hold up (verify a disputed one yourself rather than taking either side on
+trust), and list in the report to the owner which were applied and which declined, and why.
+
+## Illustrations
+
+- First reuse what we have: `LessonArt` drawings (`LessonArtId` in `lessons.ts`), the guides, real
+  photos with a stated `credit`, charts from real market history.
+- When a screen needs an illustration we don't have (owner 2026-11-14), take it from a **free
+  third-party illustration library** instead of drawing one from scratch:
+  1. Pick candidates and **read each licence at the time of use**: it must allow commercial use in an
+     app, and modification (recolouring). Prefer licences with no attribution (CC0 or the library's
+     own free licence). If attribution is required, the credit line must be shown, the way `photo`
+     credits are.
+  2. Prefer copying the individual SVG files into the repo (e.g. `apps/client/src/assets/illustrations/<library>/`)
+     over an npm package. A package is a new dependency and goes through the supply-chain rules in
+     `.claude/rules/security.md` (and `.npmrc`'s `only-built-dependencies` if it runs install
+     scripts).
+  3. Ask the owner before adding a new library: the candidates, the licence terms, a sample on our
+     dark theme. Adding one is a visual decision (visual Q&A) and a sourcing decision.
+  4. Recolour to our tokens (`lib/tokens.ts`); keep a consistent style within a lesson.
+  5. Record each library once (name, URL, licence, date checked) in `docs/APP_LOG.md` and in a
+     `README` beside the files, and each asset's source in a code comment where it's used.
+- Never use the benchmark's illustrations, or trace or redraw them.
+
+## The learning path (owner 2026-11-14)
+
+- **What's approved (owner, 2026-11-14):** until the owner has placed our practical lessons (the
+  dumbbell, done on the chart), the path follows the topic order the owner set; the detail is in
+  the git-ignored `guided-learning-topics/notes/` (the makeover plan). The owner will decide later
+  where the practical lessons go.
+- **The risk, named:** the hard rule above says the _selection and arrangement_ of content can be
+  protected. The topic order is the part of that the owner accepted. Everything else stays ours:
+  unit and lesson titles, unit descriptions, every lesson's content, its order inside the lesson,
+  its examples, and the path's look. Placing our practical lessons makes the sequence ours too.
+  Ask the owner first before matching anything beyond the topic order (names, descriptions,
+  badges or labels).
+- **In tracked files** (the path code, APP_LOG, this skill), describe it as "the topic order",
+  without naming the benchmark course or saying how closely it's followed.
+- **Titles are ours:** write each unit and lesson title fresh from what our lesson actually teaches,
+  in our voice. Don't take the benchmark's title and rephrase it: a reworded title is still their
+  title. The same goes for unit descriptions and any path labels.
+- **Look stays ours:** the zig-zag path, the progress rings, the dumbbell and our colours (the
+  owner's earlier decision: our own design identity). Matching the order doesn't mean matching their
+  visuals.
+- A lesson the benchmark has and we haven't written yet appears as a locked, "coming soon" stop with
+  our own title, so the order is visible before the content exists. Confirm with the owner before
+  adding placeholders.
+
+## Writing the cards (our voice)
+
+**The tone: written for beginners** (owner 2026-11-16). It applies to every lesson written or
+rewritten, and to quizzes, Whys, summaries and titles.
+
+- **Simple English.** Short sentences, everyday words, one idea at a time. Assume the reader has
+  never traded and isn't a native speaker. Explain a term the first time it appears.
+- **Fun and friendly.** Warm, a little playful, like a patient friend explaining over coffee. A smile
+  on most cards, never at the learner's expense, never sarcastic.
+- **Analogies welcome.** Tie a new idea to something familiar: "Think of it as …". Keep the analogy
+  short, and say where it stops matching when that matters (an analogy must never teach something
+  wrong; the fact check reviews them too).
+- **Encouraging.** Mistakes are part of learning: a "Not quite." is followed by a kind, clear Why.
+- **No jargon walls, no hype, no fear.** Excitement comes from understanding, not from promises of
+  profit.
+- **Where jokes stay out:** never in a warning or a recap, never about losses or money won, never
+  at the learner. A worried card is serious all the way through.
+- **Easy to translate:** no idioms a translation app would mangle; at most one exclamation mark a
+  card.
+
+- Two guides present: Pulin (`tick`, asks the questions a beginner is too polite to ask) and Berwyn
+  (`tock`, answers them, usually). A card has `text` (may hold `[[terms]]`), or `lines` (a short
+  exchange), or `beats` (a cold open), plus a `presenter` or a real `photo` (with its `credit`).
+- Short: one idea per card; the Next button (`nextLabel`) names the question the next card answers.
+- Plain words, then the term: say what it does before its name.
+- Our own examples: Nora and her notebook, SunCoin, Emi, the pizzas, our charts from real market
+  history (`ChartScene`, BTCUSDT daily candles). Invent fresh ones rather than borrowing a
+  benchmark's.
+- No hype, no price predictions; the honest answer is the praised one in "Your call"; paper trading
+  only, no real money.
+- A worried mood only for a real warning (the lesson rules test checks it).
+
+## Quiz formats
+
+| Format             | Use for                                                     | Status                                        |
+| ------------------ | ----------------------------------------------------------- | --------------------------------------------- |
+| Multiple choice    | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`) |
+| Choose buy or sell | read a situation or a chart, pick Buy or Sell, then the Why | new widget                                    |
+| Drag and drop      | put steps in order, or items into the right slot            | new widget                                    |
+| Match boxes        | connect terms to meanings, two columns                      | new widget                                    |
+
+- Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
+  2026-11-13); the chosen option is already marked.
+- Every quiz has a Why that teaches, not only "correct".
+- A buy-or-sell quiz never rewards guessing a price direction: the right answer follows from a stated
+  plan or rule in the situation (the same honesty rule as "Your call").
+- **Building a new format** (owner: build it, after the visual Q&A):
+  1. Visual Q&A first: layout on phone and laptop, how a drop or a match is shown, keyboard and
+     screen-reader use (drag and drop needs a non-drag path: tap to pick, tap to place).
+  2. Add a typed shape next to `LessonQuestion` in `lessons.ts` (e.g. a discriminated `kind`), so
+     `lessonScreens` and `LessonSheet` render it; keep it pure data.
+  3. A component under `apps/client/src/guide/` with a CSS Module, tokens from `lib/tokens.ts`, guide
+     anchors via `guide()` registered in `lib/guideAnchors.ts`.
+  4. Tests: the component (right, not quite, keyboard path, reduced motion) and the lesson rules.
+
+## Practise it for real: a paper trade from the lesson (owner 2026-11-16)
+
+When a benchmark row teaches a trade action, our lesson lets the learner do it, on the real chart,
+with paper money, and then picks up where it left off.
+
+### When to offer one
+
+- The trigger is the **concept**, not the benchmark's example: a card that teaches buying, selling,
+  going long, going short, or closing a position. The example on the card stays ours (the IP rule).
+- One practice trade per concept, at most; not on every card that mentions a price.
+- List the offers in the outline (Workflow step 2) so the owner sees them before any build.
+
+### What the learner sees
+
+1. On that card, an offer under the text: a main button such as "Try it on the chart" and a
+   "Skip" beside it. Skip simply moves to the next screen.
+2. The lesson sheet steps aside (it hides, as it does for a lesson's Try it today).
+3. A guided tour, the arrow ring and bubble, walks them through the paper trade: the right market
+   (Spot for buy/sell; **USDT Perpetual for long/short**, since shorting needs it), Market or Limit,
+   the amount, then Buy or Sell. A long/short tour also shows how to close the position.
+4. At the end (or on Skip / ✕ in the tour) a clear way back, e.g. "Back to the lesson", which
+   **resumes the lesson on the screen after the card**, not at the start, with the answers and
+   progress kept (`lessonStore` in memory, the furthest screen synced to the account).
+
+### How to build it with what exists
+
+- **Tour engine:** tours live in `apps/client/src/guide/tours.ts` (`TOUR_IDS`, `Tour`, `TourStep`),
+  drawn by `GuideOverlay.tsx` (the ring and bubble, placed by `bubblePlacement.ts`) on anchors set
+  with `guide()` and listed in `lib/guideAnchors.ts`. Reuse the shared step builders in `steps.ts`
+  (`chooseType`, `openTab`, `submit`), so a control is described in one wording everywhere.
+- **Base tours:** `buy-first-coin` (Spot market buy of $100) and `sell-and-review` (sell it back,
+  read the fees). For long/short, base a new perp tour on the `perp-market-long` scenario
+  (`apps/client/src/guide/scenarios/perpMarketLong.ts`, `/dashboard/usdt/BTCUSDT`). A practice tour has **no `next`**:
+  the chain must end back in the lesson, not in another tour.
+- **Per-card tour (proposed shape, doesn't exist yet):** a card field in `lessons.ts` such as
+  `practice?: TourId`, typed against `TOUR_IDS`. A card field keeps `lessonScreens` the same, so
+  the funnel's step ids and `stepBase` don't move; a new screen kind would shift them.
+- **Starting and resuming, today's mechanism:** `LessonSheet.tsx` starts the lesson's tour with
+  `startTour` ("Show me" / "Skip this part" on the `try` screen), `lessonStore.enterTour()` hides
+  the sheet, and a subscription to `tourStore` calls `leaveTour()` when that tour stops (finished,
+  skipped or closed). Three changes are needed for a card's practice:
+  - `startTour` in `apps/client/src/guide/afterNote.ts` hands a tour over to a lesson through its
+    `own()` helper, on two branches: the open lesson (`activeId`), and a lesson the learner looked
+    back from (`returnTo.lesson`, which runs `returnBack()` then `enterTour()`). Any other tour
+    closes the lesson. Teach `own()` itself that the card's `practice` tour belongs to the lesson,
+    so both branches resume, not just the first;
+  - the `LessonSheet` subscription watches only `lesson.tour`; it must watch the practice tour that
+    was started;
+  - `leaveTour()` advances only when the current screen is the `try` screen; it must also advance
+    from a card that carries `practice`, so the lesson resumes on the next screen.
+- **Phone (below `lg`, 1024 px):** today a lesson's tour is desktop only (`desktop` =
+  `TOUR_MIN_WIDTH`, defined in `apps/client/src/guide/LearnCard.tsx` and imported by `LessonSheet`;
+  phones see "This part needs a larger screen"). The expected
+  phone path: the first step points at `MobileTradeBar` (`trade.mobile.buy` / `trade.mobile.sell`,
+  "Buy / Long", "Sell / Short") to open the order form, then the arrow on the form's controls as on
+  desktop. This changes what a screen looks like, so it needs the visual Q&A
+  (`.claude/rules/design.md`) before it's built. Until then, a phone offers Skip only, or hides the
+  offer, and says the practice is on a larger screen.
+
+### Rules
+
+- Optional, never required: Skip is always there, and a skipped practice never blocks finishing.
+- Paper money only, and the offer says so ("practice money, nothing real").
+- No profit promises, no price predictions: the tour teaches the steps, not a winning trade.
+- Small: a fixed small amount (like the $100 of the buy tour), and the tour shows how to close it.
+- A step whose anchor can't be found fails gracefully: the bubble's `missingHint` says what to
+  open, and closing the tour returns to the lesson on the next screen, never a dead end.
+- It counts as a learning day for the streak, through its `tour_step` events, and its finish or
+  skip is saved, but **only once the server accepts the tour id on both learn routes**
+  (`apps/server/src/constants.ts`):
+  - **events** (`tour_started`, `tour_step`) are checked against `LEARN_EVENT_ITEM_IDS` (today
+    `LEARN_TOUR_IDS` + `LEARN_LESSON_IDS`); an unknown id gets a 400 and the day isn't counted;
+  - **progress** (`useTourProgress` saves `completed` or `dismissed` for every finished or skipped
+    tour) is checked against `LEARN_ITEM_IDS`, mirrored in the SDK; an unknown id gets a 400 that the
+    client swallows, so the completion is silently lost on reload or another device.
+  - So add the practice id to both, via a separate `LEARN_PRACTICE_TOUR_IDS` that feeds
+    `LEARN_EVENT_ITEM_IDS` and `LEARN_ITEM_IDS` (server and SDK), and **keep it out of the
+    `all-tours` badge** in `services/Habits.ts` (its target is `LEARN_TOUR_IDS.length`), so an
+    optional practice never becomes required for that badge.
+
+### Tests and docs when building it
+
+- The tour in `tours.test.ts` and its scenario in `scenarios.test.ts` (every anchor exists).
+- `LessonSheet.test.tsx` / `lessonStore.test.ts`: the offer shows on the card; Skip goes to the
+  next screen; finishing or closing the tour resumes on the screen after the card, answers kept.
+- `lessons.test.ts`: `practice` only on a trade-action card, and only a known `TourId`.
+- Server: the learn route accepts the practice tour's events (route test), and `Habits` counts its
+  day for the streak but not toward `all-tours` (`apps/server/src/__tests__/habits.test.ts` and `__tests__/int/habits.int.test.ts`).
+- The id lists are pinned: `apps/server/src/__tests__/learn.test.ts` asserts that
+  `LEARN_EVENT_ITEM_IDS` is exactly tours + lessons, and that `LEARN_ITEM_IDS` matches the SDK's
+  (`generated/CDSDK/types/index.ts`, `LEARN_ITEM_IDS` / `LearnItemId`). Adding practice ids means
+  updating those assertions, the SDK list and the SDK contract fixtures in the same change.
+- An e2e scenario for the practice path and its steps in `docs/UI_REPRODUCTIONS.md`.
+
+## Linking terms to articles
+
+- A term in card text links with `[[label|concept-id]]` (or `[[concept-id]]`): it opens a peek, and
+  the peek opens its article. Concept ids must exist in `apps/client/src/learn/graph.ts`
+  (`conceptFor`); `terms.test` checks it. At most two terms a card.
+- A card that goes deeper gets `more: { article, section? }` (a Read more). Article ids are
+  `ARTICLE_IDS` in `apps/client/src/learn/articles.ts`; `section` is an `h` block's id.
+- **Only link to what exists.** If a term deserves an article that doesn't exist yet, don't invent an
+  id: list it in the report as a proposed article (title, what it would explain).
+- A term an earlier lesson taught says "Lesson N" where it's reused (lesson rules test).
+
+## Tests and docs to update (same PR)
+
+- `apps/client/src/guide/__tests__/lessons.test.ts` — the lesson rules (caps, structure, the
+  lesson's own expectations); `LessonSheet.test.tsx` for new screen kinds.
+- `apps/client/src/learn/__tests__/terms.test.ts`, `articleMinutes.test.ts` if articles change.
+- `stepBase`: when a lesson's screens change, bump it above the old highest step, so stored funnel
+  steps aren't misread (`lessons.test` checks the ids). **Mind the ceiling:** the server accepts a
+  step id's number with one or two digits only (`stepId` pattern `^[a-z0-9-]+\.[0-9]{1,2}$`,
+  `apps/server/src/routes/learn/index.ts`), so `stepBase` + the lesson's screens must stay at 99 or
+  below. If a rewrite doesn't fit, widen the pattern (e.g. `{1,3}`) in the same change, with a route
+  test and the SDK contract, before bumping. Otherwise every event past 99 gets a 400 and is lost
+  without a failing test.
+- `minutes` (e.g. `LESSON_01_MINUTES`) to the new length.
+- Docs: a dated `docs/APP_LOG.md` entry; `docs/UI_REPRODUCTIONS.md` steps for the lesson;
+  `docs/TRADING_TEST_PLAN.md` rows if a scenario changes (memory: keep test docs in step on release).
+- Phone screenshots of the changed screens to the owner before the PR (the screenshot scripts in the
+  past sessions were throwaway Playwright scripts; write a fresh one). On the **local dev
+  database only**:
+  1. register a throwaway account through `localhost:5173/register` (any `@example.com` address),
+     with a password you note;
+  2. mark it verified, so `ProtectedRoute` lets it into the dashboard and lessons (signing in
+     works without it): in the dev database, set its `"emailVerifiedAt"` to now
+     (the dev server doesn't send the email);
+  3. the script signs in through `/login`, opens the lesson with
+     `useLessonStore.getState().start(id, screen)` (imported from the page's `lessonStore` module),
+     and captures each screen at 390 px and 1280 px.
+
+## Report back (per lesson)
+
+- The coverage checklist with each concept's screen, and any concept dropped (with the owner's row).
+- Screen count: ours vs the benchmark's.
+- Quizzes by format, and any new widget built.
+- Practice trades offered: the card, the concept (buy, sell, long, short, close) and the tour.
+- Terms linked (concept → article) and proposed new articles.
+- Any Table 2 instruction declined under the IP rule, and the alternative offered.
