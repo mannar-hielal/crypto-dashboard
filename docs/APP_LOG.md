@@ -4676,8 +4676,11 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   all three; the SDK's `LESSON_FIRST_STEPS` holds the client and server copies together). Fly runs the migration
   before the old API machines are gone, so the reads guard it too: `GET /progress` leaves out a lesson row with no
   step or an earlier one, and a start replaces such a row (only once a start neither creates nor raises a row, so
-  the write every screen makes costs no extra query). An API rolled back on its own refuses a finish with a step
-  ("Only a start takes a step"): the client then sends it again without one.
+  the write every screen makes costs no extra query). A lesson can't be dismissed (such a row would have no
+  version). **Rolling this release back: the API and the web app together** (both steps of `git.md`'s
+  emergency playbook). The API deploys before the web app, so a release never mixes them; an API rolled back on
+  its own would refuse the new app's lesson finishes (they carry a step), and the finishes it took without one
+  would read as an earlier version afterwards.
 - **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
   writer against our Bybit candles): profit up or down, Buy and Sell, two Choose buy or sell quizzes, a worked long
   (BTC 2 Oct 2023 → 13 Mar 2024, spot) and short (10 Nov 2021 → 18 Jun 2022, perpetual: a contract, with

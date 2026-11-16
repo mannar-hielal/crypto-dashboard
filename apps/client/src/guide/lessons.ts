@@ -394,7 +394,7 @@ const lesson01: Lesson = {
   minutes: LESSON_01_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–20 and 21–40
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (the lessons test holds them together)
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see LESSON_FIRST_STEPS_COPY)
   // Open a paper trade, then close it (owner 2026-11-16): the buy tour hands over to the sell tour
   tour: 'buy-first-coin',
   tryIntro:
@@ -651,7 +651,7 @@ const lessonOwnership: Lesson = {
   minutes: LESSON_02_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on, past
   // its earlier versions' 1–20 and 21–40
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (the lessons test holds them together)
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see LESSON_FIRST_STEPS_COPY)
   tryWidget: 'block-chain',
   tryIntro:
     'Your turn: change a number in an old block and watch what happens to every block after it.',
@@ -979,7 +979,7 @@ const lesson02: Lesson = {
   minutes: LESSON_03_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–40 and 41–60
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (the lessons test holds them together)
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see LESSON_FIRST_STEPS_COPY)
   tour: 'primer',
   tryIntro:
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
@@ -1253,6 +1253,13 @@ export function questionGuide(q: LessonQuestion, answer: number | undefined): Pr
 /**
  * The lesson as a run of screens, in order — what the sheet walks through and what the funnel
  * numbers (`lesson-02.<n>`, 1-based): cards, the moment, "try it", each question, the summary, the end.
+ */
+/**
+ * LESSON_FIRST_STEPS_COPY: each `stepBase` above is the SDK's `LESSON_FIRST_STEPS` − 1, written out
+ * rather than imported because 29 client test files mock `@crypto-dashboard/sdk` wholesale, and any
+ * of them that loads a lesson would then fail to load. The server keeps its own copy too (the SDK
+ * ships TypeScript source, so the server takes only types from it at runtime). A test on each side
+ * holds its copy to the SDK's.
  */
 export type LessonScreen =
   | { kind: 'card'; index: number }

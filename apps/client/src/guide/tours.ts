@@ -9,6 +9,7 @@
  * React, so the tests can walk every tour.
  */
 
+import { WIDE_LAYOUT_QUERY } from '@/lib/breakpoints';
 import type { GuideAnchor } from '@/lib/guideAnchors';
 import type { HoverWant } from './chartHover';
 import { chooseType, openTab, submit } from './steps';
@@ -35,7 +36,7 @@ export function isTourId(value: string): value is PathTourId {
  * The width from which tours use the desktop layout: the order form docked beside the chart, lg and
  * up (design.md, responsive layout). Below it, phone-ready tours open the form from the bottom bar.
  */
-export const TOUR_WIDE_QUERY = '(min-width: 1024px)';
+export const TOUR_WIDE_QUERY = WIDE_LAYOUT_QUERY;
 
 export type TourStepKind = 'observe' | 'click' | 'type' | 'quiz' | 'hover';
 

@@ -348,6 +348,10 @@ describe('/api/learn/progress', () => {
     expect(
       (await put('/api/learn/progress/lesson-02', { status: 'dismissed', step: 70 })).statusCode
     ).toBe(400);
+    // A lesson is never dismissed, with or without a step
+    expect((await put('/api/learn/progress/lesson-02', { status: 'dismissed' })).statusCode).toBe(
+      400
+    );
     expect(
       (await put('/api/learn/progress/primer', { status: 'completed', step: 2 })).statusCode
     ).toBe(400);

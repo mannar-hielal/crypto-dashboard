@@ -24,8 +24,9 @@ const MAX_ROWS = 500;
 export function dayCounter(zone = 'UTC'): (d: Date) => number {
   const format = zoneFormat(zone);
   if (!format) return (d) => Math.floor(d.getTime() / DAY_MS);
-  // A date is the same all through a quarter hour (every zone's offset is a whole number of
-  // quarter hours), so each quarter hour is formatted once per request
+  // A date is the same all through a quarter hour, so each quarter hour is formatted once per
+  // request: the rows counted here date from 2026 on, when every zone's offset is a whole number of
+  // quarter hours (a test checks every zone the runtime knows)
   const seen = new Map<number, number>();
   return (d) => {
     const quarter = Math.floor(d.getTime() / QUARTER_HOUR_MS);

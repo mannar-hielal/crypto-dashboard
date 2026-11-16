@@ -281,23 +281,6 @@ describe('useTourProgress', () => {
       );
     });
 
-    it('should finish without the step on an API from before the versions (a rollback)', async () => {
-      await loaded([]);
-      act(() => useLessonStore.getState().start('lesson-01'));
-      setProgress.mockRejectedValueOnce(new Error('Only a start takes a step'));
-      act(() => useLessonStore.getState().finish());
-      await waitFor(() =>
-        expect(setProgress).toHaveBeenLastCalledWith('lesson-01', 'completed', 'tok')
-      );
-      // Any other refusal (today's 409, a network error) is not sent again
-      setProgress.mockClear();
-      act(() => useLessonStore.getState().start('lesson-01'));
-      setProgress.mockRejectedValueOnce(new Error('An earlier version of this lesson'));
-      act(() => useLessonStore.getState().finish());
-      await act(async () => {});
-      expect(setProgress.mock.calls.filter((c) => c[1] === 'completed')).toHaveLength(1);
-    });
-
     it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {
       await loaded([
         { ...item('lesson-02', 'started'), step: 66 },

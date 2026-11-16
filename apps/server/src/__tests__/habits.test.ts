@@ -133,6 +133,24 @@ describe('streakEndingAt', () => {
     expect(kathmandu(new Date('2026-10-23T18:29:59Z'))).toBe(day(24));
   });
 
+  it('should rely only on offsets of whole quarter hours: every zone, all through 2026', () => {
+    const odd: string[] = [];
+    for (const zone of Intl.supportedValuesOf('timeZone')) {
+      const format = new Intl.DateTimeFormat('en-US', {
+        timeZone: zone,
+        timeZoneName: 'longOffset',
+      });
+      for (let month = 0; month < 12; month++) {
+        const name = format
+          .formatToParts(new Date(Date.UTC(2026, month, 15)))
+          .find((p) => p.type === 'timeZoneName')?.value;
+        const m = /GMT[+-]\d\d:(\d\d)(?::(\d\d))?/.exec(name ?? '');
+        if (m && (Number(m[1]) % 15 !== 0 || Number(m[2] ?? 0) !== 0)) odd.push(`${zone} ${name}`);
+      }
+    }
+    expect(odd).toEqual([]);
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);

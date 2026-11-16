@@ -242,8 +242,10 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     if (!inTour || !activeId) return;
     set({ inTour: false, tourFrom: null });
     // Moves on from the Try screen when its own tour ended, or from the card whose practice trade it
-    // was (owner 2026-11-16); another tour handed over from there (an article's practice link)
-    // brings the learner back to the same screen
+    // was (owner 2026-11-16), however it ended: a learner stuck on a step (a missing control) closes
+    // it, and landing back on the card would only offer the same stuck trade again (the plan,
+    // notes 11 item 5); Back returns to the card. Another tour handed over from there (an article's
+    // practice link) brings the learner back to the same screen
     const lesson = getLesson(activeId);
     const at = lessonScreens(lesson)[screen];
     if (tourFrom !== null && screenTour(lesson, at) === tourFrom) get().next();

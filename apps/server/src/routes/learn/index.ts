@@ -163,9 +163,13 @@ export async function learnRoutes(app: FastifyInstance) {
       if (step !== undefined && (status === 'dismissed' || !lessonId)) {
         return reply.status(400).send({ error: 'Only a lesson’s start or finish takes a step' });
       }
+      // 🔐 A lesson is begun or finished, never dismissed (such a row would have no version)
+      if (lessonId && status === 'dismissed') {
+        return reply.status(400).send({ error: 'A lesson can’t be dismissed' });
+      }
       // 🔐 A lesson's start and finish say which screen; one from an earlier version of the lesson
       // (no step, or a step below its first) is refused, so a stale client can't undo the reset
-      if (lessonId && status !== 'dismissed') {
+      if (lessonId) {
         if (step === undefined) {
           return status === 'started'
             ? reply.status(400).send({ error: 'A start needs a lesson and its step' })

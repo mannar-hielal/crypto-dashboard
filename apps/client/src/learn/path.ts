@@ -225,6 +225,9 @@ export function pathState(
     stops += chapter.nodes.length;
     const locked = !chapterOpen;
     const checkpoint = checkpointOf(chapter);
+    // A pass kept through the reset of Lessons 1–3 (2026-11-16) still counts: the reset is for the
+    // lessons, and taking the pass away would close chapter 2 to learners already in it. Their
+    // rewritten lessons stay open on the path, not required (an open question for the owner)
     const testedOut = checkpoint ? isDone(checkpoint, progress) : false;
     // Every node before this one is done or skipped
     let reached = !locked;
