@@ -107,8 +107,11 @@ guided-learning-topics/
 1. **Read Table 2 for the lesson.** Build a coverage checklist: every concept the owner marked
    _take_ (from either column), every concept marked _drop_ (and why, if given). Ask about rows
    with no instruction before writing anything.
-2. **Plan the screens** and show the owner a short outline before drafting text:
-   - the screen list: cards, the "Your call" moment, Try it, the quizzes, the summary, the close;
+2. **Plan the screens** and get the owner's OK on a short outline before drafting any text. **Outline
+   first** (owner 2026-11-16): save it as a numbered file in the git-ignored
+   `guided-learning-topics/notes/` (e.g. `12-lesson-1-outline.md`) with:
+   - the screen list: cards, the "Your call" moment, Try it, the quizzes (they can sit between
+     cards, not only at the end), the summary, the close;
    - for each quiz, its format (see below) and what it checks;
    - the screen count next to the benchmark's for that lesson;
    - which concepts each screen covers (every _take_ concept appears at least once).
@@ -129,6 +132,7 @@ guided-learning-topics/
      (`generated/CDSDK/types/index.ts`), the assertions in `apps/server/src/__tests__/learn.test.ts`
      and the SDK contract fixtures. A lesson id the server doesn't know gets a 400 on every event and
      progress write, so its rings never sync and it's missing from the funnel.
+   - the pictures each screen uses (see "Illustrations").
 3. **Draft the text** in the outline's order, in our voice (rules below).
 4. **Fact check by a technical-writer agent** (owner 2026-11-14), on every freshly written screen,
    before the owner sees the draft. See "Fact check" below. Apply its corrections, then show the
@@ -138,6 +142,8 @@ guided-learning-topics/
    illustration, a new card layout): run it per `.claude/rules/design.md` before building
    (`session-bootstrap` non-negotiable #2).
 6. **Implement** in `lessons.ts` (and new widgets), then tests and docs (below).
+   **Progress on a rewritten lesson** (owner 2026-11-16): every learner's progress on it is reset,
+   part-way through and completed alike; its `stepBase` moves; the lesson id stays.
 7. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
    with the screen that teaches it. Report any gap.
 
@@ -198,7 +204,9 @@ trust), and list in the report to the owner which were applied and which decline
   without naming the benchmark course or saying how closely it's followed.
 - **Titles are ours:** write each unit and lesson title fresh from what our lesson actually teaches,
   in our voice. Don't take the benchmark's title and rephrase it: a reworded title is still their
-  title. The same goes for unit descriptions and any path labels.
+  title. The same goes for unit descriptions and any path labels. Example (owner 2026-11-16): unit 1
+  is "Start here: crypto and trading basics" (it replaced "Foundations of crypto", too close to the
+  benchmark's unit name); Lesson 1 is "Up, down and your first trade".
 - **Look stays ours:** the zig-zag path, the progress rings, the dumbbell and our colours (the
   owner's earlier decision: our own design identity). Matching the order doesn't mean matching their
   visuals.
@@ -240,18 +248,20 @@ rewritten, and to quizzes, Whys, summaries and titles.
 
 ## Quiz formats
 
-| Format             | Use for                                                     | Status                                        |
-| ------------------ | ----------------------------------------------------------- | --------------------------------------------- |
-| Multiple choice    | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`) |
-| Choose buy or sell | read a situation or a chart, pick Buy or Sell, then the Why | new widget                                    |
-| Drag and drop      | put steps in order, or items into the right slot            | new widget                                    |
-| Match boxes        | connect terms to meanings, two columns                      | new widget                                    |
+| Format             | Use for                                                     | Status                                             |
+| ------------------ | ----------------------------------------------------------- | -------------------------------------------------- |
+| Multiple choice    | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)      |
+| Choose buy or sell | read a situation or a chart, pick Buy or Sell, then the Why | designed 2026-11-16 (visual Q&A done); being built |
+| Drag and drop      | put steps in order, or items into the right slot            | new widget                                         |
+| Match boxes        | connect terms to meanings, two columns                      | new widget                                         |
 
 - Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
   2026-11-13); the chosen option is already marked.
 - Every quiz has a Why that teaches, not only "correct".
 - A buy-or-sell quiz never rewards guessing a price direction: the right answer follows from a stated
   plan or rule in the situation (the same honesty rule as "Your call").
+- **Quizzes can sit between cards** (owner 2026-11-16), not only at the end: the Lesson 1 outline
+  puts them mid-lesson.
 - **Building a new format** (owner: build it, after the visual Q&A):
   1. Visual Q&A first: layout on phone and laptop, how a drop or a match is shown, keyboard and
      screen-reader use (drag and drop needs a non-drag path: tap to pick, tap to place).
@@ -260,6 +270,22 @@ rewritten, and to quizzes, Whys, summaries and titles.
   3. A component under `apps/client/src/guide/` with a CSS Module, tokens from `lib/tokens.ts`, guide
      anchors via `guide()` registered in `lib/guideAnchors.ts`.
   4. Tests: the component (right, not quite, keyboard path, reduced motion) and the lesson rules.
+
+### Choose buy or sell: the decided design (visual Q&A, owner 2026-11-16)
+
+Later lessons reuse this design as it is; no new visual Q&A unless it changes.
+
+- **Layout** (phone first; the laptop sheet is the same, wider): the real chart on top with the
+  plan's price line; the plan in a short line under it ("Your plan: … Today it closed at …"); then
+  Buy and Sell side by side.
+- **Buttons** filled like the phone trade bar (`MobileTradeBar`): Buy green (`color.green`, dark
+  `bg.page` text), Sell red (`color.red`), each with an arrow and the word (never colour alone).
+- **After the answer:** a tick or cross on the picked button, "Right." / "Not quite." and the Why,
+  which points at the plan, never at the price. Then the chart reveals the next days (a scene with
+  `freezeAt`), captioned "What happened next (the plan doesn't depend on it)".
+- **Access:** two real buttons in tab order with the focus ring; arrow keys move between them;
+  screen readers hear the chart's label, the plan, then Buy / Sell; the result is announced
+  (`role="status"`); reduced motion skips the reveal animation.
 
 ## Practise it for real: a paper trade from the lesson (owner 2026-11-16)
 

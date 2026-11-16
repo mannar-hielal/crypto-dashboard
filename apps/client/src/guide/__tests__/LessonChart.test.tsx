@@ -7,13 +7,20 @@ const h = vi.hoisted(() => ({
   remove: vi.fn(),
   range: vi.fn(),
   getCandles: vi.fn(),
+  createPriceLine: vi.fn(),
+  removePriceLine: vi.fn(),
 }));
 
 vi.mock('lightweight-charts', () => ({
   CandlestickSeries: {},
+  LineStyle: { Dashed: 2 },
   TickMarkType: { Year: 0, Month: 1, DayOfMonth: 2, Time: 3, TimeWithSeconds: 4 },
   createChart: () => ({
-    addSeries: () => ({ setData: h.setData }),
+    addSeries: () => ({
+      setData: h.setData,
+      createPriceLine: h.createPriceLine,
+      removePriceLine: h.removePriceLine,
+    }),
     timeScale: () => ({ setVisibleLogicalRange: h.range }),
     remove: h.remove,
   }),
@@ -120,5 +127,20 @@ describe('LessonChart', () => {
     render(<LessonChart scene={scene} revealed fallback={null} />);
     await waitFor(() => expect(lastData()?.length).toBe(40));
     expect(h.getCandles).toHaveBeenCalledTimes(1);
+  });
+
+  it('should draw a Choose buy or sell plan as a dashed price line with its label', async () => {
+    const withPlan: ChartScene = { ...scene, planLine: { price: 41_000, label: 'Your plan' } };
+    render(<LessonChart scene={withPlan} revealed={false} fallback={<p>picture</p>} />);
+    await waitFor(() => expect(h.createPriceLine).toHaveBeenCalled());
+    expect(h.createPriceLine).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 41_000, title: 'Your plan', lineStyle: 2 })
+    );
+  });
+
+  it('should draw no price line on a scene without a plan', async () => {
+    render(<LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />);
+    await waitFor(() => expect(h.setData).toHaveBeenCalled());
+    expect(h.createPriceLine).not.toHaveBeenCalled();
   });
 });

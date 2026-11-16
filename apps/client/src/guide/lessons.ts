@@ -105,13 +105,16 @@ export interface ChartMarker {
  * history (Bybit's USDT perpetual, which reaches back before 2021 — spot doesn't), with markers.
  */
 export interface ChartScene {
-  symbol: 'BTCUSDT';
+  /** Bitcoin, or Solana for the "smaller coins swing harder" comparison (Lesson 1, owner 2026-11-16) */
+  symbol: 'BTCUSDT' | 'SOLUSDT';
   /** The newest candle's date (YYYY-MM-DD, UTC) and how many daily candles end there */
   end: string;
   bars: number;
   markers: ChartMarker[];
   /** Show only up to this date until the learner has answered (the "what happened next?" moment) */
   freezeAt?: string;
+  /** A Choose buy or sell plan's price, drawn as a dashed line across the chart */
+  planLine?: { price: number; label: string };
   /** What the chart shows, for screen readers */
   label: string;
   /** The drawn picture shown instead when the history can't be loaded */
@@ -179,6 +182,12 @@ export interface LessonCard {
   more?: { article: ArticleId; section?: string };
   /** The Next button's words: the question the next card answers (default "Continue") */
   nextLabel?: string;
+  /**
+   * A quick check between cards (owner 2026-11-16: quizzes can sit mid-lesson). The card is then a
+   * question screen: its `title` is the heading, the question replaces the text, and Next waits for
+   * an answer.
+   */
+  quiz?: LessonQuestion;
 }
 
 /** One "You can now…" line on the close, with the article that goes deeper */
@@ -198,7 +207,18 @@ export interface CanDo {
   section?: string;
 }
 
+/**
+ * How a question is answered: a list of options (multiple choice), or Buy and Sell side by side
+ * under a chart and a stated plan (owner's visual Q&A, 2026-11-16). A buy-or-sell question's
+ * options are exactly `['Buy', 'Sell']` and its answer follows from the plan, never a guess.
+ */
+export type QuestionFormat = 'choice' | 'buy-sell';
+
 export interface LessonQuestion {
+  /** Default `choice` */
+  format?: QuestionFormat;
+  /** A buy-or-sell question's plan, shown under the chart ("Your plan: … Today it closed at …") */
+  plan?: string;
   question: string;
   /** A short context line above the question (a headline, a situation) */
   context?: string;

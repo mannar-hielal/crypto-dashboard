@@ -297,6 +297,8 @@ export const GUIDE_ANCHORS = [
   'lesson.photo',
   'lesson.meet',
   'lesson.option',
+  // Choose buy or sell: the Buy or Sell button (variant `buy` / `sell`)
+  'lesson.side',
   'lesson.try',
   'lesson.note',
   'lesson.note.save',

@@ -31,6 +31,7 @@ import { GenesisReveal } from './GenesisReveal';
 import { GuidesMeet } from './GuidesMeet';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
+import { BuySellView } from './BuySellView';
 import { TOUR_MIN_WIDTH } from './LearnCard';
 import {
   afterNote,
@@ -148,6 +149,37 @@ function TermPeek({
 }
 
 // ─── Screens ─────────────────────────────────────────────────────────────────
+
+/**
+ * A question screen's body: its chart (a frozen one plays on once answered), then the multiple
+ * choice or, for `format: 'buy-sell'`, Buy and Sell under the plan (owner's visual Q&A 2026-11-16)
+ */
+function QuestionBody({
+  q,
+  answer,
+  onAnswer,
+}: {
+  q: LessonQuestion;
+  answer: number | undefined;
+  onAnswer: (i: number) => void;
+}) {
+  return (
+    <>
+      {q.chart && (
+        <LessonChart
+          scene={q.chart}
+          revealed={answer !== undefined}
+          fallback={<LessonArt id={q.chart.fallback} />}
+        />
+      )}
+      {q.format === 'buy-sell' ? (
+        <BuySellView q={q} answer={answer} onAnswer={onAnswer} />
+      ) : (
+        <QuestionView q={q} answer={answer} onAnswer={onAnswer} />
+      )}
+    </>
+  );
+}
 
 export function QuestionView({
   q,
@@ -534,13 +566,15 @@ export function LessonSheet() {
   // The last screen's buttons save a journal line typed but not saved first, and wait for it: on a
   // failure the learner stays, reads why, and the next press goes on without it
   const finish = () => afterNote(() => useLessonStore.getState().finish(), { finishing: true });
-  const isQuestion = screen.kind === 'moment' || screen.kind === 'check';
+  // A card can be a quick check between cards (owner 2026-11-16)
+  const cardQuiz = screen.kind === 'card' ? (lesson.cards[screen.index].quiz ?? null) : null;
+  const isQuestion = screen.kind === 'moment' || screen.kind === 'check' || !!cardQuiz;
   const question =
     screen.kind === 'moment'
       ? lesson.moment
       : screen.kind === 'check'
         ? lesson.checks[screen.index]
-        : null;
+        : cardQuiz;
   const answered = answers[screenIndex] !== undefined;
 
   // The lesson's own tour: handed over, the lesson waiting on this Try screen (`afterNote.ts`)
@@ -596,6 +630,10 @@ export function LessonSheet() {
     case 'card': {
       const card = lesson.cards[screen.index];
       heading = card.title;
+      if (card.quiz) {
+        body = <QuestionBody q={card.quiz} answer={answers[screenIndex]} onAnswer={answer} />;
+        break;
+      }
       body = card.meet ? (
         <GuidesMeet meet={card.meet} done={ready} onDone={reveal} />
       ) : card.beats ? (
@@ -673,16 +711,7 @@ export function LessonSheet() {
     case 'check':
       heading = screen.kind === 'moment' ? 'Your call' : 'Check yourself';
       body = question && (
-        <>
-          {question.chart && (
-            <LessonChart
-              scene={question.chart}
-              revealed={answered}
-              fallback={<LessonArt id={question.chart.fallback} />}
-            />
-          )}
-          <QuestionView q={question} answer={answers[screenIndex]} onAnswer={answer} />
-        </>
+        <QuestionBody q={question} answer={answers[screenIndex]} onAnswer={answer} />
       );
       break;
     case 'try':

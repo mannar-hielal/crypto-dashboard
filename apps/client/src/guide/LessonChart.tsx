@@ -11,6 +11,7 @@ import {
   CandlestickSeries,
   createChart,
   createSeriesMarkers,
+  LineStyle,
   TickMarkType,
 } from 'lightweight-charts';
 import type {
@@ -139,6 +140,26 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
       chart.remove();
     };
   }, [ready]);
+
+  // ── A Choose buy or sell plan's price, as a dashed line (owner 2026-11-16) ──
+  const planPrice = scene.planLine?.price;
+  const planLabel = scene.planLine?.label;
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!ready || !series || planPrice === undefined) return;
+    const line = series.createPriceLine({
+      price: planPrice,
+      color: chartColors.lessonMarker,
+      lineStyle: LineStyle.Dashed,
+      lineWidth: 1,
+      axisLabelVisible: true,
+      title: planLabel ?? '',
+    });
+    return () => {
+      // The series may already be gone with its chart (the creating effect's cleanup runs too)
+      if (seriesRef.current === series) series.removePriceLine(line);
+    };
+  }, [ready, planPrice, planLabel]);
 
   // ── Push what's shown, and the markers on it ───────────────────────────────
   useEffect(() => {

@@ -284,6 +284,37 @@ describe('lessons', () => {
     expect(card('A stamp only you hold').text).toContain('[[miners|mining]]');
   });
 
+  it('should give every Choose buy or sell question Buy and Sell, a plan and a chart to reveal (owner 2026-11-16)', () => {
+    // The plan decides the answer, never a guess: the plan is stated, and the chart freezes until
+    // the answer, then shows what came next
+    for (const l of LESSONS) {
+      const questions = [
+        l.moment,
+        ...l.checks,
+        ...l.cards.flatMap((c) => (c.quiz ? [c.quiz] : [])),
+      ];
+      for (const q of questions.filter((x) => x.format === 'buy-sell')) {
+        expect(q.options, `${l.id}: ${q.question}`).toEqual(['Buy', 'Sell']);
+        expect(q.plan?.trim(), `${l.id}: ${q.question}`).toBeTruthy();
+        expect(q.chart?.freezeAt, `${l.id}: ${q.question}`).toBeTruthy();
+        expect([0, 1]).toContain(q.correct);
+      }
+    }
+  });
+
+  it('should keep a card that is a quiz to its question alone (no text, lines, beats or meeting)', () => {
+    for (const l of LESSONS) {
+      for (const c of l.cards.filter((x) => x.quiz)) {
+        expect([c.text, c.lines, c.beats, c.meet], `${l.id}: ${c.title}`).toEqual([
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+        ]);
+      }
+    }
+  });
+
   it('should only tease a next lesson that the close really offers', () => {
     // A teaser names what the close really offers (review #275): the next lesson, or the tour it
     // leads to (Lesson 3's first buy, 2026-11-12)
