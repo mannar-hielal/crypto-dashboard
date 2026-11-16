@@ -137,7 +137,20 @@ function stepLabel(itemId: string, stepId: string): string {
   const step = TOURS.find((t) => t.id === itemId)?.steps.find((st) => st.id === stepId);
   if (!step) return `Step ${n}`;
   const text = step.text.length > 60 ? `${step.text.slice(0, 57)}…` : step.text;
-  return `${n}. ${text}`;
+  // A step only one screen size runs: its viewers are that size's learners only
+  const only = step.screen ? ` (${step.screen} only)` : '';
+  return `${n}. ${text}${only}`;
+}
+
+/**
+ * A tour's steps in the order the tour runs them (phone-only steps are numbered from 51, so the
+ * server's numeric order would list them last); a lesson's are already in screen order
+ */
+function inTourOrder(tour: TourFunnelTour): TourFunnelTour['steps'] {
+  const order = TOURS.find((t) => t.id === tour.itemId)?.steps.map((st) => st.id);
+  if (!order) return tour.steps;
+  const at = (id: string) => (order.includes(id) ? order.indexOf(id) : order.length);
+  return [...tour.steps].sort((a, b) => at(a.stepId) - at(b.stepId));
 }
 
 function FunnelRows({ tour }: { tour: TourFunnelTour }) {
@@ -168,7 +181,7 @@ function FunnelRows({ tour }: { tour: TourFunnelTour }) {
           )}
         </td>
       </tr>
-      {tour.steps.map((st) => (
+      {inTourOrder(tour).map((st) => (
         <tr key={st.stepId}>
           <td>{stepLabel(tour.itemId, st.stepId)}</td>
           <td>{st.viewers}</td>

@@ -92,4 +92,12 @@ describe('tourStore', () => {
     s().setWide(true);
     expect(tourSteps(getTour('buy-first-coin'), true)[s().stepIndex].id).toBe(market);
   });
+
+  it('should not skip the phone’s open-the-form step when rotated on a desktop-only step', () => {
+    s().start('practice-buy'); // desktop: the side button first (a desktop-only step)
+    s().setWide(false);
+    expect(tourSteps(getTour('practice-buy'), false)[s().stepIndex].anchor).toBe(
+      'trade.mobile.buy'
+    );
+  });
 });

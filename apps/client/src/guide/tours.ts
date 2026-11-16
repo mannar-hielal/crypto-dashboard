@@ -96,6 +96,9 @@ export interface Tour {
 // chart on a larger screen, from the Buy / Long or Sell / Short bar at the bottom on a phone
 const FORM_HINT =
   'Open the order form: the Trade button above the chart, or Buy / Long at the bottom on a phone.';
+/** The same for a sell: a phone's Sell / Short opens the form on the right side */
+const FORM_HINT_SELL =
+  'Open the order form: the Trade button above the chart, or Sell / Short at the bottom on a phone.';
 /** The phone's Buy / Long and Sell / Short bar hides while the order form or an edit panel is open */
 const PHONE_BAR_HINT =
   'Close the open panel first: the Buy / Long and Sell / Short bar is at the bottom of the screen.';
@@ -268,7 +271,7 @@ const sellAndReview: Tour = {
       }),
       {
         doneWhenEmpty: 'trade.amount',
-        missingHint: FORM_HINT,
+        missingHint: 'Open the Assets tab and press Sell on your Bitcoin again.',
       }
     ),
     {
@@ -303,6 +306,7 @@ function practice(
   placed: string
 ): Tour {
   const phoneButton = side === 'buy' ? 'Buy / Long' : 'Sell / Short';
+  const formHint = side === 'buy' ? FORM_HINT : FORM_HINT_SELL;
   return {
     id,
     title,
@@ -325,13 +329,13 @@ function practice(
             anchor: side === 'buy' ? 'trade.side.buy' : 'trade.side.sell',
             explain: sideText,
           },
-          { missingHint: FORM_HINT }
+          { missingHint: formHint }
         ),
         screen: 'desktop',
       },
       fromDraft(chooseType('market'), {
         text: 'Choose Market: trade right now at the best available price.',
-        missingHint: FORM_HINT,
+        missingHint: formHint,
       }),
       fromDraft(
         {
@@ -340,7 +344,7 @@ function practice(
           key: 'usdt',
           explain: 'Choose USDT, so you can type dollars instead of coins.',
         },
-        { missingHint: FORM_HINT }
+        { missingHint: formHint }
       ),
       fromDraft(
         {
@@ -349,11 +353,11 @@ function practice(
           value: '100',
           explain: 'Type 100: a $100 practice trade. Nothing here is real money.',
         },
-        { suggest: '100', missingHint: FORM_HINT }
+        { suggest: '100', missingHint: formHint }
       ),
       fromDraft(submit({ explain: placed }), {
         doneWhenEmpty: 'trade.amount',
-        missingHint: FORM_HINT,
+        missingHint: formHint,
       }),
     ]),
   };
@@ -373,7 +377,7 @@ const practiceLong = practice(
   '/dashboard/usdt/BTCUSDT',
   'buy',
   'On the USDT Perpetual market, Buy / Long opens a long: you gain if the price rises.',
-  'Place the order. You now hold a long position. Your lesson carries on next.'
+  'Place the order. With no short open on Bitcoin, you now hold a long position (a Buy first shrinks a short you already hold). Your lesson carries on next.'
 );
 // On Ethereum: one position per symbol (one-way), so a short on Bitcoin would only close the
 // practice long instead of opening a short
@@ -383,7 +387,7 @@ const practiceShort = practice(
   '/dashboard/usdt/ETHUSDT',
   'sell',
   'On the USDT Perpetual market, Sell / Short opens a short: you gain if the price falls. This one is on Ethereum.',
-  'Place the order. You now hold a short position on Ethereum. Your lesson carries on next.'
+  'Place the order. With no long open on Ethereum, you now hold a short position (a Sell first shrinks a long you already hold). Your lesson carries on next.'
 );
 
 export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview];

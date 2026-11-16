@@ -91,11 +91,11 @@ export function startTour(tour: TourId, navigate: (url: string) => void) {
     if (own(lessons.activeId)) {
       // The lesson on screen (a look back's too, from its Try step) waits where it is; only its
       // Try step moves on when the tour ends
-      lessons.enterTour();
+      lessons.enterTour(tour);
     } else if (own(lessons.returnTo?.lesson)) {
       // From a look back, the home lesson's own tour: home first, then handed over the same way
       lessons.returnBack();
-      useLessonStore.getState().enterTour();
+      useLessonStore.getState().enterTour(tour);
     } else {
       lessons.returnBack();
       useLessonStore.getState().close();

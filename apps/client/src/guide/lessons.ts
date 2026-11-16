@@ -142,7 +142,7 @@ export interface LessonPhoto {
   alt: string;
   /**
    * Shown under the image. `null` only where the owner confirmed the rights and chose no credit
-   * line (Lesson 2's landfill, 2026-11-12): every photo states its attribution decision
+   * line: every photo states its attribution decision
    */
   credit: string | null;
 }
@@ -509,7 +509,7 @@ const lesson01: Lesson = {
     {
       title: 'The result',
       presenter: { who: 'tock', mood: 'grin', pose: 'stand' },
-      text: 'Your $1,000 became about **$2,661**. That’s around **$1,661 profit**. The exchange takes a small fee on each trade, about $2 here. Still a very good trade.',
+      text: 'Your $1,000 became about **$2,661**. That’s around **$1,661 profit**. Spot takes a 0.1% fee on each trade: about $1 to buy and $2.66 to sell. Still a very good trade.',
       lines: [
         { speaker: 'tick', text: 'Easy! I’ll just do that every time.' },
         {

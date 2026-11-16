@@ -9,6 +9,7 @@
  * Finish and the way on all lead back, and the funnel skips it.
  */
 
+import type { TourId } from './tours';
 import { create } from 'zustand';
 import { getLesson, lessonScreens, type LessonId } from './lessons';
 
@@ -29,6 +30,8 @@ interface LessonRun {
   answers: Record<number, number>;
   /** The lesson's tour is running: the sheet is hidden until it ends */
   inTour: boolean;
+  /** The tour the lesson handed over (its Try tour or a card's practice): only its end moves on */
+  tourFrom: TourId | null;
   /** The rating given on the last screen, if any */
   rating: number | null;
   /** The journal line typed on the last screen */
@@ -75,7 +78,7 @@ interface LessonState extends LessonRun {
   back: () => void;
   answer: (option: number) => void;
   /** "Show me": hide the sheet while the lesson's tour runs */
-  enterTour: () => void;
+  enterTour: (tour: TourId) => void;
   /**
    * The tour ended (finished, skipped or closed): back to the sheet, on the screen after Try if it
    * was started from there; handed over from elsewhere (an article), where the lesson was
@@ -127,6 +130,7 @@ function freshRun(id: LessonId | null, screen = 0): LessonRun {
     screen: id ? clampScreen(id, screen) : 0,
     answers: {},
     inTour: false,
+    tourFrom: null,
     rating: null,
     note: '',
     noteStatus: 'draft',
@@ -227,17 +231,21 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     set({ answers: { ...answers, [screen]: option } });
   },
 
-  enterTour: () => set({ inTour: true }),
+  enterTour: (tour) => set({ inTour: true, tourFrom: tour }),
 
   leaveTour: () => {
-    const { inTour, activeId, screen } = get();
+    const { inTour, activeId, screen, tourFrom } = get();
     if (!inTour || !activeId) return;
-    set({ inTour: false });
-    // Moves on from the Try screen, or from the card whose practice trade it was (owner 2026-11-16)
+    set({ inTour: false, tourFrom: null });
+    // Moves on from the Try screen when its own tour ended, or from the card whose practice trade it
+    // was (owner 2026-11-16); another tour handed over from there (an article's practice link)
+    // brings the learner back to the same screen
     const lesson = getLesson(activeId);
     const at = lessonScreens(lesson)[screen];
-    if (at?.kind === 'try' || (at?.kind === 'card' && lesson.cards[at.index].practice))
-      get().next();
+    const own =
+      (at?.kind === 'try' && tourFrom === lesson.tour) ||
+      (at?.kind === 'card' && !!tourFrom && lesson.cards[at.index].practice?.tour === tourFrom);
+    if (own) get().next();
   },
 
   rate: (rating) => set({ rating }),

@@ -176,6 +176,34 @@ describe('AdminMetricsPage', () => {
     expect(screen.getByText('Screen 6 (an earlier version of the lesson)')).not.toBeNull();
   });
 
+  it('lists a tour’s steps in the order it runs them, marking the phone-only and desktop-only ones', async () => {
+    mockGetMetrics.mockResolvedValue(
+      metrics({
+        tourFunnel: [
+          {
+            itemId: 'buy-first-coin',
+            started: 3,
+            completed: 1,
+            steps: [
+              { stepId: 'buy-first-coin.1', viewers: 2, closedHere: 0 },
+              { stepId: 'buy-first-coin.2', viewers: 3, closedHere: 0 },
+              { stepId: 'buy-first-coin.51', viewers: 1, closedHere: 0 },
+            ],
+          },
+        ],
+      })
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/^51\. Tap Buy \/ Long/)).not.toBeNull());
+    const rows = [...document.querySelectorAll('tr')].map((r) => r.textContent ?? '');
+    const phone = rows.findIndex((t) => t.startsWith('51.'));
+    const first = rows.findIndex((t) => t.startsWith('1.'));
+    // The phone's first step comes first, as the tour runs it, and says which learners saw it
+    expect(phone).toBeLessThan(first);
+    expect(rows[phone]).toContain('(phone only)');
+    expect(rows[first]).toContain('(desktop only)');
+  });
+
   it('says so when sign-in days are not recorded yet', async () => {
     mockGetMetrics.mockResolvedValue(metrics({ activityTrackedSince: null }));
     renderPage();

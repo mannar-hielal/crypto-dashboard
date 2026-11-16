@@ -107,6 +107,23 @@ describe('LessonSheet', () => {
     await waitFor(() => expect(useLessonStore.getState().completed['lesson-02']).toBe(true));
   });
 
+  it('should only finish (never open the next lesson) when the streak screen is closed with ✕', async () => {
+    useAuthStore.setState({ accessToken: 'token' });
+    getHabits.mockResolvedValue({
+      badges: [],
+      learningDays: 1,
+      streakDays: 1,
+      thisWeek: [true, false, false, false, false, false, false],
+    });
+    at(lessonScreens(getLesson('lesson-01')).length - 1, 'lesson-01');
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.next-lesson"]')!);
+    await waitFor(() => expect(screen.getByText('1-day streak')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Close the lesson'));
+    await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBe(true));
+    expect(useLessonStore.getState().activeId).toBeNull();
+  });
+
   it('should offer the close’s way on to a phone-ready tour on a phone', () => {
     desktop = false;
     at(lessonScreens(lesson).length - 1); // Lesson 3: on to buy-first-coin

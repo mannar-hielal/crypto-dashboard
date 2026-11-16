@@ -151,6 +151,15 @@ function TermPeek({
   );
 }
 
+/**
+ * ✕ or Esc on the streak screen: back to the close, then the finish the learner asked for (never the
+ * next lesson or tour the main button would have opened). A failed journal save shows on the close.
+ */
+function leaveStreakFinishing(clear: (v: null) => void) {
+  clear(null);
+  afterNote(() => useLessonStore.getState().finish(), { finishing: true });
+}
+
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
 /**
@@ -482,14 +491,9 @@ export function LessonSheet() {
    * step ids don't move.
    */
   const [streakThen, setStreakThen] = useState<{ run: number; go: () => void } | null>(null);
-  // ✕ and Esc on the streak screen still do what the close's button was pressed for (a finish)
-  const streakGo =
-    streakThen?.run === run
-      ? () => {
-          setStreakThen(null);
-          streakThen.go();
-        }
-      : null;
+  /** The run the streak was shown on: once per lesson run (a retry after a failed save goes on) */
+  const [streakSeenRun, setStreakSeenRun] = useState<number | null>(null);
+  const streakActive = streakThen?.run === run && !!accessToken;
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
@@ -523,12 +527,12 @@ export function LessonSheet() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (peekOpen) setPeek(null);
-      else if (streakGo) streakGo();
+      else if (streakActive) leaveStreakFinishing(setStreakThen);
       else afterNote(() => useLessonStore.getState().close());
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeId, inTour, articleOpen, mapOpen, peekOpen, streakGo]);
+  }, [activeId, inTour, articleOpen, mapOpen, peekOpen, streakActive]);
 
   // Each new screen takes the focus, so a screen reader reads it from the top
   useEffect(() => {
@@ -587,7 +591,10 @@ export function LessonSheet() {
 
   if (!screen) return null;
   const { next, back, answer } = useLessonStore.getState();
-  const close = () => (streakGo ? streakGo() : afterNote(() => useLessonStore.getState().close()));
+  const close = () =>
+    streakActive
+      ? leaveStreakFinishing(setStreakThen)
+      : afterNote(() => useLessonStore.getState().close());
   const goBack = () => {
     setPeek(null);
     back();
@@ -623,11 +630,13 @@ export function LessonSheet() {
       : nextStep.kind === 'lesson'
         ? `Lesson ${getLesson(nextStep.id).number}: ${getLesson(nextStep.id).title}`
         : getTour(nextStep.id).title;
-  // The close's buttons show the streak first (a signed-in finish only, not from a look back)
-  const streakShown = streakGo !== null;
+  // The close's buttons show the streak first: a signed-in finish only, not from a look back, and
+  // once per run
   const viaStreak = (go: () => void) => () => {
-    if (accessToken && !returnTo) setStreakThen({ run, go });
-    else go();
+    if (accessToken && !returnTo && streakSeenRun !== run) {
+      setStreakSeenRun(run);
+      setStreakThen({ run, go });
+    } else go();
   };
   const startNext = () =>
     afterNote(
@@ -806,14 +815,15 @@ export function LessonSheet() {
       body = <SummaryView lesson={lesson} screen={screenIndex} done={ready} onDone={reveal} />;
       break;
     case 'close':
-      if (streakShown && streakThen && accessToken) {
+      if (streakActive && streakThen && accessToken) {
         heading = 'Your streak';
+        const { go } = streakThen;
         body = (
           <StreakView
             accessToken={accessToken}
             onContinue={() => {
               setStreakThen(null);
-              streakThen.go();
+              go();
             }}
           />
         );
@@ -952,7 +962,7 @@ export function LessonSheet() {
               </button>
             )}
           </div>
-        ) : screen.kind === 'close' && streakShown ? null : screen.kind === 'close' ? (
+        ) : screen.kind === 'close' && streakActive ? null : screen.kind === 'close' ? (
           // The way on first, as big as the cards' Next; finishing for now under it (2026-11-08)
           <div className={styles.footStack}>
             <button

@@ -44,14 +44,26 @@ describe('lessonStore', () => {
 
   it('should hide for the tour and carry on with the next screen when the tour ends', () => {
     s().start('lesson-01');
-    useLessonStore.setState({ screen: 6 }); // try it
-    s().enterTour();
+    useLessonStore.setState({ screen: 18 }); // try it
+    s().enterTour('buy-first-coin');
     expect(s().inTour).toBe(true);
     s().leaveTour();
     expect(s().inTour).toBe(false);
-    expect(s().screen).toBe(7);
+    expect(s().screen).toBe(19);
     s().leaveTour(); // not in a tour: nothing moves
-    expect(s().screen).toBe(7);
+    expect(s().screen).toBe(19);
+  });
+
+  it('should move on from a card only when its own practice trade ends (owner 2026-11-16)', () => {
+    s().start('lesson-01', 3); // Buy and Sell: practice-buy
+    s().enterTour('practice-buy');
+    s().leaveTour();
+    expect(s().screen).toBe(4);
+    // Another tour handed over from the same card (an article's practice link): back on the card
+    s().start('lesson-01', 3);
+    s().enterTour('buy-first-coin');
+    s().leaveTour();
+    expect(s()).toMatchObject({ screen: 3, inTour: false, tourFrom: null });
   });
 
   it('should mark the lesson completed on finish, and not on close', () => {
@@ -198,7 +210,7 @@ describe('lessonStore', () => {
     expect(s()).toMatchObject({ screen: 6, answers: { 3: 1 }, run });
     expect(s().starts).toBe(1);
 
-    s().enterTour();
+    s().enterTour('primer');
     s().start('lesson-02', 2);
     expect(s()).toMatchObject({ screen: 6, inTour: true });
   });

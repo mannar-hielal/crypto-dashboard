@@ -141,7 +141,11 @@ export function useTourProgress(): void {
       if (activeId !== null && activeId !== prev.activeId) {
         send('tour_started', activeId);
         send('tour_step', activeId, stepIdAt(activeId, 0, state.wide));
-      } else if (activeId !== null && stepIndex !== prev.stepIndex) {
+      } else if (
+        activeId !== null &&
+        stepIdAt(activeId, stepIndex, state.wide) !== stepIdAt(activeId, prev.stepIndex, prev.wide)
+      ) {
+        // A new step, also when only the screen size changed it (a rotation mid-tour)
         send('tour_step', activeId, stepIdAt(activeId, stepIndex, state.wide));
       } else if (activeId === null && prev.activeId !== null && !finished) {
         // Closed (Skip, ✕, Esc) on the step it was showing
