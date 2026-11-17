@@ -182,6 +182,18 @@ describe('streakEndingAt', () => {
     expect(zoneFormatsKept()).toBe(before);
   });
 
+  it('should build nothing again for a name already found unknown', () => {
+    expect(dayCounter('Mars/Phobos')(new Date('2026-10-23T22:30:00Z'))).toBe(
+      Date.UTC(2026, 9, 23) / 86_400_000
+    );
+    const built = vi.spyOn(Intl, 'DateTimeFormat');
+    dayCounter('Mars/Phobos');
+    dayCounter('+04:00');
+    dayCounter('+04:00');
+    expect(built).toHaveBeenCalledTimes(1); // the offset, once
+    built.mockRestore();
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);

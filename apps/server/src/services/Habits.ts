@@ -73,13 +73,20 @@ const MAX_ZONE_FORMATS = 200;
  * unknown zone is never kept: made-up names can't push real ones out
  */
 const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
-/** Other spellings (Intl takes `eUROPE/zurich` too) → the canonical name: they only push out each other */
-const ZONE_ALIASES = new Map<string, string>();
+/**
+ * Other spellings (Intl takes `eUROPE/zurich` too) → the canonical name, or null for a name found
+ * unknown or an offset (never built again). A map of its own, capped: made-up names only push out
+ * each other, never a real zone's formatter
+ */
+const ZONE_ALIASES = new Map<string, string | null>();
 
 /** The zone's date formatter, or null for UTC and for a zone this runtime doesn't know */
 function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   if (zone === 'UTC') return null;
-  const known = lruGet(ZONE_FORMATS, lruGet(ZONE_ALIASES, zone) ?? zone);
+  const alias = lruGet(ZONE_ALIASES, zone);
+  // A name already found unknown (or an offset): UTC, without building a formatter again
+  if (alias === null) return null;
+  const known = lruGet(ZONE_FORMATS, alias ?? zone);
   if (known) return known;
   let format: Intl.DateTimeFormat;
   try {
@@ -90,13 +97,17 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
       day: 'numeric',
     });
   } catch {
+    lruSet(ZONE_ALIASES, zone, null);
     return null;
   }
   // Kept under the zone's canonical name: spellings of one zone share one formatter
   const canonical = format.resolvedOptions().timeZone;
   // 🔐 An offset is no zone ('+05:07': Intl takes any): not on a quarter hour, and thousands of
   // them could push the real zones out, so it counts in UTC
-  if (/^[+-]/.test(canonical)) return null;
+  if (/^[+-]/.test(canonical)) {
+    lruSet(ZONE_ALIASES, zone, null);
+    return null;
+  }
   if (canonical !== zone) lruSet(ZONE_ALIASES, zone, canonical);
   const same = lruGet(ZONE_FORMATS, canonical);
   if (same) return same;
