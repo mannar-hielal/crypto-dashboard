@@ -452,14 +452,14 @@ const reviewBuy: Tour = {
       kind: 'observe',
       anchor: 'assets.row',
       key: 'BTC',
-      text: 'This row is your Bitcoin. The $100 you just bought is in it, a hair less: Spot’s 0.1% fee is taken in the coin. Avg cost is the price you paid on average.',
+      text: 'This row is your Bitcoin. You paid $100; you hold a hair less (about $99.90 of Bitcoin) because Spot’s 0.1% fee is taken in the coin. Avg cost is what you paid per coin, fee included, so a hair above the price you bought at.',
       missingHint: 'Open the Assets tab to find your Bitcoin.',
     },
     {
       kind: 'observe',
       anchor: 'assets.row.upnl',
       key: 'BTC',
-      text: 'Unrealized PnL is what you’d gain or lose if you sold right now. It changes with every tick, and becomes real only when you sell.',
+      text: 'Unrealized PnL is what you’d gain or lose if you sold right now, before the selling fee. It changes with every tick, and becomes real only when you sell.',
       missingHint: 'Open the Assets tab to find your Bitcoin.',
       nextLabel: BACK_TO_LESSON,
     },
@@ -504,7 +504,7 @@ const reviewLong = reviewPosition(
   'review-long',
   '/dashboard/usdt/BTCUSDT',
   'BTCUSDT',
-  'This is your long on Bitcoin: Side says Long, Avg Fill Price is where you got in, and Unrealized P&L moves with every tick. It becomes real when you close the position with the ✕ at the end of the row.'
+  'This is your long on Bitcoin: Side says Long, Avg Fill Price is where you got in, and Unrealized P&L moves with the Mark Price. It becomes real when you close the position with the ✕ at the end of the row.'
 );
 const reviewShort = reviewPosition(
   'review-short',

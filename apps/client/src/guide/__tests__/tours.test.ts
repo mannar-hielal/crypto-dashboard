@@ -162,6 +162,19 @@ describe('tours', () => {
       ['observe', 'positions.row', 'linear:ETHUSDT'],
     ]);
     expect(getTour('review-short').steps.at(-1)!.text).toMatch(/grows when the price falls/);
+    // Fact check 2026-11-17: the fee in the coin and in Avg cost; PnL before the selling fee
+    const buy = getTour('review-buy').steps.map((st) => st.text);
+    expect(buy[1]).toBe(
+      'This row is your Bitcoin. You paid $100; you hold a hair less (about $99.90 of Bitcoin) because Spot’s 0.1% fee is taken in the coin. Avg cost is what you paid per coin, fee included, so a hair above the price you bought at.'
+    );
+    expect(buy[2]).toMatch(
+      /^Unrealized PnL is what you’d gain or lose if you sold right now, before the selling fee\. It changes/
+    );
+    // The long's P&L follows the Mark Price, not every tick
+    const long = getTour('review-long').steps.at(-1)!.text;
+    expect(long).toMatch(/Unrealized P&L moves with the Mark Price\./);
+    for (const id of ['review-long', 'review-short'] as const)
+      expect(getTour(id).steps.at(-1)!.text, id).not.toMatch(/every tick/);
     // The trade's last step says a look comes next, not that the lesson carries on
     for (const t of PRACTICE_TOURS)
       expect(t.steps.at(-1)!.text, t.id).toMatch(/Next, a quick look/);
