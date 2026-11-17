@@ -19,7 +19,7 @@ let profile: { id: string } | null = { id: 'u1' };
 vi.mock('@/store/authStore', () => ({
   useAuthStore: Object.assign(
     (selector: (s: { accessToken: string | null }) => unknown) => selector({ accessToken: token }),
-    { getState: () => ({ user: profile }) }
+    { getState: () => ({ user: profile, accessToken: token }) }
   ),
 }));
 
@@ -172,6 +172,34 @@ describe('useTourProgress', () => {
     expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBeUndefined();
     expect(useTourStore.getState().cardDismissed).toBe(false);
     expect(pendingDone('u1')).toEqual([]);
+  });
+
+  it('should show none of the previous account’s progress when the next one’s first read fails', async () => {
+    getProgress.mockResolvedValueOnce({ items: [item('checkpoint-ch1', 'completed')] });
+    const { rerender } = renderHook(() => useTourProgress());
+    await waitFor(() => expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true));
+    // The session expires (nothing reset), and someone else signs in; their read fails
+    profile = { id: 'u2' };
+    token = 'tok-u2';
+    getProgress.mockRejectedValueOnce(new Error('offline'));
+    rerender();
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    expect(usePathStore.getState().checkpoints).toEqual({});
+    profile = { id: 'u1' };
+    token = 'tok';
+  });
+
+  it('should send nothing for an account that signed out mid-lesson', async () => {
+    getProgress.mockResolvedValue({ items: [] });
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    act(() => useLessonStore.getState().start('lesson-01'));
+    trackEvent.mockClear();
+    // The sign-out: the token goes, then the stores reset before the hook unsubscribes
+    token = null;
+    act(() => useLessonStore.getState().reset());
+    expect(trackEvent).not.toHaveBeenCalled();
+    token = 'tok';
   });
 
   it('should save a finished tour and a dismissed card, once each', async () => {

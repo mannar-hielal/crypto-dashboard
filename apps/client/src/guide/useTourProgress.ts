@@ -128,6 +128,12 @@ const inFlight = new Map<string, symbol>();
  */
 const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([409, 422]);
 
+/** No one is signed in any more (a token rotation is still signed in) */
+const signedOut = () => !useAuthStore.getState().accessToken;
+
+/** The account the progress was last read for: another one's read starts from clean stores */
+let readFor: string | null = null;
+
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
   const step = lessonStepNumber(getLesson(id), screen);
@@ -147,6 +153,20 @@ export function useTourProgress(): void {
   useEffect(() => {
     if (!accessToken) return;
     let cancelled = false;
+    // Another account than the last read's (a session expired, then someone else signed in): the
+    // previous one's progress never shows, even if this read fails
+    const account = accountOf(accessToken);
+    if (readFor !== null && account !== readFor) {
+      applyingServer = true;
+      try {
+        useLessonStore.getState().reset();
+        useTourStore.getState().reset();
+        usePathStore.getState().reset();
+      } finally {
+        applyingServer = false;
+      }
+    }
+    readFor = account;
     learnApi
       .getProgress(accessToken)
       .then(({ items }) => {
@@ -263,6 +283,9 @@ export function useTourProgress(): void {
   useEffect(() => {
     if (!accessToken) return;
     return useTourStore.subscribe((state, prev) => {
+      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
+      // an account that has left
+      if (signedOut()) return;
       // The read above flips `loaded`: that change is the server's answer, not the learner's
       if (!prev.loaded || applyingServer) return;
       for (const id of Object.keys(state.completed) as PathTourId[]) {
@@ -315,6 +338,9 @@ export function useTourProgress(): void {
   useEffect(() => {
     if (!accessToken) return;
     return usePathStore.subscribe((state, prev) => {
+      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
+      // an account that has left
+      if (signedOut()) return;
       // The read above flips `loaded`: that change is the server's answer, not the learner's
       if (!prev.loaded || applyingServer) return;
       for (const id of Object.keys(state.skippedTours) as TourId[]) {
@@ -336,6 +362,9 @@ export function useTourProgress(): void {
   useEffect(() => {
     if (!accessToken) return;
     return useLessonStore.subscribe((state, prev) => {
+      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
+      // an account that has left
+      if (signedOut()) return;
       if (state.reached === prev.reached || state.activeId === null || applyingServer) return;
       const id = state.activeId;
       const now = state.reached[id];
@@ -349,6 +378,9 @@ export function useTourProgress(): void {
   useEffect(() => {
     if (!accessToken) return;
     return useLessonStore.subscribe((state, prev) => {
+      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
+      // an account that has left
+      if (signedOut()) return;
       const send = (name: LearnEventRequest['name'], itemId: LessonId, stepId?: string) =>
         learnApi
           .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
