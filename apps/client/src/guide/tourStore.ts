@@ -95,7 +95,9 @@ export const useTourStore = create<TourState>()((set, get) => ({
       set((s) => ({
         stepIndex: stepIndex + 1,
         quizAnswer: null,
-        seen: [...s.seen, steps[stepIndex + 1].id],
+        seen: s.seen.includes(steps[stepIndex + 1].id)
+          ? s.seen
+          : [...s.seen, steps[stepIndex + 1].id],
       }));
       return;
     }
@@ -152,7 +154,12 @@ export const useTourStore = create<TourState>()((set, get) => ({
     const at = shown.findIndex((i) => i >= start);
     const stepIndexNow = at === -1 ? shown.length - 1 : at;
     const nowId = tourSteps(tour, next)[stepIndexNow]?.id ?? '';
-    set({ wide: next, stepIndex: stepIndexNow, seen: [...seen, nowId] });
+    // (each step once: `seen` never holds more than the tour's steps)
+    set({
+      wide: next,
+      stepIndex: stepIndexNow,
+      seen: seen.includes(nowId) ? seen : [...seen, nowId],
+    });
   },
 
   back: () => {

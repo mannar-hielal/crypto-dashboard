@@ -42,7 +42,8 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
     })
     .catch((err: unknown) => {
       if (!account) return;
-      if (err instanceof Error && err.message.startsWith('An earlier version')) {
+      // 409: an earlier version, which no retry changes (by status, never the message's words)
+      if ((err as { status?: unknown } | null)?.status === 409) {
         dropDone(account, itemId);
       } else queueDone(account, { itemId, step });
     });
@@ -73,18 +74,19 @@ export function useTourProgress(): void {
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as PathTourId);
-        // Finishes and passes this device couldn't save yet: shown as done, and sent again
+        // Finishes and passes this device couldn't save yet: sent again (one the server already
+        // has is dropped). Shown as done only once saved: the server stays the one record
         const account = useAuthStore.getState().user?.id;
-        const queued = account ? pendingDone(account) : [];
-        for (const q of queued) saveDone(q.itemId, q.step, accessToken);
-        const lessons = [
-          ...new Set([
-            ...items
-              .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
-              .map((i) => i.itemId as LessonId),
-            ...queued.map((q) => q.itemId).filter(isLessonId),
-          ]),
-        ];
+        if (account) {
+          for (const q of pendingDone(account)) {
+            const saved = items.some((i) => i.itemId === q.itemId && i.status === 'completed');
+            if (saved) dropDone(account, q.itemId);
+            else saveDone(q.itemId, q.step, accessToken);
+          }
+        }
+        const lessons = items
+          .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
+          .map((i) => i.itemId as LessonId);
         // Lesson 1 (or its primer) finished means the offer is done with, dismissed or not
         const cardDismissed =
           items.some((i) => i.itemId === 'welcome-card') ||
@@ -119,14 +121,9 @@ export function useTourProgress(): void {
           skippedTours: items
             .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
             .map((i) => i.itemId as TourId),
-          checkpoints: [
-            ...new Set([
-              ...items
-                .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
-                .map((i) => i.itemId as CheckpointId),
-              ...queued.map((q) => q.itemId).filter(isCheckpointId),
-            ]),
-          ],
+          checkpoints: items
+            .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
+            .map((i) => i.itemId as CheckpointId),
         });
         const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
         useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });

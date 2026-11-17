@@ -15,7 +15,12 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   // 204: nothing to read (an accepted event)
   if (res.status === 204) return undefined as T;
   const data = (await res.json()) as T;
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  // With its status, so a caller tells a refusal (409: an earlier version) from a failure
+  if (!res.ok) {
+    throw Object.assign(new Error((data as { error?: string }).error ?? `HTTP ${res.status}`), {
+      status: res.status,
+    });
+  }
   return data;
 }
 

@@ -306,7 +306,7 @@ describe('useTourProgress', () => {
       expect(useLessonStore.getState()).toMatchObject({ activeId: null, finishes: 1 });
     });
 
-    it('should keep a finish that could not be saved, show it done, and send it again on the next load', async () => {
+    it('should keep a finish that could not be saved and send it again on the next load', async () => {
       localStorage.clear();
       await loaded([]);
       act(() => useLessonStore.getState().start('lesson-01'));
@@ -316,19 +316,32 @@ describe('useTourProgress', () => {
       await waitFor(() =>
         expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }])
       );
-      // Next load: shown as done (the server doesn't have it yet), and sent again: it leaves the
-      // queue only once a save lands (the helper clears the write mock, so the queue is the proof)
+      // Next load: sent again; it leaves the queue only once a save lands (the helper clears the
+      // write mock, so the queue is the proof). Not shown as done before: the server is the record
       useLessonStore.getState().reset();
       useTourStore.getState().reset();
       await loaded([]);
-      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined();
       await waitFor(() => expect(pendingDone('u1')).toEqual([]));
+    });
+
+    it('should drop a kept finish the server already has, without sending it again', async () => {
+      localStorage.clear();
+      queueDone('u1', { itemId: 'lesson-01', step: 81 });
+      // A send would fail and keep it queued: an empty queue means it was dropped, never sent
+      setProgress.mockRejectedValue(new Error('down'));
+      await loaded([item('lesson-01', 'completed')]);
+      expect(pendingDone('u1')).toEqual([]);
+      setProgress.mockResolvedValue({});
     });
 
     it('should drop a kept finish the server refuses as an earlier version', async () => {
       localStorage.clear();
       queueDone('u1', { itemId: 'lesson-02', step: 30 });
-      setProgress.mockRejectedValueOnce(new Error('An earlier version of this lesson'));
+      // Told apart by its status, never its words
+      setProgress.mockRejectedValueOnce(
+        Object.assign(new Error('reworded, whatever it says'), { status: 409 })
+      );
       await loaded([]);
       await waitFor(() => expect(pendingDone('u1')).toEqual([]));
     });

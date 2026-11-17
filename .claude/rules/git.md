@@ -102,7 +102,7 @@ it would also be a way around it for a mistake. The break-glass options work wit
    - **Mind a release that changed the contract between the web app and the API**: its APP_LOG
      entry says which way is safe. The Lessons 1–3 rewrite (2026-11-16): the API alone may be rolled
      back (its app keeps a refused lesson finish or checkpoint pass on the device and sends it again
-     once the API is back); the web app alone may not (the new API refuses the previous app's lesson
+     each time the progress loads, until the API is back and it lands); the web app alone may not (the new API refuses the previous app's lesson
      saves as an earlier version), so roll back both, or the API only.
 2. **The deploy itself failed** (a flaky prod smoke, a Fly hiccup) → re-run that Deploy run
    (`gh run rerun <run id> --failed`). The gate checks the same release PR again. If the release PR's
