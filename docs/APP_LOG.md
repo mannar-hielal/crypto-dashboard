@@ -4779,8 +4779,9 @@ failed `[13.3.1][4.6]` on WebKit twice: every click took seconds and the reset's
 - **The cause was the image, not the release.** Every WebKit test ran 2–4× slower than on the last green run (median
   2.2×; Chromium about 1.35×).
 - **Checked locally:** on macOS, the release and `main` ran at the same speed, test for test, in WebKit and in Chromium.
-- **What changed:** `ci.yml` and `e2e-nightly.yml` run on `ubuntu-24.04` (the other workflows run no browser).
-  Moving to 26.04 is a deliberate change later, with a full-set run to compare.
+- **What changed:** every workflow that runs Playwright is on `ubuntu-24.04`: `ci.yml`, `e2e-nightly.yml`,
+  `prod-smoke.yml` and `deploy.yml` (its post-deploy smoke; a smoke timing out on a slower image would block a
+  deploy). The rest run no browser. Moving to 26.04 is a deliberate change later, with a full-set run to compare.
 - **Reverted:** a first guess (#303: WebKit holding back a background tab's frames, so the test brought tab A to the
   front) didn't help and has been undone.
 
