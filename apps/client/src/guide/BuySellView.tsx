@@ -53,7 +53,9 @@ export function BuySellView({
       <p className={styles.question}>{q.question}</p>
       <div className={styles.sides} role="group" aria-label={q.question}>
         {SIDES.map(({ label, Icon, className }, i) => {
-          const mark = !answered ? null : i === q.correct ? 'right' : i === answer ? 'wrong' : null;
+          // Only the learner's own pick is marked: a wrong one never points at the right side, so
+          // "Try again" still asks (owner 2026-11-17: Try again until right)
+          const mark = i !== answer ? null : answer === q.correct ? 'right' : 'wrong';
           return (
             <button
               key={label}
@@ -61,8 +63,9 @@ export function BuySellView({
                 buttons.current[i] = el;
               }}
               type="button"
-              // Dimmed: only a side with no mark (never the right answer after a wrong pick)
-              className={`${styles.side} ${className} ${answered && mark === null ? styles.unpicked : ''}`}
+              // Dimmed: the other side once the answer is right; after a wrong pick nothing is dimmed,
+              // so the dimming never hints at the right side either
+              className={`${styles.side} ${className} ${answered && answer === q.correct && mark === null ? styles.unpicked : ''}`}
               disabled={answered}
               onClick={() => onAnswer(i)}
               onKeyDown={(e) => onKeyDown(e, i)}

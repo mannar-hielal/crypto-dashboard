@@ -56,12 +56,12 @@ describe('BuySellView', () => {
     expect(side('buy').className).not.toMatch(/unpicked/);
   });
 
-  it('should say Not quite. and mark both the pick and the right side when the pick was wrong', () => {
+  it('should say Not quite. and mark only the wrong pick, never pointing at the right side', () => {
     render(<BuySellView q={q} answer={1} onAnswer={() => {}} />);
     expect(document.querySelector('[role="status"]')!.textContent).toBe(`Not quite. ${q.explain}`);
     expect(side('sell').querySelector('[aria-label="your pick, not quite"]')).toBeTruthy();
-    expect(side('buy').querySelector('[aria-label="right answer"]')).toBeTruthy();
-    // Both are marked, so neither is dimmed: the right answer never fades
+    // Try again still asks (owner 2026-11-17): the right side carries no mark and isn't dimmed
+    expect(side('buy').querySelector('[aria-label="right answer"]')).toBeNull();
     expect(side('buy').className).not.toMatch(/unpicked/);
     expect(side('sell').className).not.toMatch(/unpicked/);
   });

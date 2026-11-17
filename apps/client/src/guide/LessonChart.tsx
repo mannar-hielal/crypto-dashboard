@@ -91,6 +91,11 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
   const reduced = prefersReducedMotion();
   const count = reduced ? target : shown;
   useEffect(() => {
+    // Asked again (Try again): back to the frozen moment, the outcome hidden until the next answer
+    if (shown > target) {
+      const back = window.setTimeout(() => setShown(target), 0);
+      return () => window.clearTimeout(back);
+    }
     if (!bars || reduced || shown >= target) return;
     const t = window.setTimeout(() => setShown((n) => Math.min(n + 1, target)), REVEAL_STEP_MS);
     return () => window.clearTimeout(t);

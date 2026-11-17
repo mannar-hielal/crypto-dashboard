@@ -54,6 +54,7 @@ import {
   type LessonPhoto,
   questionGuide,
   type LessonQuestion,
+  screenQuestion,
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
@@ -247,13 +248,14 @@ export function QuestionView({
       </div>
       <div className={styles.options}>
         {q.options.map((option, i) => {
-          const cls = !answered
-            ? styles.option
-            : i === q.correct
-              ? `${styles.option} ${styles.right}`
-              : i === answer
-                ? `${styles.option} ${styles.wrong}`
-                : styles.option;
+          // Only the learner's own pick is marked: a wrong one never points at the right option, so
+          // "Try again" still asks (owner 2026-11-17)
+          const cls =
+            !answered || i !== answer
+              ? styles.option
+              : answer === q.correct
+                ? `${styles.option} ${styles.right}`
+                : `${styles.option} ${styles.wrong}`;
           return (
             <button
               key={option}
@@ -606,14 +608,9 @@ export function LessonSheet() {
   // failure the learner stays, reads why, and the next press goes on without it
   const finish = finishLesson;
   // A card can be a quick check between cards (owner 2026-11-16)
-  const cardQuiz = screen.kind === 'card' ? (lesson.cards[screen.index].quiz ?? null) : null;
-  const isQuestion = screen.kind === 'moment' || screen.kind === 'check' || !!cardQuiz;
-  const question =
-    screen.kind === 'moment'
-      ? lesson.moment
-      : screen.kind === 'check'
-        ? lesson.checks[screen.index]
-        : cardQuiz;
+  // (screenQuestion: the one rule the store's retry and Back use too)
+  const question = screenQuestion(lesson, screen);
+  const isQuestion = question !== null;
   // Continue waits for a right answer: a wrong one offers "Try again" (owner 2026-11-17)
   const answeredRight = !!question && answers[screenIndex] === question.correct;
   // Another go: the board starts afresh, and the focus returns to the sheet (the button is gone)

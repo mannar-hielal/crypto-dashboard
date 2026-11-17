@@ -118,6 +118,18 @@ describe('LessonChart', () => {
     expect(n).toBeLessThan(40);
   });
 
+  it('should freeze again when the question is asked again (Try again), the outcome hidden', async () => {
+    reduced = false;
+    const { rerender } = render(
+      <LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />
+    );
+    await waitFor(() => expect(lastData()?.length).toBe(27));
+    rerender(<LessonChart scene={scene} revealed fallback={<p>picture</p>} />);
+    await waitFor(() => expect(lastData()?.length).toBe(40), { timeout: 3000 });
+    rerender(<LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />);
+    await waitFor(() => expect(lastData()?.length).toBe(27));
+  });
+
   it('should keep the drawn picture when the history can’t be loaded, and try again next time', async () => {
     h.getCandles.mockRejectedValueOnce(new Error('offline'));
     render(<LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />);

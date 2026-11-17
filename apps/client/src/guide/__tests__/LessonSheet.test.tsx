@@ -249,6 +249,9 @@ describe('LessonSheet', () => {
     // Not quite: no way on yet, only another go (owner 2026-11-17)
     expect(nextBtn()!.disabled).toBe(true);
     expect(option(0).disabled).toBe(true);
+    // Only the wrong pick is marked: the right option isn't pointed at, so the next go still asks
+    expect(option(lesson.moment.correct).className).not.toMatch(/right/);
+    expect(option(1).className).toMatch(/wrong/);
     fireEvent.click(document.querySelector('[data-guide="lesson.retry"]')!);
     expect(sheet()!.textContent).not.toContain('Not quite.');
     expect(option(0).disabled).toBe(false);
