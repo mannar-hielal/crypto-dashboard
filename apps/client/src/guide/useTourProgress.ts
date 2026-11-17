@@ -1,9 +1,9 @@
 /**
  * Keeps the account's tour progress and the store in step: read it once signed in, write each new
  * finish / dismissal as it happens, and report the tour's events (the funnel). A lesson finish or a
- * checkpoint pass that can't be saved is kept on the device and sent again on each progress read
- * (learn/pendingDone.ts), and shown as done meanwhile; one the server refuses as an earlier version
- * is taken back. Any other failed write is dropped: that progress then lives only in this session,
+ * checkpoint pass is kept on the device until its save lands and sent again on each progress read
+ * (learn/pendingDone.ts), shown as done meanwhile; one the server refuses for good (an earlier
+ * version, a step it won't take) is taken back. Any other failed write is dropped: that progress then lives only in this session,
  * the worst case, never a broken tour.
  */
 
@@ -53,20 +53,27 @@ function undone(itemId: PendingDone['itemId']): void {
  */
 function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: string): void {
   const account = useAuthStore.getState().user?.id;
+  // Kept before it's sent: a progress read that lands while the save is on its way still shows it
+  if (account) queueDone(account, { itemId, step });
   learnApi
     .setProgress(itemId, 'completed', accessToken, step)
     .then(() => {
       if (account) dropDone(account, itemId);
     })
     .catch((err: unknown) => {
-      if (!account) return;
-      // 409: an earlier version, which no retry changes (by status, never the message's words)
-      if ((err as { status?: unknown } | null)?.status === 409) {
-        dropDone(account, itemId);
+      // Refused for good (an earlier version, a step this API won't take, a bad request): no retry
+      // changes it, so it's dropped and taken back off the screen. Anything else (offline, a 5xx,
+      // an expired session) stays kept for the next read. Told apart by status, never the words
+      const status = (err as { status?: unknown } | null)?.status;
+      if (typeof status === 'number' && REFUSED_FOR_GOOD.has(status)) {
+        if (account) dropDone(account, itemId);
         undone(itemId);
-      } else queueDone(account, { itemId, step });
+      }
     });
 }
+
+/** Answers no retry changes: a bad request, not found, an earlier version, unprocessable */
+const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([400, 404, 409, 422]);
 
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
@@ -164,7 +171,14 @@ export function useTourProgress(): void {
           useTourStore
             .getState()
             .setProgress({ completed: [], cardDismissed: true, fillOfferDismissed: true });
-          usePathStore.getState().setProgress({ skippedTours: [], checkpoints: [] });
+          // (a pass this device still has to save stays shown, as on a read that lands)
+          const account = useAuthStore.getState().user?.id;
+          usePathStore.getState().setProgress({
+            skippedTours: [],
+            checkpoints: (account ? pendingDone(account) : [])
+              .map((q) => q.itemId)
+              .filter(isCheckpointId),
+          });
         }
       });
     return () => {

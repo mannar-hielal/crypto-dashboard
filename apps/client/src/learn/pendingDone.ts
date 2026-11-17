@@ -39,15 +39,22 @@ function isPending(v: unknown): v is PendingDone {
   );
 }
 
+/**
+ * The stored list in today's shape, from any version this module ever wrote (only 1 so far; a new
+ * shape adds its step here). Anything else reads as nothing kept: it's validated item by item after
+ */
+function migrate(raw: unknown): unknown[] {
+  if (typeof raw !== 'object' || raw === null) return [];
+  const { v, items } = raw as Record<string, unknown>;
+  if (v === VERSION && Array.isArray(items)) return items;
+  return [];
+}
+
 /** The account's finishes and passes still to save */
 export function pendingDone(account: string): PendingDone[] {
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
-    if (typeof raw !== 'object' || raw === null) return [];
-    const { v, items } = raw as Record<string, unknown>;
-    return v === VERSION && Array.isArray(items)
-      ? items.filter(isPending).slice(0, MAX_PENDING)
-      : [];
+    return migrate(raw).filter(isPending).slice(0, MAX_PENDING);
   } catch {
     return [];
   }

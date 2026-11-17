@@ -88,6 +88,16 @@ describe('useTourProgress', () => {
     expect(useTourStore.getState().cardDismissed).toBe(true);
   });
 
+  it('should keep a pass this device still has to save shown when the progress cannot be read', async () => {
+    localStorage.clear();
+    queueDone('u1', { itemId: 'checkpoint-ch1', step: 2 });
+    getProgress.mockRejectedValue(new Error('network'));
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
+    localStorage.clear();
+  });
+
   it('should save a finished tour and a dismissed card, once each', async () => {
     getProgress.mockResolvedValue({ items: [] });
     renderHook(() => useTourProgress());
@@ -333,6 +343,29 @@ describe('useTourProgress', () => {
       setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
       act(() => useLessonStore.getState().finish());
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined());
+      expect(pendingDone('u1')).toEqual([]);
+    });
+
+    it('should keep a finish shown when a progress read lands while its save is on its way', async () => {
+      localStorage.clear();
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      setProgress.mockReturnValueOnce(new Promise(() => undefined)); // the save never answers
+      act(() => useLessonStore.getState().finish());
+      // Kept before it was sent: a read now (a session refresh) still shows it
+      expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }]);
+      useTourStore.getState().reset();
+      await loaded([]);
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+    });
+
+    it('should take a finish back when the server refuses its step for good (a 400)', async () => {
+      localStorage.clear();
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 400 }));
+      act(() => useLessonStore.getState().finish());
       await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined());
       expect(pendingDone('u1')).toEqual([]);
     });
