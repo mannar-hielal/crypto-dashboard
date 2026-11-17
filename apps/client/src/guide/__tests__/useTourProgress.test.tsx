@@ -15,11 +15,14 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 
 let token: string | null = 'tok';
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { accessToken: string | null }) => unknown) =>
-    selector({ accessToken: token }),
+  useAuthStore: Object.assign(
+    (selector: (s: { accessToken: string | null }) => unknown) => selector({ accessToken: token }),
+    { getState: () => ({ user: { id: 'u1' } }) }
+  ),
 }));
 
 import { useTourProgress } from '@/guide/useTourProgress';
+import { pendingDone, queueDone } from '@/learn/pendingDone';
 import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
 import { usePathStore } from '@/learn/pathStore';
@@ -301,6 +304,33 @@ describe('useTourProgress', () => {
       expect(setProgress).not.toHaveBeenCalled();
       expect(calls()).toEqual([]);
       expect(useLessonStore.getState()).toMatchObject({ activeId: null, finishes: 1 });
+    });
+
+    it('should keep a finish that could not be saved, show it done, and send it again on the next load', async () => {
+      localStorage.clear();
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      // An API rolled back on its own refuses the step
+      setProgress.mockRejectedValueOnce(new Error('Only a start takes a step'));
+      act(() => useLessonStore.getState().finish());
+      await waitFor(() =>
+        expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }])
+      );
+      // Next load: shown as done (the server doesn't have it yet), and sent again: it leaves the
+      // queue only once a save lands (the helper clears the write mock, so the queue is the proof)
+      useLessonStore.getState().reset();
+      useTourStore.getState().reset();
+      await loaded([]);
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      await waitFor(() => expect(pendingDone('u1')).toEqual([]));
+    });
+
+    it('should drop a kept finish the server refuses as an earlier version', async () => {
+      localStorage.clear();
+      queueDone('u1', { itemId: 'lesson-02', step: 30 });
+      setProgress.mockRejectedValueOnce(new Error('An earlier version of this lesson'));
+      await loaded([]);
+      await waitFor(() => expect(pendingDone('u1')).toEqual([]));
     });
 
     it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {

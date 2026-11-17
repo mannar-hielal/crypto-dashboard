@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { noteFinishSent } from '@/learn/finishSync';
+import { dropDone, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
@@ -26,6 +27,26 @@ import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './to
 
 /** Set while the server's furthest screens are merged in: they're already stored, so never sent */
 let applyingServer = false;
+
+/**
+ * A lesson finish or a checkpoint pass, with its version step. One that can't be saved is kept on
+ * the device and sent again when the progress next loads (learn/pendingDone.ts), unless it was
+ * refused as an earlier version, which no retry changes
+ */
+function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: string): void {
+  const account = useAuthStore.getState().user?.id;
+  learnApi
+    .setProgress(itemId, 'completed', accessToken, step)
+    .then(() => {
+      if (account) dropDone(account, itemId);
+    })
+    .catch((err: unknown) => {
+      if (!account) return;
+      if (err instanceof Error && err.message.startsWith('An earlier version')) {
+        dropDone(account, itemId);
+      } else queueDone(account, { itemId, step });
+    });
+}
 
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
@@ -52,9 +73,18 @@ export function useTourProgress(): void {
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as PathTourId);
-        const lessons = items
-          .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
-          .map((i) => i.itemId as LessonId);
+        // Finishes and passes this device couldn't save yet: shown as done, and sent again
+        const account = useAuthStore.getState().user?.id;
+        const queued = account ? pendingDone(account) : [];
+        for (const q of queued) saveDone(q.itemId, q.step, accessToken);
+        const lessons = [
+          ...new Set([
+            ...items
+              .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
+              .map((i) => i.itemId as LessonId),
+            ...queued.map((q) => q.itemId).filter(isLessonId),
+          ]),
+        ];
         // Lesson 1 (or its primer) finished means the offer is done with, dismissed or not
         const cardDismissed =
           items.some((i) => i.itemId === 'welcome-card') ||
@@ -89,9 +119,14 @@ export function useTourProgress(): void {
           skippedTours: items
             .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
             .map((i) => i.itemId as TourId),
-          checkpoints: items
-            .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
-            .map((i) => i.itemId as CheckpointId),
+          checkpoints: [
+            ...new Set([
+              ...items
+                .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
+                .map((i) => i.itemId as CheckpointId),
+              ...queued.map((q) => q.itemId).filter(isCheckpointId),
+            ]),
+          ],
         });
         const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
         useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
@@ -176,9 +211,7 @@ export function useTourProgress(): void {
       for (const id of Object.keys(state.checkpoints) as CheckpointId[]) {
         if (!prev.checkpoints[id]) {
           // With its question set's version: the server ignores a pass from an earlier set
-          learnApi
-            .setProgress(id, 'completed', accessToken, getCheckpoint(id).version)
-            .catch(() => undefined);
+          saveDone(id, getCheckpoint(id).version, accessToken);
         }
       }
     });
@@ -212,13 +245,12 @@ export function useTourProgress(): void {
       // (a reset sets the count back to 0: that's no finish)
       const finished = state.finishes > prev.finishes ? prev.activeId : null;
       if (finished) {
-        // With its last screen's step: the server refuses a finish from an earlier version. (An API
-        // from before 2026-11-16 refuses the step instead. A release never mixes them: deploy.yml's
-        // `fly deploy` waits for every API machine before the web app goes out, and this release
-        // rolls back API and web together, git.md's emergency playbook)
+        // With its last screen's step: the server refuses a finish from an earlier version. An API
+        // from before 2026-11-16 (rolled back on its own) refuses the step instead: saveDone keeps
+        // the finish and sends it again once the API is back
         const lesson = getLesson(finished);
         const last = lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
-        learnApi.setProgress(finished, 'completed', accessToken, last).catch(() => undefined);
+        saveDone(finished, last, accessToken);
         // Noted, so the streak screen reads the habits after it lands (learn/finishSync.ts)
         noteFinishSent(
           learnApi
