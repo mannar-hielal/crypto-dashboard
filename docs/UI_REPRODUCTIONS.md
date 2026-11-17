@@ -235,57 +235,89 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    dark stage, the real photo of Laszlo Hanyecz with the two pizzas ([lesson.photo], credited "Photo: Laszlo
    Hanyecz", no guide), and the lines one by one ("22 May 2010 · Florida" … "Back then, those coins were worth about
    $41." … "Those same coins later passed $1 billion. Prices move. A lot."). [lesson.next] stays hidden until the
-   last line is in, then shows full width as **Unlock how trading works →** with one shine. Enter (or a tap on
+   last line is in, then shows full width as **Continue →** with one shine. Enter (or a tap on
    [lesson.beats]) during the reveal → every line at once, still on screen 1; reduced motion → every line at once,
    no shine (M). → **Meet your guides** (Pulin from the left, Berwyn from the right; "In the next 9 minutes you'll
-   learn:" and three ✓ lines), then **Show me the up-or-down trick →**.
-   - Screens 3–4: **Up or down, you can win**, then **Buy and Sell** with [lesson.practice `practice-buy`] **Try a
+   learn:" and three ✓ lines), then **Continue →**. On every card and question of Lessons 1–3 the main button
+   says **Continue →** and the link under it **← Back**; the summary's button says **Finish lesson** (2026-11-17).
+   No `**` or `*` shows anywhere: those words are bold or italic (**Buy**, **Sell**, **long** …).
+   - Screens 3–4: **Up or down, you can win** (the picture on top, 2026-11-17: three panels, a green line that
+     climbs "▲ up wins", a red one that slides "▼ down wins", a grey one sideways "≈ flat"), then **Buy and Sell** (the
+     picture: a coin and a banknote, a green arrow "Buy: pay $, get coin" and a red one "Sell: hand coin, get $") with
+     [lesson.practice `practice-buy`] **Try a
      buy on the real chart** → Expect the sheet to step aside, `/dashboard/spot/BTC/USDT`, the tour ring on the
-     form's Buy (a phone: on the bottom bar's **Buy / Long**), Market, USDT, 100, Place; after the order (or ✕ /
-     Skip) → Expect the lesson back on screen 5.
+     form's Buy (a phone: on the bottom bar's **Buy / Long**), Market, USDT, 100, Place; after the order → Expect
+     **What just happened** (2026-11-17): the ring on the account panel's [account.tab `assets`], then on Bitcoin's
+     [assets.row `BTC`] ("You paid $100; you hold a hair less (about $99.90 of Bitcoin)…", Avg cost "fee included") and
+     its [assets.row.upnl `BTC`] ("…if you sold right now, before the selling fee."), the last bubble's button
+     **Back to the lesson** → Expect
+     the lesson back on screen 5. ✕ / Skip at any point → the lesson back on screen 5 as well.
    - Screens 5–6: **Quick check** (Choose buy or sell): the BTC chart frozen on 23 Oct 2023 under a dashed
      "Your plan" line at $31,000, the plan line under it, then Buy (green) and Sell (red) side by side. ← / → move
      between them. Pick Buy → Expect ✓ on Buy, "Right." and the Why (the plan, not the price), then the candles
-     play on to 9 Nov with "What happened next (the plan doesn't depend on it)". Screen 6: the 5 Aug 2024 exit at
-     $58,000 ("Your exit line") → Sell.
-   - Screens 7–13: **Going long** (practice-long on `/dashboard/usdt/BTCUSDT`), **A real long** (markers "Buy
-     $27,484" 2 Oct 2023, "Sell $73,133" 13 Mar 2024), **The result** ([lesson.term `hindsight`]), **Close it to
-     keep it**, **Going short** (practice-short on `/dashboard/usdt/ETHUSDT`: the form's Sell / Short, a phone's **Sell / Short**), **A real
-     short** (10 Nov 2021 → 18 Jun 2022), **The catch** (Berwyn worried: no ceiling, liquidation).
+     play on to 9 Nov with "What happened next (the plan doesn't depend on it)". Pick Sell instead → ✕, "Not
+     quite." and the Why, Continue disabled, and [lesson.retry] **Try again** → the pick cleared and the chart
+     frozen again; Buy then → Continue enabled. Screen 6: the 5 Aug 2024 exit at $58,000 ("Your exit line") → Sell.
+   - Screens 7–13: **Going long** (practice-long on `/dashboard/usdt/BTCUSDT`, then **What just happened**:
+     [account.tab `positions`], the [positions.row `linear:BTCUSDT`] row: "…Unrealized P&L moves with the Mark
+     Price. It becomes real when you close the position with the ✕ (Close) at the end of the row.", **Back to the
+     lesson**), **A real long** (spot candles since 2026-11-17: markers "Buy $27,500" 2 Oct 2023, "Sell $73,079" 13
+     Mar 2024), **The result**: the text, then [lesson.math]: Pulin in round glasses says "Let's do the math.", six
+     numbered steps ("1. Price rise 73,079 − 27,500 = 45,579" … "6. Keep 99.8% after fees $2,657 × 0.998 ≈ $2,652")
+     and [lesson.math.answer] "➜ Bitcoin rose about 166%. After fees, your $1,000 became about **$2,652**: about
+     **$1,652 profit**." (no hindsight line), **Close it to keep it** ("…the ✕ (Close) at the end of your position
+     row."; the picture: "open: on paper" +$120? over a dashed wobble, **Close** →, "closed: real" +$120 framed in
+     green with a lock), **Going short** (the picture: a price falling from "1. sell the borrowed game: $60" to "2. buy
+     one back: $40, return it", the gap "you keep $20"): the text, then [lesson.analogy] Berwyn in glasses ("Think of it as borrowing. A friend
+     lends you a $60 game…", ending "…you put up USDT as margin, the contract settles the difference in USDT, and
+     while it's open you pay or receive a small funding fee."), no exchange between the guides, then practice-short on `/dashboard/usdt/ETHUSDT` (the
+     form's Sell / Short, a phone's **Sell / Short**; then **What just happened** on [positions.row
+     `linear:ETHUSDT`], "…close it with the ✕ (Close) at the end of the row."), **A real short** (10 Nov 2021 → 18 Jun 2022), **The catch**: Berwyn in glasses works out
+     the 0.01 BTC short in five steps ($648.94 → $189.65, $459.29, 70.8%), "➜ Bitcoin fell about 71%…", then
+     Berwyn's line "Now the catch: …" (no ceiling; the exchange closes a losing short before your margin runs out
+     (liquidation), and that margin is lost).
    - Screen 14: **Quick check** (long, short or stay out) → "Stay out for now" is right; screen 15: **Your call**.
-   - Screens 16–18: **The market never sleeps** ([lesson.term `slippage`], Read more → _Price swings_, always
-     open), **Smaller coins swing harder** (the SOL chart, "−29%"; BTC −19% in the text), **Big swings, big
-     risks** ([lesson.term `rug-pull`]).
+   - Screens 16–18: **The market never sleeps** (the picture: a moon, a week of day bars, the shop's filled only by
+     day and empty on Sunday, crypto's full every day, "crypto: open 24/7"; Berwyn's line: [lesson.term `slippage`] is a button that opens
+     its peek; Read more → _Price swings_, always open), **Smaller coins swing harder** (the SOL chart above the
+     text, "−29%"; then Pulin's math: "182.57 − 129.70 = 52.87" … "29.0%"), **Big swings, big risks**
+     ([lesson.term `rug-pull`]).
    - Screen 19: **Try it on the real screen** (on a phone too) → [lesson.try] → the buy tour, then the sell tour,
      the lesson waiting through both → back on screen 20.
    - Screen 20: **What you learned**: five lines, only the last with [lesson.recap] Read more, and the highlight
-     "Decide when and why before you click." with no Read more. Continue → screen 21, **Lesson 1 done**: the
+     "Decide when and why before you click." with no Read more. **Finish lesson** → screen 21, **Lesson 1 done**: the
      ribbon, the journal line, the rating, [lesson.teaser] "Next: where Bitcoin came from…", and
      [lesson.next-lesson] **Lesson 2: Money nobody controls** with "Finish for now". Signed in, either button → Expect
      the streak screen first ([lesson.streak]: the flame, "N-day streak" counting up, this week's dots, "Come back
      tomorrow to keep it going"), then [lesson.streak.continue] does what was pressed (M). A guest goes straight on.
 2. Lesson 2 · **Money nobody controls** (rewritten 2026-11-16), 21 screens → Expect the cold open drawn, no photo
    and no guide: the Bitcoin mark and the beats ("3 January 2009 · The first block" … the Times headline … "In the
-   next 9 minutes: why Bitcoin exists…"), then **Unlock why Bitcoin exists →**. Then **From the price to the
+   next 9 minutes: why Bitcoin exists…"), then **Continue →**. Then **From the price to the
    thing** (Pulin and Berwyn), **2008: trust broke**, **A paper, then a block** ([lesson.more] → _Bitcoin's story_
    at its timeline), **One record, many copies** (the dotted world map; [lesson.term `ledger`] → a peek with no
    "From" line; [lesson.term `node`] → "A computer that keeps a full copy…", [lesson.peek.more] → the network
    article in the drawer, the lesson hidden), **Sending bitcoin**, **Two checks, then a block**, **Sealed by hard
-   work**, **The hash links the chain**.
+   work** (the picture, 2026-11-17: three blocks, Block 1's "pays 5 → 9" and its fingerprint changed, red, the links
+   after it crossed out ✕, "change one: redo every block after"), **The hash links the chain** (the picture: three
+   blocks, each one's "prev" the fingerprint of the block before, amber arrows, "# = a block's fingerprint").
    - Screen 10, **Quick check** (Drag and drop): numbered slots 1–5, the steps below. Tap a step → it's ringed
      ([lesson.step], aria-pressed); tap [lesson.slot `0`] → it lands there; tap a filled slot → it goes back. With a
      mouse, drag a step onto a slot. [lesson.check] stays off until all five are placed; then ✓ / ✕ per slot,
-     "Right." / "Not quite." and the Why (sign, check, bundle, seal, share).
+     "Right." / "Not quite." and the Why (sign, check, bundle, seal, share). Not quite → [lesson.retry] **Try
+     again** empties every slot; Continue stays off until the order is right. ← Back off a wrong board and
+     Continue again → the board empty, never showing the right order.
    - Screen 12, **Quick check** (Match boxes): two columns; tap [lesson.match-term `0`] then a meaning → both show
-     ①; tap a paired box → the pair undone. [lesson.check] → ✓ / ✕ per pair and the Why.
+     ①; tap a paired box → the pair undone. [lesson.check] → ✓ / ✕ per pair and the Why; not quite →
+     [lesson.retry] **Try again** undoes every pair (2026-11-17).
    - **No borders**, **Liquidity, briefly**, **Money that runs code**, **NFTs, briefly**, then **Your call** (one
      copy disagrees with thousands) → "The thousands of copies that agree" is right; then the features **Quick
      check** (Match boxes: Decentralized, Fixed supply, Open to check, Borderless).
    - Screen 19, **Try it** (any screen size): the blockchain piece in the sheet; [article.chain.change] → the later
      blocks break, [article.chain.reset] mends them; [lesson.try] Continue.
-   - Screen 20, **Why Bitcoin exists**: three lines with Read more, then the staged story ([lesson.genesis]: "However…"
-     → 2008, Lehman → banks failed → Satoshi, the Bitcoin mark, "That was the birth of Bitcoin."; Continue hidden
-     until it ends; Enter, a tap, Back to it later and reduced motion show it all at once). Screen 21: the close,
+   - Screen 20, **Why Bitcoin exists**: four numbered lines with Read more, the first "Bitcoin was made so people
+     can pay each other online without trusting a bank in the middle." (→ `bitcoin-story#plan`), the last "No one is
+     in charge: the network agrees." (→ `bitcoin-network#answered`), shown at once (no story, no Bitcoin
+     mark: dropped 2026-11-17), and **Finish lesson** ready straight away. Screen 21: the close,
      [lesson.teaser] "Next: why prices swing so hard…", [lesson.next-lesson] **Lesson 3: News, swings and traps**.
 3. The knowledge base from Lesson 2 (unchanged articles): in _Many notebooks, no Nora_, [article.gossip.send] → the
    dots light ring by ring (1, 8, 64), all at once with reduced motion; [article.balance.try] → "✗ Rejected by every
@@ -293,14 +325,15 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    [`sam`] → ✗; [article.chain.change] → the later blocks break; [article.answer.tile `lose`] → its answer shown. In
    _Mailboxes and keys_ (now "practised in a later lesson on keys and custody"): [article.mailbox.step `2`] → the
    stamp seated, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…".
-4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16), 21 screens → Expect the cold open **One bitcoin for
-   $8,200** (kept) and **Unlock why prices swing**; **Why so much?**; **Big swings, both ways** (May 2021,
-   Read more → `price-swings#size`); **News moves it, fast**; **Same news, either way** (the halving chart: "Halving"
+4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16), 21 screens → Expect the cold open **One Bitcoin for
+   $8,200** (kept) and **Continue →**; **Why so much?**; **Big swings, both ways** (May 2021, "as low as $28,800 on Bybit's perpetual chart", "It can swing up just as
+   hard, often without warning, so no one can reliably time it.", then Berwyn's math in
+   glasses, "42,900 − 28,800 = 14,100" … "32.9%", "➜ … about **33%**: a third.", Read more → `price-swings#size`); **News moves it, fast**; **Same news, either way** (the halving chart: "Halving"
    20 Apr 2024, "$58,299", "$71,437"); then **Your call**: the ETF chart stopping on 10 Jan 2024, answer → it plays on
    to 23 Jan, "−14.5%", and the Why names the halving.
    - Then **The power of hype** (Berwyn worried: a warning), **Thousands of deals, one candle**, **A market shock**
-     (FTX: "FTX in trouble" 8 Nov 2022, "$15,892"), **A plan beats panic**, **Up, then down** ("$63,588" 13 Apr 2021,
-     "$29,765" 20 Jul), **Thin or deep** (Read more → `exchange-price#liquidity`), **The $8,200 moment**,
+     (FTX: "FTX in trouble" 8 Nov 2022, "$15,892"; no math since 2026-11-17: the text gives the 23%), **A plan beats panic**, **Up, then down**
+     ("$63,588" 13 Apr 2021, "$29,765" 20 Jul; Berwyn's math, "53.2%"), **Thin or deep** (Read more → `exchange-price#liquidity`), **The $8,200 moment**,
      **Bitcoin is deep**.
    - **Quick check** (Match boxes: four situations to what usually happens), **A rug pull** (worried, no named
      token), **Check before you trust** (Read more → `spot-a-scam#checklist`), **Quick check** (Drag and drop: a rug
@@ -308,7 +341,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    - Desktop: **Try it** → [lesson.try] Show me → the primer's three tasks, then the summary. A phone gets Continue
      and "needs a larger screen" (the primer's hover steps).
    - **What moves a price**: four lines with Read more and "Your plan decides, not the headline."; the close with no
-     teaser and one button, [lesson.finish] **Finish** (Lesson 1's Try already ran the buy and sell tours).
+     teaser and one button, [lesson.finish] **Finish lesson** (2026-11-17; Lesson 1's Try already ran the buy and sell tours).
 5. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of nine articles;
    [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
    In **When the queue runs thin**, [article.queue.size] to 10 → Expect the thin queue down to 90; [article.queue.limit]
@@ -317,7 +350,8 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    _Check before you trust_, the red-flag sorter → Expect a Why after every pick and "3 red flags…" once all six are in.
 
 **Manual check (M).** The pictures and the guides' faces at 375, 412, 820 and 1440 px (nothing clipped, the
-presenter never over the scene). Frequency: per release touching `guide/LessonArt.tsx`, `guide/art/` or the lessons.
+presenter never over the scene); every picture above its card's text; the guides' round glasses on the math and
+the analogy, and the math's steps (a sum wraps under its label on a narrow phone, never a sideways scroll). Frequency: per release touching `guide/LessonArt.tsx`, `guide/art/` or the lessons.
 
 ### Learning path — the learning map (no Part B rows yet)
 

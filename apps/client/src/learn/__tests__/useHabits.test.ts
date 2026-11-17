@@ -59,14 +59,15 @@ describe('useHabits', () => {
     expect(result.current.habits).toBeNull();
   });
 
-  it('should not read again when only the token rotates (the same account)', async () => {
+  it('should read again with each new token, keeping the answer shown meanwhile', async () => {
     useAuthStore.getState().setAuth('t1', { id: 'u1', email: 'a@b', username: 'a' } as never);
     getHabits.mockResolvedValue(habits);
-    const { rerender } = renderHook(({ t }) => useHabits(t), { initialProps: { t: 't1' } });
-    await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(1));
-    rerender({ t: 't2' });
-    await act(async () => {});
-    expect(getHabits).toHaveBeenCalledTimes(1);
+    const { result, rerender } = renderHook(({ t }) => useHabits(t), { initialProps: { t: 't1' } });
+    await waitFor(() => expect(result.current.habits).toEqual(habits));
+    rerender({ t: 't2' }); // a session refresh (the same account)
+    expect(result.current.habits).toEqual(habits);
+    await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(2));
+    expect(getHabits).toHaveBeenLastCalledWith('t2');
   });
 
   it('should send nothing for a read cancelled before it answered', async () => {
@@ -108,5 +109,33 @@ describe('useHabits', () => {
     expect(getHabits).not.toHaveBeenCalled();
     act(() => useTourStore.setState({ loaded: true }));
     await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(1));
+  });
+
+  it('should recover from an expired token’s failure with the refreshed one', async () => {
+    useAuthStore.setState({ user: { id: 'a', email: 'a@x', username: 'a' } as never });
+    getHabits.mockRejectedValueOnce(Object.assign(new Error('401'), { status: 401 }));
+    getHabits.mockResolvedValue(habits);
+    const { result, rerender } = renderHook(({ t }) => useHabits(t), {
+      initialProps: { t: 'expired-1' },
+    });
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    rerender({ t: 'fresh-2' }); // the session refreshed for the same account
+    await waitFor(() => expect(result.current.habits).toEqual(habits));
+    expect(result.current.failed).toBe(false);
+  });
+
+  it('should never hand a new token’s read the one still on its way with the old token', async () => {
+    useAuthStore.setState({ user: { id: 'a', email: 'a@x', username: 'a' } as never });
+    let fail: (e: unknown) => void = () => {};
+    getHabits.mockReturnValueOnce(new Promise((_, reject) => (fail = reject)));
+    getHabits.mockResolvedValue(habits);
+    const { result, rerender } = renderHook(({ t }) => useHabits(t), {
+      initialProps: { t: 'expired-3' },
+    });
+    rerender({ t: 'fresh-4' }); // refreshed while the expired token's read is still out
+    await waitFor(() => expect(result.current.habits).toEqual(habits));
+    await act(async () => fail(Object.assign(new Error('401'), { status: 401 })));
+    // The old read's failure lands after the new answer: it was cancelled, nothing changes
+    expect(result.current).toEqual({ habits, failed: false });
   });
 });

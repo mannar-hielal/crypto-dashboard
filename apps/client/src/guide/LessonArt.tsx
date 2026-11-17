@@ -1,7 +1,8 @@
 /**
  * The lessons' pictures (owner 2026-10-22: our own colours and candles, never traced from an
  * inspiration; 2026-10-24: Phosphor duotone icons, the real BTC mark, a dotted world map, and Tick or
- * Tock standing in every scene, presenting it). Decorative: the card's text carries the meaning.
+ * Tock standing in every scene, presenting it). Most are decorative: the card's text carries the
+ * meaning. Since 2026-11-17 some tell most of their card (`ART_LABELS`, lessons.ts, says what).
  *
  * Every scene is drawn in a 320 × 160 box and leaves its bottom-left corner (x < 74, y > 56) free
  * for the presenting guide.
@@ -12,7 +13,7 @@ import { Clock, HardDrives, MagnifyingGlass } from '@phosphor-icons/react';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { Guide, GuideFigure } from './art/Guide';
 import { WORLD_DOTS } from './art/worldDots';
-import type { LessonArtId, Presenter, Speaker } from './lessons';
+import { ART_LABELS, type LessonArtId, type Presenter, type Speaker } from './lessons';
 import styles from './LessonArt.module.css';
 
 /** The guide's face beside a line of dialogue: Tick curious, Tock calm */
@@ -406,6 +407,403 @@ function CheckCoin() {
   );
 }
 
+// ─── Pictures that tell the card (owner 2026-11-17) ──────────────────────────
+// Drawn so the learner gets most of the card from the picture alone; our own shapes, primitives only.
+
+type Point = readonly [number, number];
+
+/** A chevron at the end of the segment p → q, pointing along it */
+function arrowHead(p: Point, q: Point, size = 8): string {
+  const angle = Math.atan2(q[1] - p[1], q[0] - p[0]);
+  const wing = (turn: number) =>
+    `${q[0] + size * Math.cos(angle + turn)} ${q[1] + size * Math.sin(angle + turn)}`;
+  return `M${wing(Math.PI * 0.8)} L${q[0]} ${q[1]} L${wing(-Math.PI * 0.8)}`;
+}
+
+/** A line through the points with an arrowhead at its end, in the colour of its class */
+function PathArrow({ points, className }: { points: readonly Point[]; className: string }) {
+  const d = points.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');
+  return (
+    <g className={className}>
+      <path d={d} className={styles.stroke} />
+      <path
+        d={arrowHead(points[points.length - 2], points[points.length - 1])}
+        className={styles.stroke}
+      />
+    </g>
+  );
+}
+
+/** "Up or down, you can win": a price that climbs, one that slides, one that drifts sideways */
+function ThreePaths() {
+  const wave: readonly Point[] = [
+    [-28, 30],
+    [-18, 18],
+    [-9, 24],
+    [2, 4],
+    [10, 10],
+    [26, -24],
+  ];
+  const paths = [
+    { cx: 118, name: 'climbs', result: '▲ up wins', tone: styles.up, dy: (y: number) => y },
+    { cx: 196, name: 'slides', result: '▼ down wins', tone: styles.down, dy: (y: number) => -y },
+    { cx: 274, name: 'sideways', result: '≈ flat', tone: styles.muted, dy: (y: number) => y / 6 },
+  ];
+  return (
+    <>
+      {paths.map((p) => (
+        <g key={p.name}>
+          <rect x={p.cx - 36} y="12" width="72" height="84" rx="6" className={styles.panel} />
+          <PathArrow points={wave.map(([x, y]) => [p.cx + x, 54 + p.dy(y)])} className={p.tone} />
+          <Label x={p.cx} y={114}>
+            {p.name}
+          </Label>
+          <text x={p.cx} y="132" textAnchor="middle" className={`${styles.chipText} ${p.tone}`}>
+            {p.result}
+          </text>
+        </g>
+      ))}
+    </>
+  );
+}
+
+/** "Buy and Sell": money becomes a coin (Buy), a coin becomes money (Sell) */
+function BuySellSwap() {
+  return (
+    <>
+      <circle cx="118" cy="74" r="26" className={styles.coin} />
+      <text x="118" y="83" textAnchor="middle" className={styles.coinText}>
+        ₿
+      </text>
+      <rect x="238" y="56" width="70" height="38" rx="4" className={styles.note} />
+      <text x="273" y="81" textAnchor="middle" className={`${styles.bigNumber} ${styles.white}`}>
+        $
+      </text>
+      <PathArrow
+        points={[
+          [238, 58],
+          [196, 40],
+          [148, 60],
+        ]}
+        className={styles.up}
+      />
+      <text x="196" y="22" textAnchor="middle" className={`${styles.chipText} ${styles.up}`}>
+        Buy: pay $, get coin
+      </text>
+      <PathArrow
+        points={[
+          [148, 90],
+          [196, 110],
+          [238, 92],
+        ]}
+        className={styles.down}
+      />
+      <text x="196" y="134" textAnchor="middle" className={`${styles.chipText} ${styles.down}`}>
+        Sell: hand coin, get $
+      </text>
+    </>
+  );
+}
+
+/** "Close it to keep it": an open result wobbles on paper; closed, it's locked in */
+function CloseToKeep() {
+  return (
+    <>
+      <Label x={130} y={16}>
+        open: on paper
+      </Label>
+      <rect x="82" y="24" width="96" height="64" rx="6" className={styles.panel} />
+      <text x="130" y="46" textAnchor="middle" className={`${styles.bigNumber} ${styles.muted}`}>
+        +$120?
+      </text>
+      <path
+        d="M90 70 L102 62 L112 74 L124 58 L136 76 L148 64 L160 72 L170 60"
+        className={`${styles.stroke} ${styles.muted} ${styles.dashed}`}
+      />
+      <Label x={130} y={106}>
+        can still shrink
+      </Label>
+      <text x="199" y="48" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Close
+      </text>
+      <PathArrow
+        points={[
+          [184, 56],
+          [214, 56],
+        ]}
+        className={styles.white}
+      />
+      <Label x={268} y={16}>
+        closed: real
+      </Label>
+      <rect x="222" y="24" width="92" height="64" rx="6" className={styles.lockedPanel} />
+      <text x="268" y="50" textAnchor="middle" className={`${styles.bigNumber} ${styles.up}`}>
+        +$120
+      </text>
+      <g className={styles.amber}>
+        <path d="M263 68 V63 A5 5 0 0 1 273 63 V68" className={styles.stroke} />
+        <rect x="259" y="67" width="18" height="14" rx="2" className={styles.body} />
+      </g>
+      <Label x={268} y={106}>
+        yours to keep
+      </Label>
+    </>
+  );
+}
+
+/** "Going short": the borrowed game sold at $60, one bought back at $40, $20 kept */
+function ShortGame() {
+  const price: readonly Point[] = [
+    [100, 30],
+    [125, 44],
+    [145, 38],
+    [170, 58],
+    [190, 52],
+    [215, 74],
+    [238, 68],
+    [260, 90],
+    [280, 96],
+  ];
+  return (
+    <>
+      <path
+        d="M100 30 H304 M280 96 H304"
+        className={`${styles.stroke} ${styles.muted} ${styles.guideLine}`}
+      />
+      <path
+        d={price.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ')}
+        className={`${styles.stroke} ${styles.down}`}
+      />
+      <circle cx="100" cy="30" r="4.5" className={styles.coin} />
+      <circle cx="280" cy="96" r="4.5" className={styles.coin} />
+      <text x="92" y="18" className={`${styles.chipText} ${styles.white}`}>
+        1. sell the borrowed game: $60
+      </text>
+      <text x="286" y="118" textAnchor="end" className={`${styles.chipText} ${styles.white}`}>
+        2. buy one back: $40, return it
+      </text>
+      <path d="M298 30 H304 V96 H298" className={`${styles.stroke} ${styles.up}`} />
+      <text x="258" y="52" textAnchor="middle" className={`${styles.chipText} ${styles.up}`}>
+        you keep $20
+      </text>
+      <Label x={196} y={142}>
+        win when the price falls
+      </Label>
+    </>
+  );
+}
+
+interface BlockShape {
+  title: string;
+  /** What the block records ("pays 5"), and the edit that broke it */
+  data: string;
+  edited?: boolean;
+  prev: string;
+  own: string;
+  /** This block's own fingerprint changed (the edit) */
+  changed?: boolean;
+  /** Its `prev` no longer matches the block before: it needs its work redone */
+  broken?: boolean;
+}
+
+const BLOCK_X = [84, 164, 244];
+const BLOCK_Y = 14;
+
+/** Three blocks in a row, each carrying the fingerprint (hash) of the block before it */
+function BlockRow({ blocks }: { blocks: readonly BlockShape[] }) {
+  return (
+    <>
+      {blocks.map((b, i) => {
+        const x = BLOCK_X[i];
+        const cx = x + 34;
+        return (
+          <g key={b.title}>
+            <rect
+              x={x}
+              y={BLOCK_Y}
+              width="68"
+              height="96"
+              rx="6"
+              className={b.broken || b.changed ? styles.brokenPanel : styles.panel}
+            />
+            <text
+              x={cx}
+              y={BLOCK_Y + 16}
+              textAnchor="middle"
+              className={`${styles.chipText} ${styles.white}`}
+            >
+              {b.title}
+            </text>
+            <text
+              x={cx}
+              y={BLOCK_Y + 30}
+              textAnchor="middle"
+              className={`${styles.small} ${b.edited ? styles.down : styles.muted}`}
+            >
+              {b.data}
+            </text>
+            <text
+              x={cx}
+              y={BLOCK_Y + 43}
+              textAnchor="middle"
+              className={`${styles.small} ${styles.muted}`}
+            >
+              prev
+            </text>
+            <rect
+              x={x + 8}
+              y={BLOCK_Y + 47}
+              width="52"
+              height="17"
+              rx="4"
+              className={styles.panel}
+            />
+            <text
+              x={cx}
+              y={BLOCK_Y + 59}
+              textAnchor="middle"
+              className={`${styles.small} ${b.broken ? styles.down : styles.muted}`}
+            >
+              {b.prev}
+            </text>
+            <rect
+              x={x + 8}
+              y={BLOCK_Y + 68}
+              width="52"
+              height="18"
+              rx="4"
+              className={b.changed ? styles.hashChanged : styles.hash}
+            />
+            <text x={cx} y={BLOCK_Y + 81} textAnchor="middle" className={styles.hashText}>
+              {b.own}
+            </text>
+          </g>
+        );
+      })}
+      {blocks.slice(1).map((b, i) => {
+        const from: Point = [BLOCK_X[i] + 60, BLOCK_Y + 77];
+        const to: Point = [BLOCK_X[i + 1] + 8, BLOCK_Y + 55];
+        const mid: Point = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2];
+        return b.broken ? (
+          <g key={b.title} className={styles.down}>
+            <path
+              d={`M${from[0]} ${from[1]} L${to[0]} ${to[1]}`}
+              className={`${styles.stroke} ${styles.dashed}`}
+            />
+            <text x={mid[0]} y={mid[1] + 4} textAnchor="middle" className={styles.chipText}>
+              ✕
+            </text>
+          </g>
+        ) : (
+          <PathArrow key={b.title} points={[from, to]} className={styles.amber} />
+        );
+      })}
+    </>
+  );
+}
+
+/** "The hash links the chain": each block carries the fingerprint of the one before */
+function HashChain() {
+  return (
+    <>
+      <BlockRow
+        blocks={[
+          { title: 'Block 1', data: 'pays 5', prev: 'none', own: '#k7q2' },
+          { title: 'Block 2', data: 'pays 2', prev: '#k7q2', own: '#m4x9' },
+          { title: 'Block 3', data: 'pays 7', prev: '#m4x9', own: '#z8p3' },
+        ]}
+      />
+      <Label x={198} y={132}>
+        # = a block’s fingerprint
+      </Label>
+    </>
+  );
+}
+
+/** "Sealed by hard work": one old number changed, its fingerprint changes, every later block breaks */
+function SealBroken() {
+  return (
+    <>
+      <BlockRow
+        blocks={[
+          {
+            title: 'Block 1',
+            data: 'pays 5 → 9',
+            edited: true,
+            prev: 'none',
+            own: '#r2w6',
+            changed: true,
+          },
+          { title: 'Block 2', data: 'pays 2', prev: '#k7q2', own: '#m4x9', broken: true },
+          { title: 'Block 3', data: 'pays 7', prev: '#m4x9', own: '#z8p3', broken: true },
+        ]}
+      />
+      <text x="198" y="132" textAnchor="middle" className={`${styles.chipText} ${styles.down}`}>
+        change one: redo every block after
+      </text>
+    </>
+  );
+}
+
+/** Hours a week (0–1 of each day) a shop is open, Monday to Sunday: 9 to 6, a short Saturday */
+const SHOP_HOURS: readonly (readonly [number, number] | null)[] = [
+  [0.375, 0.75],
+  [0.375, 0.75],
+  [0.375, 0.75],
+  [0.375, 0.75],
+  [0.375, 0.75],
+  [0.417, 0.667],
+  null,
+];
+const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+/** "The market never sleeps": a shop's week of opening hours against crypto's, open all along */
+function AlwaysOpen() {
+  const dayX = (i: number) => 128 + i * 26;
+  const rows = [
+    { name: 'Shop', y: 38, hours: SHOP_HOURS },
+    { name: 'Crypto', y: 78, hours: SHOP_HOURS.map(() => [0, 1] as const) },
+  ];
+  return (
+    <>
+      <path d="M44 10 A17 17 0 1 0 58 38 A13 13 0 1 1 44 10 Z" className={styles.coin} />
+      {DAY_LETTERS.map((d, i) => (
+        <Label key={i} x={dayX(i) + 11} y={28}>
+          {d}
+        </Label>
+      ))}
+      {rows.map((row) => (
+        <g key={row.name}>
+          <text x="82" y={row.y + 15} className={`${styles.chipText} ${styles.white}`}>
+            {row.name}
+          </text>
+          {row.hours.map((open, i) => (
+            <g key={i}>
+              <rect x={dayX(i)} y={row.y} width="22" height="20" rx="3" className={styles.panel} />
+              {open && (
+                <rect
+                  x={dayX(i)}
+                  y={row.y + 20 - 20 * (open[1] - open[0]) - 20 * open[0]}
+                  width="22"
+                  height={20 * (open[1] - open[0])}
+                  rx="3"
+                  className={styles.openFill}
+                />
+              )}
+            </g>
+          ))}
+        </g>
+      ))}
+      <Label x={217} y={124}>
+        one bar = one day, 24 hours
+      </Label>
+      <text x="217" y="142" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        crypto: open 24/7
+      </text>
+    </>
+  );
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
   ledger: WorldLedgers,
   bitcoin: BitcoinBirth,
@@ -415,16 +813,24 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   candleAnatomy: CandleAnatomy,
   swings: Swings,
   checkCoin: CheckCoin,
+  threePaths: ThreePaths,
+  buySell: BuySellSwap,
+  closeToKeep: CloseToKeep,
+  shortGame: ShortGame,
+  alwaysOpen: AlwaysOpen,
+  hashChain: HashChain,
+  sealBroken: SealBroken,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */
 export function LessonArt({ id, presenter }: { id: LessonArtId; presenter?: Presenter }) {
   const Picture = ART[id];
+  const label = ART_LABELS[id];
   return (
     <svg
       viewBox="0 0 320 160"
       className={styles.art}
-      aria-hidden="true"
+      {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
       focusable="false"
       data-lesson-art={id}
     >

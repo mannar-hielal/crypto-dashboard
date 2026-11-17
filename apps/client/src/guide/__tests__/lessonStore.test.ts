@@ -42,6 +42,33 @@ describe('lessonStore', () => {
     expect(s().answers).toEqual({ 5: 1 });
   });
 
+  it('should clear a wrong answer on Try again, and keep a right one (owner 2026-11-17)', () => {
+    const l = getLesson('lesson-01');
+    // Lesson 1's first quick check: Buy is right
+    const quiz = lessonScreens(l).findIndex((x) => x.kind === 'card' && !!l.cards[x.index].quiz);
+    const right = l.cards[(lessonScreens(l)[quiz] as { index: number }).index].quiz!.correct;
+    s().start('lesson-01', quiz);
+    s().answer(1 - right);
+    s().retry();
+    expect(s().answers).toEqual({});
+    s().answer(right);
+    s().retry();
+    expect(s().answers).toEqual({ [quiz]: right });
+  });
+
+  it('should clear a wrong answer on Back, and keep a right one', () => {
+    const l = getLesson('lesson-01');
+    const quiz = lessonScreens(l).findIndex((x) => x.kind === 'card' && !!l.cards[x.index].quiz);
+    s().start('lesson-01', quiz);
+    s().answer(1); // Sell: not quite
+    s().back();
+    expect(s().answers).toEqual({});
+    s().next();
+    s().answer(0);
+    s().back();
+    expect(s().answers).toEqual({ [quiz]: 0 });
+  });
+
   it('should hide for the tour and carry on with the next screen when the tour ends', () => {
     s().start('lesson-01');
     useLessonStore.setState({ screen: 18 }); // try it
@@ -64,6 +91,22 @@ describe('lessonStore', () => {
     s().enterTour('buy-first-coin');
     s().leaveTour();
     expect(s()).toMatchObject({ screen: 3, inTour: false, tourFrom: null });
+  });
+
+  it('should stay on the screen when the app closed the tour (a rotation), not the learner', () => {
+    s().start('lesson-01');
+    useLessonStore.setState({ screen: 18 }); // try it
+    s().enterTour('buy-first-coin');
+    s().leaveTour(false);
+    expect(s()).toMatchObject({ screen: 18, inTour: false, tourFrom: null });
+  });
+
+  it('should not show a finish the server refused as done again when the lesson is left', () => {
+    s().start('lesson-01');
+    s().markFinished(); // counted and saved; the streak screen shows
+    s().setCompleted([]); // refused as an earlier version: taken back
+    s().finish(); // Continue on the streak screen
+    expect(s().completed['lesson-01']).toBeUndefined();
   });
 
   it('should mark the lesson completed on finish, and not on close', () => {

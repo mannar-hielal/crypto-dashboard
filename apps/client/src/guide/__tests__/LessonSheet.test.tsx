@@ -219,7 +219,7 @@ describe('LessonSheet', () => {
   it('should open Lesson 3 on the flash crash drawn from our own candles, and step through the cards', () => {
     at(0);
     renderSheet();
-    expect(sheet()!.textContent).toContain('One bitcoin for $8,200');
+    expect(sheet()!.textContent).toContain('One Bitcoin for $8,200');
     // No photo (owner 2026-11-12): Bybit's minute candles, with Binance.US's wick drawn
     expect(sheet()!.querySelector('[data-lesson-art="flashCrash"]')).not.toBeNull();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('1');
@@ -246,8 +246,31 @@ describe('LessonSheet', () => {
       'tock'
     );
     expect(sheet()!.textContent).toContain('hindsight');
-    expect(nextBtn()!.disabled).toBe(false);
+    // Not quite: no way on yet, only another go (owner 2026-11-17)
+    expect(nextBtn()!.disabled).toBe(true);
     expect(option(0).disabled).toBe(true);
+    // Only the wrong pick is marked: the right option isn't pointed at, so the next go still asks
+    expect(option(lesson.moment.correct).className).not.toMatch(/right/);
+    expect(option(1).className).toMatch(/wrong/);
+    fireEvent.click(document.querySelector('[data-guide="lesson.retry"]')!);
+    expect(sheet()!.textContent).not.toContain('Not quite.');
+    expect(option(0).disabled).toBe(false);
+    expect(document.activeElement).toBe(sheet());
+    fireEvent.click(option(lesson.moment.correct));
+    expect(sheet()!.textContent).toContain('Right.');
+    expect(document.querySelector('[data-guide="lesson.retry"]')).toBeNull();
+    expect(nextBtn()!.disabled).toBe(false);
+  });
+
+  it('should clear a wrong answer on Back, so the board starts afresh on the way forward', () => {
+    at(5); // the moment
+    renderSheet();
+    fireEvent.click(option(1));
+    fireEvent.click(screen.getByText('← Back'));
+    fireEvent.click(nextBtn()!);
+    expect(useLessonStore.getState().screen).toBe(5);
+    expect(sheet()!.textContent).not.toContain('Not quite.');
+    expect(nextBtn()!.disabled).toBe(true);
   });
 
   it('should praise the honest answer', () => {
@@ -358,8 +381,9 @@ describe('LessonSheet', () => {
     renderSheet();
     expect(document.querySelector('[data-guide="lesson.finish-line"]')).not.toBeNull();
     expect(document.querySelector('[data-guide="lesson.note"]')).not.toBeNull();
-    // Lesson 3 offers no way on: one Finish, and the path shows what comes next
-    expect(finishBtn().textContent).toBe('Finish');
+    // Lesson 3 offers no way on: one Finish lesson (the one label set, owner 2026-11-17), and the
+    // path shows what comes next
+    expect(finishBtn().textContent).toBe('Finish lesson');
     expect(document.querySelector('[data-guide="lesson.next-lesson"]')).toBeNull();
     expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
 
@@ -482,6 +506,105 @@ describe('LessonSheet', () => {
     expect(sheet()!.textContent).toContain('The power of hype');
   });
 
+  // ── The inline markup (owner 2026-11-17: **word** showed its asterisks) ──────────
+
+  it('should set **bold** and *italic* apart on every card of every lesson, never showing a *', () => {
+    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02'] as const) {
+      const screens = lessonScreens(getLesson(id));
+      screens.forEach((s, i) => {
+        if (s.kind !== 'card') return;
+        at(i, id);
+        const { unmount } = renderSheet();
+        fireEvent.keyDown(sheet()!, { key: 'Enter' }); // a cold open's lines in at once
+        expect(sheet()!.textContent, `${id} screen ${i}`).not.toMatch(/\*|\[\[/);
+        unmount();
+      });
+    }
+    at(3, 'lesson-01'); // Buy and Sell
+    renderSheet();
+    const bold = [...sheet()!.querySelectorAll('p strong')].map((b) => b.textContent);
+    expect(bold).toEqual(['Buy', 'Sell']);
+  });
+
+  it('should make a term in a guide’s line a button that opens its peek', () => {
+    const l1 = getLesson('lesson-01');
+    const screenIndex = lessonScreens(l1).findIndex(
+      (s) => s.kind === 'card' && l1.cards[s.index].title === 'The market never sleeps'
+    );
+    at(screenIndex, 'lesson-01');
+    renderSheet();
+    const term = document.querySelector<HTMLButtonElement>(
+      '[data-guide="lesson.term"][data-guide-key="slippage"]'
+    )!;
+    expect(term.textContent).toBe('slippage');
+    fireEvent.click(term);
+    expect(document.querySelector('[data-guide="lesson.peek"]')).not.toBeNull();
+  });
+
+  // ── The math, the analogy and pictures on top (owner 2026-11-17) ─────────────────
+
+  /** The screen of a lesson's card, by its title */
+  const cardScreen = (id: LessonId, title: string) => {
+    const l = getLesson(id);
+    return lessonScreens(l).findIndex((x) => x.kind === 'card' && l.cards[x.index].title === title);
+  };
+
+  it('should work the result out in numbered steps under the text, by Pulin in glasses', () => {
+    at(cardScreen('lesson-01', 'The result'), 'lesson-01');
+    renderSheet();
+    const math = document.querySelector('[data-guide="lesson.math"]')!;
+    expect(math.textContent).toContain('Let’s do the math.');
+    expect(math.querySelector('[data-guide-who="tick"] [data-glasses]')).not.toBeNull();
+    const steps = [...math.querySelectorAll('ol li')].map((li) => li.textContent);
+    expect(steps).toHaveLength(6);
+    expect(steps[0]).toBe('1.Price rise73,079 − 27,500 = 45,579');
+    const answer = document.querySelector('[data-guide="lesson.math.answer"]')!;
+    expect(answer.querySelectorAll('strong')).toHaveLength(2);
+    expect(answer.textContent).toContain('$2,652');
+    // The text first, then the math; no hindsight line, no chit-chat
+    const text = sheet()!.querySelector('p')!;
+    expect(text.compareDocumentPosition(math) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sheet()!.textContent).not.toMatch(/hindsight|Easy!/i);
+  });
+
+  it('should explain going short with the borrowing analogy, by Berwyn in glasses, before the practice', () => {
+    at(cardScreen('lesson-01', 'Going short'), 'lesson-01');
+    renderSheet();
+    const analogy = document.querySelector('[data-guide="lesson.analogy"]')!;
+    expect(analogy.querySelector('[data-guide-who="tock"] [data-glasses]')).not.toBeNull();
+    expect(analogy.textContent).toMatch(/^Berwyn Think of it as borrowing\./);
+    const practice = document.querySelector('[data-guide="lesson.practice"]')!;
+    expect(
+      analogy.compareDocumentPosition(practice) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(sheet()!.textContent).not.toContain('feels illegal');
+  });
+
+  it('should put every card’s picture above its text (owner 2026-11-17)', () => {
+    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02'] as const) {
+      const l = getLesson(id);
+      lessonScreens(l).forEach((x, i) => {
+        if (x.kind !== 'card') return;
+        const card = l.cards[x.index];
+        if (!card.text || !(card.art || card.chart || card.photo)) return;
+        at(i, id);
+        const { unmount } = renderSheet();
+        const picture = sheet()!.querySelector(
+          '[data-lesson-art], [data-guide="lesson.chart"], [data-guide="lesson.photo"]'
+        )!;
+        const text = [...sheet()!.querySelectorAll('p')].find((p) =>
+          p.textContent?.startsWith(card.text!.replace(/\*|\[\[|\]\]/g, '').slice(0, 12))
+        )!;
+        expect(picture, `${id}: ${card.title}`).not.toBeNull();
+        expect(
+          picture.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING,
+          `${id}: ${card.title}`
+        ).toBeTruthy();
+        unmount();
+      });
+    }
+  });
+
   // ── Lesson 1's cold open and the Next button (owner's visual Q&A 2026-10-25) ───
 
   it('should hold Next until the cold open’s lines are in, then name what comes next', () => {
@@ -493,13 +616,14 @@ describe('LessonSheet', () => {
     fireEvent.keyDown(sheet()!, { key: 'Enter' });
     expect(useLessonStore.getState().screen).toBe(0);
     expect(nextBtn()!.dataset.ready).toBe('true');
-    expect(nextBtn()!.textContent).toBe('Unlock how trading works →');
+    // One label set (owner 2026-11-17): Continue, never a card's own words
+    expect(nextBtn()!.textContent).toBe('Continue →');
 
     fireEvent.keyDown(sheet()!, { key: 'ArrowRight' });
     expect(useLessonStore.getState().screen).toBe(1);
     expect(sheet()!.textContent).toContain('I’m Pulin.');
     expect(sheet()!.textContent).toContain('how you can win when a price goes up or down');
-    expect(nextBtn()!.textContent).toBe('Show me the up-or-down trick →');
+    expect(nextBtn()!.textContent).toBe('Continue →');
 
     // Back to the cold open: it doesn't play again
     fireEvent.click(screen.getByText('← Back'));
@@ -549,7 +673,7 @@ describe('LessonSheet', () => {
   it('should not move on from an unanswered question', () => {
     at(15, 'lesson-ownership'); // NFTs, briefly
     renderSheet();
-    expect(nextBtn()!.textContent).toBe('Your call →');
+    expect(nextBtn()!.textContent).toBe('Continue →');
     fireEvent.keyDown(sheet()!, { key: 'ArrowRight' });
     expect(useLessonStore.getState().screen).toBe(16); // the moment
     fireEvent.keyDown(sheet()!, { key: 'Enter' });
@@ -567,6 +691,23 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState().inTour).toBe(true);
     // The tour ends (finished, skipped or closed): back to the lesson, one screen on
     act(() => useTourStore.getState().close());
+    expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 4 });
+  });
+
+  it('should wait through the look at what just happened after a practice trade, then carry on', () => {
+    // Owner 2026-11-17: the trade's last step hands over to its review in the account panel
+    at(3, 'lesson-01'); // Buy and Sell
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.practice"]')!);
+    act(() => useTourStore.setState({ stepIndex: 4 })); // its last step: place the order
+    act(() => useTourStore.getState().next()); // the order placed: on to the review
+    expect(useTourStore.getState().activeId).toBe('review-buy');
+    expect(useLessonStore.getState()).toMatchObject({ inTour: true, screen: 3 });
+    expect(sheet()).toBeNull();
+    // Its last step's button, Back to the lesson: the lesson carries on one screen on
+    act(() => useTourStore.setState({ stepIndex: 2 }));
+    act(() => useTourStore.getState().next());
+    expect(useTourStore.getState().activeId).toBeNull();
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 4 });
   });
 
@@ -590,6 +731,8 @@ describe('LessonSheet', () => {
     renderSheet();
     const nextLesson = document.querySelector('[data-guide="lesson.next-lesson"]')!;
     expect(nextLesson.textContent).toBe('Lesson 2: Money nobody controls');
+    // With a way on, finishing stays the link under it (only a close with no way on says Finish lesson)
+    expect(finishBtn().textContent).toBe('Finish for now');
     fireEvent.click(nextLesson);
     expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
     expect(useLessonStore.getState()).toMatchObject({ activeId: 'lesson-ownership', screen: 0 });
@@ -602,11 +745,13 @@ describe('LessonSheet', () => {
     expect(document.querySelector('#lesson-heading')!.textContent).toBe('What you learned');
     // Owner 2026-11-16: four lines have no article yet (plain text); price swings has one
     expect(document.querySelectorAll('[data-guide="lesson.recap"]')).toHaveLength(1);
-    expect(document.querySelector('[data-guide="lesson.genesis"]')).toBeNull();
     const highlight = document.querySelector('[data-guide="lesson.highlight"]')!;
     expect(highlight.textContent).toContain('Decide when and why before you click.');
     expect(highlight.querySelector('button')).toBeNull();
     expect(nextBtn()!.dataset.ready).toBe('true');
+    // The summary's button: the one finish label, in every lesson (owner 2026-11-17)
+    expect(nextBtn()!.textContent).toBe('Finish lesson');
+    expect(document.querySelector('[data-guide="lesson.back"]')!.textContent).toBe('← Back');
   });
 
   it('should open the paper card’s Read more on Lesson 2’s story article', () => {
@@ -633,11 +778,20 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
   });
 
-  it('should show a summary with no genesis at once', () => {
-    at(12); // Lesson 3
+  it('should sum Lesson 2 up in plain points, the why first, with no birth story (owner 2026-11-17)', () => {
+    at(19, 'lesson-ownership');
     renderSheet();
-    expect(document.querySelector('[data-guide="lesson.genesis"]')).toBeNull();
+    expect(document.querySelector('#lesson-heading')!.textContent).toBe('Why Bitcoin exists');
+    // Fact check 2026-11-17: the actual why leads, a fourth point on the same screen
+    const points = sheet()!.querySelectorAll('ol li');
+    expect(points).toHaveLength(4);
+    expect(points[0].textContent).toContain(
+      'Bitcoin was made so people can pay each other online without trusting a bank in the middle.'
+    );
+    expect(sheet()!.textContent).not.toMatch(/Satoshi|Lehman|birth/);
+    // Shown at once, nothing staged: the button is ready
     expect(nextBtn()!.dataset.ready).toBe('true');
+    expect(nextBtn()!.textContent).toBe('Finish lesson');
   });
 
   it('should end Lesson 1 on the ribbon, the journal, the rating and the way to Lesson 2', () => {

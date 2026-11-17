@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { accountFor } from './account';
+import { onePerKey } from '@/lib/onePerKey';
 import { usePathStore } from './pathStore';
 import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
@@ -14,11 +15,7 @@ import { useTourStore } from '@/guide/tourStore';
  */
 const reading = new Map<string, Promise<HabitsResponse>>();
 function readHabits(key: string, token: string): Promise<HabitsResponse> {
-  const onTheWay = reading.get(key);
-  if (onTheWay) return onTheWay;
-  const read = learnApi.getHabits(token).finally(() => reading.delete(key));
-  reading.set(key, read);
-  return read;
+  return onePerKey(reading, key, () => learnApi.getHabits(token));
 }
 
 /**
@@ -54,24 +51,23 @@ export function useHabits(accessToken: string | null): {
     failed: boolean;
   } | null>(null);
 
-  // The token at the moment of the read: a rotation (the same account) reads nothing again
-  const token = useRef(accessToken);
-  useEffect(() => {
-    token.current = accessToken;
-  }, [accessToken]);
-  const signedIn = !!accessToken;
   const done = useDoneCount();
 
   useEffect(() => {
-    if (!signedIn || done === null) return;
+    // (an account always has a name here: every token the server signs carries its userId, so
+    // the '' fallback below never joins two sessions; weighed, review after release #302)
+    if (!accessToken || done === null) return;
     let cancelled = false;
     // Read at once, never waiting for a finish to land: a lesson's own start already counted today
     // (Habits counts starts), so the streak screen right after a finish shows today. Only a run
-    // begun before midnight and finished after it shows its new day on the next read (weighed,
-    // review round 30: the wait that covered it cost a 4 s hold on every read and kept failing)
-    const now = token.current;
-    if (!now) return;
-    readHabits(`${account ?? ''}|${done}`, now)
+    // begun before midnight and finished after it shows its new day on the next read, as does one
+    // begun signed out (no start was stored) (weighed, review round 30 and after release #302: the
+    // wait that covered it cost a 4 s hold on every read and kept failing)
+    // Keyed by the token too, and read again with each new one (a session refresh, about every 15
+    // minutes, only while the map or the streak screen is open): a read never joins one sent with an
+    // older token, and an expired token's failure always recovers with the next (review after
+    // release #302: a retry kept only for failures raced the refresh, twice)
+    readHabits(`${account ?? ''}|${done}|${accessToken}`, accessToken)
       .then((r) => {
         if (!cancelled) setRead({ account, habits: r, failed: false });
       })
@@ -87,7 +83,7 @@ export function useHabits(accessToken: string | null): {
     return () => {
       cancelled = true;
     };
-  }, [signedIn, account, done]);
+  }, [account, done, accessToken]);
 
   const mine = accessToken && read && read.account === account ? read : null;
   return { habits: mine?.habits ?? null, failed: mine?.failed ?? false };

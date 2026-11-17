@@ -4643,6 +4643,80 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-17 — Lessons 1–3 after release: one label set, Try again, the math, the glasses, what just happened
+
+The owner's ten tasks after the Lessons 1–3 release (screenshots; the new rules are in
+`.claude/skills/lesson-authoring` and hold for every future lesson). **No screen added or removed:** `stepBase` and
+`LESSON_FIRST_STEP` stay, nobody's progress resets. Ships with the other fixes on `fix/lessons-after-release`.
+
+- **Bold and italic render** (`learn/RichText.tsx` over `parseInline` in `learn/terms.ts`): `**word**` and `*word*`
+  showed their asterisks on 80+ lesson lines; a `[[term]]` in a guide's line showed its brackets. One renderer now
+  serves the articles, card text, the guides' lines (their terms open the peek; `cardTermIds` counts them for the
+  two-terms rule and the graph), points, recaps, quiz context, plans and Whys, and the cold open's facts. Never HTML.
+- **One label set** (`LESSON_LABELS`): Continue, ← Back, and Finish lesson on the summary, in every lesson. The 51
+  per-card labels and `LessonCard.nextLabel` are gone. The close keeps its way on (the next lesson, Finish for now)
+  and the Try screen its Show me / Skip this part.
+- **Lesson 2's summary** shows its three points plainly; the staged birth of Bitcoin is dropped (2008 and Lehman
+  stay on the lesson's own card). `GenesisReveal`, `BirthStory`, `BITCOIN_BIRTH` and `lesson.genesis` are deleted.
+- **Try again until right**, on every lesson question: after "Not quite." and the Why, Try again
+  (`lesson.retry`) clears the answer and empties the board; Continue waits for a right answer; Back off a wrong
+  answer clears it. Checkpoints are unchanged (scored, one go).
+- **The math** (`LessonCard.math`, `MathBreakdownView`): a guide in glasses says "Let's do the math", then numbered
+  steps, one operation each with its result, then the answer set apart. On Lesson 1's The result (rewritten around
+  it; the hindsight line dropped: 166%, $2,656 after two 0.1% fees, $1,656 profit), The catch (the 0.01 BTC short:
+  $648.94 → $189.65, $459.29, 70.8%) and Smaller coins (SOL −29.0%), and Lesson 3's Big swings (−32.9%), A market
+  shock (−22.8%) and Up, then down (−53.2%). Every figure recomputed from the cards' candles (noted beside each).
+- **The glasses** (`Guide` / `GuideFigure` `glasses`): thin round frames in the face's line colour, on either
+  guide, per card. **The analogy** (`LessonCard.analogy`): Lesson 1's Going short now explains shorting as
+  borrowing a game, selling it, buying one back cheaper, returning it and keeping the difference, told by Berwyn in
+  glasses in place of the guides' exchange; it says a perpetual borrows nothing.
+- **What just happened** after every practice trade: `practice-buy` → `review-buy` (Assets, Bitcoin's row, its
+  Unrealized PnL), `practice-long` → `review-long` and `practice-short` → `review-short` (Positions, the position's
+  row), each ending "Back to the lesson"; the lesson resumes one screen on. Chained chapters (each ≤ 5 steps),
+  existing anchors, phone-ready, not saved or reported.
+- **Pictures on top, text below**, already the sheet's layout: a test now checks every card. New illustrations are
+  candidates for the owner, not drawn.
+- **Later the same day (owner's decisions, 2026-11-17).** Still no screen added or removed.
+  - **Lesson 3's math, reviewed:** kept on Big swings (the text gives no percent; the sum is where "a third", the
+    sizing rule's number, comes from) and on Up, then down (the text says only "more than half"; the sum proves
+    53%). Removed from A market shock: its text already states "down about 23%", it was the third identical sum in a
+    row, and the card's point is one company shaking the market. `lessons.test` holds which are kept and why.
+  - **Lesson 3's close** (no way on) says **Finish lesson** (`LESSON_LABELS.finish`), not "Finish". A close with a way
+    on keeps "Lesson N: …" and "Finish for now"; the Try screen keeps Show me / Skip this part.
+  - **Lesson 2's plain ending** (no highlight) stays as it is.
+  - **Pictures that tell the card:** seven new `LessonArt` drawings, our own shapes in the existing style, token
+    colours only, no new library, asset or animation. Lesson 1: Up or down (`threePaths`: climbs, slides,
+    sideways), Buy and Sell (`buySell`: money for a coin and back), Close it to keep it (`closeToKeep`: +$120 on
+    paper, then locked in), Going short (`shortGame`: the analogy's $60 → $40, $20 kept), The market never sleeps
+    (`alwaysOpen`: a shop's week of hours against 24/7). Lesson 2: The hash links the chain (`hashChain`) and Sealed
+    by hard work (`sealBroken`: one number changed, every later block broken). These are announced to screen
+    readers (`role="img"` with their `ART_LABELS` line); the older decorative pictures stay hidden. The benchmark
+    course's screenshots were looked at only for which kinds of cards get a picture, never for its drawings.
+- **Fact check applied (2026-11-17, a technical writer's review; the owner decided each item).** Still no screen
+  added or removed, nobody's progress resets.
+  - **Lesson 1's worked long is a spot buy, so it quotes Bybit BTCUSDT spot closes** (it quoted the perpetual's):
+    2 Oct 2023 $27,499.97 (written $27,500), 13 Mar 2024 $73,079.40 ($73,079). The math, recomputed: 73,079 −
+    27,500 = 45,579; ÷ 27,500 = 1.657; 165.7% ("about 166%"); $1,657 gain, $2,657 before fees, × 0.998 ≈ **$2,652**,
+    about **$1,652 profit**. A `ChartScene` may name its Bybit `category` (`spot` | `linear`, default `linear`, so
+    every other scene is unchanged); `lessonChartLoader` passes it to `getCandles` and keys its cache by it.
+    `LONG_2023` reads spot, its markers "Buy $27,500" and "Sell $73,079".
+  - **Going short:** the analogy ends "Our perpetual borrows nothing: you put up USDT as margin, the contract
+    settles the difference in USDT, and while it's open you pay or receive a small funding fee." The card's text
+    and analogy were trimmed to stay within 80 words. **The catch:** "the exchange closes a losing short before your
+    margin runs out (liquidation), and that margin is lost".
+  - **One phrase for closing a position:** "the ✕ (Close) at the end of your position row" (Lesson 1's Close it to
+    keep it), "of the row" in `review-long` / `review-short`.
+  - **`review-buy`:** you paid $100 and hold about $99.90 of Bitcoin (Spot's 0.1% fee is taken in the coin); Avg cost
+    is what you paid per coin, fee included; Unrealized PnL is before the selling fee. **`review-long`:** Unrealized
+    P&L moves with the Mark Price (not "every tick").
+  - **Lesson 2's summary, Why Bitcoin exists,** now opens with the why: "Bitcoin was made so people can pay each
+    other online without trusting a bank in the middle." (Read more: `bitcoin-story#plan`, a new section id). "No
+    one is in charge: the network agrees." opens `bitcoin-network#answered` (it opened the story's timeline). Four
+    points on the same one screen.
+  - **Lesson 3:** Bitcoin with a capital B throughout (the cold open: "One Bitcoin for $8,200"); Big swings, both
+    ways: "as low as $28,800 on Bybit's perpetual chart", and "It can swing up just as hard, often without warning,
+    so no one can reliably time it."
+
 ### 2026-11-16 — Lessons 1–3 rewrite: new quiz formats, practice trades, the streak screen, and Lesson 1
 
 The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan and drafts in the git-ignored
@@ -4770,6 +4844,21 @@ drop):
   `get_metadata` / `get_screenshot` / `get_design_context` / `get_variable_defs`).
 - **`technical-analyst`** reads a pasted chart directly (it routed images through an opencode plugin and a Grok
   sub-agent). **`session-bootstrap`** names Claude Code's tools and points at `CLAUDE.md` for the quick commands.
+
+### 2026-11-17 — A picomatch advisory accepted (no fixed version)
+
+On 2026-11-17 `pnpm audit --audit-level=high` began to fail on GHSA-fc5q-39xc-vjpf: a ReDoS in `picomatch` with
+every version up to 4.0.7 (the latest) vulnerable and no fixed one. Every commit hook and CI run in the repo stopped.
+
+- **Reached only through tooling:** its consumers in the lockfile are `vite`, `vitest`, `lint-staged`, `tinyglobby`,
+  `fdir` and `@rollup/pluginutils` (via `vite-plugin-pwa` → `workbox-build`), all dev or build tooling, with
+  patterns from config. `pnpm why picomatch -r --prod` finds no production path. The latest releases still depend
+  on it, so no upgrade or override could clear it.
+- **Kept honest:** the ignore is by advisory id, so `security.md` asks for `pnpm why picomatch -r --prod` to be
+  re-checked whenever a production dependency changes.
+- **Owner's decision:** accept this one advisory. It is listed in `package.json`, `pnpm.auditConfig.ignoreGhsas`,
+  and `.claude/rules/security.md` (Supply-chain) records the exception and its terms.
+- **To undo:** once a fixed `picomatch` exists, delete the entry and add an override floor.
 
 ### 2026-11-17 — The Playwright jobs pinned to Ubuntu 24.04
 

@@ -42,8 +42,10 @@ const LESSON_01_LAST_STEP = 60 + lessonScreens(getLesson('lesson-01')).length;
 describe('useTourProgress', () => {
   beforeEach(() => {
     profile = { id: 'u1' };
-    // The finish queue outlives a save (a read drops it): each test starts with none
+    // The finish queue outlives a save (a read drops it): each test starts with none, and with no
+    // account read yet (the last-read account and the lists held in memory are module state)
     localStorage.clear();
+    forgetSignedOutAccount();
     token = 'tok';
     useTourStore.getState().reset();
     useLessonStore.getState().reset();
@@ -607,6 +609,20 @@ describe('useTourProgress', () => {
       expect(getProgress).toHaveBeenCalledTimes(2); // the read, then one check for both
     });
 
+    it('should not resend the newer finish for an account that signed out meanwhile', async () => {
+      profile = { id: 'u8' };
+      queueDone('u8', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP - 1 });
+      let refuse: (e: unknown) => void = () => {};
+      setProgress.mockReturnValueOnce(new Promise((_, reject) => (refuse = reject)));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(setProgress).toHaveBeenCalledTimes(1));
+      queueDone('u8', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
+      token = null; // signed out before the refusal lands
+      await act(async () => refuse(Object.assign(new Error('x'), { status: 409 })));
+      expect(setProgress).toHaveBeenCalledTimes(1);
+    });
+
     it('should send no close for a finished lesson left from a look back', async () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
@@ -854,5 +870,23 @@ describe('useTourProgress', () => {
         { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.65' },
       ]);
     });
+  });
+
+  it('should take a refused pass off the map without marking its progress read', async () => {
+    profile = { id: 'u6' };
+    let land: (v: { items: never[] }) => void = () => {};
+    getProgress
+      .mockReturnValueOnce(new Promise((r) => (land = r))) // the first read, still on its way
+      .mockResolvedValue({ items: [] }); // the refusal's check
+    setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+    renderHook(() => useTourProgress());
+    act(() => {
+      usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
+    });
+    await waitFor(() =>
+      expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBeUndefined()
+    );
+    expect(usePathStore.getState().loaded).toBe(false);
+    await act(async () => land({ items: [] }));
   });
 });

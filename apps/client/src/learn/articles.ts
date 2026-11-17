@@ -737,7 +737,8 @@ const bitcoinStory: Article = {
     { kind: 'h', text: 'A short timeline', id: 'timeline' },
     { kind: 'widget', id: 'bitcoin-timeline' },
     // Owner 2026-11-12: the plan as one-liners; mining expanded, last, with the mining race
-    { kind: 'h', text: 'The plan, in six steps' },
+    // Lesson 2's summary opens here: why Bitcoin was made (fact check 2026-11-17)
+    { kind: 'h', text: 'The plan, in six steps', id: 'plan' },
     {
       kind: 'list',
       ordered: true,

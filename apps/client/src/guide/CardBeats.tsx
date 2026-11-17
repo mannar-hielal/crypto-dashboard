@@ -13,6 +13,7 @@ import { guide } from '@/lib/guideAnchors';
 import { GuideAvatar } from './LessonArt';
 import { compact, counterValue, formatDollars } from './beats';
 import { GUIDE_NAMES, type Beat } from './lessons';
+import { RichText } from '@/learn/RichText';
 import { emphasize } from './emphasize';
 import styles from './CardBeats.module.css';
 
@@ -66,7 +67,11 @@ function BeatLine({ beat, run, active }: { beat: Beat; run: boolean; active: boo
         </span>
       );
     case 'fact':
-      return <span className={styles.fact}>{beat.text}</span>;
+      return (
+        <span className={styles.fact}>
+          <RichText text={beat.text} />
+        </span>
+      );
     case 'counter':
       return (
         <span className={styles.fact}>

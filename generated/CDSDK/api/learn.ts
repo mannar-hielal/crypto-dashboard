@@ -6,22 +6,29 @@ import type {
   LearnProgressResponse,
   LearnStatus,
 } from '../types/index.js';
+import { SDK_REQUEST_TIMEOUT_MS } from '../types/index.js';
 
 const BASE_URL =
   (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? 'http://localhost:3001';
 
 async function request<T>(path: string, init: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, init);
+  // 🔐 Bounded like every SDK call (auth.ts): a stalled request fails instead of hanging, so a
+  // progress read, a save or a habits read always settles
+  const timeout = AbortSignal.timeout(SDK_REQUEST_TIMEOUT_MS);
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    // A caller's own signal is kept beside the bound (as auth.ts does)
+    signal: init.signal ? AbortSignal.any([init.signal, timeout]) : timeout,
+  });
   // 204: nothing to read (an accepted event)
   if (res.status === 204) return undefined as T;
-  const data = (await res.json()) as T;
-  // With its status, so a caller tells a refusal (409: an earlier version) from a failure
+  // With its status, so a caller tells a refusal (409: an earlier version) from a failure; the
+  // status is checked before the body, which an edge or a proxy may send as HTML (a 502)
   if (!res.ok) {
-    throw Object.assign(new Error((data as { error?: string }).error ?? `HTTP ${res.status}`), {
-      status: res.status,
-    });
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw Object.assign(new Error(body?.error ?? `HTTP ${res.status}`), { status: res.status });
   }
-  return data;
+  return (await res.json()) as T;
 }
 
 /** This device's IANA time zone (`Europe/Zurich`), or none where the runtime can't say */

@@ -205,6 +205,22 @@ describe('PathDrawer', () => {
     expect(overview.textContent).toContain('Closing a position makes the result real.');
   });
 
+  it('should render a summary line’s **bold** in the chapter overview, never its asterisks', () => {
+    const recap = getLesson('lesson-01').recap!;
+    const saved = recap.points[0].text;
+    (recap.points[0] as { text: string }).text = '**Close** to make it real.';
+    try {
+      useTourStore.setState({ panelOpen: true });
+      renderDrawer();
+      fireEvent.click(document.querySelector(guideSelector('path.chapter.info', 'ch1'))!);
+      const overview = document.querySelector(guideSelector('path.chapter.overview'))!;
+      expect(overview.querySelector('strong')?.textContent).toBe('Close');
+      expect(overview.textContent).not.toContain('**');
+    } finally {
+      (recap.points[0] as { text: string }).text = saved;
+    }
+  });
+
   it('should show the streak, and keep the library and habits in their own tab', async () => {
     getHabits.mockResolvedValue({
       learningDays: 4,

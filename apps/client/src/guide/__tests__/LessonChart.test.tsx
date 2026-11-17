@@ -91,6 +91,23 @@ describe('LessonChart', () => {
     expect(screen.getByRole('img', { name: 'A test chart' })).toBeTruthy();
   });
 
+  it('should ask for spot history when the scene quotes spot prices, cached apart from the perpetual', async () => {
+    const spot: ChartScene = { ...scene, category: 'spot' };
+    const first = render(<LessonChart scene={spot} revealed fallback={null} />);
+    await waitFor(() => expect(h.setData).toHaveBeenCalled());
+    expect(h.getCandles).toHaveBeenCalledWith('BTCUSDT', '1d', 40, 'spot', Date.UTC(2024, 0, 23));
+    first.unmount();
+    render(<LessonChart scene={scene} revealed fallback={null} />);
+    await waitFor(() => expect(h.getCandles).toHaveBeenCalledTimes(2));
+    expect(h.getCandles).toHaveBeenLastCalledWith(
+      'BTCUSDT',
+      '1d',
+      40,
+      'linear',
+      Date.UTC(2024, 0, 23)
+    );
+  });
+
   it('should stop on the freeze day, with only the markers so far, until the answer', async () => {
     const { rerender } = render(
       <LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />
@@ -116,6 +133,18 @@ describe('LessonChart', () => {
     const n = lastData()?.length ?? 0;
     expect(n).toBeGreaterThan(27);
     expect(n).toBeLessThan(40);
+  });
+
+  it('should freeze again when the question is asked again (Try again), the outcome hidden', async () => {
+    reduced = false;
+    const { rerender } = render(
+      <LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />
+    );
+    await waitFor(() => expect(lastData()?.length).toBe(27));
+    rerender(<LessonChart scene={scene} revealed fallback={<p>picture</p>} />);
+    await waitFor(() => expect(lastData()?.length).toBe(40), { timeout: 3000 });
+    rerender(<LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />);
+    await waitFor(() => expect(lastData()?.length).toBe(27));
   });
 
   it('should keep the drawn picture when the history can’t be loaded, and try again next time', async () => {

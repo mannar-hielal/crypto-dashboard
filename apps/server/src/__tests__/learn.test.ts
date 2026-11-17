@@ -878,6 +878,10 @@ describe('GET /api/learn/habits', () => {
     );
     // The bound covers every event a learner may hold
     expect(MAX_LEARN_EVENTS_PER_USER).toBeLessThanOrEqual(500);
+    // The journal's days read the most recent notes first, within the same bound
+    expect(app.prisma.journalEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { createdAt: 'desc' }, take: 500 })
+    );
   });
 
   it('should take the learner’s time zone, count an unknown one in UTC, and refuse an overlong one', async () => {

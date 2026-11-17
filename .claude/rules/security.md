@@ -94,6 +94,17 @@ owner accepted a narrower rule so that phones on flaky links (the PWA) don't sig
   `preinstall`, in the pre-commit hook, and in CI (`ci.yml`) — high/critical findings fail the
   build. Low/moderate findings are visible but non-blocking. Never bypass this with
   `--no-verify`/skipping the CI step to unblock a merge; fix or override the specific package.
+- **Accepted advisories (`pnpm.auditConfig.ignoreGhsas`)**: the one exception to "fix or override",
+  for an advisory with no fixed version on a path that never ships. Each needs the owner's decision,
+  and comes out as soon as a fix exists (then the override floor, as above). Today:
+  - `GHSA-fc5q-39xc-vjpf` (picomatch ReDoS, every version up to 4.0.7, no fixed one). Its consumers
+    in `pnpm-lock.yaml` are all dev or build tooling: `vite`, `vitest`, `lint-staged`, `tinyglobby`,
+    `fdir` and `@rollup/pluginutils` (via `vite-plugin-pwa` → `workbox-build`). Their patterns come
+    from config, never from users, and `pnpm why picomatch -r --prod` finds no production path.
+    Accepted by the owner, 2026-11-17.
+  - The ignore is by advisory id, so it would also cover a production dependency that pulled
+    `picomatch` in later. **Re-check `pnpm why picomatch -r --prod` (empty) whenever a production
+    dependency is added or upgraded**, and drop the exception if it isn't.
 - **Lockfile discipline**: CI and both Docker build stages install with `--frozen-lockfile` —
   a lockfile drift between what's committed and what's installed is treated as a build failure,
   not silently resolved.
@@ -208,7 +219,8 @@ Before calling a feature "done," confirm:
 - [ ] Any new env var is in both `criticalVars` (`config.ts`) and `.env.example`.
 - [ ] Any new outbound `fetch` has `AbortSignal.timeout(...)`.
 - [ ] `pnpm audit --audit-level=high` is clean, or a new CVE is resolved via a `pnpm.overrides`
-      entry, not suppressed.
+      entry, not suppressed (the one exception: an owner-accepted advisory with no fix, on a path
+      that never ships, listed under Supply-chain's "Accepted advisories").
 - [ ] Any new native/build dependency is deliberately added to `.npmrc`'s
       `only-built-dependencies` — not silently allowed to run install scripts.
 - [ ] User-controllable content never reaches `dangerouslySetInnerHTML`/`innerHTML` unsanitized.

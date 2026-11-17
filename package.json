@@ -75,6 +75,11 @@
       "nanoid@<3.3.18": ">=3.3.18",
       "fast-jwt": ">=6.3.1",
       "source-map-js": ">=1.2.2"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-fc5q-39xc-vjpf"
+      ]
     }
   },
   "lint-staged": {
