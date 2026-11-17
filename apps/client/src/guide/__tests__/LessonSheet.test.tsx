@@ -101,6 +101,27 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
   });
 
+  it('should still show the streak when Finish is pressed again after a journal line failed to save', async () => {
+    useAuthStore.setState({ accessToken: 'token' });
+    getHabits.mockResolvedValue({
+      badges: [],
+      learningDays: 1,
+      streakDays: 1,
+      thisWeek: [true, false, false, false, false, false, false],
+    });
+    addJournalNote.mockResolvedValueOnce('Network error');
+    at(lessonScreens(lesson).length - 1);
+    renderSheet();
+    fireEvent.change(document.querySelector('[data-guide="lesson.note"]')!, {
+      target: { value: 'A line' },
+    });
+    fireEvent.click(finishBtn());
+    await waitFor(() => expect(sheet()!.textContent).toContain('Could not save'));
+    // Pressed again: the finish goes through, and its streak shows
+    fireEvent.click(finishBtn());
+    await waitFor(() => expect(screen.getByText('1-day streak')).toBeTruthy());
+  });
+
   it('should still finish when the streak screen is closed with ✕ or Esc', async () => {
     useAuthStore.setState({ accessToken: 'token' });
     getHabits.mockResolvedValue({

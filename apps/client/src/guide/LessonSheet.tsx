@@ -637,9 +637,11 @@ export function LessonSheet() {
   // the streak screen (a closed tab) loses neither. Continue, ✕ or Esc then only leave
   const viaStreak = (go: () => void) => () => {
     if (accessToken && !returnTo && streakSeenRun !== run) {
-      setStreakSeenRun(run);
+      // Seen once the finish goes through (a journal line that fails to save keeps the learner on
+      // the close: the next press still shows the streak)
       afterNote(
         () => {
+          setStreakSeenRun(run);
           useLessonStore.getState().markFinished();
           setStreakThen({ run, go });
         },
