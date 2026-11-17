@@ -235,6 +235,7 @@ export async function loadHabits(
     }),
     prisma.journalEntry.findMany({
       where: { userId, isUserNote: true },
+      orderBy: { createdAt: 'desc' }, // the most recent days, should the cap ever pass the bound
       take: MAX_ROWS,
       select: { createdAt: true },
     }),
