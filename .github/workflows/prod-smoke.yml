@@ -20,7 +20,9 @@ concurrency:
 jobs:
   smoke:
     name: Production smoke
-    runs-on: ubuntu-latest
+    # Pinned (2026-11-17) with the other Playwright jobs: ubuntu-latest moved to 26.04 that day,
+    # where browsers ran slower (WebKit 2-4x, Chromium about 1.35x). See APP_LOG, 2026-11-17
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout

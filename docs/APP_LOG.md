@@ -4771,6 +4771,20 @@ drop):
 - **`technical-analyst`** reads a pasted chart directly (it routed images through an opencode plugin and a Grok
   sub-agent). **`session-bootstrap`** names Claude Code's tools and points at `CLAUDE.md` for the quick commands.
 
+### 2026-11-17 — The Playwright jobs pinned to Ubuntu 24.04
+
+`ubuntu-latest` moved from Ubuntu 24.04 to 26.04 on 2026-11-17. On release #302 (Lessons 1–3), the "E2E full set"
+failed `[13.3.1][4.6]` on WebKit twice: every click took seconds and the reset's 3 s confirm window ran out.
+
+- **The cause was the image, not the release.** Every WebKit test ran 2–4× slower than on the last green run (median
+  2.2×; Chromium about 1.35×).
+- **Checked locally:** on macOS, the release and `main` ran at the same speed, test for test, in WebKit and in Chromium.
+- **What changed:** every workflow that runs Playwright is on `ubuntu-24.04`: `ci.yml`, `e2e-nightly.yml`,
+  `prod-smoke.yml` and `deploy.yml` (its post-deploy smoke; a smoke timing out on a slower image would block a
+  deploy). The rest run no browser. Moving to 26.04 is a deliberate change later, with a full-set run to compare.
+- **Reverted:** a first guess (#303: WebKit holding back a background tab's frames, so the test brought tab A to the
+  front) didn't help and has been undone.
+
 ### 2026-11-13 — Housekeeping: the TradingView mirror deleted, dependencies updated
 
 - **`tv-website-full/` deleted** (owner). It was a 15 MB local copy of tradingview.com, git-ignored and used by no
