@@ -69,7 +69,10 @@ export const LESSON_VERSION_SPAN = 40;
  * column was weighed, review rounds 8-13: it would rename the step floor, not remove the special
  * cases. An old API machine during a rollout writes rows without it too, so the reads still skip
  * them, a start still takes them over, and an old Lesson 1 finish still keeps the welcome card shut.
- * The step already marks the version, so no schema change is needed.)
+ * The step already marks the version, so no schema change is needed. A
+ * new item id per version, `lesson-01@v3`, was weighed too, review round 25: old rows would go
+ * inert, but every place that names a lesson (the path, checkpoints' taughtIn, the funnel, the
+ * admin page, URLs) would have to carry the version, and an old machine still writes the old id.)
  */
 export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number> = {
   'lesson-01': 61,

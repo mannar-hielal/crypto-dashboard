@@ -230,6 +230,9 @@ export async function loadHabits(
     // - starts, finishes and closes: a few a run, each stored every time, so a run carried on past
     //   midnight still marks its second day when it ends (a close or a finish);
     // - steps: each stored once ever per learner, so they add the days a new screen was reached
+    // (Weighed, review round 25: at most 1,000 small rows a read, after a finish or on opening the
+    // map, with each quarter hour's date worked out once; a day bucket in the database would need
+    // raw SQL, which the server never uses)
     prisma.learningEvent.findMany({
       where: { userId, name: { in: ['tour_started', 'tour_completed', 'tour_closed'] } },
       orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
