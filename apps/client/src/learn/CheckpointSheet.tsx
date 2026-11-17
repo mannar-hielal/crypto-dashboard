@@ -29,6 +29,16 @@ import {
 } from './checkpoints';
 import { usePathStore } from './pathStore';
 
+/**
+ * Where a Review goes: the place it was taught, unless that's a tour locked behind another (Sell
+ * behind Buy, NEEDS_DONE) not done yet, which comes first. One rule for the label and the button
+ */
+function reviewTarget(t: TaughtIn): TaughtIn {
+  if (t.kind === 'lesson' || !isTourId(t.id)) return t;
+  const needs = NEEDS_DONE[t.id];
+  return needs && !useTourStore.getState().completed[needs] ? { kind: 'tour', id: needs } : t;
+}
+
 function taughtInLabel(t: TaughtIn): string {
   if (t.kind === 'lesson') {
     const lesson = getLesson(t.id);
@@ -45,7 +55,8 @@ interface MissedProps {
 
 function Missed({ q, wide, onReview }: MissedProps) {
   // A tour that can't run here (a phone, unless it's phone-ready) gets its name without a button
-  const canGo = q.taughtIn.kind === 'lesson' || runsHere(q.taughtIn.id, wide);
+  const target = reviewTarget(q.taughtIn);
+  const canGo = target.kind === 'lesson' || runsHere(target.id, wide);
   return (
     <li>
       <p className={styles.text}>{q.question}</p>
@@ -53,10 +64,10 @@ function Missed({ q, wide, onReview }: MissedProps) {
         <button
           type="button"
           className={styles.link}
-          onClick={() => onReview(q.taughtIn)}
+          onClick={() => onReview(target)}
           {...guide('checkpoint.review', q.taughtIn.id)}
         >
-          Review {taughtInLabel(q.taughtIn)} →
+          Review {taughtInLabel(target)} →
         </button>
       ) : (
         <p className={styles.hint}>Taught in {taughtInLabel(q.taughtIn)} (on a larger screen)</p>
@@ -106,13 +117,9 @@ export function CheckpointSheet() {
   const review = (t: TaughtIn) => {
     closeCheckpoint();
     // As the map's and the articles' links (`afterNote.ts`): one lesson or tour on screen
+    // (t is already reviewTarget's: a locked tour's prerequisite comes first)
     if (t.kind === 'lesson') startLesson(t.id);
-    else {
-      // A tour locked behind another (Sell behind Buy, NEEDS_DONE): the one it needs comes first
-      const needs = isTourId(t.id) ? NEEDS_DONE[t.id] : undefined;
-      const ready = !needs || !!useTourStore.getState().completed[needs];
-      startTour(ready ? t.id : needs!, navigate);
-    }
+    else startTour(t.id, navigate);
   };
 
   const score = checkpointScore(checkpoint, answers);

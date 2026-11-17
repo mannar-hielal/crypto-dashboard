@@ -223,6 +223,9 @@ export function useTourProgress(): void {
       cardByKeptFinish = false;
       asServerAnswer(resetLearningStores);
     }
+    // A read again for the same account (a session refresh): the tours it finished here stand,
+    // even if their save hasn't landed (a tour finish is sent once, with no queue)
+    const refreshRead = readFor !== null && readFor === account;
     setLastReadAccount(account);
     // 🔐 An answer that lands after a sign-out or for another account (before this effect's cleanup
     // has run) is never put in the stores or the device's queue
@@ -235,6 +238,15 @@ export function useTourProgress(): void {
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as PathTourId);
+        // This session's tour finishes the server doesn't have yet (a save lost or still on its
+        // way): kept on screen, so Sell doesn't lock again behind a Buy just done, and sent again
+        if (refreshRead) {
+          const mine = Object.keys(useTourStore.getState().completed) as PathTourId[];
+          for (const id of mine.filter((t) => !completed.includes(t))) {
+            completed.push(id);
+            learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
+          }
+        }
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)

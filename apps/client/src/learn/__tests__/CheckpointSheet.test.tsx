@@ -122,6 +122,15 @@ describe('CheckpointSheet', () => {
     expect(useTourStore.getState().activeId).toBe('buy-first-coin');
   });
 
+  it('should name the Buy lesson on the Review button while Sell is locked behind it', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch1');
+    renderSheet();
+    answerAll((i) => wrongFor(i));
+    const review = document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!;
+    expect(review.textContent).toContain('Buy your first coin');
+    expect(review.textContent).not.toContain('Sell it');
+  });
+
   it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {
     useTourStore.setState({ completed: { 'buy-first-coin': true } });
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
