@@ -41,7 +41,10 @@ jobs:
       ${{ github.event_name != 'pull_request' ||
           (github.head_ref == 'develop' &&
            github.event.pull_request.head.repo.full_name == github.repository) }}
-    runs-on: ubuntu-latest
+    # Pinned (2026-11-17): ubuntu-latest moved to 26.04 that day, where WebKit ran every e2e test
+    # 2-4x slower (median 2.2x; Chromium about 1.35x) and broke [13.3.1][4.6] on release #302. Move
+    # on deliberately, with a full-set run to compare
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     services:
       postgres:
