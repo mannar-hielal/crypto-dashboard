@@ -3,8 +3,10 @@
  * dismissal cannot overwrite a completion, and the rows go with the user.
  */
 
+import { join } from 'node:path';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanDatabase, createUser, integrationPrisma } from './db.js';
+import { SERVER_DIR, prisma as prismaCli } from './prismaCli.js';
 
 const db = integrationPrisma();
 
@@ -85,5 +87,67 @@ describe('LearningProgress (Postgres)', () => {
     await db.user.delete({ where: { id: userId } });
 
     expect(await db.learningProgress.count({ where: { userId } })).toBe(0);
+  });
+
+  it('should reset every learner’s Lessons 1–3, begun and finished, and nothing else (owner 2026-11-16)', async () => {
+    const userId = await createUser(db);
+    await db.learningProgress.createMany({
+      data: [
+        { userId, itemId: 'lesson-01', status: 'completed' },
+        { userId, itemId: 'lesson-ownership', status: 'started', step: 24 },
+        { userId, itemId: 'lesson-02', status: 'completed' },
+        { userId, itemId: 'primer', status: 'completed' },
+        { userId, itemId: 'checkpoint-ch1', status: 'completed' },
+        { userId, itemId: 'welcome-card', status: 'dismissed' },
+      ],
+    });
+    // The migration's own file, run again here (it already ran when the database was migrated)
+    const file = join(
+      SERVER_DIR,
+      'prisma/migrations/20261116200000_reset_lessons_1_3/migration.sql'
+    );
+    const res = prismaCli(['db', 'execute', '--file', file], process.env.DATABASE_URL as string);
+    expect(res.status, res.output).toBe(0);
+
+    const rows = await db.learningProgress.findMany({
+      where: { userId },
+      orderBy: { itemId: 'asc' },
+    });
+    expect(rows.map((r) => r.itemId)).toEqual(['checkpoint-ch1', 'primer', 'welcome-card']);
+    // A learner who finished Lesson 1 without dismissing the welcome card keeps it dismissed
+    const other = await createUser(db);
+    await db.learningProgress.create({
+      data: { userId: other, itemId: 'lesson-01', status: 'completed' },
+    });
+    const again = prismaCli(['db', 'execute', '--file', file], process.env.DATABASE_URL as string);
+    expect(again.status, again.output).toBe(0);
+    expect(
+      await db.learningProgress.findMany({
+        where: { userId: other },
+        select: { itemId: true, status: true },
+      })
+    ).toEqual([{ itemId: 'welcome-card', status: 'dismissed' }]);
+  });
+
+  it('should clear every learner’s chapter 1 checkpoint pass, and nothing else (owner 2026-11-17)', async () => {
+    const userId = await createUser(db);
+    await db.learningProgress.createMany({
+      data: [
+        { userId, itemId: 'checkpoint-ch1', status: 'completed' },
+        { userId, itemId: 'primer', status: 'completed' },
+        { userId, itemId: 'lesson-01', status: 'started', step: 64 },
+      ],
+    });
+    const file = join(
+      SERVER_DIR,
+      'prisma/migrations/20261117090000_reset_checkpoint_ch1/migration.sql'
+    );
+    const res = prismaCli(['db', 'execute', '--file', file], process.env.DATABASE_URL as string);
+    expect(res.status, res.output).toBe(0);
+    const rows = await db.learningProgress.findMany({
+      where: { userId },
+      orderBy: { itemId: 'asc' },
+    });
+    expect(rows.map((r) => r.itemId)).toEqual(['lesson-01', 'primer']);
   });
 });

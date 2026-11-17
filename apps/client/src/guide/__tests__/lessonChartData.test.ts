@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { daySeconds, frozenCount, markersUpTo, sceneEndMs, toBars } from '@/guide/lessonChartData';
+import {
+  daySeconds,
+  frozenCount,
+  markersUpTo,
+  sceneEndMs,
+  toBars,
+  pricePrecision,
+} from '@/guide/lessonChartData';
 import type { ChartScene } from '@/guide/lessons';
 
 const scene: ChartScene = {
@@ -45,5 +52,12 @@ describe('lessonChartData', () => {
     expect(markersUpTo(scene.markers, undefined)).toEqual([]);
     expect(markersUpTo(scene.markers, bars[0].time)).toEqual([]);
     expect(markersUpTo(scene.markers, bars[1].time)).toHaveLength(1);
+  });
+
+  it('should give prices the decimals their level needs (never $0.00 for a sub-cent coin)', () => {
+    expect(pricePrecision(57_459)).toBe(0);
+    expect(pricePrecision(182.57)).toBe(2);
+    expect(pricePrecision(0.5)).toBe(4); // $0.5000
+    expect(pricePrecision(0.00002)).toBe(8);
   });
 });

@@ -10,13 +10,13 @@
  */
 
 import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
-import { getTour, type TourId } from '@/guide/tours';
+import { getTour, type PathTourId } from '@/guide/tours';
 import { canOpen, FREE, type Entitlement } from './access';
 import { getCheckpoint, type CheckpointId } from './checkpoints';
 
 export type BuiltNode =
   | { kind: 'lesson'; id: LessonId; access: Entitlement }
-  | { kind: 'tour'; id: TourId; access: Entitlement }
+  | { kind: 'tour'; id: PathTourId; access: Entitlement }
   | { kind: 'checkpoint'; id: CheckpointId; access: Entitlement };
 
 export type NodeKind = BuiltNode['kind'];
@@ -46,7 +46,8 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     id: 'ch1',
     number: 1,
-    title: 'Foundations of crypto',
+    // Owner 2026-11-16: our own title (the old one was too close to the benchmark's unit name)
+    title: 'Start here: crypto and trading basics',
     tone: 'purpleDark',
     access: FREE,
     status: 'open',
@@ -54,6 +55,11 @@ export const CHAPTERS: readonly Chapter[] = [
       { kind: 'lesson', id: 'lesson-01', access: FREE },
       { kind: 'lesson', id: 'lesson-ownership', access: FREE },
       { kind: 'lesson', id: 'lesson-02', access: FREE },
+      // Deliberately kept here (open question for the owner, 2026-11-16): Lesson 1's Try now runs
+      // these two tours, so a learner who did it finds them already done. Where the practical stops
+      // sit is the owner's call (lesson-authoring skill: the path keeps its order until the owner
+      // places them); a finished stop is no blocker, and a learner who skipped Lesson 1's Try
+      // still meets them here
       { kind: 'tour', id: 'buy-first-coin', access: FREE },
       { kind: 'tour', id: 'sell-and-review', access: FREE },
       { kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE },
@@ -119,9 +125,9 @@ export type ChapterView =
 
 export interface PathProgress {
   lessons: Partial<Record<LessonId, true>>;
-  tours: Partial<Record<TourId, true>>;
+  tours: Partial<Record<PathTourId, true>>;
   /** Tours skipped for now (the server's `dismissed`) */
-  skippedTours: Partial<Record<TourId, true>>;
+  skippedTours: Partial<Record<PathTourId, true>>;
   checkpoints: Partial<Record<CheckpointId, true>>;
   /** The furthest screen (0-based) reached in each lesson, synced through the server */
   reached?: Partial<Record<LessonId, number>>;
@@ -219,6 +225,8 @@ export function pathState(
     stops += chapter.nodes.length;
     const locked = !chapterOpen;
     const checkpoint = checkpointOf(chapter);
+    // Passes from before the Lessons 1–3 rewrite were cleared with its questions (owner 2026-11-17,
+    // migration 20261117090000_reset_checkpoint_ch1): a pass here is of today's checkpoint
     const testedOut = checkpoint ? isDone(checkpoint, progress) : false;
     // Every node before this one is done or skipped
     let reached = !locked;

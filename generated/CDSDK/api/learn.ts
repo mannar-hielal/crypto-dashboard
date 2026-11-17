@@ -15,18 +15,36 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   // 204: nothing to read (an accepted event)
   if (res.status === 204) return undefined as T;
   const data = (await res.json()) as T;
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  // With its status, so a caller tells a refusal (409: an earlier version) from a failure
+  if (!res.ok) {
+    throw Object.assign(new Error((data as { error?: string }).error ?? `HTTP ${res.status}`), {
+      status: res.status,
+    });
+  }
   return data;
 }
 
-/** What the account remembers about the guided tours */
+/** This device's IANA time zone (`Europe/Zurich`), or none where the runtime can't say */
+function deviceTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** What the account remembers about learning: tours, lessons, offers, habits and events */
 export const learnApi = {
   getProgress: (accessToken: string) =>
     request<LearnProgressResponse>('/api/learn/progress', {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
 
-  /** `started` takes a lesson's furthest screen as `step` (its funnel step number) */
+  /**
+   * `step`: a lesson's funnel step number, with its start (the furthest screen) and its finish (the
+   * last screen); a checkpoint pass's question set version (`CHECKPOINT_VERSIONS`). The server
+   * answers 409 to one from an earlier version
+   */
   setProgress: (itemId: LearnItemId, status: LearnStatus, accessToken: string, step?: number) =>
     request<{ item: LearnProgressItem }>(`/api/learn/progress/${encodeURIComponent(itemId)}`, {
       method: 'PUT',
@@ -34,10 +52,17 @@ export const learnApi = {
       body: JSON.stringify(step === undefined ? { status } : { status, step }),
     }),
 
-  /** The account's habit badges and learning streak, counted from what is already stored */
-  getHabits: (accessToken: string) =>
+  /**
+   * The account's habit badges and learning streak, counted from what is already stored. `zone`:
+   * the learner's time zone (IANA; this device's by default), so the days are their own. 🔐 Sent
+   * as a header, never in the URL: a URL lands in logs, and the zone is a rough location
+   */
+  getHabits: (accessToken: string, zone: string | undefined = deviceTimeZone()) =>
     request<HabitsResponse>('/api/learn/habits', {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(zone ? { 'X-Time-Zone': zone } : {}),
+      },
     }),
 
   /** Fire-and-forget: report a tour event (accepted with 204) */

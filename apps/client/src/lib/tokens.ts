@@ -95,6 +95,7 @@ export const fontSize = {
   xs: '14px', // Tailwind text-xs equivalent          (18px × 0.75 ≈ 14px)
   sm: '16px', // Tailwind text-sm equivalent          (21px × 0.75 ≈ 16px)
   base: '18px', // Tailwind text-base equivalent        (24px × 0.75)
+  display: '28px', // a big number on its own (the streak screen's count; owner's visual Q&A 2026-11-16)
 } as const;
 
 export const lineHeight = {
@@ -238,4 +239,5 @@ export const interaction = {
 
 export const radius = {
   button: '25px', // primary CTA / pill buttons
+  card: '10px', // cards, boxes and panels inside a sheet (the radius the lesson and learn screens use)
 } as const;

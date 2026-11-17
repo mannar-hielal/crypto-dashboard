@@ -903,7 +903,8 @@ of it shipped in release #289 on 2026-11-14.
   - New quiz types: choose buy or sell, drag and drop, match boxes.
   - Practice paper trades from a card, with a guided arrow and resume.
   - A streak screen on the lesson close, with the Learn panel's counter refreshed after a lesson. A lesson
-    already counts as a learning day: its screens send `tour_step` events, which `Habits` counts.
+    already counts as a learning day: it sends `tour_started` (and `tour_completed`), which `Habits` counts
+    (since 2026-11-17 any learning event but a rating counts a day, all read at once: a learner holds at most 500).
   - Learners part-way through a lesson have their progress reset. The new Lesson 1 ships as soon as it's written,
     which ends the pilot's 4-week measurement early.
   - The path follows the topic order with our own titles and look; the owner places the practice (dumbbell) lessons
@@ -4642,6 +4643,93 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-16 — Lessons 1–3 rewrite: new quiz formats, practice trades, the streak screen, and Lesson 1
+
+The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan and drafts in the git-ignored
+`guided-learning-topics/notes/`): the same concepts and length as the benchmark course, in our words and examples.
+
+- **Quiz formats** (visual Q&A, owner): **Choose buy or sell** (the chart with the plan's price as a dashed line,
+  the plan, Buy and Sell filled like the phone trade bar; the Why points at the plan; a frozen chart then plays on,
+  "What happened next (the plan doesn't depend on it)"), **Drag and drop** (numbered slots; drag, or tap a step then
+  a slot) and **Match boxes** (two columns, tap to pair, numbered chips). Quizzes can sit between cards
+  (`LessonCard.quiz`). Each format's rules are in `lessons.test`.
+- **The caps are raised** (owner): up to 16 teaching cards and 2–6 questions a lesson (were 6 and 2–3).
+- **Practice trades from a card** (owner): a Buy, Long or Short card offers a guided paper trade on the real chart
+  (`practice-buy` on spot, `practice-long` / `practice-short` on the USDT Perpetual); the lesson waits and then goes on
+  at the next screen. Not saved or reported as tours of their own. The lesson waits through a tour chain
+  (buy → sell) too.
+- **Tours on phones** (owner): steps can be phone- or desktop-only; phone-ready tours open the form from the
+  bottom bar, so a lesson's Try is offered on phones; the primer (hover steps) still needs a larger screen. An order
+  step counts as done when the phone's order sheet closes after the submit.
+- **The streak screen** (visual Q&A, owner): after a signed-in learner presses the close's button: a flame, the
+  streak counting up, this week's days (`GET /api/learn/habits` adds `thisWeek`), then Continue. Not a screen of its
+  own (the funnel's steps don't move). Once per lesson run; ✕ or Esc on it only finish. The days are the learner's
+  own: the client sends its IANA time zone (an `X-Time-Zone: Europe/Zurich` header, the SDK's default), so the dots, the streak and
+  the learning days follow the learner's calendar, each day with its own date's offset (a daylight-saving change
+  moves nothing). A day counts with any learning event on it but a rating (a start, a step, a close, a finish; all read in one
+  query, as a learner never holds more than 500 events). The streak screen reads the habits at once: the lesson's own start already counted today (only a run
+  carried past midnight shows its new day on the next read). UTC when absent or unknown (an odd device zone never fails
+  the request), and the zone is never logged: a header, never the URL, which the request log records (privacy
+  policy 1.6 says so; every authenticated read already makes a CORS preflight, so the header costs
+  no extra request). Formatters are kept for zone names Intl returns (capped at 1,000; other text is worked out once into a
+  capped map and never kept as a zone), and each quarter hour is
+  formatted once per request (every zone's offset is a whole number of quarter hours). `thisWeek` is optional
+  in the SDK: an API rolled back on its own doesn't send it, and the dots then show no days.
+- **Everyone's progress on Lessons 1–3 is reset** (owner: begun and finished alike), by the data migration
+  `20261116200000_reset_lessons_1_3`; the ids stay. So that a tab or a cached PWA still on the old lessons can't undo
+  it, a lesson's start and finish carry the funnel step (a finish: its last screen's, kept in the row as its
+  version), and the server answers 409 to one below the current version's first step (`LESSON_FIRST_STEP`, 61 for
+  all three; the SDK's `LESSON_FIRST_STEPS` holds the client and server copies together). Fly runs the migration
+  before the old API machines are gone, so the reads guard it too: `GET /progress` leaves out a lesson row with no
+  step or an earlier one, and a start replaces such a row (only once a start neither creates nor raises a row, so
+  the write every screen makes costs no extra query). A lesson can't be dismissed (such a row would have no
+  version). An old-version Lesson 1 finish that lands after the migration still keeps the welcome card shut (GET
+  answers a dismissal for it, as the migration does for earlier finishes). **Rolling this release back: the API alone, or both** (`git.md`'s emergency
+  playbook). The previous API refuses the new app's lesson finishes and checkpoint passes (they carry a step): the
+  app keeps such a refused one on the device per account (`learn/pendingDone.ts`, validated and capped) and sends
+  it again each time the progress loads, until it lands (a 409, told apart by status, drops it; it shows as done
+  once saved). A lesson's steps stay within one version's span (`LESSON_VERSION_SPAN`, 40), which the server
+  refuses past, and a rebuild raises `stepBase` by at least that; every Lesson 1 finish saves the welcome card's
+  dismissal with it. A learning day is one with any learning event but a rating (closes count too: a run carried on
+  past midnight marks its second day when it ends). The web app alone is not safe: the new API
+  refuses the previous app's lesson saves as an earlier version. A normal release deploys the API just before the
+  web app; the old app's saves in between are the ones the reset was made to refuse.
+- **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
+  writer against our Bybit candles): profit up or down, Buy and Sell, two Choose buy or sell quizzes, a worked long
+  (BTC 2 Oct 2023 → 13 Mar 2024, spot) and short (10 Nov 2021 → 18 Jun 2022, perpetual: a contract, with
+  liquidation), closing a position, long/short/stay out, Your call "decide when and why before you click", 24/7, BTC
+  vs SOL (−19% vs −29%), risks and scams, a Try it that opens and closes a paper trade. `stepBase` 60. Its money and
+  trust cards (Nora's notebook) move to a later lesson; their articles stay (`money-101` says so). Four summary lines
+  have no article yet (plain text, owner). Unit 1 is now **"Start here: crypto and trading basics"**.
+- **Lesson 2, "Money nobody controls"** (owner-approved outline and draft, fact-checked): the genesis block's
+  headline as the cold open, 2008, the white paper and block 0, one ledger with many copies (a class score sheet),
+  sending, the two checks, blocks, proof of work, the hash, a Drag and drop (a payment's journey), decentralized
+  (21 million, an open ledger), Match boxes (network parts; Bitcoin's features), borderless, liquidity, programmable
+  networks, NFTs, Your call (one copy against thousands), the `block-chain` Try it, and the birth story staged in the
+  summary. `stepBase` 60. Its keys and custody cards (James Howells, Sneaky Sam, the phone in the sea) move to a
+  later lesson; `mailboxes-keys` and `getting-bitcoin` say so; the Howells photo and the drawings only those cards
+  used are deleted (git keeps them).
+- **Lesson 3, "News, swings and traps"** (owner-approved, fact-checked against our candles): the $8,200 cold open
+  and the volatility card kept; news, the April 2024 halving both ways, the ETF Your call kept, hype, candles, FTX
+  (November 2022, −23%), a plan beats panic, April → July 2021 (−53%), thin or deep, the $8,200 moment explained,
+  Bitcoin is deep, Match boxes (situations), a rug pull told generally, the checklist, and a Drag and drop (a rug
+  pull's steps). `stepBase` 60. The benchmark's company and token examples are gone; the two-queues card moves to a
+  later lesson (the order-book widget and its article stay). **No way on from its close** (review): Lesson 1's Try
+  already runs the buy and sell tours, so the close just finishes and the path shows what's next. A lesson's way on
+  is now only ever the next lesson (`next: LessonId`); the close's tour way on and `lesson.next-tour` are deleted.
+- **The Chapter 1 checkpoint** (was "Foundations checkpoint"): its recovery-phrase question went with keys and
+  custody to a later lesson; in its place, "your plan says sell below $50,000" (taught in Lesson 1). **Earlier passes
+  are cleared** (owner 2026-11-17, migration `20261117090000_reset_checkpoint_ch1`): every learner takes it again,
+  and a learner already in chapter 2 finds it closed until they pass. A pass carries its question set's version as
+  `step` (the client's `version`, the SDK's `CHECKPOINT_VERSIONS`, the server's `CHECKPOINT_VERSION`); the server
+  refuses one from an earlier set with 409 and ignores such a row on reads, as it does a lesson's.
+- **The admin funnel**: a tour's steps in the order it runs them, phone-only and desktop-only steps marked; a
+  rewritten lesson's started / finished totals are labelled "(totals: all versions)", since those events carry no
+  step (the old versions' events are kept, as they were for the pilot).
+- **The path's chapter overview** lists each lesson's summary lines ("What you'll learn").
+- **Release** (owner): the new Lesson 1 ships as soon as it's written, which ends the voice-pilot measurement early;
+  the funnel before and after still shows the pilot's first days.
+
 ### 2026-11-16 — The benchmark-name check: local git hooks; CI test steps
 
 🔐 IP: nothing committed or pushed may name the benchmark course (owner 2026-11-16: git checks only).
@@ -4682,6 +4770,20 @@ drop):
   `get_metadata` / `get_screenshot` / `get_design_context` / `get_variable_defs`).
 - **`technical-analyst`** reads a pasted chart directly (it routed images through an opencode plugin and a Grok
   sub-agent). **`session-bootstrap`** names Claude Code's tools and points at `CLAUDE.md` for the quick commands.
+
+### 2026-11-17 — The Playwright jobs pinned to Ubuntu 24.04
+
+`ubuntu-latest` moved from Ubuntu 24.04 to 26.04 on 2026-11-17. On release #302 (Lessons 1–3), the "E2E full set"
+failed `[13.3.1][4.6]` on WebKit twice: every click took seconds and the reset's 3 s confirm window ran out.
+
+- **The cause was the image, not the release.** Every WebKit test ran 2–4× slower than on the last green run (median
+  2.2×; Chromium about 1.35×).
+- **Checked locally:** on macOS, the release and `main` ran at the same speed, test for test, in WebKit and in Chromium.
+- **What changed:** every workflow that runs Playwright is on `ubuntu-24.04`: `ci.yml`, `e2e-nightly.yml`,
+  `prod-smoke.yml` and `deploy.yml` (its post-deploy smoke; a smoke timing out on a slower image would block a
+  deploy). The rest run no browser. Moving to 26.04 is a deliberate change later, with a full-set run to compare.
+- **Reverted:** a first guess (#303: WebKit holding back a background tab's frames, so the test brought tab A to the
+  front) didn't help and has been undone.
 
 ### 2026-11-13 — Housekeeping: the TradingView mirror deleted, dependencies updated
 
@@ -5043,7 +5145,8 @@ recommendations, and chose our own drawing over a photo for the cold open.
   (a hard drive, a bin and Tock): the Newport landfill with a digger, and an inset portrait of James Howells. No
   drawing and no guide, as Lesson 1. The owner confirmed on 2026-11-12 that they hold the rights to publish it and
   gave no credit line, so none is shown: `photo.credit` is now optional and the caption renders only when given.
-  It ships as `src/assets/lessons/howells-landfill.jpg` (884 px, about 165 kB), with alt text. The `hardDrive`
+  It ships as `src/assets/lessons/howells-landfill.jpg` (884 px, about 165 kB), with alt text. (Deleted
+  2026-11-16 with Lesson 2's keys and custody cards, which move to a later lesson; git keeps it.) The `hardDrive`
   drawing is gone.
 - Tests: Lesson 2's cold open has the photo with no credit, drawing or guide (`lessons.test`, `LessonSheet.test`).
 - **No Nora in Lesson 2** (owner, same day): a learner may come back days later and not remember her. Card 2 is now

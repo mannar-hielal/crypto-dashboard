@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { isGuideAnchor } from '@/lib/guideAnchors';
-import { TOUR_IDS, TOURS, getTour, isTourId } from '@/guide/tours';
+import {
+  TOUR_IDS,
+  TOURS,
+  getTour,
+  isTourId,
+  PRACTICE_TOURS,
+  PRACTICE_TOUR_IDS,
+  tourSteps,
+  backIndex,
+} from '@/guide/tours';
 
 describe('tours', () => {
   it('should define every tour id once', () => {
@@ -9,17 +18,21 @@ describe('tours', () => {
     expect(isTourId('nope')).toBe(false);
   });
 
-  for (const tour of TOURS) {
+  for (const tour of [...TOURS, ...PRACTICE_TOURS]) {
     describe(tour.id, () => {
-      it('should have at most five steps (completion falls fast past five)', () => {
-        expect(tour.steps.length).toBeGreaterThan(0);
-        expect(tour.steps.length).toBeLessThanOrEqual(5);
+      it('should have at most five steps on each screen size (completion falls fast past five)', () => {
+        for (const wide of [true, false]) {
+          expect(tourSteps(tour, wide).length).toBeGreaterThan(0);
+          expect(tourSteps(tour, wide).length).toBeLessThanOrEqual(5);
+        }
       });
 
-      it('should number its steps <id>.1, <id>.2, … in order', () => {
-        expect(tour.steps.map((s) => s.id)).toEqual(
-          tour.steps.map((_, i) => `${tour.id}.${i + 1}`)
-        );
+      it('should number its steps <id>.1, <id>.2, … in order, phone-only steps from 51', () => {
+        // Phone-only steps numbered apart, so adding one never renumbers stored steps (2026-11-16)
+        const main = tour.steps.filter((s) => s.screen !== 'phone');
+        const phone = tour.steps.filter((s) => s.screen === 'phone');
+        expect(main.map((s) => s.id)).toEqual(main.map((_, i) => `${tour.id}.${i + 1}`));
+        expect(phone.map((s) => s.id)).toEqual(phone.map((_, i) => `${tour.id}.${51 + i}`));
       });
 
       it('should use registered anchors only and give every step text', () => {
@@ -55,8 +68,8 @@ describe('tours', () => {
   });
 
   it('should teach going long, a position, closing it and taking a profit (the benchmark gaps)', () => {
-    const buy = getTour('buy-first-coin').steps;
-    const sell = getTour('sell-and-review').steps;
+    const buy = tourSteps(getTour('buy-first-coin'), true);
+    const sell = tourSteps(getTour('sell-and-review'), true);
     expect(buy[0].text).toMatch(/Buy if you expect the price to rise, Sell to get out/);
     expect(buy[0].text).toMatch(/going long/);
     expect(buy.at(-1)!.text).toMatch(/You now hold a position: \$100 of Bitcoin, long/);
@@ -65,9 +78,49 @@ describe('tours', () => {
     expect(sell.map((s) => s.text).join(' ')).toMatch(/taken a profit/);
   });
 
+  it('should not assume the sell tour sells exactly $100 (a practice buy may come first)', () => {
+    // Lesson 1's practice buy and its Try both buy $100 of Bitcoin (review 2026-11-16)
+    const text = getTour('sell-and-review')
+      .steps.map((st) => st.text)
+      .join(' ');
+    expect(text).not.toMatch(/\$100/);
+    expect(text).toMatch(/Selling all of your Bitcoin closes your position/);
+  });
+
   it('should have the buy tour type dollars, not coins', () => {
     const steps = getTour('buy-first-coin').steps;
     expect(steps.some((s) => s.anchor === 'trade.amount-unit' && s.key === 'usdt')).toBe(true);
     expect(steps.find((s) => s.kind === 'type')?.suggest).toBe('100');
+  });
+
+  it('should open the order form from the phone’s bar on a phone, and from the side button on a larger screen (owner 2026-11-16)', () => {
+    for (const tour of [getTour('buy-first-coin'), ...PRACTICE_TOURS]) {
+      expect(tourSteps(tour, false)[0].anchor, tour.id).toMatch(/^trade\.mobile\./);
+      expect(tourSteps(tour, true)[0].anchor, tour.id).toMatch(/^trade\.side\./);
+      expect(tour.phoneReady, tour.id).toBe(true);
+    }
+    // The primer's hover steps need a pointer: no phone path
+    expect(getTour('primer').phoneReady).toBeUndefined();
+  });
+
+  it('should keep practice trades out of the saved, reported tours, and chain them to nothing', () => {
+    expect(PRACTICE_TOURS.map((t) => t.id)).toEqual([...PRACTICE_TOUR_IDS]);
+    for (const t of PRACTICE_TOURS) {
+      expect(isTourId(t.id)).toBe(false);
+      expect(t.next).toBeUndefined();
+    }
+    // On Ethereum: one position per symbol, so a short on Bitcoin would only close the practice long
+    expect(getTour('practice-long').startUrl).toBe('/dashboard/usdt/BTCUSDT');
+    expect(getTour('practice-short').startUrl).toBe('/dashboard/usdt/ETHUSDT');
+    expect(tourSteps(getTour('practice-short'), false)[0].anchor).toBe('trade.mobile.sell');
+  });
+
+  it('should go back past a phone step already done, and nowhere when only it is behind', () => {
+    const phone = tourSteps(getTour('practice-buy'), false);
+    const tap = phone[0].id; // Tap Buy / Long
+    expect(backIndex(phone, 1, [tap])).toBeNull();
+    expect(backIndex(phone, 1, [])).toBe(0); // not done in this run: it may be shown again
+    expect(backIndex(phone, 2, [tap])).toBe(1);
+    expect(backIndex(phone, 0, [])).toBeNull();
   });
 });

@@ -92,10 +92,13 @@ describe('CheckpointSheet', () => {
 
     expect(screen.getByText('Not yet')).toBeTruthy();
     expect(usePathStore.getState().checkpoints).toEqual({});
-    const reviews = document.querySelectorAll(
-      guideSelector('checkpoint.review', 'lesson-ownership')
+    // The two missed questions: the record's copies (Lesson 2) and the plan's rule (Lesson 1)
+    expect(
+      document.querySelectorAll(guideSelector('checkpoint.review', 'lesson-ownership'))
+    ).toHaveLength(1);
+    expect(document.querySelectorAll(guideSelector('checkpoint.review', 'lesson-01'))).toHaveLength(
+      1
     );
-    expect(reviews).toHaveLength(2);
 
     fireEvent.click(document.querySelector(guideSelector('checkpoint.retry'))!);
     expect(screen.getByText('1 / 5')).toBeTruthy();
@@ -110,7 +113,7 @@ describe('CheckpointSheet', () => {
     expect(useLessonStore.getState().activeId).toBe('lesson-02');
   });
 
-  it('should send a missed tour question to the tour on a larger screen, and only name it on a phone', () => {
+  it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
@@ -123,10 +126,10 @@ describe('CheckpointSheet', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
+    // sell-and-review is phone-ready (2026-11-16): the phone gets the button as well
     expect(
       document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))
-    ).toBeNull();
-    expect(screen.getByText(/on a larger screen/)).toBeTruthy();
+    ).not.toBeNull();
   });
 
   it('should close from ✕ or Esc back to the path', () => {

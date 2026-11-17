@@ -6,11 +6,13 @@
  * the card keeps its drawn picture, so a lesson never waits on data.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { pricePrecision } from './lessonChartData';
+import { useEffect, useRef, useState, type ReactNode, useMemo } from 'react';
 import {
   CandlestickSeries,
   createChart,
   createSeriesMarkers,
+  LineStyle,
   TickMarkType,
 } from 'lightweight-charts';
 import type {
@@ -96,6 +98,11 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
 
   // ── The chart itself, once there is data ───────────────────────────────────
   const ready = bars !== null;
+  // Decimals by the coin's price level, not its name (pricePrecision), once per data load
+  const precision = useMemo(() => {
+    const top = bars ? bars.reduce((t, b) => Math.max(t, b.high), 0) : 0;
+    return pricePrecision(top);
+  }, [bars]);
   useEffect(() => {
     const el = containerRef.current;
     if (!ready || !el) return;
@@ -126,8 +133,6 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
       borderVisible: false,
       priceLineVisible: false,
       lastValueVisible: false,
-      // Whole dollars: a lesson reads "$57,459", not "57459.00"
-      priceFormat: { type: 'price', precision: 0, minMove: 1 },
     });
     chartRef.current = chart;
     seriesRef.current = series;
@@ -139,6 +144,34 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
       chart.remove();
     };
   }, [ready]);
+
+  // The price format follows the scene's coin on the same series (a new chart would drop its data
+  // and its plan line)
+  useEffect(() => {
+    seriesRef.current?.applyOptions({
+      priceFormat: { type: 'price', precision, minMove: 10 ** -precision },
+    });
+  }, [ready, precision]);
+
+  // ── A Choose buy or sell plan's price, as a dashed line (owner 2026-11-16) ──
+  const planPrice = scene.planLine?.price;
+  const planLabel = scene.planLine?.label;
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!ready || !series || planPrice === undefined) return;
+    const line = series.createPriceLine({
+      price: planPrice,
+      color: chartColors.lessonMarker,
+      lineStyle: LineStyle.Dashed,
+      lineWidth: 1,
+      axisLabelVisible: true,
+      title: planLabel ?? '',
+    });
+    return () => {
+      // The series may already be gone with its chart (the creating effect's cleanup runs too)
+      if (seriesRef.current === series) series.removePriceLine(line);
+    };
+  }, [ready, planPrice, planLabel]);
 
   // ── Push what's shown, and the markers on it ───────────────────────────────
   useEffect(() => {

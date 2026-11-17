@@ -32,7 +32,10 @@ jobs:
     # (Actions budget, git.md). Every check runs even after another one failed (only a failed
     # install stops the rest), so a run reports all its failures at once.
     name: CI (checks, integration, e2e smoke)
-    runs-on: ubuntu-latest
+    # Pinned (2026-11-17): ubuntu-latest moved to 26.04 that day, where WebKit ran every e2e test
+    # 2-4x slower (median 2.2x; Chromium about 1.35x) and broke [13.3.1][4.6] on release #302 (this job's smoke runs Playwright too). Move
+    # on deliberately, with a full-set run to compare
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The throwaway service's own credentials: the integration tests use crypto_dashboard_int, and the
     # e2e server creates crypto_dashboard_e2e_test itself

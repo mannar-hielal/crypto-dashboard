@@ -7,16 +7,33 @@ const h = vi.hoisted(() => ({
   remove: vi.fn(),
   range: vi.fn(),
   getCandles: vi.fn(),
+  createPriceLine: vi.fn(),
+  removePriceLine: vi.fn(),
+  seriesOptions: vi.fn(),
+  applyOptions: vi.fn(),
+  createChart: vi.fn(),
 }));
 
 vi.mock('lightweight-charts', () => ({
   CandlestickSeries: {},
+  LineStyle: { Dashed: 2 },
   TickMarkType: { Year: 0, Month: 1, DayOfMonth: 2, Time: 3, TimeWithSeconds: 4 },
-  createChart: () => ({
-    addSeries: () => ({ setData: h.setData }),
-    timeScale: () => ({ setVisibleLogicalRange: h.range }),
-    remove: h.remove,
-  }),
+  createChart: () => {
+    h.createChart();
+    return {
+      addSeries: (_type: unknown, options: unknown) => {
+        h.seriesOptions(options);
+        return {
+          setData: h.setData,
+          createPriceLine: h.createPriceLine,
+          removePriceLine: h.removePriceLine,
+          applyOptions: h.applyOptions,
+        };
+      },
+      timeScale: () => ({ setVisibleLogicalRange: h.range }),
+      remove: h.remove,
+    };
+  },
   createSeriesMarkers: () => ({ setMarkers: h.setMarkers }),
 }));
 vi.mock('@crypto-dashboard/sdk', () => ({
@@ -120,5 +137,44 @@ describe('LessonChart', () => {
     render(<LessonChart scene={scene} revealed fallback={null} />);
     await waitFor(() => expect(lastData()?.length).toBe(40));
     expect(h.getCandles).toHaveBeenCalledTimes(1);
+  });
+
+  it('should draw a Choose buy or sell plan as a dashed price line with its label', async () => {
+    const withPlan: ChartScene = { ...scene, planLine: { price: 41_000, label: 'Your plan' } };
+    render(<LessonChart scene={withPlan} revealed={false} fallback={<p>picture</p>} />);
+    await waitFor(() => expect(h.createPriceLine).toHaveBeenCalled());
+    expect(h.createPriceLine).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 41_000, title: 'Your plan', lineStyle: 2 })
+    );
+  });
+
+  it('should draw no price line on a scene without a plan', async () => {
+    render(<LessonChart scene={scene} revealed={false} fallback={<p>picture</p>} />);
+    await waitFor(() => expect(h.setData).toHaveBeenCalled());
+    expect(h.createPriceLine).not.toHaveBeenCalled();
+  });
+
+  it('should show cents below $1,000 and whole dollars above it, on the same chart', async () => {
+    const format = () =>
+      (h.applyOptions.mock.calls.at(-1)?.[0] as { priceFormat: { precision: number } }).priceFormat
+        .precision;
+    // The test candles trade around $100: cents
+    const { rerender } = render(<LessonChart scene={scene} revealed fallback={<p>picture</p>} />);
+    await waitFor(() => expect(format()).toBe(2));
+    // Another scene in the thousands: whole dollars, on the same chart (its data and plan line stay)
+    h.getCandles.mockResolvedValue({
+      candles: candles().map((c) => ({
+        ...c,
+        open: 50_000,
+        high: 51_000,
+        low: 49_000,
+        close: 50_500,
+      })),
+    });
+    rerender(
+      <LessonChart scene={{ ...scene, end: '2024-03-01' }} revealed fallback={<p>picture</p>} />
+    );
+    await waitFor(() => expect(format()).toBe(0));
+    expect(h.createChart).toHaveBeenCalledTimes(1);
   });
 });

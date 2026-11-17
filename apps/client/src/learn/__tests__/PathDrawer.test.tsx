@@ -7,14 +7,28 @@ vi.mock('@crypto-dashboard/sdk', () => ({
   learnApi: { getHabits: (...a: unknown[]) => getHabits(...a) },
 }));
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { accessToken: string }) => unknown) =>
-    selector({ accessToken: 'tok' }),
+  useAuthStore: Object.assign(
+    (selector: (s: { accessToken: string; user: null }) => unknown) =>
+      selector({ accessToken: 'tok', user: null }),
+    { getState: () => ({ accessToken: 'tok', user: null }) }
+  ),
 }));
 
 let wide = true;
 vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => wide }));
 
 const navigate = vi.fn();
+/** Tours to treat as not phone-ready (the path's two are today; a later tour may not be) */
+const notOnPhones = new Set<string>();
+vi.mock('@/guide/tours', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/guide/tours')>();
+  return {
+    ...mod,
+    runsHere: (id: Parameters<typeof mod.runsHere>[0], wide: boolean) =>
+      notOnPhones.has(id) ? wide : mod.runsHere(id, wide),
+  };
+});
+
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
   useNavigate: () => navigate,
@@ -61,10 +75,10 @@ describe('PathDrawer', () => {
     renderDrawer();
 
     expect(screen.getByRole('dialog', { name: 'Crypto trading path' })).toBeTruthy();
-    expect(screen.getByText('Foundations of crypto')).toBeTruthy();
+    expect(screen.getByText('Start here: crypto and trading basics')).toBeTruthy();
     expect(screen.getByText('Start')).toBeTruthy();
     expect(nodeButton('lesson:lesson-01').getAttribute('aria-label')).toBe(
-      'Lesson: What is the problem?, next step'
+      'Lesson, on the real chart: Up, down and your first trade, next step'
     );
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText('Trade with a plan')).toBeTruthy();
@@ -90,12 +104,14 @@ describe('PathDrawer', () => {
     );
     expect(lesson1.getAttribute('aria-label')).toContain(`, 5 of ${screens} screens`);
     // A lesson is a book, with no badge; what's done on the real chart is a dumbbell: the
-    // practice, and Lesson 3, whose "Try it" is there
-    expect(lesson1.querySelector('.lucide-book-open')).not.toBeNull();
-    expect(lesson1.querySelector('.lucide-dumbbell')).toBeNull();
+    // practice, and Lessons 1 and 3, whose "Try it" is there (Lesson 1's since 2026-11-16)
+    expect(lesson1.querySelector('.lucide-dumbbell')).not.toBeNull();
+    const lesson2 = nodeButton('lesson:lesson-ownership');
+    expect(lesson2.querySelector('.lucide-book-open')).not.toBeNull();
+    expect(lesson2.querySelector('.lucide-dumbbell')).toBeNull();
     expect(nodeButton('lesson:lesson-02').querySelector('.lucide-dumbbell')).not.toBeNull();
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-label')).toContain(
-      'Lesson, on the real chart: Who sets the price?'
+      'Lesson, on the real chart: News, swings and traps'
     );
     expect(nodeButton('tour:buy-first-coin').querySelector('.lucide-dumbbell')).not.toBeNull();
     // A lesson not begun has no ring
@@ -116,7 +132,7 @@ describe('PathDrawer', () => {
     fireEvent.click(nodeButton('lesson:lesson-02'));
     expect(useLessonStore.getState().activeId).toBeNull();
     expect(useTourStore.getState().panelOpen).toBe(true);
-    expect(screen.getByText('Finish “What is Bitcoin?” first.')).toBeTruthy();
+    expect(screen.getByText('Finish “Money nobody controls” first.')).toBeTruthy();
   });
 
   it('should never make a coming-soon stop focusable', () => {
@@ -143,7 +159,22 @@ describe('PathDrawer', () => {
     expect(useTourStore.getState()).toMatchObject({ panelOpen: false, activeId: 'buy-first-coin' });
   });
 
-  it('should let a phone skip a tour for now, which opens the next stop', () => {
+  it('should start a phone-ready tour on a phone, with no "larger screen" note', () => {
+    // The path's tours open the form from the phone's bar since 2026-11-16; a tour that isn't
+    // phone-ready still gets the note and its "skip for now"
+    wide = false;
+    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-ownership', 'lesson-02']);
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+
+    fireEvent.click(nodeButton('tour:buy-first-coin'));
+    expect(useTourStore.getState().activeId).toBe('buy-first-coin');
+    expect(screen.queryByText(/needs a laptop or tablet/)).toBeNull();
+  });
+
+  it('should let a phone skip a tour that needs a larger screen, which opens the next stop', () => {
+    // Every tour on the path is phone-ready today: the flow is kept for a later one that isn't
+    notOnPhones.add('buy-first-coin');
     wide = false;
     useLessonStore.getState().setCompleted(['lesson-01', 'lesson-ownership', 'lesson-02']);
     useTourStore.setState({ panelOpen: true });
@@ -160,6 +191,7 @@ describe('PathDrawer', () => {
         .querySelector(guideSelector('path.node', 'tour:sell-and-review'))!
         .getAttribute('data-state')
     ).toBe('current');
+    notOnPhones.clear();
   });
 
   it('should show what a chapter covers from its book button', () => {
@@ -167,8 +199,10 @@ describe('PathDrawer', () => {
     renderDrawer();
     fireEvent.click(document.querySelector(guideSelector('path.chapter.info', 'ch1'))!);
     const overview = document.querySelector(guideSelector('path.chapter.overview'))!;
-    expect(overview.textContent).toContain('Who sets the price?');
-    expect(overview.textContent).toContain('After this chapter you can');
+    expect(overview.textContent).toContain('News, swings and traps');
+    // Each lesson's summary lines (the lessons sum up there since 2026-11-16)
+    expect(overview.textContent).toContain('What you’ll learn');
+    expect(overview.textContent).toContain('Closing a position makes the result real.');
   });
 
   it('should show the streak, and keep the library and habits in their own tab', async () => {
@@ -177,7 +211,7 @@ describe('PathDrawer', () => {
       streakDays: 2,
       badges: [{ id: 'ten-stop-losses', earned: false, progress: 4, target: 10 }],
     });
-    useTourStore.setState({ panelOpen: true });
+    useTourStore.setState({ panelOpen: true, loaded: true });
     renderDrawer();
 
     await waitFor(() =>
@@ -193,9 +227,19 @@ describe('PathDrawer', () => {
     expect(useArticleStore.getState().openId).toBe('exchange-price');
   });
 
+  it('should read the habits once the progress is in, not before and again after', async () => {
+    getHabits.mockResolvedValue({ learningDays: 0, streakDays: 0, badges: [], thisWeek: [] });
+    useTourStore.setState({ panelOpen: true, loaded: false });
+    renderDrawer();
+    await act(async () => {});
+    expect(getHabits).not.toHaveBeenCalled();
+    act(() => useTourStore.setState({ loaded: true }));
+    await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(1));
+  });
+
   it('should say so when the habits cannot be loaded', async () => {
     getHabits.mockRejectedValue(new Error('offline'));
-    useTourStore.setState({ panelOpen: true });
+    useTourStore.setState({ panelOpen: true, loaded: true });
     renderDrawer();
     fireEvent.click(document.querySelector(guideSelector('path.tab', 'library'))!);
     await waitFor(() => expect(screen.getByText(/Could not load your habits/)).toBeTruthy());

@@ -129,7 +129,7 @@ function stepLabel(itemId: string, stepId: string): string {
   if (isLessonId(itemId)) {
     const lesson = LESSONS.find((l) => l.id === itemId);
     if (!lesson) return `Screen ${n}`;
-    // A step from before the lesson's screens changed (Lesson 1's 1–20) names no screen of today's
+    // A step from before the lesson's screens changed (below its stepBase) names no screen of today's
     const index = lessonScreenOfStep(lesson, Number(n));
     if (index === null) return `Screen ${n} (an earlier version of the lesson)`;
     return `${index + 1}. ${screenName(lesson, lessonScreens(lesson)[index])}`;
@@ -137,13 +137,29 @@ function stepLabel(itemId: string, stepId: string): string {
   const step = TOURS.find((t) => t.id === itemId)?.steps.find((st) => st.id === stepId);
   if (!step) return `Step ${n}`;
   const text = step.text.length > 60 ? `${step.text.slice(0, 57)}…` : step.text;
-  return `${n}. ${text}`;
+  // A step only one screen size runs: its viewers are that size's learners only
+  const only = step.screen ? ` (${step.screen} only)` : '';
+  return `${n}. ${text}${only}`;
+}
+
+/**
+ * A tour's steps in the order the tour runs them (phone-only steps are numbered from 51, so the
+ * server's numeric order would list them last); a lesson's are already in screen order
+ */
+function inTourOrder(tour: TourFunnelTour): TourFunnelTour['steps'] {
+  const steps = TOURS.find((t) => t.id === tour.itemId)?.steps;
+  if (!steps) return tour.steps;
+  const position = new Map(steps.map((st, i) => [st.id, i]));
+  const at = (id: string) => position.get(id) ?? steps.length;
+  return [...tour.steps].sort((a, b) => at(a.stepId) - at(b.stepId));
 }
 
 function FunnelRows({ tour }: { tour: TourFunnelTour }) {
   const lesson = LESSONS.find((l) => l.id === tour.itemId);
+  // A lesson's started / finished totals and its rating count every version of it (those events
+  // carry no step); its screen rows are today's version only (stepBase)
   const title = lesson
-    ? `Lesson ${lesson.number}: ${lesson.title}`
+    ? `Lesson ${lesson.number}: ${lesson.title}${lesson.stepBase ? ' (totals and rating: all versions)' : ''}`
     : (TOURS.find((t) => t.id === tour.itemId)?.title ?? tour.itemId);
   return (
     <>
@@ -168,7 +184,7 @@ function FunnelRows({ tour }: { tour: TourFunnelTour }) {
           )}
         </td>
       </tr>
-      {tour.steps.map((st) => (
+      {inTourOrder(tour).map((st) => (
         <tr key={st.stepId}>
           <td>{stepLabel(tour.itemId, st.stepId)}</td>
           <td>{st.viewers}</td>

@@ -7,6 +7,7 @@
  * the in-memory token fresh using the httpOnly refresh cookie.
  */
 
+import { tokenPayload } from './tokenPayload';
 import {
   authApi,
   SDK_REQUEST_TIMEOUT_MS,
@@ -302,13 +303,6 @@ function retryWhenOnline(sends?: SendTimes): void {
  * without verification — only to schedule a refresh; the server verifies every use.
  */
 export function msUntilExpiry(token: string): number | null {
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
-    return typeof exp === 'number' ? exp * 1000 - Date.now() : null;
-  } catch {
-    return null;
-  }
+  const exp = tokenPayload(token)?.exp;
+  return typeof exp === 'number' ? exp * 1000 - Date.now() : null;
 }

@@ -49,7 +49,7 @@ describe('afterNote', () => {
     expect(s()).toMatchObject({ screen: 1, inTour: false });
     const tryScreen = lessonScreens(getLesson('lesson-02')).findIndex((x) => x.kind === 'try');
     s().start('lesson-02', tryScreen);
-    s().enterTour();
+    s().enterTour('primer');
     s().leaveTour();
     expect(s().screen).toBe(tryScreen + 1);
   });

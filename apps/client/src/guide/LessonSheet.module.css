@@ -217,11 +217,6 @@
   border-color: var(--color-brand-red);
 }
 
-.explain {
-  margin: 0;
-  color: var(--color-brand-muted);
-}
-
 .hint {
   margin: 0;
   color: var(--color-brand-muted);
@@ -294,6 +289,23 @@
 
 .spacer {
   flex: 1;
+}
+
+/* A card's practice trade: a secondary pill under its text (owner 2026-11-16) */
+.practice {
+  align-self: flex-start;
+  border: 1px solid var(--color-brand-purple-dark);
+  border-radius: var(--radius-btn);
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--color-brand-white);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.practice:hover {
+  background: var(--color-brand-purple-dark);
 }
 
 .link {
@@ -547,8 +559,7 @@
   display: block;
   width: 100%;
   /* Every lesson photo shows at the Pizza Day photo's shape (1200 × 736), so the cold opens match in
-     height (owner 2026-11-12); a taller photo is cropped from the bottom, keeping its top (the
-     landfill's digger and James Howells' portrait) */
+     height (owner 2026-11-12); a taller photo is cropped from the bottom, keeping its top */
   aspect-ratio: 1200 / 736;
   object-fit: cover;
   object-position: center top;

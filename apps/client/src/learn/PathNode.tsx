@@ -7,6 +7,7 @@
  * under it, instead of doing nothing: not reached yet, needs a larger screen, or not on the plan.
  */
 
+import { runsHere } from '@/guide/tours';
 import { useState, type ReactNode } from 'react';
 import { BookOpen, Check, Crown, Dumbbell, Gem, Laptop, Lock } from 'lucide-react';
 import { GuideAvatar } from '@/guide/LessonArt';
@@ -100,7 +101,8 @@ export function PathNode({
   const screens = node.kind === 'lesson' ? lessonScreens(getLesson(node.id)).length : 0;
   const progress =
     fraction !== null ? `, ${Math.round(fraction * screens)} of ${screens} screens` : '';
-  const phoneTour = node.kind === 'tour' && !wide;
+  // A tour that can't run on this screen (a phone, unless the tour is phone-ready)
+  const phoneTour = node.kind === 'tour' && !runsHere(node.id, wide);
   // These open a note under the stop instead of starting it
   const explains = state === 'locked' || state === 'pro' || phoneTour;
 

@@ -9,8 +9,9 @@
  * Finish and the way on all lead back, and the funnel skips it.
  */
 
+import type { TourId } from './tours';
 import { create } from 'zustand';
-import { getLesson, lessonScreens, type LessonId } from './lessons';
+import { getLesson, lessonScreens, type LessonId, screenTour } from './lessons';
 
 /** The journal line on the last screen: typed, on its way, or in the journal */
 export type NoteStatus = 'draft' | 'saving' | 'saved';
@@ -29,6 +30,8 @@ interface LessonRun {
   answers: Record<number, number>;
   /** The lesson's tour is running: the sheet is hidden until it ends */
   inTour: boolean;
+  /** The tour the lesson handed over (its Try tour or a card's practice): only its end moves on */
+  tourFrom: TourId | null;
   /** The rating given on the last screen, if any */
   rating: number | null;
   /** The journal line typed on the last screen */
@@ -58,6 +61,11 @@ interface LessonState extends LessonRun {
   returnTo: ReturnPlace | null;
   /** Counts every change of run, so a save that lands after the learner moved on changes nothing */
   run: number;
+  /**
+   * The lesson start already counted as finished (`markFinished`): its close is no second finish.
+   * By `starts`, which a look back and the way back from it don't change (`run` does)
+   */
+  doneAt: { id: LessonId; starts: number } | null;
   /** Counts every `start()`: how the funnel tells a lesson started from the way back from a look back */
   starts: number;
   /**
@@ -75,7 +83,9 @@ interface LessonState extends LessonRun {
   back: () => void;
   answer: (option: number) => void;
   /** "Show me": hide the sheet while the lesson's tour runs */
-  enterTour: () => void;
+  enterTour: (tour: TourId) => void;
+  /** Another tour took the handed-over one's place: its end brings the learner back, not on */
+  forgetTour: () => void;
   /**
    * The tour ended (finished, skipped or closed): back to the sheet, on the screen after Try if it
    * was started from there; handed over from elsewhere (an article), where the lesson was
@@ -91,6 +101,11 @@ interface LessonState extends LessonRun {
   saveNote: (write: JournalWrite, retry?: boolean) => Promise<boolean>;
   /** The last screen's Finish: the lesson is done (during a look back: back to the lesson) */
   finish: () => void;
+  /**
+   * The lesson is done, but the sheet stays (the streak screen shows first): counted and saved now,
+   * so leaving from the streak screen loses nothing. A `finish()` after it only closes
+   */
+  markFinished: () => void;
   /** Close without finishing: ✕ or Esc (during a look back: back to the lesson) */
   close: () => void;
   setCompleted: (ids: LessonId[]) => void;
@@ -127,6 +142,7 @@ function freshRun(id: LessonId | null, screen = 0): LessonRun {
     screen: id ? clampScreen(id, screen) : 0,
     answers: {},
     inTour: false,
+    tourFrom: null,
     rating: null,
     note: '',
     noteStatus: 'draft',
@@ -139,10 +155,20 @@ const initial = {
   completed: {},
   reached: {},
   finishes: 0,
+  doneAt: null,
   returnTo: null,
   run: 0,
   starts: 0,
 } as const;
+
+/**
+ * This start of the lesson is already counted as finished (`markFinished` or `finish` ran for it):
+ * the one rule the finish count, the streak screen and the funnel's close all use. A look back and
+ * the way back from it never change `starts`
+ */
+export function isStartDone(s: Pick<LessonState, 'doneAt' | 'starts'>, id: LessonId): boolean {
+  return s.doneAt !== null && s.doneAt.id === id && s.doneAt.starts === s.starts;
+}
 
 export const useLessonStore = create<LessonState>()((set, get) => ({
   ...initial,
@@ -227,13 +253,22 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     set({ answers: { ...answers, [screen]: option } });
   },
 
-  enterTour: () => set({ inTour: true }),
+  enterTour: (tour) => set({ inTour: true, tourFrom: tour }),
+
+  forgetTour: () => set({ tourFrom: null }),
 
   leaveTour: () => {
-    const { inTour, activeId, screen } = get();
+    const { inTour, activeId, screen, tourFrom } = get();
     if (!inTour || !activeId) return;
-    set({ inTour: false });
-    if (lessonScreens(getLesson(activeId))[screen]?.kind === 'try') get().next();
+    set({ inTour: false, tourFrom: null });
+    // Moves on from the Try screen when its own tour ended, or from the card whose practice trade it
+    // was (owner 2026-11-16), however it ended: a learner stuck on a step (a missing control) closes
+    // it, and landing back on the card would only offer the same stuck trade again (the plan,
+    // notes 11 item 5); Back returns to the card. Another tour handed over from there (an article's
+    // practice link) brings the learner back to the same screen
+    const lesson = getLesson(activeId);
+    const at = lessonScreens(lesson)[screen];
+    if (tourFrom !== null && screenTour(lesson, at) === tourFrom) get().next();
   },
 
   rate: (rating) => set({ rating }),
@@ -261,12 +296,25 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       get().returnBack();
       return;
     }
+    set((s) => {
+      const counted = isStartDone(s, activeId);
+      return {
+        ...freshRun(null),
+        completed: { ...s.completed, [activeId]: true },
+        finishes: counted ? s.finishes : s.finishes + 1,
+        returnTo: null,
+        run: s.run + 1,
+      };
+    });
+  },
+
+  markFinished: () => {
+    const { activeId, returnTo, starts } = get();
+    if (!activeId || returnTo || isStartDone(get(), activeId)) return;
     set((s) => ({
-      ...freshRun(null),
       completed: { ...s.completed, [activeId]: true },
       finishes: s.finishes + 1,
-      returnTo: null,
-      run: s.run + 1,
+      doneAt: { id: activeId, starts },
     }));
   },
 
@@ -296,5 +344,14 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
 
   // `run` keeps counting: a save from before the reset must never match a run after it
   reset: () =>
-    set((s) => ({ ...initial, answers: {}, completed: {}, reached: {}, run: s.run + 1 })),
+    // `run` and `starts` keep counting (never back to an earlier value): a key made from them, such
+    // as the streak's "seen" mark, never comes round again
+    set((s) => ({
+      ...initial,
+      answers: {},
+      completed: {},
+      reached: {},
+      run: s.run + 1,
+      starts: s.starts,
+    })),
 }));

@@ -297,6 +297,21 @@ export const GUIDE_ANCHORS = [
   'lesson.photo',
   'lesson.meet',
   'lesson.option',
+  // Choose buy or sell: the Buy or Sell button (variant `buy` / `sell`)
+  'lesson.side',
+  // Drag and drop: a numbered slot (variant: its index), a step to place (variant: its index)
+  'lesson.slot',
+  'lesson.step',
+  // Match boxes: a term and a meaning (variant: its index in the question's pairs)
+  'lesson.match-term',
+  'lesson.match-meaning',
+  // Drag and drop / Match boxes: the Check button that grades the board
+  'lesson.check',
+  // The streak screen after a lesson's close, and its Continue
+  'lesson.streak',
+  'lesson.streak.continue',
+  // A card's practice trade button (variant: its practice tour id)
+  'lesson.practice',
   'lesson.try',
   'lesson.note',
   'lesson.note.save',
@@ -310,7 +325,6 @@ export const GUIDE_ANCHORS = [
   'lesson.finish-line',
   'lesson.rating',
   'lesson.finish',
-  'lesson.next-tour',
   'lesson.next-lesson',
   'lesson.term',
   'lesson.peek',

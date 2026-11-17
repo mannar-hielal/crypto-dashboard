@@ -3,7 +3,7 @@
  * the marketing pages (Landing, Features) offer the Live Chart link instead and no "Sign in" at all.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { TopBar } from '../TopBar';
@@ -91,5 +91,14 @@ describe('TopBar signed in', () => {
     // A step that opens later brings it back
     act(() => useLessonStore.getState().setCompleted(['lesson-01']));
     expect(routeButton().getAttribute('aria-label')).toBe('Learning path: a new step is ready');
+  });
+
+  it('should leave none of the account’s lesson progress on the device after Sign out', async () => {
+    useLessonStore.getState().setCompleted(['lesson-01']);
+    renderAt('/chart', false);
+    fireEvent.click(document.querySelector(guideSelector('nav.user-menu'))!);
+    fireEvent.click(document.querySelector(guideSelector('nav.sign-out'))!);
+    await vi.waitFor(() => expect(useAuthStore.getState().accessToken).toBeNull());
+    expect(useLessonStore.getState().completed).toEqual({});
   });
 });
