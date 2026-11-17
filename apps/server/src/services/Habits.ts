@@ -15,6 +15,8 @@ type Prisma = FastifyInstance['prisma'];
 const DAY_MS = 86_400_000;
 /** 🔐 Bounds on the rows read for one user (the journal is capped at 200 per user anyway) */
 const MAX_ROWS = 500;
+/** How far back a step alone counts a day (its run began the day before) */
+const RECENT_STEP_DAYS = 60;
 
 /**
  * The learner's day counter: each moment's calendar date in their time zone (an IANA name such as
@@ -185,7 +187,7 @@ export async function loadHabits(
   now: Date = new Date(),
   zone = 'UTC'
 ): Promise<HabitsResponse> {
-  const [stopLossOrders, notes, events, toursCompleted] = await Promise.all([
+  const [stopLossOrders, notes, events, recentSteps, toursCompleted] = await Promise.all([
     prisma.order.count({
       where: {
         userId,
@@ -202,13 +204,26 @@ export async function loadHabits(
     prisma.learningEvent.findMany({
       // A day is learned when a tour or a lesson is started or finished on it: every session
       // starts one (opening a lesson again is a start), and the streak screen shows right after a
-      // finish. Not each step (about 25 a lesson), so the rows read cover far more days. Never a
-      // rating: a new one deletes the learner's earlier rating of that lesson (and that day)
+      // finish. Two in a run, so the rows read reach far back. Never a rating: a new one deletes
+      // the learner's earlier rating of that lesson (and that day)
       where: {
         userId,
         name: { in: ['tour_started', 'tour_completed'] },
       },
       orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
+      take: MAX_ROWS,
+      select: { at: true },
+    }),
+    prisma.learningEvent.findMany({
+      // And the steps of the recent weeks: a day worked in a run begun the day before (a lesson
+      // carried on past midnight) has steps but no start. Recent only, about 25 a lesson: the
+      // streak and this week are what such a day changes
+      where: {
+        userId,
+        name: 'tour_step',
+        at: { gte: new Date(now.getTime() - RECENT_STEP_DAYS * DAY_MS) },
+      },
+      orderBy: { at: 'desc' },
       take: MAX_ROWS,
       select: { at: true },
     }),
@@ -221,7 +236,7 @@ export async function loadHabits(
     {
       stopLossOrders,
       noteTimes: notes.map((n) => n.createdAt),
-      tourTimes: events.map((e) => e.at),
+      tourTimes: [...events, ...recentSteps].map((e) => e.at),
       toursCompleted,
     },
     now,

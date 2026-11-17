@@ -112,4 +112,28 @@ describe('loadHabits (Postgres)', () => {
     expect(h.streakDays).toBe(0);
     expect(h.badges.every((b) => !b.earned)).toBe(true);
   });
+
+  it('should count a day worked only in a run begun the day before, while it is recent', async () => {
+    const userId = await createUser(db);
+    // Started on the 13th, carried on past midnight: only steps on the 14th
+    await db.learningEvent.create({
+      data: {
+        userId,
+        name: 'tour_started',
+        itemId: 'lesson-01',
+        at: new Date('2026-10-13T23:50:00Z'),
+      },
+    });
+    await db.learningEvent.create({
+      data: {
+        userId,
+        name: 'tour_step',
+        itemId: 'lesson-01',
+        stepId: 'lesson-01.70',
+        at: new Date('2026-10-14T00:20:00Z'),
+      },
+    });
+    const h = await loadHabits(db, userId, NOW);
+    expect(h.learningDays).toBe(2);
+  });
 });
