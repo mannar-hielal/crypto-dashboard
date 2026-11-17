@@ -743,6 +743,8 @@ export function LessonSheet() {
             <div className={styles.chartRow}>
               {card.presenter && <GuideFigure {...card.presenter} className={styles.chartGuide} />}
               <LessonChart
+                // A fresh chart per card: a failed load or another scene's candles never carry over
+                key={`${run}:${screenIndex}`}
                 scene={card.chart}
                 revealed={false}
                 fallback={<LessonArt id={card.chart.fallback} />}

@@ -23,7 +23,9 @@ const MAX_AGE_MS = 30 * 86_400_000;
 /** 🔐 Never more than this many kept (there are only a handful of lessons and checkpoints) */
 const MAX_PENDING = 20;
 
-const key = (account: string) => `cd-pending-done:${account}`;
+/** The one storage prefix: written by key(), wiped by forgetAllDone() at sign-out */
+const PREFIX = 'cd-pending-done:';
+const key = (account: string) => `${PREFIX}${account}`;
 
 /**
  * 🔐 The stored shape's version (security.md: persisted client state is versioned): `{ v, items }`.
@@ -160,7 +162,7 @@ export function forgetAllDone(): void {
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
-      if (k?.startsWith('cd-pending-done:')) localStorage.removeItem(k);
+      if (k?.startsWith(PREFIX)) localStorage.removeItem(k);
     }
   } catch {
     // No storage: nothing kept

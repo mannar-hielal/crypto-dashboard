@@ -280,7 +280,8 @@ export function useTourProgress(): void {
         // Hidden only by a Lesson 1 finish still to save: undone() shows it again if that's refused
         cardByKeptFinish = !cardBySaved && lessons.includes('lesson-01');
         const cardDismissed = cardBySaved || cardByKeptFinish;
-        useLessonStore.getState().setCompleted(lessons);
+        // (the server's answer: never sent back as the learner's own finish)
+        asServerAnswer(() => useLessonStore.getState().setCompleted(lessons));
         // How far each begun lesson got (the map's ring). A step from an earlier version of the
         // lesson names no screen today: that lesson's ring starts again
         const reached: Partial<Record<LessonId, number>> = {};

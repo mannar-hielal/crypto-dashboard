@@ -117,7 +117,8 @@ describe('CheckpointSheet', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
-    fireEvent.click(document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!);
+    // The anchor names where it goes: the Buy lesson, while Sell is locked behind it
+    fireEvent.click(document.querySelector(guideSelector('checkpoint.review', 'buy-first-coin'))!);
     // Sell sells what Buy bought: locked until Buy is done (NEEDS_DONE), here as on the map
     expect(useTourStore.getState().activeId).toBe('buy-first-coin');
   });
@@ -126,7 +127,7 @@ describe('CheckpointSheet', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
-    const review = document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!;
+    const review = document.querySelector(guideSelector('checkpoint.review', 'buy-first-coin'))!;
     expect(review.textContent).toContain('Buy your first coin');
     expect(review.textContent).not.toContain('Sell it');
   });
@@ -135,11 +136,10 @@ describe('CheckpointSheet', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
-    const review = () =>
-      document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!;
-    expect(review().textContent).toContain('Buy your first coin');
+    const review = (id: string) => document.querySelector(guideSelector('checkpoint.review', id));
+    expect(review('buy-first-coin')!.textContent).toContain('Buy your first coin');
     act(() => useTourStore.setState({ completed: { 'buy-first-coin': true } }));
-    expect(review().textContent).toContain('Sell it and read the result');
+    expect(review('sell-and-review')!.textContent).toContain('Sell it and read the result');
   });
 
   it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {

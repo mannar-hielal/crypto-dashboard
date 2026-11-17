@@ -65,7 +65,7 @@ function Missed({ q, wide, onReview }: MissedProps) {
           type="button"
           className={styles.link}
           onClick={() => onReview(target)}
-          {...guide('checkpoint.review', q.taughtIn.id)}
+          {...guide('checkpoint.review', target.id)}
         >
           Review {taughtInLabel(target)} →
         </button>
