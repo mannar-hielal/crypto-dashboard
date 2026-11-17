@@ -212,8 +212,9 @@ export function useTourProgress(): void {
       const finished = state.finishes > prev.finishes ? prev.activeId : null;
       if (finished) {
         // With its last screen's step: the server refuses a finish from an earlier version. (An API
-        // from before 2026-11-16 refuses the step instead: this release rolls back API and web
-        // together, git.md's emergency playbook)
+        // from before 2026-11-16 refuses the step instead. A release never mixes them: deploy.yml's
+        // `fly deploy` waits for every API machine before the web app goes out, and this release
+        // rolls back API and web together, git.md's emergency playbook)
         const lesson = getLesson(finished);
         const last = lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
         learnApi.setProgress(finished, 'completed', accessToken, last).catch(() => undefined);
