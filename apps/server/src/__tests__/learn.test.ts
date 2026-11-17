@@ -810,17 +810,23 @@ describe('GET /api/learn/habits', () => {
     });
   });
 
-  it('should count a day by its starts and finishes only (the rule: not steps, never a rating)', async () => {
+  it('should count a day by any learning event but a rating, steps read apart', async () => {
     await app.inject({
       method: 'GET',
       url: '/api/learn/habits',
       headers: { authorization: `Bearer ${token}` },
     });
-    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledTimes(1);
     expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: 'user-1', name: { in: ['tour_started', 'tour_completed'] } },
+        where: {
+          userId: 'user-1',
+          name: { in: ['tour_started', 'tour_completed', 'tour_closed'] },
+        },
       })
+    );
+    // Steps with their own limit, so they never crowd out the rest
+    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'user-1', name: 'tour_step' } })
     );
   });
 

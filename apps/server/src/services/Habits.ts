@@ -123,7 +123,7 @@ export interface HabitInput {
   stopLossOrders: number;
   /** When the user wrote a journal note */
   noteTimes: Date[];
-  /** When the user started, moved through or finished a tour or a lesson */
+  /** When the user started, moved through, closed or finished a tour or a lesson */
   tourTimes: Date[];
   /** Tours finished */
   toursCompleted: number;
@@ -193,7 +193,7 @@ export async function loadHabits(
   now: Date = new Date(),
   zone = 'UTC'
 ): Promise<HabitsResponse> {
-  const [stopLossOrders, notes, events, toursCompleted] = await Promise.all([
+  const [stopLossOrders, notes, events, steps, toursCompleted] = await Promise.all([
     prisma.order.count({
       where: {
         userId,
@@ -207,17 +207,21 @@ export async function loadHabits(
       take: MAX_ROWS,
       select: { createdAt: true },
     }),
+    // The rule (2026-11-17): a learning day is one with any learning event on it but a rating (a new
+    // rating deletes the earlier one of that lesson, and its day with it). Read in two parts, each
+    // with its own limit, so the many steps (about 25 a lesson) never crowd out the rest:
+    // - starts, finishes and closes: a few a run, each stored every time, so a run carried on past
+    //   midnight still marks its second day when it ends (a close or a finish);
+    // - steps: each stored once ever per learner, so they add the days a new screen was reached
     prisma.learningEvent.findMany({
-      // The rule (2026-11-17): a learning day is one on which the learner starts or finishes a tour
-      // or a lesson. Every session starts one (opening a lesson again is a start), and the streak
-      // screen shows right after a finish. Not steps: each is stored once ever per learner, so a
-      // step can't mark a day (going over seen screens again stores none). Not ratings: a new one
-      // deletes the earlier rating of that lesson. Two rows a run, so the rows read reach far back
-      where: {
-        userId,
-        name: { in: ['tour_started', 'tour_completed'] },
-      },
+      where: { userId, name: { in: ['tour_started', 'tour_completed', 'tour_closed'] } },
       orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
+      take: MAX_ROWS,
+      select: { at: true },
+    }),
+    prisma.learningEvent.findMany({
+      where: { userId, name: 'tour_step' },
+      orderBy: { at: 'desc' },
       take: MAX_ROWS,
       select: { at: true },
     }),
@@ -230,7 +234,7 @@ export async function loadHabits(
     {
       stopLossOrders,
       noteTimes: notes.map((n) => n.createdAt),
-      tourTimes: events.map((e) => e.at),
+      tourTimes: [...events, ...steps].map((e) => e.at),
       toursCompleted,
     },
     now,

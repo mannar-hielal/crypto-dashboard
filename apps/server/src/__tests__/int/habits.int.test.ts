@@ -98,9 +98,10 @@ describe('loadHabits (Postgres)', () => {
 
     const h = await loadHabits(db, userId, NOW);
 
-    // the 13th (a note) and the 14th (a tour started); a close and an automatic line add nothing
-    expect(h.learningDays).toBe(2);
-    expect(h.streakDays).toBe(2);
+    // the 13th (a note), the 14th (a tour started) and the 12th (a close); an automatic line adds
+    // nothing
+    expect(h.learningDays).toBe(3);
+    expect(h.streakDays).toBe(3);
     expect(h.badges.find((b) => b.id === 'first-tour')!.earned).toBe(true);
     expect(h.badges.find((b) => b.id === 'all-tours')!.progress).toBe(1);
   });
@@ -111,5 +112,29 @@ describe('loadHabits (Postgres)', () => {
     expect(h.learningDays).toBe(0);
     expect(h.streakDays).toBe(0);
     expect(h.badges.every((b) => !b.earned)).toBe(true);
+  });
+
+  it('should count a day worked only in a run begun the day before, by its close', async () => {
+    const userId = await createUser(db);
+    // Started on the 13th, carried on past midnight over screens already seen, closed on the 14th
+    await db.learningEvent.create({
+      data: {
+        userId,
+        name: 'tour_started',
+        itemId: 'lesson-01',
+        at: new Date('2026-10-13T23:50:00Z'),
+      },
+    });
+    await db.learningEvent.create({
+      data: {
+        userId,
+        name: 'tour_closed',
+        itemId: 'lesson-01',
+        stepId: 'lesson-01.64',
+        at: new Date('2026-10-14T00:20:00Z'),
+      },
+    });
+    const h = await loadHabits(db, userId, NOW);
+    expect(h.learningDays).toBe(2);
   });
 });

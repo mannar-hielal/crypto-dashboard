@@ -904,7 +904,7 @@ of it shipped in release #289 on 2026-11-14.
   - Practice paper trades from a card, with a guided arrow and resume.
   - A streak screen on the lesson close, with the Learn panel's counter refreshed after a lesson. A lesson
     already counts as a learning day: it sends `tour_started` (and `tour_completed`), which `Habits` counts
-    (since 2026-11-17 a day is counted by starts and finishes).
+    (since 2026-11-17 any learning event but a rating counts a day, steps read apart).
   - Learners part-way through a lesson have their progress reset. The new Lesson 1 ships as soon as it's written,
     which ends the pilot's 4-week measurement early.
   - The path follows the topic order with our own titles and look; the owner places the practice (dumbbell) lessons
@@ -4666,7 +4666,8 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   own (the funnel's steps don't move). Once per lesson run; ✕ or Esc on it only finish. The days are the learner's
   own: the client sends its IANA time zone (`?tz=Europe/Zurich`, the SDK's default), so the dots, the streak and
   the learning days follow the learner's calendar, each day with its own date's offset (a daylight-saving change
-  moves nothing). A day counts when a tour or a lesson is started or finished on it (never a step or a rating), and the streak screen reads the habits once the finish's event has landed (`learn/finishSync.ts`), so
+  moves nothing). A day counts with any learning event on it but a rating (a start, a step, a close, a finish; steps read with
+  their own limit), and the streak screen reads the habits once the finish's event has landed (`learn/finishSync.ts`), so
   the server alone counts today. UTC when absent or unknown (an odd device zone never fails the request). Known zones' formatters
   are cached (at most 200, least recently used out first; unknown names never kept), and each quarter hour is
   formatted once per request (every zone's offset is a whole number of quarter hours). `thisWeek` is optional
@@ -4686,8 +4687,8 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   it again each time the progress loads, until it lands (a 409, told apart by status, drops it; it shows as done
   once saved). A lesson's steps stay within one version's span (`LESSON_VERSION_SPAN`, 40), which the server
   refuses past, and a rebuild raises `stepBase` by at least that; every Lesson 1 finish saves the welcome card's
-  dismissal with it. A learning day is one on which the learner starts or finishes a tour or a lesson (steps are
-  stored once ever, so they can't mark days). The web app alone is not safe: the new API
+  dismissal with it. A learning day is one with any learning event but a rating (closes count too: a run carried on
+  past midnight marks its second day when it ends). The web app alone is not safe: the new API
   refuses the previous app's lesson saves as an earlier version. A normal release deploys the API just before the
   web app; the old app's saves in between are the ones the reset was made to refuse.
 - **Lesson 1, "Up, down and your first trade"** (owner-approved outline and draft, fact-checked by a technical
