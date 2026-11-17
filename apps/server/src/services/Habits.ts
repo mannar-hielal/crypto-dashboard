@@ -94,6 +94,9 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   }
   // Kept under the zone's canonical name: spellings of one zone share one formatter
   const canonical = format.resolvedOptions().timeZone;
+  // 🔐 An offset is no zone ('+05:07': Intl takes any): not on a quarter hour, and thousands of
+  // them could push the real zones out, so it counts in UTC
+  if (/^[+-]/.test(canonical)) return null;
   if (canonical !== zone) lruSet(ZONE_ALIASES, zone, canonical);
   const same = lruGet(ZONE_FORMATS, canonical);
   if (same) return same;

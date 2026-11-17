@@ -173,6 +173,15 @@ describe('streakEndingAt', () => {
     built.mockRestore();
   });
 
+  it('should count an offset in UTC: it is no zone, and not on a quarter hour', () => {
+    const before = zoneFormatsKept();
+    const late = new Date('2026-10-23T22:30:00Z');
+    expect(dayCounter('+05:07')(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
+    expect(dayCounter('-03:00')(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
+    // Never kept: offsets can't push the real zones out
+    expect(zoneFormatsKept()).toBe(before);
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
