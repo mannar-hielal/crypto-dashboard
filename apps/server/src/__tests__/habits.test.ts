@@ -238,4 +238,11 @@ describe('streakEndingAt', () => {
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
     expect(dayCounter('Mars/Olympus')(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
   });
+
+  it('should say where today is in the week, in the zone counted in', () => {
+    // Sunday 11 Oct 22:30 UTC is Monday 12 Oct 08:30 in Sydney: Monday there, Sunday in UTC
+    const at = new Date('2026-10-11T22:30:00Z');
+    expect(computeHabits(base, at, 'Australia/Sydney').todayIndex).toBe(0);
+    expect(computeHabits(base, at).todayIndex).toBe(6);
+  });
 });

@@ -109,8 +109,12 @@ describe('useHabits', () => {
   it('should still show the streak when the finish failed but today was already counted', async () => {
     let fail: (e: Error) => void = () => undefined;
     noteFinishSent(null, new Promise<void>((_, reject) => (fail = reject)));
-    const today = (new Date().getDay() + 6) % 7;
-    const counted = { ...habits, thisWeek: Array.from({ length: 7 }, (_, i) => i === today) };
+    // Today as the server counted it (its zone), whatever this device's clock says
+    const counted = {
+      ...habits,
+      thisWeek: [false, false, true, false, false, false, false],
+      todayIndex: 2,
+    };
     getHabits.mockResolvedValue(counted);
     const { result } = renderHook(() => useHabits('t'));
     await act(async () => fail(new Error('5xx')));

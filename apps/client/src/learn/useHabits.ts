@@ -43,7 +43,9 @@ export function useHabits(
         const read = await learnApi.getHabits(now);
         // The finish didn't land (failed, or still slow): the count is right only if today was
         // already counted (the lesson's own start counts it); else it would miss today, a failed read
-        if (!counted && !read.thisWeek?.[(new Date().getDay() + 6) % 7]) {
+        // (today's place as the server counted it, in its zone: never this device's guess)
+        const today = read.todayIndex;
+        if (!counted && (today === undefined || !read.thisWeek?.[today])) {
           throw new Error('Today is not counted yet');
         }
         return read;

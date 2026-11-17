@@ -209,6 +209,8 @@ export function computeHabits(input: HabitInput, now: Date, zone = 'UTC'): Habit
     learningDays: learningDays.size,
     streakDays: streakEndingAt(learningDays, today),
     thisWeek: weekDays(learningDays, today),
+    // Today's place in thisWeek, in the zone counted in (a client never guesses it from its clock)
+    todayIndex: (today + 3) % 7,
   };
 }
 
