@@ -254,24 +254,28 @@ export async function learnRoutes(app: FastifyInstance) {
         // Not raised: finished, or a step no higher. A finish from an earlier version of the lesson
         // is today's start (an earlier version's begun row was raised above). Only here, off the
         // path every screen takes
-        const replaced = await app.prisma.learningProgress.updateMany({
-          where: {
-            userId,
-            itemId,
-            // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
-            OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
-          },
-          data: { status, step },
-        });
-        if (replaced.count === 1) {
-          // That row was a finish (a begun row is raised above): Lesson 1 finished in its earlier
-          // version keeps the welcome card shut, as the migration and GET do
-          if (itemId === 'lesson-01') {
-            await app.prisma.learningProgress.createMany({
+        // That row was a finish (a begun row is raised above): Lesson 1 finished in its earlier
+        // version keeps the welcome card shut, as the migration and GET do. One transaction: the
+        // old finish is the only sign of it, so it never goes without the dismissal saved
+        const replaced = await app.prisma.$transaction(async (tx) => {
+          const taken = await tx.learningProgress.updateMany({
+            where: {
+              userId,
+              itemId,
+              // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
+              OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
+            },
+            data: { status, step },
+          });
+          if (taken.count === 1 && itemId === 'lesson-01') {
+            await tx.learningProgress.createMany({
               data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
               skipDuplicates: true,
             });
           }
+          return taken;
+        });
+        if (replaced.count === 1) {
           return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
         }
         const row = await app.prisma.learningProgress.findUnique({

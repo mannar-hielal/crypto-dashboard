@@ -360,6 +360,8 @@ describe('/api/learn/progress', () => {
       data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
       skipDuplicates: true,
     });
+    // Both writes in one transaction: the old finish never goes without the dismissal saved
+    expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 
   it('PUT started: a finished lesson stays finished', async () => {
