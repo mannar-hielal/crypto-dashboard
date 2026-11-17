@@ -458,7 +458,7 @@ const reviewBuy: Tour = {
       kind: 'observe',
       anchor: 'assets.row.upnl',
       key: 'BTC',
-      text: 'Unrealized PnL is what you’d gain or lose if you sold right now, before the selling fee. It changes with every tick, and becomes real only when you sell.',
+      text: 'Unrealized PnL is what you’d gain or lose if you sold right now, before the selling fee. It changes as the price moves, and becomes real only when you sell.',
       missingHint: 'Open the Assets tab to find your Bitcoin.',
       nextLabel: BACK_TO_LESSON,
     },

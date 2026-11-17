@@ -410,7 +410,8 @@ describe('lessons', () => {
     expect(art('lesson-02')).toEqual({
       'One Bitcoin for $8,200': 'flashCrash',
       'Thousands of deals, one candle': 'candleAnatomy',
-      'Thin or deep': 'staircase',
+      'Thin or deep': 'deepThin',
+      'The $8,200 moment': 'staircase',
       'Check before you trust': 'checkCoin',
     });
     // Going short's picture matches its analogy's numbers

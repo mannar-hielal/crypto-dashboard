@@ -226,6 +226,18 @@
   font-weight: 700;
 }
 
+/* A buy offer still waiting (Thin or deep): solid, in the buy side's colour */
+.offer {
+  fill: var(--color-brand-green); /* color.green */
+  opacity: 0.75;
+}
+
+/* The price now, as a thin bright rule */
+.priceLine {
+  stroke: var(--color-brand-white); /* color.white */
+  stroke-width: 1.5;
+}
+
 /* A buy offer already taken: struck through in shape, not only colour */
 .eaten {
   fill: transparent;

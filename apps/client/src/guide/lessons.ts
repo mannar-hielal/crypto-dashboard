@@ -37,6 +37,7 @@ export type LessonArtId =
   | 'flashCrash'
   /** A thin queue of buy offers eaten step by step */
   | 'staircase'
+  | 'deepThin'
   | 'candleAnatomy'
   | 'swings'
   | 'checkCoin'
@@ -65,7 +66,11 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
   bitcoin: null,
   etf: null,
   flashCrash: null,
-  staircase: null,
+  // The $8,200 moment: one order eats down a thin list of buyers (owner 2026-11-17: moved here)
+  staircase:
+    'Buy offers waiting at $65,000, $60,000 and $40,000, then nobody until $8,200: one big sale ate down the list.',
+  deepThin:
+    'The same big sell order: where many buyers wait close to the price it barely moves (deep); where few wait far apart it jumps (thin).',
   candleAnatomy: null,
   swings: null,
   checkCoin: null,
@@ -591,7 +596,7 @@ const lesson01: Lesson = {
       title: 'Close it to keep it',
       art: 'closeToKeep',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the ✕ (Close) at the end of your position row. Until then, it can still shrink.',
+      text: 'While you hold a position, the profit on screen is only on paper: it changes as the price moves. It becomes real when you **close** the position. In our app that’s the ✕ (Close) at the end of your position row. Until then, it can still shrink.',
     },
     {
       // Owner 2026-11-17: the borrowing analogy, by one guide in glasses, replaces the chit-chat; it
@@ -1187,13 +1192,14 @@ const lesson02: Lesson = {
     },
     {
       title: 'Thin or deep',
-      art: 'staircase',
+      art: 'deepThin',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'Remember [[liquidity]] from Lesson 2? Picture buyers and sellers waiting with their prices. When many wait close to the price, the market is **deep**: a big order barely moves it. When few wait, it’s **thin**: a big order runs through them and the price jumps.',
       more: { article: 'exchange-price', section: 'liquidity' },
     },
     {
       title: 'The $8,200 moment',
+      art: 'staircase',
       presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
       text: 'Back to 21 October 2021. One program sold a huge amount at once on one exchange. It took the best buyer, then the next, then the next, down a list that ran thin fast. Each deal was lower, and each was “the price” for a moment, until buyers came back.',
     },
