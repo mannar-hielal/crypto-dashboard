@@ -52,12 +52,12 @@ function Connector({ index }: { index: number }) {
  * lines; a lesson with no summary, its "You can now" lines)
  */
 function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
-  // Keyed by lesson and place: two lessons may share a line
+  // Keyed by lesson and line: two lessons may share a line
   const learned = nodes.flatMap((v) => {
     if (v.node.kind !== 'lesson') return [];
     const lesson = getLesson(v.node.id);
-    return (lesson.recap?.points ?? lesson.canDo).map((c, i) => ({
-      key: `${lesson.id}:${i}`,
+    return (lesson.recap?.points ?? lesson.canDo).map((c) => ({
+      key: `${lesson.id}:${c.text}`, // a lesson's lines are its own and unique
       text: c.text,
     }));
   });

@@ -6,6 +6,7 @@
  * the card keeps its drawn picture, so a lesson never waits on data.
  */
 
+import { pricePrecision } from './lessonChartData';
 import { useEffect, useRef, useState, type ReactNode, useMemo } from 'react';
 import {
   CandlestickSeries,
@@ -97,13 +98,11 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
 
   // ── The chart itself, once there is data ───────────────────────────────────
   const ready = bars !== null;
-  // By the coin's price level, not its name: whole dollars from $1,000 (Bitcoin's "$57,459", not
-  // "57459.00"), cents below it (Solana's "$182.57")
-  // (once per data load: the sheet re-renders often, and no spread into Math.max)
-  const cents = useMemo(
-    () => !!bars && bars.length > 0 && bars.reduce((top, b) => Math.max(top, b.high), 0) < 1000,
-    [bars]
-  );
+  // Decimals by the coin's price level, not its name (pricePrecision), once per data load
+  const precision = useMemo(() => {
+    const top = bars ? bars.reduce((t, b) => Math.max(t, b.high), 0) : 0;
+    return pricePrecision(top);
+  }, [bars]);
   useEffect(() => {
     const el = containerRef.current;
     if (!ready || !el) return;
@@ -150,11 +149,9 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
   // and its plan line)
   useEffect(() => {
     seriesRef.current?.applyOptions({
-      priceFormat: cents
-        ? { type: 'price', precision: 2, minMove: 0.01 }
-        : { type: 'price', precision: 0, minMove: 1 },
+      priceFormat: { type: 'price', precision, minMove: 10 ** -precision },
     });
-  }, [ready, cents]);
+  }, [ready, precision]);
 
   // ── A Choose buy or sell plan's price, as a dashed line (owner 2026-11-16) ──
   const planPrice = scene.planLine?.price;
