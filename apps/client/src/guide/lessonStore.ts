@@ -327,7 +327,9 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       const counted = isStartDone(s, activeId);
       return {
         ...freshRun(null),
-        completed: { ...s.completed, [activeId]: true },
+        // A start markFinished already counted keeps `completed` as it is now: the server may have
+        // refused it since (undone() took it back), and leaving must not show it done again
+        completed: counted ? s.completed : { ...s.completed, [activeId]: true },
         finishes: counted ? s.finishes : s.finishes + 1,
         returnTo: null,
         run: s.run + 1,
@@ -335,6 +337,9 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     });
   },
 
+  // (finish and markFinished stay two: one ends the run and closes, the other counts the finish
+  // and keeps the sheet for the streak; isStartDone is their one shared rule. Weighed, review
+  // after release #302)
   markFinished: () => {
     const { activeId, returnTo, starts } = get();
     if (!activeId || returnTo || isStartDone(get(), activeId)) return;

@@ -101,6 +101,14 @@ describe('lessonStore', () => {
     expect(s()).toMatchObject({ screen: 18, inTour: false, tourFrom: null });
   });
 
+  it('should not show a finish the server refused as done again when the lesson is left', () => {
+    s().start('lesson-01');
+    s().markFinished(); // counted and saved; the streak screen shows
+    s().setCompleted([]); // refused as an earlier version: taken back
+    s().finish(); // Continue on the streak screen
+    expect(s().completed['lesson-01']).toBeUndefined();
+  });
+
   it('should mark the lesson completed on finish, and not on close', () => {
     s().start('lesson-01');
     s().close();
