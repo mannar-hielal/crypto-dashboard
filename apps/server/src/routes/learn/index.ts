@@ -10,7 +10,6 @@ import {
   CHECKPOINT_VERSION,
   LESSON_FIRST_STEP,
 } from '../../constants.js';
-import { logger } from '../../logger.js';
 import { loadHabits } from '../../services/Habits.js';
 import { recordLearningEvent } from '../../services/LearningEvents.js';
 
@@ -41,8 +40,6 @@ interface ItemRow {
   step?: number | null;
   updatedAt: Date;
 }
-
-const log = logger.child({ route: 'learn' });
 
 // A finished lesson keeps its finish's step in the row (its version), but answers without one: it
 // no longer has a "furthest screen"
@@ -124,24 +121,13 @@ export async function learnRoutes(app: FastifyInstance) {
         select: ROW,
       });
       const items = rows.filter((r) => !isStaleRow(r)).map(toItem);
-      // Lesson 1 finished in its earlier version but after the reset (an old API machine during the
-      // rollout): the welcome card is dismissed and saved, as the reset migration does for earlier
-      // finishes, so it stays shut once a start replaces that row. Once per account: the row then
-      // exists (and a duplicate is skipped)
+      // Lesson 1 finished in its earlier version after the reset (an old API machine during the
+      // rollout): the welcome card is answered as dismissed, as the migration did for earlier
+      // finishes. Saved by the start that takes that row over (PUT), never by this read
       const oldLesson1Done = rows.some(
         (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleRow(r)
       );
       if (oldLesson1Done && !rows.some((r) => r.itemId === 'welcome-card')) {
-        // A failed save never fails the read: the dismissal is answered anyway, and the next read
-        // tries again
-        try {
-          await app.prisma.learningProgress.createMany({
-            data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
-            skipDuplicates: true,
-          });
-        } catch (err) {
-          log.warn({ err }, 'Saving the welcome card’s dismissal failed');
-        }
         items.push(
           toItem({ itemId: 'welcome-card', status: 'dismissed', step: null, updatedAt: new Date() })
         );
@@ -251,37 +237,38 @@ export async function learnRoutes(app: FastifyInstance) {
         if (raisedRows.count === 1) {
           return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
         }
-        // Not raised: finished, or a step no higher. A finish from an earlier version of the lesson
-        // is today's start (an earlier version's begun row was raised above). Only here, off the
-        // path every screen takes
-        // That row was a finish (a begun row is raised above): Lesson 1 finished in its earlier
-        // version keeps the welcome card shut, as the migration and GET do. One transaction: the
-        // old finish is the only sign of it, so it never goes without the dismissal saved
-        const replaced = await app.prisma.$transaction(async (tx) => {
-          const taken = await tx.learningProgress.updateMany({
-            where: {
-              userId,
-              itemId,
-              // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
-              OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
-            },
-            data: { status, step },
-          });
-          if (taken.count === 1 && itemId === 'lesson-01') {
-            await tx.learningProgress.createMany({
-              data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
-              skipDuplicates: true,
-            });
-          }
-          return taken;
-        });
-        if (replaced.count === 1) {
-          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
-        }
         const row = await app.prisma.learningProgress.findUnique({
           where: { userId_itemId: { userId, itemId } },
           select: ROW,
         });
+        // Not raised: finished, or a step no higher. A finish from an earlier version of the lesson
+        // (an old API machine during the rollout) is today's start, taken over only when the row
+        // read is one, so the start that changes nothing costs no more. One transaction with Lesson
+        // 1's welcome card: that old finish is the only sign the card was done with, so it never
+        // goes without the dismissal saved
+        if (row && isStaleRow(row)) {
+          const replaced = await app.prisma.$transaction(async (tx) => {
+            const taken = await tx.learningProgress.updateMany({
+              where: {
+                userId,
+                itemId,
+                // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
+                OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
+              },
+              data: { status, step },
+            });
+            if (taken.count === 1 && itemId === 'lesson-01') {
+              await tx.learningProgress.createMany({
+                data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
+                skipDuplicates: true,
+              });
+            }
+            return taken;
+          });
+          if (replaced.count === 1) {
+            return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
+          }
+        }
         return reply.send({
           item: toItem(row ?? { itemId, status, step, updatedAt: new Date() }),
         });

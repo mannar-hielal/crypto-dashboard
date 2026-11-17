@@ -138,23 +138,8 @@ describe('/api/learn/progress', () => {
     expect(res.json().items).toEqual([
       expect.objectContaining({ itemId: 'welcome-card', status: 'dismissed' }),
     ]);
-    // Saved, so it stays shut after a start replaces the old finish
-    expect(app.prisma.learningProgress.createMany).toHaveBeenCalledWith({
-      data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
-      skipDuplicates: true,
-    });
-  });
-
-  it('GET: should still answer the dismissal when saving it fails', async () => {
-    vi.mocked(app.prisma.learningProgress.findMany).mockResolvedValueOnce([
-      { itemId: 'lesson-01', status: 'completed', step: null, updatedAt: AT },
-    ] as never);
-    vi.mocked(app.prisma.learningProgress.createMany).mockRejectedValueOnce(new Error('db down'));
-    const res = await app.inject({ method: 'GET', url: '/api/learn/progress', headers: auth() });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().items).toEqual([
-      expect.objectContaining({ itemId: 'welcome-card', status: 'dismissed' }),
-    ]);
+    // Answered, never written by a read (the start that takes the row over saves it)
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
   });
 
   it('GET: returns only the caller’s items, as ISO dates', async () => {
@@ -342,7 +327,13 @@ describe('/api/learn/progress', () => {
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany)
       .mockResolvedValueOnce({ count: 0 }) // not raised: the row is a finish
-      .mockResolvedValueOnce({ count: 1 }); // from an earlier version: replaced
+      .mockResolvedValueOnce({ count: 1 }); // from an earlier version: taken over
+    vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
+      itemId: 'lesson-01',
+      status: 'completed',
+      step: null,
+      updatedAt: AT,
+    } as never);
     const res = await app.inject({
       method: 'PUT',
       url: '/api/learn/progress/lesson-01',
@@ -354,7 +345,6 @@ describe('/api/learn/progress', () => {
       where: { userId: 'user-1', itemId: 'lesson-01', OR: [{ step: null }, { step: { lt: 61 } }] },
       data: { status: 'started', step: 64 },
     });
-    expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
     // It was Lesson 1's earlier finish: the welcome card stays shut
     expect(app.prisma.learningProgress.createMany).toHaveBeenLastCalledWith({
       data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
@@ -365,8 +355,6 @@ describe('/api/learn/progress', () => {
   });
 
   it('PUT started: a finished lesson stays finished', async () => {
-    // No row from an earlier version to replace
-    vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
@@ -387,6 +375,8 @@ describe('/api/learn/progress', () => {
       status: 'completed',
       updatedAt: AT.toISOString(),
     });
+    // Today's finish: nothing to take over, so no transaction
+    expect(app.prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('PUT started: refuses a tour, a missing step and a step out of range, before any write', async () => {
