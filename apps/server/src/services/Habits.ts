@@ -114,7 +114,7 @@ export interface HabitInput {
   stopLossOrders: number;
   /** When the user wrote a journal note */
   noteTimes: Date[];
-  /** When the user started or moved through a guided-tour step */
+  /** When the user started, moved through, finished or rated a tour or a lesson */
   tourTimes: Date[];
   /** Tours finished */
   toursCompleted: number;
@@ -199,7 +199,12 @@ export async function loadHabits(
       select: { createdAt: true },
     }),
     prisma.learningEvent.findMany({
-      where: { userId, name: { in: ['tour_started', 'tour_step'] } },
+      // A finish and a rating count too: the streak screen shows right after a finish, and a
+      // learner who only went back and finished today did learn today
+      where: {
+        userId,
+        name: { in: ['tour_started', 'tour_step', 'tour_completed', 'lesson_rated'] },
+      },
       orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
       take: MAX_ROWS,
       select: { at: true },

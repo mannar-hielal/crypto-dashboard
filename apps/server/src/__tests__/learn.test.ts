@@ -723,6 +723,22 @@ describe('GET /api/learn/habits', () => {
     });
   });
 
+  it('should count a finish and a rating as learning, not only starts and steps', async () => {
+    await app.inject({
+      method: 'GET',
+      url: '/api/learn/habits',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user-1',
+          name: { in: ['tour_started', 'tour_step', 'tour_completed', 'lesson_rated'] },
+        },
+      })
+    );
+  });
+
   it('should take the learner’s time zone, count an unknown one in UTC, and refuse an overlong one', async () => {
     const get = (tz: string) =>
       app.inject({
