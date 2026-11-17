@@ -220,24 +220,25 @@ describe('/api/learn/progress', () => {
     );
   });
 
-  it('PUT: should refuse a step past the current version, before any write', async () => {
+  it('PUT: should refuse a step past the current version as a version conflict (409), before any write', async () => {
     const put = (url: string, payload: unknown) =>
       app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
-    // Lesson 1's version spans steps 61..100; a checkpoint's is its one set
+    // Lesson 1's version spans steps 61..100; a checkpoint's is its one set. A 409, so the client
+    // drops it; a 400 is an older API's answer, which it keeps
     expect(
       (await put('/api/learn/progress/lesson-01', { status: 'started', step: 101 })).statusCode
-    ).toBe(400);
+    ).toBe(409);
     expect(
       (await put('/api/learn/progress/lesson-01', { status: 'completed', step: 999 })).statusCode
-    ).toBe(400);
+    ).toBe(409);
     expect(
       (await put('/api/learn/progress/checkpoint-ch1', { status: 'completed', step: 3 })).statusCode
-    ).toBe(400);
+    ).toBe(409);
     expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
     expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
   });
 
-  it('PUT completed: should save the welcome card’s dismissal with every Lesson 1 finish', async () => {
+  it('PUT completed: should finish Lesson 1 with the upsert alone (the client reads it as the card done)', async () => {
     vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
       itemId: 'lesson-01',
       status: 'completed',
@@ -250,11 +251,8 @@ describe('/api/learn/progress', () => {
       headers: auth(),
       payload: { status: 'completed', step: 81 },
     });
-    expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(app.prisma.learningProgress.createMany).toHaveBeenCalledWith({
-      data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
-      skipDuplicates: true,
-    });
+    expect(app.prisma.$transaction).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
   });
 
   it('PUT: should refuse a checkpoint pass when it is from an earlier question set (owner 2026-11-17)', async () => {

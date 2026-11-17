@@ -81,6 +81,11 @@ const versionRange = (itemId: string): { from: number; to: number } | null => {
   return { from, to: from + (lessonOf(itemId) ? LESSON_VERSION_SPAN : 1) };
 };
 
+/** The same rule as a Prisma filter: a row outside the range (no step, below it, past it) */
+const staleWhere = (range: { from: number; to: number }) => ({
+  OR: [{ step: null }, { step: { lt: range.from } }, { step: { gte: range.to } }],
+});
+
 /** A step outside the item's current version (none counts as outside) */
 const outsideVersion = (range: { from: number; to: number }, step: number | null | undefined) =>
   typeof step !== 'number' || step < range.from || step >= range.to;
@@ -239,11 +244,12 @@ export async function learnRoutes(app: FastifyInstance) {
       } else if (status === 'started' && (!lessonId || step === undefined)) {
         return bad('A start needs a lesson and its step');
       } else if (outsideVersion(range, step)) {
-        // Below the version (or none): an earlier one, 409. 🔐 Past it (a lesson's span, a
-        // checkpoint's own set): refused, so no stored step can reach a later version's range
+        // A version conflict either way, 409: below the version (or none), an earlier one; 🔐 past
+        // it (a lesson's span, a checkpoint's own set), so no stored step can reach a later
+        // version's range. (The client keeps a finish refused with a 400, an older API's answer)
         return step === undefined || step < range.from
           ? earlier()
-          : bad('A step past this version');
+          : reply.status(409).send({ error: 'A step past this version' });
       }
 
       // (checked above: a start is a lesson's, with its step; this only narrows the types)
@@ -286,7 +292,7 @@ export async function learnRoutes(app: FastifyInstance) {
                 userId,
                 itemId,
                 // The same range as isStaleRow: below the version, or past its span
-                OR: [{ step: null }, { step: { lt: range.from } }, { step: { gte: range.to } }],
+                ...staleWhere(range), // the same range as isStaleRow
               },
               data: { status, step },
             });
@@ -316,19 +322,16 @@ export async function learnRoutes(app: FastifyInstance) {
       if (status === 'completed') {
         // A lesson's finish keeps its step: the version it was finished in (a tour's: none). Any
         // step of the current version counts: progress is the learner's own, so a client claiming
-        // a finish it didn't reach only changes its own path. A Lesson 1 finish also means the
-        // welcome card is done with (the migration's and the takeover's rule): saved with it
-        const finish = app.prisma.learningProgress.upsert({
+        // a finish it didn't reach only changes its own path. (No welcome-card row: the client
+        // reads a finished Lesson 1 as the card done with. One is saved only where an old finish is
+        // about to be hidden or replaced: the reset migration and the takeover; GET answers one for
+        // an old finish in between)
+        const row = await app.prisma.learningProgress.upsert({
           where: { userId_itemId: { userId, itemId } },
           create: { userId, itemId, status, step: step ?? null },
           update: { status, step: step ?? null },
           select: ROW,
         });
-        // One batched transaction (one round trip) for Lesson 1; any other finish is the upsert alone
-        const row =
-          itemId === 'lesson-01'
-            ? (await app.prisma.$transaction([finish, dismissWelcomeCard(app.prisma, userId)]))[0]
-            : await finish;
         return reply.send({ item: toItem(row) });
       }
 
