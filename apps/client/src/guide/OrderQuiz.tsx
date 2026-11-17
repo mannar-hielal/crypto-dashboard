@@ -9,6 +9,7 @@
 import { useMemo, useState, type DragEvent } from 'react';
 import { Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
+import { QUIZ_MARK_SIZE } from './quizMarks';
 import { shuffledOrder, type LessonQuestion } from './lessons';
 import { BoardFooter } from './BoardFooter';
 import styles from './QuizBoard.module.css';
@@ -89,8 +90,10 @@ export function OrderQuiz({
                       : 'Tap a step, then here'
                     : steps[step]}
                 </span>
-                {mark === 'right' && <Check aria-hidden="true" size={18} strokeWidth={3} />}
-                {mark === 'wrong' && <X aria-hidden="true" size={18} strokeWidth={3} />}
+                {mark === 'right' && (
+                  <Check aria-hidden="true" size={QUIZ_MARK_SIZE} strokeWidth={3} />
+                )}
+                {mark === 'wrong' && <X aria-hidden="true" size={QUIZ_MARK_SIZE} strokeWidth={3} />}
               </button>
             </li>
           );

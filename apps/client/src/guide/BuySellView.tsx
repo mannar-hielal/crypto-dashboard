@@ -11,6 +11,7 @@ import { AnswerResult } from './AnswerResult';
 import { useRef, type KeyboardEvent } from 'react';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
+import { QUIZ_MARK_SIZE } from './quizMarks';
 import type { LessonQuestion } from './lessons';
 import styles from './BuySellView.module.css';
 
@@ -59,11 +60,13 @@ export function BuySellView({
               onKeyDown={(e) => onKeyDown(e, i)}
               {...guide('lesson.side', label.toLowerCase())}
             >
-              <Icon aria-hidden="true" size={18} strokeWidth={2.5} />
+              <Icon aria-hidden="true" size={QUIZ_MARK_SIZE} strokeWidth={2.5} />
               {label}
-              {mark === 'right' && <Check aria-label="right answer" size={18} strokeWidth={3} />}
+              {mark === 'right' && (
+                <Check aria-label="right answer" size={QUIZ_MARK_SIZE} strokeWidth={3} />
+              )}
               {mark === 'wrong' && (
-                <X aria-label="your pick, not quite" size={18} strokeWidth={3} />
+                <X aria-label="your pick, not quite" size={QUIZ_MARK_SIZE} strokeWidth={3} />
               )}
             </button>
           );

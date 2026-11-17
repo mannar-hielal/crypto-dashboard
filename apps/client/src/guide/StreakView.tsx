@@ -8,7 +8,7 @@
  */
 
 import { useHabits } from '@/learn/useHabits';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { animate, useReducedMotion } from 'framer-motion';
 import { Flame } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
@@ -31,13 +31,18 @@ export function StreakView({
   const [shown, setShown] = useState(0);
 
   // Count up to the streak once it's known; with reduced motion the number is shown as it is. Keyed
-  // on the number alone: a read again (a session refresh) with the same streak doesn't replay it
+  // on the number alone: a read again (a session refresh) with the same streak doesn't replay it,
+  // and a new number (past midnight) moves on from the one shown, never back from 0
   const streak = habits ? habits.streakDays : null;
+  const shownNow = useRef(0);
   useEffect(() => {
     if (streak === null || reduced) return;
-    const controls = animate(0, streak, {
+    const controls = animate(shownNow.current, streak, {
       duration: COUNT_UP_S,
-      onUpdate: (v) => setShown(Math.round(v)),
+      onUpdate: (v) => {
+        shownNow.current = Math.round(v);
+        setShown(shownNow.current);
+      },
     });
     return () => controls.stop();
   }, [streak, reduced]);

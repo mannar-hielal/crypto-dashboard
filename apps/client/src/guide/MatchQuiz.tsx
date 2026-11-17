@@ -9,6 +9,7 @@
 import { useMemo, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
+import { QUIZ_MARK_SIZE_SMALL } from './quizMarks';
 import { shuffledOrder, type LessonQuestion } from './lessons';
 import { BoardFooter } from './BoardFooter';
 import styles from './QuizBoard.module.css';
@@ -101,8 +102,12 @@ export function MatchQuiz({
                     {chip(t)}
                   </span>
                 )}
-                {mark === 'right' && <Check aria-hidden="true" size={16} strokeWidth={3} />}
-                {mark === 'wrong' && <X aria-hidden="true" size={16} strokeWidth={3} />}
+                {mark === 'right' && (
+                  <Check aria-hidden="true" size={QUIZ_MARK_SIZE_SMALL} strokeWidth={3} />
+                )}
+                {mark === 'wrong' && (
+                  <X aria-hidden="true" size={QUIZ_MARK_SIZE_SMALL} strokeWidth={3} />
+                )}
               </button>
             );
           })}
