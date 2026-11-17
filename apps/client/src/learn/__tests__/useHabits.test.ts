@@ -94,4 +94,16 @@ describe('useHabits', () => {
     await act(async () => {});
     expect(getHabits).toHaveBeenCalledTimes(1);
   });
+
+  it('should treat the habits as not loaded when the finish they would count failed to save', async () => {
+    let fail: (e: Error) => void = () => undefined;
+    noteFinishSent(null, new Promise<void>((_, reject) => (fail = reject)));
+    getHabits.mockResolvedValue(habits);
+    const { result } = renderHook(() => useHabits('t'));
+    await act(async () => fail(new Error('5xx')));
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    // A count that misses today's finish is never shown
+    expect(result.current.habits).toBeNull();
+    expect(getHabits).not.toHaveBeenCalled();
+  });
 });

@@ -398,11 +398,11 @@ export function useTourProgress(): void {
         const last = lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
         saveDone(finished, last, accessToken);
         // Noted, so the streak screen reads the habits after it lands (learn/finishSync.ts)
+        // (noteFinishSent takes the request as it is: whether it landed decides what the streak
+        // screen can say, and it never rejects past that)
         noteFinishSent(
           accountOf(accessToken),
-          learnApi
-            .trackEvent({ name: 'tour_completed', itemId: finished }, accessToken)
-            .catch(() => undefined)
+          learnApi.trackEvent({ name: 'tour_completed', itemId: finished }, accessToken)
         );
       }
 

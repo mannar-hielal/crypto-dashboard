@@ -7,37 +7,42 @@
 /** How long a habits read waits for the finish's event at most: a hung request never blocks it */
 export const FINISH_WAIT_MS = 4000;
 
-/** The finish's event still on its way, and whose, or null once it has landed (or failed) */
-let pending: { account: string | null; done: Promise<void> } | null = null;
+/**
+ * The finish's event still on its way, and whose (`landed`: true once saved, false if it failed), or
+ * null once it has settled
+ */
+let pending: { account: string | null; landed: Promise<boolean> } | null = null;
 
 /** Called when a finish's event is sent, for the account it is */
 export function noteFinishSent(account: string | null, request: Promise<unknown>): void {
   const mine = {
     account,
-    done: request.then(
-      () => undefined,
-      () => undefined
+    landed: request.then(
+      () => true,
+      () => false
     ),
   };
   pending = mine;
-  void mine.done.then(() => {
+  void mine.landed.then(() => {
     if (pending === mine) pending = null;
   });
 }
 
 /**
- * Resolves once the last finish's event has landed (or failed), or after `FINISH_WAIT_MS`. At once
- * when none is on its way; the wait's timer is cleared when the event wins
+ * Whether the account's last finish is counted: resolves once its event has landed (true) or failed
+ * (false), or false after `FINISH_WAIT_MS`; true at once when none is on its way. The wait's timer is cleared when the event settles. The streak screen says "today
+ * still counts" rather than showing a count that misses the finish
  */
-export function finishSaved(account: string | null): Promise<void> {
+export function finishSaved(account: string | null): Promise<boolean> {
   const waiting = pending;
-  // Another account's finish (signed out since) is no reason to wait
-  if (!waiting || waiting.account !== account) return Promise.resolve();
-  return new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, FINISH_WAIT_MS);
-    void waiting.done.then(() => {
+  // Nothing on its way (the streak screen always finds its finish still on its way: it opens with
+  // it), or another account's: nothing to miss
+  if (!waiting || waiting.account !== account) return Promise.resolve(true);
+  return new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => resolve(false), FINISH_WAIT_MS);
+    void waiting.landed.then((ok) => {
       clearTimeout(timer);
-      resolve();
+      resolve(ok);
     });
   });
 }

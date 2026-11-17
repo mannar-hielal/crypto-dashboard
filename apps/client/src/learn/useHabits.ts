@@ -37,9 +37,12 @@ export function useHabits(
     // After the last finish's event lands: the server then counts today's finish
     finishSaved(account)
       // (a run cancelled while it waited sends nothing)
-      .then(() => {
+      .then((counted) => {
         const now = token.current;
-        return cancelled || !now ? null : learnApi.getHabits(now);
+        if (cancelled || !now) return null;
+        // The finish didn't land: a count read now would miss today, so it's a failed read
+        if (!counted) throw new Error('The finish is not counted yet');
+        return learnApi.getHabits(now);
       })
       .then((r) => {
         if (!cancelled && r) setRead({ account, habits: r, failed: false });
