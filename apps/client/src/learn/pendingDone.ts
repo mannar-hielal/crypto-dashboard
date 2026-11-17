@@ -131,7 +131,10 @@ export function dropDone(account: string, itemId: PendingDone['itemId'], step?: 
   );
 }
 
-/** Keep exactly these (a read worked out which stay): one write */
+/**
+ * Keep exactly these (a read worked out which stay): one write. A name for its caller's intent
+ * beside the private write() (weighed, review after #308)
+ */
 export function keepOnly(account: string, items: PendingDone[]): void {
   write(account, items);
 }
