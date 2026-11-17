@@ -37,6 +37,7 @@ export type LessonArtId =
   | 'flashCrash'
   /** A thin queue of buy offers eaten step by step */
   | 'staircase'
+  | 'deepThin'
   | 'candleAnatomy'
   | 'swings'
   | 'checkCoin'
@@ -65,7 +66,11 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
   bitcoin: null,
   etf: null,
   flashCrash: null,
-  staircase: null,
+  // The $8,200 moment: one order eats down a thin list of buyers (owner 2026-11-17: moved here)
+  staircase:
+    'Buy offers waiting at $65,000, $60,000 and $40,000, then nobody until $8,200: one big sale ate down the list.',
+  deepThin:
+    'The same big sell order: where many buyers wait close to the price it barely moves (deep); where few wait far apart it jumps (thin).',
   candleAnatomy: null,
   swings: null,
   checkCoin: null,
@@ -350,7 +355,7 @@ export interface Lesson {
   };
   /**
    * The lesson the close offers next. None: the path shows what comes next (Lesson 3 since the
-   * rewrite: Lesson 1's Try already runs the buy and sell tours)
+   * rewrite: the map's practice stops, buy then sell, come next)
    */
   next?: LessonId;
   access: Entitlement;
@@ -459,10 +464,11 @@ const lesson01: Lesson = {
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–20 and 21–40
   stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
-  // Open a paper trade, then close it (owner 2026-11-16): the buy tour hands over to the sell tour
+  // Buy only (owner 2026-11-17: one job per practical lesson): the buy tour, then its look at the
+  // coin bought; selling is the map's next practice stop, no longer handed over from here
   tour: 'buy-first-coin',
   tryIntro:
-    'Time to try it for real, with paper money. We’ll guide you to open a small trade on the live chart, then close it. Nothing here is real money.',
+    'Time to try it for real, with paper money. We’ll guide you to buy a little Bitcoin on the live chart, then show you what changed in your account. Selling it is its own practice on the learning map. Nothing here is real money.',
   cards: [
     {
       // bitcointalk.org, 22 May 2010: Laszlo Hanyecz in Jacksonville, Florida, paid 10,000 BTC for
@@ -591,7 +597,7 @@ const lesson01: Lesson = {
       title: 'Close it to keep it',
       art: 'closeToKeep',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the ✕ (Close) at the end of your position row. Until then, it can still shrink.',
+      text: 'While you hold a position, the profit on screen is only on paper: it changes as the price moves. It becomes real when you **close** the position. In our app that’s the ✕ (Close) at the end of your position row. Until then, it can still shrink.',
     },
     {
       // Owner 2026-11-17: the borrowing analogy, by one guide in glasses, replaces the chit-chat; it
@@ -1187,13 +1193,14 @@ const lesson02: Lesson = {
     },
     {
       title: 'Thin or deep',
-      art: 'staircase',
+      art: 'deepThin',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'Remember [[liquidity]] from Lesson 2? Picture buyers and sellers waiting with their prices. When many wait close to the price, the market is **deep**: a big order barely moves it. When few wait, it’s **thin**: a big order runs through them and the price jumps.',
       more: { article: 'exchange-price', section: 'liquidity' },
     },
     {
       title: 'The $8,200 moment',
+      art: 'staircase',
       presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
       text: 'Back to 21 October 2021. One program sold a huge amount at once on one exchange. It took the best buyer, then the next, then the next, down a list that ran thin fast. Each deal was lower, and each was “the price” for a moment, until buyers came back.',
     },
@@ -1273,8 +1280,8 @@ const lesson02: Lesson = {
   // The quizzes sit between the cards (owner 2026-11-16)
   checks: [],
   notePrompt: 'Which check will you always do before buying a new coin?',
-  // No teaser and no way on (review 2026-11-16): Lesson 1's Try already runs the buy and sell
-  // tours, so the path, not this close, shows what comes next
+  // No teaser and no way on (review 2026-11-16): the map's practice stops (buy, then sell) come
+  // next, so the path, not this close, shows what comes next
   canDo: [],
   recap: {
     title: 'What moves a price',
@@ -1314,11 +1321,6 @@ export function getLesson(id: LessonId): Lesson {
 }
 
 /**
- * Who stands beside a question: the guide who asks it, from the question through the answer. The
- * right answer gets their grin; "Not quite" gets them calm, never sad or worried (red is never the
- * villain).
- */
-/**
  * A fixed shuffle for Drag and drop and Match boxes: the same order on every visit (seeded by the
  * question's words), and never the right order itself, so nothing is answered before a move.
  */
@@ -1336,6 +1338,11 @@ export function shuffledOrder(n: number, seed: string): number[] {
   return order;
 }
 
+/**
+ * Who stands beside a question: the guide who asks it, from the question through the answer. The
+ * right answer gets their grin; "Not quite" gets them calm, never sad or worried (red is never the
+ * villain).
+ */
 export function questionGuide(q: LessonQuestion, answer: number | undefined): Presenter {
   const asker = q.presenter ?? { who: 'tock', mood: 'thinking' };
   if (answer === undefined) return asker;

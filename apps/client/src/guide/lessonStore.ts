@@ -201,8 +201,13 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     if (s.activeId === id) {
       if (screen !== undefined && !s.inTour) {
         const at = clampScreen(id, screen);
-        // A look back's own lesson is only visited: it isn't begun by it
-        set({ screen: at, reached: s.returnTo ? s.reached : raised(s.reached, id, at) });
+        // A look back's own lesson is only visited: it isn't begun by it. Leaving a wrong answer
+        // this way clears it, as Back does: coming back, the board starts afresh
+        set({
+          screen: at,
+          answers: withoutWrong(s, s.screen),
+          reached: s.returnTo ? s.reached : raised(s.reached, id, at),
+        });
       }
       return;
     }
@@ -211,7 +216,12 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       get().returnBack();
       if (screen !== undefined) {
         const at = clampScreen(id, screen);
-        set((now) => ({ screen: at, reached: raised(now.reached, id, at) }));
+        // (a wrong answer on the screen it's left from clears, as Back does)
+        set((now) => ({
+          screen: at,
+          answers: withoutWrong(now, now.screen),
+          reached: raised(now.reached, id, at),
+        }));
       }
       return;
     }

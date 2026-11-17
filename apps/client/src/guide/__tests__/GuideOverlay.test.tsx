@@ -167,8 +167,8 @@ describe('GuideOverlay', () => {
     amount.value = '';
     await frame();
     await frame();
-    // Finished the tour: handed over to the next chapter
-    expect(useTourStore.getState().activeId).toBe('sell-and-review');
+    // Finished the tour: handed over to its look at the coin bought (owner 2026-11-17)
+    expect(useTourStore.getState().activeId).toBe('review-first-coin');
     expect(useTourStore.getState().completed['buy-first-coin']).toBe(true);
   });
 
@@ -203,7 +203,8 @@ describe('GuideOverlay', () => {
   });
 
   it('should grade the quiz, explain it, and finish the tour', async () => {
-    useTourStore.getState().start('sell-and-review');
+    // The Sell lesson's last chapter (its own steps: the sell itself was finished before it)
+    useTourStore.getState().start('review-sell-result');
     useTourStore.setState({ stepIndex: 4 });
     render(<GuideOverlay />);
     await frame();
@@ -213,12 +214,28 @@ describe('GuideOverlay', () => {
     expect(document.body.textContent).toContain('Not quite.');
     expect(document.body.textContent).toContain('0.2%');
     fireEvent.click(screen.getByText('Finish'));
-    expect(useTourStore.getState().completed['sell-and-review']).toBe(true);
     expect(useTourStore.getState().activeId).toBeNull();
   });
 
-  it('should show a step’s own button label, and finish the primer without handing over', async () => {
+  it('should tell a learner with no Bitcoin to do the Buy lesson first (owner 2026-11-17)', async () => {
+    // The Assets tab open, but no Bitcoin row (sold elsewhere): no Sell button to ring
     useTourStore.getState().start('sell-and-review');
+    useTourStore.setState({ stepIndex: 1 });
+    render(<GuideOverlay />);
+    await frame();
+    expect(document.querySelector('[data-tour-ring]')).toBeNull();
+    expect(document.body.textContent).toContain('None there? You need some to sell');
+    expect(document.body.textContent).toContain('“Buy your first coin” on the learning map');
+
+    // With Bitcoin to sell, the ring is on its Sell button and the hint is gone
+    addControl('assets.row.sell', { key: 'BTC' });
+    await frame();
+    expect(document.querySelector('[data-tour-ring]')).not.toBeNull();
+    expect(document.body.textContent).not.toContain('None there?');
+  });
+
+  it('should show a step’s own button label, and finish the primer without handing over', async () => {
+    useTourStore.getState().start('review-sell-result');
     useTourStore.setState({ stepIndex: 3 }); // the centred "done" card
     render(<GuideOverlay />);
     await frame();

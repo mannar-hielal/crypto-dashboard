@@ -33,6 +33,7 @@ import { useArticleStore } from '@/learn/articleStore';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
+import { getTour, tourSteps } from '@/guide/tours';
 import { useAuthStore } from '@/store/authStore';
 
 const lesson = getLesson('lesson-02');
@@ -184,6 +185,31 @@ describe('LessonSheet', () => {
     expect(getHabits).not.toHaveBeenCalled();
   });
 
+  it('should take a first Esc while typing the journal line as leaving the field, the next as closing', async () => {
+    at(lessonScreens(lesson).length - 1); // the close screen, with the journal line
+    renderSheet();
+    const note = document.querySelector<HTMLTextAreaElement>('[data-guide="lesson.note"]')!;
+    note.focus();
+    fireEvent.change(note, { target: { value: 'Sized for the fall' } });
+    fireEvent.keyDown(note, { key: 'Escape' });
+    // Still open, the line kept, the field left
+    expect(useLessonStore.getState().activeId).toBe('lesson-02');
+    expect(note.value).toBe('Sized for the fall');
+    expect(document.activeElement).not.toBe(note);
+    // The next Esc closes, once the line typed is saved
+    addJournalNote.mockResolvedValue(null);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
+  });
+
+  it('should only close, never finish, when an earlier screen is left with ✕', async () => {
+    at(2);
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.close"]')!);
+    await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
+    expect(useLessonStore.getState().completed['lesson-02']).toBeUndefined();
+  });
+
   it('should not move on past Try when another tour took its tour’s place (review 2026-11-16)', () => {
     const tryAt = lessonScreens(getLesson('lesson-01')).findIndex((x) => x.kind === 'try');
     at(tryAt, 'lesson-01');
@@ -198,7 +224,7 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: tryAt });
   });
 
-  it('should move on past Try after the tour’s own next chapter ends (buy → sell)', () => {
+  it('should move on past Try after the tour’s own next chapter ends (the buy, then its look at the coin)', () => {
     const tryAt = lessonScreens(getLesson('lesson-01')).findIndex((x) => x.kind === 'try');
     at(tryAt, 'lesson-01');
     renderSheet();
@@ -206,7 +232,7 @@ describe('LessonSheet', () => {
       useLessonStore.getState().enterTour('buy-first-coin');
       useTourStore.getState().start('buy-first-coin');
     });
-    act(() => useTourStore.getState().start('sell-and-review'));
+    act(() => useTourStore.getState().start('review-first-coin'));
     act(() => useTourStore.getState().close());
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: tryAt + 1 });
   });
@@ -711,17 +737,31 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 4 });
   });
 
-  it('should offer Lesson 1’s “Try it” on a phone too, and wait for the whole buy → sell chain', () => {
+  it('should offer Lesson 1’s “Try it” on a phone too, wait through the buy and its look, never the Sell lesson', () => {
     desktop = false;
     at(18, 'lesson-01');
     renderSheet();
     expect(sheet()!.textContent).not.toContain('needs a larger screen');
     fireEvent.click(document.querySelector('[data-guide="lesson.try"]')!);
     expect(useTourStore.getState().activeId).toBe('buy-first-coin');
-    // The buy tour hands over to the sell tour: the lesson keeps waiting
-    act(() => useTourStore.setState({ activeId: 'sell-and-review', stepIndex: 0 }));
+    // The order placed: the buy hands over to its look at the coin (owner 2026-11-17: never to the
+    // Sell lesson, a map stop of its own); the lesson keeps waiting
+    act(() =>
+      useTourStore.setState({
+        stepIndex: tourSteps(getTour('buy-first-coin'), useTourStore.getState().wide).length - 1,
+      })
+    );
+    act(() => useTourStore.getState().next());
+    expect(useTourStore.getState().activeId).toBe('review-first-coin');
     expect(useLessonStore.getState()).toMatchObject({ inTour: true, screen: 18 });
-    act(() => useTourStore.getState().close());
+    // Its last step: the chain ends, the lesson carries on
+    act(() =>
+      useTourStore.setState({
+        stepIndex: tourSteps(getTour('review-first-coin'), useTourStore.getState().wide).length - 1,
+      })
+    );
+    act(() => useTourStore.getState().next());
+    expect(useTourStore.getState().activeId).toBeNull();
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 19 });
   });
 

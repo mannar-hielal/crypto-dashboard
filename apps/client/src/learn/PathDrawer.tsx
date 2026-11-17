@@ -271,7 +271,8 @@ export function PathDrawer() {
   const [tab, setTab] = useState<Tab>('path');
   const drawerRef = useRef<HTMLElement>(null);
 
-  // Habits are counted on the server: read whenever the map opens, and again after a new finish
+  // How much is done on the map (the Continue bubble). The habits are read while the map is open,
+  // and again when useHabits' own done count moves
   const finished = view.chapters.reduce((n, c) => n + c.done, 0);
   const { habits, failed: habitsError } = useHabits(open ? accessToken : null);
 

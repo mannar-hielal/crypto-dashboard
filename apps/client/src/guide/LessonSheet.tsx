@@ -511,9 +511,9 @@ export function LessonSheet() {
 
   // While a tour handed over from the lesson runs (its Try tour, a card's practice trade), the tour
   // store has the screen; when no tour runs any more — finished, skipped or closed, after a chain
-  // like buy → sell too — the lesson carries on. A tour that took its place some other way (not
-  // its next chapter, not handed over by the lesson) didn't come from the lesson: its end brings
-  // the learner back to the same screen
+  // like the buy and its look at the coin too — the lesson carries on. A tour that took its place
+  // some other way (not its next chapter, not handed over by the lesson) didn't come from the
+  // lesson: its end brings the learner back to the same screen
   useEffect(() => {
     if (!inTour) return;
     return useTourStore.subscribe((s, prev) => {
@@ -535,14 +535,39 @@ export function LessonSheet() {
   // Esc closes the sheet (not while the tour or an article is open: each has its own Esc)
   // (an open term peek closes first: Esc then dismisses just the peek; the map, if open over the
   // sheet, has its own Esc)
+  // ✕ or Esc only close, on every screen the close screen included: the lesson finishes through
+  // the close's own buttons (the streak, the journal line, the way on). Weighed, review after
+  // #308: making ✕ finish on the close screen skipped the streak, overrode a chosen way on and
+  // finished on an Esc meant for the journal field, so the summary's "Finish lesson" leads to the
+  // close screen, where the finish is the learner's next press
+  const leaveSheet = () => afterNote(() => useLessonStore.getState().close());
   const peekOpen = peek !== null;
   useEffect(() => {
     if (!activeId || inTour || articleOpen || mapOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (peekOpen) setPeek(null);
-      else if (streakActive) leaveStreakFinishing(setStreakThen);
-      else afterNote(() => useLessonStore.getState().close());
+      // Esc inside the journal field (or closing an IME's candidates) belongs to the field, never
+      // to the sheet only while a line is being typed: the first Esc leaves the field (the line
+      // stays), the next one closes. An empty or saved (read-only) field lets Esc close at once
+      if (e.isComposing) return;
+      // (Any field being typed in is left first, not only the journal's: in a modal sheet Esc
+      // shouldn't close the lesson out from under typing. Weighed, review after #308)
+      // An open term peek closes first, whatever has the focus
+      if (peekOpen) {
+        setPeek(null);
+        return;
+      }
+      const field = e.target as HTMLTextAreaElement | HTMLInputElement | null;
+      const typing =
+        (field?.tagName === 'TEXTAREA' || field?.tagName === 'INPUT') &&
+        !field.readOnly &&
+        field.value.trim() !== '';
+      if (typing) {
+        field.blur();
+        return;
+      }
+      if (streakActive) leaveStreakFinishing(setStreakThen);
+      else leaveSheet();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -603,10 +628,7 @@ export function LessonSheet() {
 
   if (!screen) return null;
   const { next, back, answer } = useLessonStore.getState();
-  const close = () =>
-    streakActive
-      ? leaveStreakFinishing(setStreakThen)
-      : afterNote(() => useLessonStore.getState().close());
+  const close = () => (streakActive ? leaveStreakFinishing(setStreakThen) : leaveSheet());
   const goBack = () => {
     setPeek(null);
     back();

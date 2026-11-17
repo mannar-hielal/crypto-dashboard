@@ -330,6 +330,59 @@ function Staircase() {
   );
 }
 
+/**
+ * "Thin or deep" (owner 2026-11-17): the same big sell order meets many buy offers packed close to
+ * the price (deep: the price barely moves) and a few spread far apart (thin: the price jumps)
+ */
+function DeepThin() {
+  const book = [
+    {
+      cx: 148,
+      name: 'deep',
+      note: 'small move',
+      offers: [36, 46, 56, 66, 76, 86, 96],
+      stop: 46,
+    },
+    { cx: 262, name: 'thin', note: 'big jump', offers: [36, 98], stop: 102 },
+  ];
+  return (
+    <>
+      <text x="205" y="10" textAnchor="middle" className={styles.label}>
+        the same big sell order
+      </text>
+      {book.map((b) => (
+        <g key={b.name}>
+          <rect x={b.cx - 48} y="16" width="96" height="98" rx="6" className={styles.panel} />
+          {/* The price now: the line the buyers wait under */}
+          <line x1={b.cx - 40} x2={b.cx + 40} y1="28" y2="28" className={styles.priceLine} />
+          <text x={b.cx - 38} y="25" className={styles.label}>
+            price
+          </text>
+          {b.offers.map((y) => (
+            <rect
+              key={y}
+              x={b.cx - 32}
+              y={y}
+              width="44"
+              height="6"
+              rx="2"
+              className={styles.offer}
+            />
+          ))}
+          <path d={`M${b.cx + 26} 29 L${b.cx + 26} ${b.stop}`} className={styles.moveLine} />
+          {/* Neutral colours: green and red mean profit/loss and buy/sell (design.md) */}
+          <text x={b.cx} y="132" textAnchor="middle" className={styles.chipText}>
+            {b.name}: {b.note}
+          </text>
+        </g>
+      ))}
+      <text x="232" y="150" textAnchor="middle" className={styles.label}>
+        bars: buyers waiting
+      </text>
+    </>
+  );
+}
+
 /** One green and one red candle, open, high, low and close named, and a day-and-night mark */
 function CandleAnatomy() {
   const candle = (x: number, up: boolean) => {
@@ -810,6 +863,7 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   etf: Etf,
   flashCrash: FlashCrash,
   staircase: Staircase,
+  deepThin: DeepThin,
   candleAnatomy: CandleAnatomy,
   swings: Swings,
   checkCoin: CheckCoin,

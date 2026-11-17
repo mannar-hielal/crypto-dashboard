@@ -135,6 +135,15 @@ describe('PathDrawer', () => {
     expect(screen.getByText('Finish “Money nobody controls” first.')).toBeTruthy();
   });
 
+  it('should keep Sell locked, naming Buy, while Buy is still to do (owner 2026-11-17)', () => {
+    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-ownership', 'lesson-02']);
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(nodeButton('tour:sell-and-review'));
+    expect(useTourStore.getState().activeId).toBeNull();
+    expect(screen.getByText('Finish “Buy your first coin” first.')).toBeTruthy();
+  });
+
   it('should never make a coming-soon stop focusable', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
@@ -172,7 +181,7 @@ describe('PathDrawer', () => {
     expect(screen.queryByText(/needs a laptop or tablet/)).toBeNull();
   });
 
-  it('should let a phone skip a tour that needs a larger screen, which opens the next stop', () => {
+  it('should let a phone skip a tour that needs a larger screen, which opens the next stop it doesn’t lock', () => {
     // Every tour on the path is phone-ready today: the flow is kept for a later one that isn't
     notOnPhones.add('buy-first-coin');
     wide = false;
@@ -186,11 +195,11 @@ describe('PathDrawer', () => {
 
     fireEvent.click(document.querySelector(guideSelector('path.tour.skip', 'buy-first-coin'))!);
     expect(usePathStore.getState().skippedTours).toEqual({ 'buy-first-coin': true });
-    expect(
-      document
-        .querySelector(guideSelector('path.node', 'tour:sell-and-review'))!
-        .getAttribute('data-state')
-    ).toBe('current');
+    const state = (key: string) =>
+      document.querySelector(guideSelector('path.node', key))!.getAttribute('data-state');
+    // Sell needs Buy done (owner 2026-11-17): it stays locked, the checkpoint is next
+    expect(state('tour:sell-and-review')).toBe('locked');
+    expect(state('checkpoint:checkpoint-ch1')).toBe('current');
     notOnPhones.clear();
   });
 
