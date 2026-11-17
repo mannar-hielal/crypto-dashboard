@@ -428,8 +428,10 @@ export async function learnRoutes(app: FastifyInstance) {
         headers: {
           type: 'object',
           properties: {
-            // 🔐 Bounded (IANA names are under 40 characters). Any other text is never refused: an
-            // unknown zone counts in UTC (`dayCounter`), so an odd device zone keeps the streak
+            // 🔐 Bounded (every string input is: web.md); IANA names are under 40 characters, so
+            // only made-up input over 64 is refused (400). Any text within the bound is never
+            // refused: an unknown zone counts in UTC (`dayCounter`), so an odd device zone keeps
+            // the streak
             'x-time-zone': { type: 'string', maxLength: 64 },
           },
         },
