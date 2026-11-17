@@ -311,10 +311,18 @@ describe('lessons', () => {
       '0.708 × 100 = 70.8%',
     ]);
     expect(caught.lines?.[0].text).toMatch(/^Now the catch/);
+    // Fact check 2026-11-17: liquidation comes before the margin runs out, and the margin is lost
+    expect(caught.lines?.[0].text).toContain(
+      'the exchange closes a losing short before your margin runs out (liquidation), and that margin is lost'
+    );
     // Going short: the borrowing analogy, by one guide, in place of the guides' exchange
     const short2 = card('Going short');
     expect(short2.analogy?.text).toMatch(/borrow.*give it back.*keep \$20/);
-    expect(short2.analogy?.text).toMatch(/perpetual borrows nothing/);
+    // Fact check 2026-11-17: where the analogy stops matching names the margin and the funding fee
+    expect(short2.analogy?.text).toMatch(
+      /Our perpetual borrows nothing: you put up USDT as margin, the contract settles the difference in USDT, and while it’s open you pay or receive a small funding fee\.$/
+    );
+    expect(cardWords(short2)).toBeLessThanOrEqual(80);
     expect(short2.practice?.tour).toBe('practice-short');
   });
 

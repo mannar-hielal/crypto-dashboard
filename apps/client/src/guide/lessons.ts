@@ -599,10 +599,10 @@ const lesson01: Lesson = {
       title: 'Going short',
       art: 'shortGame',
       presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
-      text: 'Going **short** is the mirror move: you win when the price falls. In our app you short on the USDT Perpetual market, with USDT as margin.',
+      text: 'Going **short**, on our USDT Perpetual market, is the mirror move: you win when the price falls.',
       analogy: {
         who: 'tock',
-        text: 'Think of it as borrowing. A friend lends you a game that sells for $60, and you sell it today. Next month it costs $40: you buy one, give it back, and keep $20. If it climbs to $90, you lose $30. Our perpetual borrows nothing: the contract simply settles the difference in USDT.',
+        text: 'Think of it as borrowing. A friend lends you a $60 game, and you sell it. Next month it’s $40: buy one, give it back, keep $20. If it hits $90, you lose $30. Our perpetual borrows nothing: you put up USDT as margin, the contract settles the difference in USDT, and while it’s open you pay or receive a small funding fee.',
       },
       practice: { tour: 'practice-short', label: 'Try a short on the real chart' },
     },
@@ -634,7 +634,7 @@ const lesson01: Lesson = {
       lines: [
         {
           speaker: 'tock',
-          text: 'Now the catch: a price can only fall to zero, but it can rise without a ceiling. On a perpetual, the exchange closes a losing short once your margin is gone (liquidation). Shorts need a stop, always.',
+          text: 'Now the catch: a price can only fall to zero, but it can rise without a ceiling. On a perpetual, the exchange closes a losing short before your margin runs out (liquidation), and that margin is lost. Shorts need a stop, always.',
         },
       ],
     },
