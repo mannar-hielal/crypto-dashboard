@@ -4676,6 +4676,22 @@ The owner's ten tasks after the Lessons 1–3 release (screenshots; the new rule
   existing anchors, phone-ready, not saved or reported.
 - **Pictures on top, text below**, already the sheet's layout: a test now checks every card. New illustrations are
   candidates for the owner, not drawn.
+- **Later the same day (owner's decisions, 2026-11-17).** Still no screen added or removed.
+  - **Lesson 3's math, reviewed:** kept on Big swings (the text gives no percent; the sum is where "a third", the
+    sizing rule's number, comes from) and on Up, then down (the text says only "more than half"; the sum proves
+    53%). Removed from A market shock: its text already states "down about 23%", it was the third identical sum in a
+    row, and the card's point is one company shaking the market. `lessons.test` holds which are kept and why.
+  - **Lesson 3's close** (no way on) says **Finish lesson** (`LESSON_LABELS.finish`), not "Finish". A close with a way
+    on keeps "Lesson N: …" and "Finish for now"; the Try screen keeps Show me / Skip this part.
+  - **Lesson 2's plain ending** (no highlight) stays as it is.
+  - **Pictures that tell the card:** seven new `LessonArt` drawings, our own shapes in the existing style, token
+    colours only, no new library, asset or animation. Lesson 1: Up or down (`threePaths`: climbs, slides,
+    sideways), Buy and Sell (`buySell`: money for a coin and back), Close it to keep it (`closeToKeep`: +$120 on
+    paper, then locked in), Going short (`shortGame`: the analogy's $60 → $40, $20 kept), The market never sleeps
+    (`alwaysOpen`: a shop's week of hours against 24/7). Lesson 2: The hash links the chain (`hashChain`) and Sealed
+    by hard work (`sealBroken`: one number changed, every later block broken). These are announced to screen
+    readers (`role="img"` with their `ART_LABELS` line); the older decorative pictures stay hidden. The benchmark
+    course's screenshots were looked at only for which kinds of cards get a picture, never for its drawings.
 
 ### 2026-11-16 — Lessons 1–3 rewrite: new quiz formats, practice trades, the streak screen, and Lesson 1
 
