@@ -45,7 +45,8 @@ export function MatchQuiz({
   const [selected, setSelected] = useState<number | null>(null);
   const complete = Object.keys(links).length === pairs.length;
   // Answered on an earlier visit: no pairs in memory, so the right pairs are shown, unmarked
-  const revisit = answered && !complete;
+  // Coming back to a right answer only: a wrong one (kept until Try again) never shows the pairs
+  const revisit = answered && answer === q.correct && !complete;
   const shown: Record<number, number> = revisit
     ? Object.fromEntries(pairs.map((_, i) => [i, i]))
     : links;

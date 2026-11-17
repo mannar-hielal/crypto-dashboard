@@ -35,7 +35,8 @@ export function OrderQuiz({
   const [slots, setSlots] = useState<(number | null)[]>(() => steps.map(() => null));
   const [picked, setPicked] = useState<number | null>(null);
   // Answered on an earlier visit: no placements in memory, so the right order is shown, unmarked
-  const revisit = answered && slots.some((x) => x === null);
+  // Coming back to a right answer only: a wrong one (kept until Try again) never shows the order
+  const revisit = answered && answer === q.correct && slots.some((x) => x === null);
   const shown = revisit ? steps.map((_, i) => i) : slots;
   const placed = new Set(shown.filter((x): x is number => x !== null));
 

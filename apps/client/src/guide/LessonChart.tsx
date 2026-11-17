@@ -89,7 +89,8 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
   const target = bars ? (revealed ? bars.length : frozenCount(bars, scene)) : 0;
   // With reduced motion the chart jumps straight to where it's going
   const reduced = prefersReducedMotion();
-  const count = reduced ? target : shown;
+  // (never past the target: asked again, the outcome is hidden at once, not a moment later)
+  const count = reduced ? target : Math.min(shown, target);
   useEffect(() => {
     // Asked again (Try again): back to the frozen moment, the outcome hidden until the next answer
     if (shown > target) {

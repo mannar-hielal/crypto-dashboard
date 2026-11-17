@@ -102,13 +102,19 @@ describe('OrderQuiz (Drag and drop)', () => {
     expect(el('lesson.step', 0)).toBeTruthy();
   });
 
-  it('should show the right order, unmarked, and the result when an answered question is shown again', () => {
-    render(<OrderQuiz q={order} answer={1} onAnswer={() => {}} />);
-    // Not every slot ticked under "Not quite.": the right order, labelled as such
+  it('should show the right order, unmarked, when a rightly answered question is shown again', () => {
+    render(<OrderQuiz q={order} answer={order.correct} onAnswer={() => {}} />);
     expect(el('lesson.slot', 0).getAttribute('aria-label')).toBe('Slot 1: First');
     expect(screen.getByText('The right order:')).toBeTruthy();
-    expect(status()).toBe('Not quite. First comes first.');
     expect(document.querySelector(guideSelector('lesson.check'))).toBeNull();
+  });
+
+  it('should never show the right order on a board shown again after a wrong check', () => {
+    // Remounted (an article opened over the sheet) with the wrong answer still kept for Try again
+    render(<OrderQuiz q={order} answer={-1} onAnswer={() => {}} />);
+    expect(el('lesson.slot', 0).getAttribute('aria-label')).toBe('Slot 1: empty');
+    expect(screen.queryByText('The right order:')).toBeNull();
+    expect(status()).toBe('Not quite. First comes first.');
   });
 });
 
@@ -261,5 +267,10 @@ describe('Try again on the boards', () => {
     render(<MatchQuiz q={match} answer={-1} onAnswer={() => {}} />);
     expect(status()).toMatch(/^Not quite\./);
     expect(retryButton()).toBeNull();
+  });
+
+  it('should never show the right pairs on a board shown again after a wrong check', () => {
+    render(<MatchQuiz q={match} answer={-1} onAnswer={() => {}} />);
+    expect(screen.queryByText('The right pairs:')).toBeNull();
   });
 });
