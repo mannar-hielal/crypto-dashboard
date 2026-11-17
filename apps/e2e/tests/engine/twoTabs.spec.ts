@@ -46,7 +46,11 @@ test('[13.3.1][4.6] what tab A does shows in tab B; a reload keeps it @full', as
   await at(b, 'account.tab', 'assets').click();
   await expect(at(b, 'assets.row', 'AVAX')).toBeVisible();
 
-  // A reset in A empties B too (NEW-8-2)
+  // A reset in A empties B too (NEW-8-2). A comes back to the front first, as a person's tab would:
+  // B's reload left A behind it, and WebKit then holds back A's animation frames, so the dialog's
+  // fade and the confirm button's swap (AnimatePresence mode="wait") never finished within the
+  // confirm's 3 s window (release #302, both tries; the trace showed the dialog half faded in)
+  await a.bringToFront();
   await at(a, 'account.settings').click();
   await resetAccount(a); // the two-step confirm, retried if its 3 s window ran out
   await expect(at(b, 'assets.row', 'AVAX')).toHaveCount(0, { timeout: syncMs });
