@@ -83,7 +83,9 @@ const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const
 
 /**
  * A lesson's furthest screen is stored as its funnel step number, which includes the lesson's
- * `stepBase` (raised by 20 at each rebuild, never lowered). Room for many rebuilds; a SmallInt column
+ * `stepBase`. A rebuild raises it past every step the lesson used before (its last version's
+ * `stepBase` + screens; the client's lessons test records them), never lowers it. Room for many
+ * rebuilds; a SmallInt column
  */
 const MAX_STEP = 999;
 

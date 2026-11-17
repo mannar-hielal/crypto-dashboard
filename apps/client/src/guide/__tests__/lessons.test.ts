@@ -373,6 +373,20 @@ describe('lessons', () => {
     for (const l of LESSONS) expect((l.stepBase ?? 0) + 1, l.id).toBe(LESSON_FIRST_STEPS[l.id]);
   });
 
+  it('should start each lesson’s steps above every step its earlier versions used', () => {
+    // An earlier version's step in the current range would count as today's (its rows, its
+    // finishes). On a rebuild, record the version replaced here (stepBase + its screens) and raise
+    // stepBase above it. Measured on main before the 2026-11-16 rewrite
+    const EARLIER_LAST_STEPS: Record<string, number> = {
+      'lesson-01': 32,
+      'lesson-ownership': 34,
+      'lesson-02': 54,
+    };
+    for (const l of LESSONS) {
+      expect((l.stepBase ?? 0) + 1, l.id).toBeGreaterThan(EARLIER_LAST_STEPS[l.id] ?? 0);
+    }
+  });
+
   it('should version each checkpoint as the SDK does, which the server holds its copy to', () => {
     // A pass carries it; the server ignores a pass from an earlier question set (owner 2026-11-17)
     for (const c of CHECKPOINTS) expect(c.version, c.id).toBe(CHECKPOINT_VERSIONS[c.id]);

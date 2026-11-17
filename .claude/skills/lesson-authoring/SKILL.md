@@ -384,13 +384,14 @@ with paper money, and then picks up where it left off.
 - `apps/client/src/guide/__tests__/lessons.test.ts` — the lesson rules (caps, structure, the
   lesson's own expectations); `LessonSheet.test.tsx` for new screen kinds.
 - `apps/client/src/learn/__tests__/terms.test.ts`, `articleMinutes.test.ts` if articles change.
-- `stepBase`: when a lesson's screens change, bump it above the old highest step, so stored funnel
-  steps aren't misread (`lessons.test` checks the ids). **Mind the ceiling:** the server accepts a
-  step id's number with one or two digits only (`stepId` pattern `^[a-z0-9-]+\.[0-9]{1,2}$`,
-  `apps/server/src/routes/learn/index.ts`), so `stepBase` + the lesson's screens must stay at 99 or
-  below. If a rewrite doesn't fit, widen the pattern (e.g. `{1,3}`) in the same change, with a route
-  test and the SDK contract, before bumping. Otherwise every event past 99 gets a 400 and is lost
-  without a failing test.
+- `stepBase`: when a lesson's screens change, raise it past every step the replaced version used
+  (that version's `stepBase` + its screens), so stored steps and rows are never read as today's.
+  Record the replaced version's last step in `lessons.test`'s `EARLIER_LAST_STEPS`, and raise the
+  SDK's `LESSON_FIRST_STEPS` and the server's `LESSON_FIRST_STEP` with it (a test on each side holds
+  them together; the server refuses and ignores anything below). **Mind the ceiling:** the server
+  accepts a step number of up to three digits (`stepId` pattern `{1,3}`, `MAX_STEP` 999 in
+  `apps/server/src/routes/learn/index.ts`), so `stepBase` + the lesson's screens must stay at 999 or
+  below.
 - `minutes` (e.g. `LESSON_01_MINUTES`) to the new length.
 - Docs: a dated `docs/APP_LOG.md` entry; `docs/UI_REPRODUCTIONS.md` steps for the lesson;
   `docs/TRADING_TEST_PLAN.md` rows if a scenario changes (memory: keep test docs in step on release).
