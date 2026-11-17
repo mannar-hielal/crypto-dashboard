@@ -490,10 +490,17 @@ export function LessonSheet() {
    * waits here, on this run, and Continue then does it. Not a screen of its own, so the funnel's
    * step ids don't move.
    */
-  const [streakThen, setStreakThen] = useState<{ run: number; go: () => void } | null>(null);
+  const [streakThen, setStreakThen] = useState<{
+    run: number;
+    screen: number;
+    go: () => void;
+  } | null>(null);
   /** The run the streak was shown on: once per lesson run (a retry after a failed save goes on) */
   const [streakSeenRun, setStreakSeenRun] = useState<number | null>(null);
-  const streakActive = streakThen?.run === run && !!accessToken;
+  // On the close it was opened from: the same run moved to another screen (the lesson opened again
+  // at a card from the map) leaves it, so ✕ and Esc there just close
+  const streakActive =
+    streakThen?.run === run && streakThen.screen === screenIndex && !!accessToken;
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
@@ -643,7 +650,7 @@ export function LessonSheet() {
         () => {
           setStreakSeenRun(run);
           useLessonStore.getState().markFinished();
-          setStreakThen({ run, go });
+          setStreakThen({ run, screen: screenIndex, go });
         },
         { finishing: true }
       );
