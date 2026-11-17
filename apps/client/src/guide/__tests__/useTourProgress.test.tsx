@@ -174,17 +174,6 @@ describe('useTourProgress', () => {
     expect(pendingDone('u1')).toEqual([]);
   });
 
-  it('should forget the device’s kept finishes when the learner signs out', async () => {
-    queueDone('u1', { itemId: 'lesson-02', step: 81 });
-    getProgress.mockResolvedValue({ items: [] });
-    const { rerender } = renderHook(() => useTourProgress());
-    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-    token = null;
-    rerender();
-    expect(pendingDone('u1')).toEqual([]);
-    token = 'tok';
-  });
-
   it('should save a finished tour and a dismissed card, once each', async () => {
     getProgress.mockResolvedValue({ items: [] });
     renderHook(() => useTourProgress());

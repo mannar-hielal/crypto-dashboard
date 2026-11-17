@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { HelmetProvider } from 'react-helmet-async';
 import App from './App.tsx';
+import { forgetOnSignOut } from './learn/signedOut';
 import './index.css';
 
 // Service worker is auto-registered by vite-plugin-pwa (registerType: 'autoUpdate')
@@ -21,6 +22,9 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
+
+// The device forgets an account's own things at sign-out, whichever screen is showing
+forgetOnSignOut();
 
 createRoot(root).render(
   <StrictMode>

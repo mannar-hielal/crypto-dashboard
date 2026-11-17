@@ -12,14 +12,7 @@ import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { noteFinishSent } from '@/learn/finishSync';
-import {
-  dropDone,
-  dropMany,
-  forgetAllDone,
-  pendingDone,
-  queueDone,
-  type PendingDone,
-} from '@/learn/pendingDone';
+import { dropDone, dropMany, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
@@ -144,12 +137,10 @@ function sendReached(id: LessonId, screen: number, accessToken: string): void {
 export function useTourProgress(): void {
   const accessToken = useAuthStore((s) => s.accessToken);
 
-  // Signed out: the furthest screens belong to the account that made them, never the next one; the
-  // device keeps no account's unsaved finishes either (forgetAllDone)
+  // No account: the furthest screens belong to the one that made them (sign-out itself is handled
+  // by learn/signedOut.ts, which also forgets the device's unsaved finishes)
   useEffect(() => {
-    if (accessToken) return;
-    useLessonStore.getState().clearReached();
-    forgetAllDone();
+    if (!accessToken) useLessonStore.getState().clearReached();
   }, [accessToken]);
 
   // Read
