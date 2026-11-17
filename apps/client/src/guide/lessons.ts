@@ -195,15 +195,6 @@ export interface LessonCard {
 }
 
 /** One "You can now…" line on the close, with the article that goes deeper */
-/**
- * The birth of Bitcoin, staged on a summary (`GenesisReveal`, owner 2026-11-12): after the problem
- * lines, each story line fades in and out in turn, then the Bitcoin mark, with the highlight under it
- */
-export interface BirthStory {
-  /** Each line in turn; `emphasis`, a part of its text, is set apart (Satoshi's name) */
-  lines: { text: string; emphasis?: string }[];
-}
-
 export interface CanDo {
   text: string;
   /** The article it opens; none yet = a plain line (owner 2026-11-16) */
@@ -279,7 +270,6 @@ export interface Lesson {
     points: CanDo[];
     /** The conclusion; with no article it has no Read more (Lesson 1's ending, owner 2026-11-12) */
     highlight?: { text: string; article?: ArticleId; section?: string };
-    genesis?: BirthStory;
   };
   /**
    * The lesson the close offers next. None: the path shows what comes next (Lesson 3 since the
@@ -301,24 +291,6 @@ export interface Lesson {
 
 /** Lesson 1's length: its card, the guides' meeting and the welcome card all say it */
 const LESSON_01_MINUTES = 9;
-
-/**
- * The birth of Bitcoin, staged on a summary (owner 2026-11-12). Lesson 1 told it until the rewrite
- * of 2026-11-16; Lesson 2 (why Bitcoin exists) tells it now. 2008: banks failed and governments and
- * central banks rescued them; Lehman Brothers, founded 1850, filed for bankruptcy on 15 September
- * 2008; the Bitcoin paper is dated 31 October 2008 (bitcoin-story).
- */
-export const BITCOIN_BIRTH: BirthStory = {
-  lines: [
-    { text: 'However, for most people there was no other choice.' },
-    { text: 'In 2008, that trust broke: Lehman Brothers, a 158-year-old bank, collapsed.' },
-    { text: 'Banks failed, and governments rushed to rescue them with newly printed money.' },
-    {
-      text: 'Then someone called Satoshi Nakamoto proposed money that no one holds or controls.',
-      emphasis: 'Satoshi Nakamoto',
-    },
-  ],
-};
 
 // ─── Lesson 1's charts: Bybit BTCUSDT / SOLUSDT perpetual daily candles (UTC closes, read and
 // fact-checked 2026-11-16, guided-learning-topics notes 13) ─────────────────────────────────────
@@ -841,8 +813,7 @@ const lessonOwnership: Lesson = {
   notePrompt: 'In your own words: why does Bitcoin need thousands of copies?',
   teaser: 'Next: why prices swing so hard, and how to spot a trap.',
   canDo: [],
-  // The birth story Lesson 1 told until the rewrite, staged here (owner 2026-11-16: "our genesis reveal
-  // can stay")
+  // Three plain lines (owner 2026-11-17: the staged birth of Bitcoin dropped after the makeover)
   recap: {
     title: 'Why Bitcoin exists',
     points: [
@@ -862,8 +833,6 @@ const lessonOwnership: Lesson = {
         section: 'timeline',
       },
     ],
-    genesis: BITCOIN_BIRTH,
-    highlight: { text: 'That was the birth of Bitcoin.' },
   },
   next: 'lesson-02',
   access: FREE,

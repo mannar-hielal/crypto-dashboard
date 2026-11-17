@@ -321,7 +321,6 @@ export const GUIDE_ANCHORS = [
   /** The close's line on what the next lesson brings */
   'lesson.teaser',
   'lesson.highlight',
-  'lesson.genesis',
   'lesson.finish-line',
   'lesson.rating',
   'lesson.finish',

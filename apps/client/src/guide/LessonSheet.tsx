@@ -29,7 +29,6 @@ import { usePaperStore } from '@/store/paperStore';
 import { GuideFigure } from './art/Guide';
 import { CardBeats } from './CardBeats';
 import { FinishLine } from './FinishLine';
-import { GenesisReveal } from './GenesisReveal';
 import { GuidesMeet } from './GuidesMeet';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
@@ -365,18 +364,7 @@ function ReadMore({
 }
 
 /** The summary before the end: the lesson's recap, or what the learner can now do */
-function SummaryView({
-  lesson,
-  screen,
-  done,
-  onDone,
-}: {
-  lesson: Lesson;
-  screen: number;
-  /** For a staged summary (`recap.genesis`): everything shown */
-  done: boolean;
-  onDone: () => void;
-}) {
+function SummaryView({ lesson, screen }: { lesson: Lesson; screen: number }) {
   const recap = lesson.recap;
   if (!recap) {
     return (
@@ -390,39 +378,14 @@ function SummaryView({
       </ul>
     );
   }
-  // A highlight with no article has no Read more (the end of Lesson 1, owner 2026-11-12). Its words
-  // are built once: in the purple box on a plain recap, under the Bitcoin mark on a staged one
+  // A highlight with no article has no Read more (the end of Lesson 1, owner 2026-11-12)
   const { article, section } = recap.highlight ?? {};
-  const highlightWords = recap.highlight && (
-    <>
+  const highlight = recap.highlight && (
+    <p className={styles.highlight} {...guide('lesson.highlight')}>
       <RichText text={recap.highlight.text} />{' '}
       {article && <ReadMore item={{ article, section }} lesson={lesson} screen={screen} />}
-    </>
-  );
-  const highlight = highlightWords && (
-    <p className={styles.highlight} {...guide('lesson.highlight')}>
-      {highlightWords}
     </p>
   );
-  if (recap.genesis) {
-    return (
-      <GenesisReveal
-        story={recap.genesis}
-        points={recap.points.map((item) => ({
-          text: item.text,
-          node: (
-            <>
-              {item.text} <ReadMore item={item} lesson={lesson} screen={screen} />
-            </>
-          ),
-        }))}
-        // The story's last line under the Bitcoin mark, not in the purple box
-        highlight={highlightWords && <span {...guide('lesson.highlight')}>{highlightWords}</span>}
-        done={done}
-        onDone={onDone}
-      />
-    );
-  }
   return (
     <>
       <ol className={styles.recap}>
@@ -590,11 +553,8 @@ export function LessonSheet() {
   const screens = lesson ? lessonScreens(lesson) : [];
   const screen = screens.at(screenIndex);
   const screenCard = lesson && screen?.kind === 'card' ? lesson.cards[screen.index] : null;
-  // A cold open, the guides' meeting and a staged summary (the birth of Bitcoin) each play first
-  const staged =
-    !!screenCard?.beats ||
-    !!screenCard?.meet ||
-    (!!lesson?.recap?.genesis && screen?.kind === 'summary');
+  // A cold open and the guides' meeting each play first
+  const staged = !!screenCard?.beats || !!screenCard?.meet;
   const ready = !staged || revealed.has(beatsKey);
   const reveal = () => setRevealed((r) => (r.has(beatsKey) ? r : new Set(r).add(beatsKey)));
 
@@ -846,7 +806,7 @@ export function LessonSheet() {
       break;
     case 'summary':
       heading = lesson.recap?.title ?? 'You can now';
-      body = <SummaryView lesson={lesson} screen={screenIndex} done={ready} onDone={reveal} />;
+      body = <SummaryView lesson={lesson} screen={screenIndex} />;
       break;
     case 'close':
       if (streakActive && streakThen && accessToken) {

@@ -17,7 +17,6 @@ import {
   lessonScreens,
   lessonStepId,
   questionGuide,
-  BITCOIN_BIRTH,
   type LessonQuestion,
   lessonOwnsTour,
   screenTour,
@@ -300,14 +299,17 @@ describe('lessons', () => {
     const charge = l.cards.find((c) => c.title === 'No one in charge')!;
     expect(charge.text).toMatch(/never be more than 21 million/);
     expect(charge.text).toMatch(/anyone can read the whole ledger/);
-    // The birth story, staged in the summary
-    expect(l.recap?.genesis).toBe(BITCOIN_BIRTH);
-    expect(l.recap?.highlight?.text).toBe('That was the birth of Bitcoin.');
+    // The summary: three plain points, no staged birth story (owner 2026-11-17)
+    expect(l.recap?.title).toBe('Why Bitcoin exists');
+    expect(l.recap?.points).toHaveLength(3);
+    expect(Object.keys(l.recap ?? {})).toEqual(['title', 'points']);
   });
 
   it('should tease each next lesson on its close', () => {
-    // A concrete 2008: Lehman Brothers (the birth story Lesson 2 tells since the rewrite)
-    expect(BITCOIN_BIRTH.lines[1].text).toMatch(/Lehman Brothers, a 158-year-old bank/);
+    // A concrete 2008: Lehman Brothers, on Lesson 2's own card
+    expect(
+      getLesson('lesson-ownership').cards.find((c) => c.title === '2008: trust broke')?.text
+    ).toMatch(/Lehman Brothers, a bank founded in 1850/);
     expect(getLesson('lesson-01').teaser).toMatch(/^Next: where Bitcoin came from/);
     expect(getLesson('lesson-ownership').teaser).toMatch(/^Next: why prices swing/);
     expect(getLesson('lesson-02').teaser).toBeUndefined();

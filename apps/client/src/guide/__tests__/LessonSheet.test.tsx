@@ -638,7 +638,6 @@ describe('LessonSheet', () => {
     expect(document.querySelector('#lesson-heading')!.textContent).toBe('What you learned');
     // Owner 2026-11-16: four lines have no article yet (plain text); price swings has one
     expect(document.querySelectorAll('[data-guide="lesson.recap"]')).toHaveLength(1);
-    expect(document.querySelector('[data-guide="lesson.genesis"]')).toBeNull();
     const highlight = document.querySelector('[data-guide="lesson.highlight"]')!;
     expect(highlight.textContent).toContain('Decide when and why before you click.');
     expect(highlight.querySelector('button')).toBeNull();
@@ -672,11 +671,15 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
   });
 
-  it('should show a summary with no genesis at once', () => {
-    at(12); // Lesson 3
+  it('should sum Lesson 2 up in three plain points, with no birth story (owner 2026-11-17)', () => {
+    at(19, 'lesson-ownership');
     renderSheet();
-    expect(document.querySelector('[data-guide="lesson.genesis"]')).toBeNull();
+    expect(document.querySelector('#lesson-heading')!.textContent).toBe('Why Bitcoin exists');
+    expect(sheet()!.querySelectorAll('ol li')).toHaveLength(3);
+    expect(sheet()!.textContent).not.toMatch(/Satoshi|Lehman|birth/);
+    // Shown at once, nothing staged: the button is ready
     expect(nextBtn()!.dataset.ready).toBe('true');
+    expect(nextBtn()!.textContent).toBe('Finish lesson');
   });
 
   it('should end Lesson 1 on the ribbon, the journal, the rating and the way to Lesson 2', () => {
