@@ -24,7 +24,7 @@ import { useAuthStore } from '@/store/authStore';
 import { ArticleWidget } from '@/learn/ArticleWidgets';
 import type { Concept } from '@/learn/concepts';
 import { conceptFor, lessonPlaceLabel, lessonPlacesOf } from '@/learn/graph';
-import { parseTerms } from '@/learn/terms';
+import { RichText } from '@/learn/RichText';
 import { usePaperStore } from '@/store/paperStore';
 import { GuideFigure } from './art/Guide';
 import { CardBeats } from './CardBeats';
@@ -62,34 +62,45 @@ const NOTE_MAX = 500;
 
 // ─── Terms and their peek ────────────────────────────────────────────────────
 
-/** Card text with its terms as buttons; an unknown id stays plain text */
-function CardText({
-  text,
-  openTerm,
-  onTerm,
-}: {
+interface LessonTextProps {
   text: string;
   openTerm: string | null;
   onTerm: (id: string) => void;
-}) {
+}
+
+/**
+ * Lesson text through the one inline renderer: bold and italic runs, and its terms as buttons that
+ * open the peek (an unknown id stays plain text). Card text and the guides' lines alike (owner
+ * 2026-11-17: a line's term showed its brackets)
+ */
+function LessonText({ text, openTerm, onTerm }: LessonTextProps) {
   return (
-    <p className={styles.text}>
-      {parseTerms(text).map((seg) => {
-        const concept = seg.concept ? conceptFor(seg.concept) : null;
-        if (!concept) return seg.text;
+    <RichText
+      text={text}
+      renderTerm={(label, id) => {
+        const concept = conceptFor(id);
+        if (!concept) return label;
         return (
           <button
-            key={`term:${concept.id}`}
             type="button"
             className={styles.term}
             aria-expanded={openTerm === concept.id}
             onClick={() => onTerm(concept.id)}
             {...guide('lesson.term', concept.id)}
           >
-            {seg.text}
+            {label}
           </button>
         );
-      })}
+      }}
+    />
+  );
+}
+
+/** A card's text paragraph */
+function CardText(props: LessonTextProps) {
+  return (
+    <p className={styles.text}>
+      <LessonText {...props} />
     </p>
   );
 }
@@ -217,7 +228,11 @@ export function QuestionView({
   const guideNow = questionGuide(q, answer);
   return (
     <>
-      {q.context && <p className={styles.context}>{q.context}</p>}
+      {q.context && (
+        <p className={styles.context}>
+          <RichText text={q.context} />
+        </p>
+      )}
       <div className={styles.questionHead}>
         <GuideFigure who={guideNow.who} mood={guideNow.mood} className={styles.reactGuide} />
         <p className={styles.question}>{q.question}</p>
@@ -368,7 +383,7 @@ function SummaryView({
         {lesson.canDo.map((item) => (
           <li key={item.text}>
             <span aria-hidden="true">✓ </span>
-            {item.text}. <ReadMore item={item} lesson={lesson} screen={screen} />
+            <RichText text={item.text} />. <ReadMore item={item} lesson={lesson} screen={screen} />
           </li>
         ))}
       </ul>
@@ -379,7 +394,7 @@ function SummaryView({
   const { article, section } = recap.highlight ?? {};
   const highlightWords = recap.highlight && (
     <>
-      {recap.highlight.text}{' '}
+      <RichText text={recap.highlight.text} />{' '}
       {article && <ReadMore item={{ article, section }} lesson={lesson} screen={screen} />}
     </>
   );
@@ -412,7 +427,7 @@ function SummaryView({
       <ol className={styles.recap}>
         {recap.points.map((item) => (
           <li key={item.text}>
-            {item.text} <ReadMore item={item} lesson={lesson} screen={screen} />
+            <RichText text={item.text} /> <ReadMore item={item} lesson={lesson} screen={screen} />
           </li>
         ))}
       </ol>
@@ -763,7 +778,7 @@ export function LessonSheet() {
             <ul className={styles.points}>
               {card.points.map((point) => (
                 <li key={point.label}>
-                  <strong>{point.label}</strong> {point.text}
+                  <strong>{point.label}</strong> <RichText text={point.text} />
                 </li>
               ))}
             </ul>
@@ -782,7 +797,8 @@ export function LessonSheet() {
             <p key={line.text} className={styles.line}>
               <GuideAvatar who={line.speaker} />
               <span>
-                <strong className={styles.speaker}>{GUIDE_NAMES[line.speaker]}</strong> {line.text}
+                <strong className={styles.speaker}>{GUIDE_NAMES[line.speaker]}</strong>{' '}
+                <LessonText text={line.text} openTerm={openTerm} onTerm={toggleTerm} />
               </span>
             </p>
           ))}

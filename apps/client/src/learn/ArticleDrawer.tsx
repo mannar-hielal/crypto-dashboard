@@ -3,7 +3,7 @@
  * right over the dimmed dashboard, full screen on phones. From a lesson it says where it came from
  * ("← Back to Lesson 1") and the lesson waits behind it. It ends with a short self-test, the ways
  * to practise it on the real screen, and its sources, folded away so the reading never leaves the
- * app. Article text is our own, plain, with `**bold**` as the only markup — never HTML.
+ * app. Article text is our own, plain, with `**bold**` as the only markup — never HTML (`RichText`).
  */
 
 import { useTourWide } from '@/guide/useTourWide';
@@ -19,19 +19,9 @@ import { startLesson, startTour } from '@/guide/afterNote';
 import { getArticle, type ArticleBlock } from './articles';
 import { useArticleStore } from './articleStore';
 import { ArticleWidget } from './ArticleWidgets';
+import { RichText } from './RichText';
 import { practiceFor, type PracticeLink } from './graph';
 import styles from './ArticleDrawer.module.css';
-
-/** `**bold**` runs as <strong>; everything else stays plain text (never parsed as HTML) */
-export function RichText({ text }: { text: string }) {
-  const parts = text.split(/\*\*(.+?)\*\*/g);
-  return (
-    <>
-      {/* Odd parts are the captured bold runs; plain strings need no key */}
-      {parts.map((part, i) => (i % 2 === 1 ? <strong key={`b:${part}`}>{part}</strong> : part))}
-    </>
-  );
-}
 
 const sectionId = (id: string) => `article-section-${id}`;
 

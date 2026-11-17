@@ -16,7 +16,7 @@
 
 import { FREE, type Entitlement } from '@/learn/access';
 import type { ArticleId, WidgetId } from '@/learn/articles';
-import { plainText } from '@/learn/terms';
+import { plainText, termIds } from '@/learn/terms';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId, PracticeTourId } from './tours';
 
@@ -1312,11 +1312,19 @@ export function lessonScreenOfStep(lesson: Lesson, step: number): number | null 
   return screen >= 0 && screen < lessonScreens(lesson).length ? screen : null;
 }
 
+/**
+ * The terms a card marks, in its text and its guides' lines (both open the peek since 2026-11-17):
+ * the two-terms rule, and where a concept is taught (`learn/graph.ts`)
+ */
+export function cardTermIds(card: LessonCard): string[] {
+  return [card.text ?? '', ...(card.lines ?? []).map((l) => l.text)].flatMap(termIds);
+}
+
 /** Every word in a card, for the 80-word rule (a term counts as the words of its label) */
 export function cardWords(card: LessonCard): number {
   const text = [
     plainText(card.text ?? ''),
-    ...(card.lines ?? []).map((l) => l.text),
+    ...(card.lines ?? []).map((l) => plainText(l.text)),
     ...(card.meet ? [card.meet.tick, card.meet.tock, card.meet.lead, ...card.meet.list] : []),
     ...(card.points ?? []).flatMap((p) => [p.label, p.text]),
     ...(card.beats ?? []).map((b) => b.text),

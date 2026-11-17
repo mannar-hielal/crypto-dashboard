@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTerms, plainText, termIds } from '@/learn/terms';
+import { parseInline, parseTerms, plainText, termIds } from '@/learn/terms';
 
 describe('terms', () => {
   it('should split text into plain runs and terms, with or without an explicit id', () => {
@@ -21,5 +21,20 @@ describe('terms', () => {
     const t = 'An [[exchange]] sets the [[last deal|last-price]]';
     expect(plainText(t)).toBe('An exchange sets the last deal');
     expect(termIds(t)).toEqual(['exchange', 'last-price']);
+  });
+
+  it('should read **bold** and *italic* runs, leaving a term’s label and a lone * alone', () => {
+    expect(parseInline('Going **long** is *the* move: 2 * 3 [[candle]].')).toEqual([
+      { text: 'Going ' },
+      { text: 'long', bold: true },
+      { text: ' is ' },
+      { text: 'the', em: true },
+      { text: ' move: 2 * 3 ' },
+      { text: 'candle', concept: 'candle' },
+      { text: '.' },
+    ]);
+    expect(plainText('Your **$1,000**, *right now*, a [[ledger]]')).toBe(
+      'Your $1,000, right now, a ledger'
+    );
   });
 });

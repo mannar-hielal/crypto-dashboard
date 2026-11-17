@@ -8,6 +8,7 @@ import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   LESSON_IDS,
   LESSONS,
+  cardTermIds,
   cardWords,
   getLesson,
   isLessonId,
@@ -140,8 +141,9 @@ describe('lessons', () => {
       });
 
       it('should mark at most two terms a card, and end on two or three things the learner can do', () => {
+        // Its text and its guides' lines together (both open the peek since 2026-11-17)
         for (const card of lesson.cards) {
-          expect(termIds(card.text ?? '').length, card.title).toBeLessThanOrEqual(2);
+          expect(cardTermIds(card).length, card.title).toBeLessThanOrEqual(2);
         }
         // A lesson with a recap sums up there (its can-do list may be empty)
         if (!lesson.recap) {
@@ -446,11 +448,12 @@ describe('lessons', () => {
     const firstTaught = new Map<string, number>();
     for (const l of LESSONS) {
       for (const card of l.cards) {
-        const ids = termIds(card.text ?? '');
+        const ids = cardTermIds(card);
+        const words = [card.text ?? '', ...(card.lines ?? []).map((x) => x.text)].join(' ');
         for (const id of ids) {
           const earlier = firstTaught.get(id);
           if (earlier !== undefined && earlier < l.number) {
-            expect(card.text, `${l.id}: ${card.title}`).toMatch(
+            expect(words, `${l.id}: ${card.title}`).toMatch(
               new RegExp(`Lessons? (\\d and )?${earlier}`)
             );
           }

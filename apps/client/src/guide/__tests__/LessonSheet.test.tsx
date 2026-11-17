@@ -482,6 +482,41 @@ describe('LessonSheet', () => {
     expect(sheet()!.textContent).toContain('The power of hype');
   });
 
+  // ── The inline markup (owner 2026-11-17: **word** showed its asterisks) ──────────
+
+  it('should set **bold** and *italic* apart on every card of every lesson, never showing a *', () => {
+    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02'] as const) {
+      const screens = lessonScreens(getLesson(id));
+      screens.forEach((s, i) => {
+        if (s.kind !== 'card') return;
+        at(i, id);
+        const { unmount } = renderSheet();
+        fireEvent.keyDown(sheet()!, { key: 'Enter' }); // a cold open's lines in at once
+        expect(sheet()!.textContent, `${id} screen ${i}`).not.toMatch(/\*|\[\[/);
+        unmount();
+      });
+    }
+    at(3, 'lesson-01'); // Buy and Sell
+    renderSheet();
+    const bold = [...sheet()!.querySelectorAll('p strong')].map((b) => b.textContent);
+    expect(bold).toEqual(['Buy', 'Sell']);
+  });
+
+  it('should make a term in a guide’s line a button that opens its peek', () => {
+    const l1 = getLesson('lesson-01');
+    const screenIndex = lessonScreens(l1).findIndex(
+      (s) => s.kind === 'card' && l1.cards[s.index].title === 'The market never sleeps'
+    );
+    at(screenIndex, 'lesson-01');
+    renderSheet();
+    const term = document.querySelector<HTMLButtonElement>(
+      '[data-guide="lesson.term"][data-guide-key="slippage"]'
+    )!;
+    expect(term.textContent).toBe('slippage');
+    fireEvent.click(term);
+    expect(document.querySelector('[data-guide="lesson.peek"]')).not.toBeNull();
+  });
+
   // ── Lesson 1's cold open and the Next button (owner's visual Q&A 2026-10-25) ───
 
   it('should hold Next until the cold open’s lines are in, then name what comes next', () => {

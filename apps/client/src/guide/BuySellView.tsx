@@ -11,6 +11,7 @@ import { AnswerResult } from './AnswerResult';
 import { useRef, type KeyboardEvent } from 'react';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
+import { RichText } from '@/learn/RichText';
 import { QUIZ_MARK_SIZE } from './quizMarks';
 import type { LessonQuestion } from './lessons';
 import styles from './BuySellView.module.css';
@@ -41,7 +42,11 @@ export function BuySellView({
 
   return (
     <>
-      {q.plan && <p className={styles.plan}>{q.plan}</p>}
+      {q.plan && (
+        <p className={styles.plan}>
+          <RichText text={q.plan} />
+        </p>
+      )}
       <p className={styles.question}>{q.question}</p>
       <div className={styles.sides} role="group" aria-label={q.question}>
         {SIDES.map(({ label, Icon, className }, i) => {

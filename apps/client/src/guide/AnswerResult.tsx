@@ -4,6 +4,7 @@
  * repeating the pick, which is already marked). Announced to screen readers as it appears.
  */
 
+import { RichText } from '@/learn/RichText';
 import styles from './QuizBoard.module.css';
 
 export function AnswerResult({
@@ -19,7 +20,7 @@ export function AnswerResult({
   return (
     <p className={className} role="status">
       <strong>{right ? 'Right. ' : 'Not quite. '}</strong>
-      {explain}
+      <RichText text={explain} />
     </p>
   );
 }
