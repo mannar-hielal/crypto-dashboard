@@ -104,6 +104,17 @@ describe('useHabits', () => {
     await waitFor(() => expect(result.current.failed).toBe(true));
     // A count that misses today's finish is never shown
     expect(result.current.habits).toBeNull();
-    expect(getHabits).not.toHaveBeenCalled();
+  });
+
+  it('should still show the streak when the finish failed but today was already counted', async () => {
+    let fail: (e: Error) => void = () => undefined;
+    noteFinishSent(null, new Promise<void>((_, reject) => (fail = reject)));
+    const today = (new Date().getDay() + 6) % 7;
+    const counted = { ...habits, thisWeek: Array.from({ length: 7 }, (_, i) => i === today) };
+    getHabits.mockResolvedValue(counted);
+    const { result } = renderHook(() => useHabits('t'));
+    await act(async () => fail(new Error('5xx')));
+    await waitFor(() => expect(result.current.habits).toEqual(counted));
+    expect(result.current.failed).toBe(false);
   });
 });
