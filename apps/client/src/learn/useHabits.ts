@@ -29,9 +29,10 @@ export function useHabits(
     let cancelled = false;
     // After the last finish's event lands: the server then counts today's finish
     finishSaved(account)
-      .then(() => learnApi.getHabits(accessToken))
+      // (a run cancelled while it waited sends nothing)
+      .then(() => (cancelled ? null : learnApi.getHabits(accessToken)))
       .then((r) => {
-        if (!cancelled) setRead({ account, habits: r, failed: false });
+        if (!cancelled && r) setRead({ account, habits: r, failed: false });
       })
       .catch(() => {
         if (cancelled) return;

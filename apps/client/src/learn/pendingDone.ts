@@ -47,7 +47,7 @@ function isPending(v: unknown): v is PendingDone {
 }
 
 /**
- * The stored list in today's shape, from any version this module ever wrote (only 1 so far; a new
+ * The stored list in today's shape, from any version this module ever wrote (1 and today's 2; a new
  * shape adds its step here). Anything else reads as nothing kept: it's validated item by item after
  */
 function migrate(raw: unknown): unknown[] {

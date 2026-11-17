@@ -67,4 +67,14 @@ describe('useHabits', () => {
     rerender({ t: 't3' });
     expect(result.current.habits).toBeNull();
   });
+
+  it('should send nothing for a read cancelled while it waited for a finish', async () => {
+    let land: () => void = () => undefined;
+    noteFinishSent(null, new Promise<void>((resolve) => (land = resolve)));
+    getHabits.mockResolvedValue(habits);
+    const { unmount } = renderHook(() => useHabits('t'));
+    unmount(); // the map closed (or the token changed) while it waited
+    await act(async () => land());
+    expect(getHabits).not.toHaveBeenCalled();
+  });
 });

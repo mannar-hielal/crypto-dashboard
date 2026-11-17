@@ -147,9 +147,10 @@ function stepLabel(itemId: string, stepId: string): string {
  * server's numeric order would list them last); a lesson's are already in screen order
  */
 function inTourOrder(tour: TourFunnelTour): TourFunnelTour['steps'] {
-  const order = TOURS.find((t) => t.id === tour.itemId)?.steps.map((st) => st.id);
-  if (!order) return tour.steps;
-  const at = (id: string) => (order.includes(id) ? order.indexOf(id) : order.length);
+  const steps = TOURS.find((t) => t.id === tour.itemId)?.steps;
+  if (!steps) return tour.steps;
+  const position = new Map(steps.map((st, i) => [st.id, i]));
+  const at = (id: string) => position.get(id) ?? steps.length;
   return [...tour.steps].sort((a, b) => at(a.stepId) - at(b.stepId));
 }
 
