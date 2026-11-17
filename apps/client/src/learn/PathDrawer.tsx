@@ -7,12 +7,11 @@
  * material and are never locked — and the habit badges.
  */
 
+import { useHabits } from './useHabits';
 import { useTourWide } from '@/guide/useTourWide';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { BookText, Flame, X } from 'lucide-react';
-import { learnApi } from '@crypto-dashboard/sdk';
-import type { HabitsResponse } from '@crypto-dashboard/sdk';
 import { useNavigate } from 'react-router';
 import { guide } from '@/lib/guideAnchors';
 import { bg, color } from '@/lib/tokens';
@@ -263,29 +262,11 @@ export function PathDrawer() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const view = usePathView();
   const [tab, setTab] = useState<Tab>('path');
-  const [habits, setHabits] = useState<HabitsResponse | null>(null);
-  const [habitsError, setHabitsError] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
 
   // Habits are counted on the server: read whenever the map opens, and again after a new finish
   const finished = view.chapters.reduce((n, c) => n + c.done, 0);
-  useEffect(() => {
-    if (!open || !accessToken) return;
-    let cancelled = false;
-    learnApi
-      .getHabits(accessToken)
-      .then((r) => {
-        if (cancelled) return;
-        setHabits(r);
-        setHabitsError(false);
-      })
-      .catch(() => {
-        if (!cancelled) setHabitsError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, accessToken, finished]);
+  const { habits, failed: habitsError } = useHabits(open ? accessToken : null, finished);
 
   // Esc closes
   useEffect(() => {

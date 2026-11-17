@@ -7,10 +7,10 @@
  * if they can't load, the screen says so and Continue still goes on.
  */
 
+import { useHabits } from '@/learn/useHabits';
 import { useEffect, useState } from 'react';
 import { animate, useReducedMotion } from 'framer-motion';
 import { Flame } from 'lucide-react';
-import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { guide } from '@/lib/guideAnchors';
 import styles from './StreakView.module.css';
 
@@ -25,24 +25,8 @@ export function StreakView({
   onContinue: () => void;
 }) {
   const reduced = useReducedMotion();
-  const [habits, setHabits] = useState<HabitsResponse | null>(null);
-  const [failed, setFailed] = useState(false);
+  const { habits, failed } = useHabits(accessToken);
   const [shown, setShown] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    learnApi
-      .getHabits(accessToken)
-      .then((r) => {
-        if (!cancelled) setHabits(r);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
 
   // Count up to the streak; with reduced motion the number is shown as it is
   const streak = habits?.streakDays ?? 0;
