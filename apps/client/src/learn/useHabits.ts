@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
-import { accountOf } from './account';
+import { accountFromToken } from './account';
 import { finishSaved } from './finishSync';
 
 /**
@@ -15,10 +15,9 @@ export function useHabits(
 ): { habits: HabitsResponse | null; failed: boolean } {
   // Whose answer it is, by account (a session refresh changes the token, not the account): another
   // account's (a sign-out, then a sign-in) is never shown
-  // The account (accountOf: the profile's id, or the token's own user while the profile loads); the
-  // profile's id is watched only so a profile that loads re-renders
-  useAuthStore((s) => s.user?.id);
-  const account = accountOf(accessToken);
+  // The account: the profile's id, or the token's own user while the profile loads
+  const profileId = useAuthStore((s) => s.user?.id ?? null);
+  const account = profileId ?? accountFromToken(accessToken);
   const [read, setRead] = useState<{
     account: string | null;
     habits: HabitsResponse | null;

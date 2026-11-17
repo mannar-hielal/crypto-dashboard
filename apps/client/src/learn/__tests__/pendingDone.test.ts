@@ -62,4 +62,14 @@ describe('pendingDone', () => {
     expect(pendingDone('b')).toEqual([]);
     expect(localStorage.getItem('cd-layout')).toBe('x');
   });
+
+  it('should drop a refused finish only while it still holds the refused step', () => {
+    queueDone('a', { itemId: 'lesson-01', step: 81 });
+    // A newer finish of the item was kept while the refused one was on its way
+    queueDone('a', { itemId: 'lesson-01', step: 82 });
+    dropDone('a', 'lesson-01', 81);
+    expect(pendingDone('a')).toEqual([expect.objectContaining({ itemId: 'lesson-01', step: 82 })]);
+    dropDone('a', 'lesson-01', 82);
+    expect(pendingDone('a')).toEqual([]);
+  });
 });

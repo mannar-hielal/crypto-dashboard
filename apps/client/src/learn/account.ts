@@ -7,8 +7,11 @@ import { useAuthStore } from '@/store/authStore';
  * `userId` (read, not verified: it only names the account's things here)
  */
 export function accountOf(accessToken: string | null): string | null {
-  const id = useAuthStore.getState().user?.id;
-  if (id) return id;
+  return useAuthStore.getState().user?.id ?? accountFromToken(accessToken);
+}
+
+/** The access token's own `userId` (read, not verified), or null */
+export function accountFromToken(accessToken: string | null): string | null {
   if (!accessToken) return null;
   const userId = tokenPayload(accessToken)?.userId;
   return typeof userId === 'string' && userId !== '' ? userId : null;

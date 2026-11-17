@@ -12,7 +12,7 @@ import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { noteFinishSent } from '@/learn/finishSync';
-import { dropDone, dropMany, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
+import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
@@ -37,18 +37,10 @@ let applyingServer = false;
  * a checkpoint's own question set. One kept under another version (a release since) is dropped,
  * never shown as done or counted
  */
-function currentQueued(account: string): PendingDone[] {
-  const kept = pendingDone(account);
-  const current = kept.filter((q) =>
-    isLessonId(q.itemId)
-      ? lessonScreenOfStep(getLesson(q.itemId), q.step) !== null
-      : q.step === getCheckpoint(q.itemId).version
-  );
-  dropMany(
-    account,
-    kept.filter((q) => !current.includes(q)).map((q) => q.itemId)
-  );
-  return current;
+function isCurrentVersion(q: PendingDone): boolean {
+  return isLessonId(q.itemId)
+    ? lessonScreenOfStep(getLesson(q.itemId), q.step) !== null
+    : q.step === getCheckpoint(q.itemId).version;
 }
 
 /** A lesson finish or a checkpoint pass refused as an earlier version: no longer shown as done */
@@ -71,11 +63,17 @@ function undone(itemId: PendingDone['itemId']): void {
  * (learn/pendingDone.ts), still shown as done. One refused as an earlier version (409), which no
  * retry changes, is dropped and taken back off the screen
  */
-function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: string): void {
+function saveDone(
+  itemId: PendingDone['itemId'],
+  step: number,
+  accessToken: string,
+  { kept = false }: { kept?: boolean } = {}
+): void {
   const account = accountOf(accessToken);
   // Kept before it's sent, and until a read shows the server has it (not dropped when the save
-  // lands: a read that left before the save and answers after it would hide it again)
-  if (account) queueDone(account, { itemId, step });
+  // lands: a read that left before the save and answers after it would hide it again). A resend
+  // from the read is already kept
+  if (account && !kept) queueDone(account, { itemId, step });
   // One save of an item at a time: a read meanwhile doesn't send it again
   const key = `${account ?? ''}:${itemId}`;
   if (inFlight.has(key)) return;
@@ -96,7 +94,8 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
       // session, an older API's 400) stays kept. Told apart by status, never the words
       const status = (err as { status?: unknown } | null)?.status;
       if (typeof status !== 'number' || !REFUSED_FOR_GOOD.has(status)) return;
-      if (account) dropDone(account, itemId);
+      // (only this finish: a newer one of the item, kept meanwhile, stays)
+      if (account) dropDone(account, itemId, step);
       if (accountOf(useAuthStore.getState().accessToken) !== account) return;
       return (
         learnApi
@@ -121,12 +120,13 @@ const SAVE_HOLD_MS = 20_000;
 const inFlight = new Map<string, symbol>();
 
 /**
- * Answers no retry changes: not found, an earlier version (409), unprocessable. Never 400: that is
+ * Answers no retry changes: an earlier version (409), unprocessable. Never a 404 (an edge or a
+ * proxy may answer one; the route never does for a known item) nor a 400: that is
  * what an older API answers a newer client (one from before 2026-11-16 refuses the step; a later
  * one refuses a step past its version), and that finish is kept until the API is back, at most 30
  * days (learn/pendingDone.ts)
  */
-const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([404, 409, 422]);
+const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([409, 422]);
 
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
@@ -157,16 +157,14 @@ export function useTourProgress(): void {
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         const account = accountOf(accessToken);
-        const queued = account ? currentQueued(account) : [];
-        const stillQueued = queued.filter(
-          (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
+        // (the stored list read once, worked out in memory, and written once)
+        const kept = account ? pendingDone(account) : [];
+        const stillQueued = kept.filter(
+          (q) =>
+            isCurrentVersion(q) &&
+            !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
         );
-        if (account) {
-          dropMany(
-            account,
-            queued.filter((q) => !stillQueued.includes(q)).map((q) => q.itemId)
-          );
-        }
+        if (account && stillQueued.length !== kept.length) keepOnly(account, stillQueued);
         const lessons = [
           ...new Set([
             ...items
@@ -226,7 +224,7 @@ export function useTourProgress(): void {
         } finally {
           applyingServer = false;
         }
-        for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken);
+        for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken, { kept: true });
       })
       .catch(() => {
         // Can't read it. A read again (a session refresh) leaves everything shown as it is; a first
@@ -235,7 +233,9 @@ export function useTourProgress(): void {
           // (finishes and passes this device still has to save stay shown, as on a read that lands;
           // nothing here is echoed back)
           const account = accountOf(accessToken);
-          const queued = (account ? currentQueued(account) : []).map((q) => q.itemId);
+          const queued = (account ? pendingDone(account) : [])
+            .filter(isCurrentVersion)
+            .map((q) => q.itemId);
           applyingServer = true;
           try {
             useTourStore

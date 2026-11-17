@@ -512,6 +512,16 @@ describe('useTourProgress', () => {
       getProgress.mockResolvedValue({ items: [] });
     });
 
+    it('should keep a finish answered with a 404 (an edge or a proxy, not the route)', async () => {
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('Not Found'), { status: 404 }));
+      act(() => useLessonStore.getState().finish());
+      await act(async () => {});
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      expect(pendingDone('u1')).toHaveLength(1);
+    });
+
     it('should drop a kept finish the server already has, without sending it again', async () => {
       localStorage.clear();
       queueDone('u1', { itemId: 'lesson-01', step: 81 });

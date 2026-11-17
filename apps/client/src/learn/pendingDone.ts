@@ -92,17 +92,22 @@ export function queueDone(account: string, item: Omit<PendingDone, 'since'>): vo
 }
 
 /** Saved, or refused for good (an earlier version): kept no longer */
-export function dropDone(account: string, itemId: PendingDone['itemId']): void {
-  dropMany(account, [itemId]);
-}
-
-/** Several at once: one read and one write of the stored list */
-export function dropMany(account: string, itemIds: readonly PendingDone['itemId'][]): void {
-  if (itemIds.length === 0) return;
+/**
+ * Drop one: only while it still holds `step` when given (a newer finish of the item, kept while
+ * this one was on its way, stays)
+ */
+export function dropDone(account: string, itemId: PendingDone['itemId'], step?: number): void {
   write(
     account,
-    pendingDone(account).filter((p) => !itemIds.includes(p.itemId))
+    pendingDone(account).filter(
+      (p) => p.itemId !== itemId || (step !== undefined && p.step !== step)
+    )
   );
+}
+
+/** Keep exactly these (a read worked out which stay): one write */
+export function keepOnly(account: string, items: PendingDone[]): void {
+  write(account, items);
 }
 
 /**
