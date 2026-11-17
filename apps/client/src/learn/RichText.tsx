@@ -22,6 +22,9 @@ export function RichText({ text, renderTerm }: RichTextProps) {
         // changes under the same renderer, so the place is stable)
         if (seg.concept) {
           return (
+            // (Keyed by place and content: the same word may appear twice in one text, so content
+            // alone isn't unique; a text's runs are rebuilt whole, never reordered. Weighed, review
+            // after release #302)
             <Fragment key={`t:${i}:${seg.concept}`}>
               {renderTerm ? renderTerm(seg.text, seg.concept) : seg.text}
             </Fragment>

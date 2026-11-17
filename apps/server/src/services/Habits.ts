@@ -189,7 +189,8 @@ export function streakEndingAt(days: ReadonlySet<number>, today: number): number
 
 /** This week's learning days, Monday first (the learner's days, as the streak counts them) */
 export function weekDays(days: ReadonlySet<number>, today: number): boolean[] {
-  // Day 0 (1 Jan 1970) was a Thursday: Monday is 3 days after it
+  // Day 0 (1 Jan 1970) was a Thursday, so (d + 3) % 7 is 0 on a Monday (day 4, 5 Jan 1970) and
+  // counts the days since the Monday of d's week
   const monday = today - ((today + 3) % 7);
   return Array.from({ length: 7 }, (_, i) => days.has(monday + i));
 }

@@ -132,7 +132,6 @@ function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
   return steps.map((s) => ({ ...s, id: `${id}.${s.screen === 'phone' ? ++phone : ++main}` }));
 }
 
-/** The tours' desktop layout applies now (outside React: the tour store) */
 /**
  * The wide layout right now. Its own query (`WIDE_LAYOUT_QUERY`, the narrow one's exact negation),
  * not `!isNarrowNow()`: the same answer in a browser, but the tests stub matchMedia per query, and

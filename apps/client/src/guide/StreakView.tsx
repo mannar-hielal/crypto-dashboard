@@ -53,6 +53,8 @@ export function StreakView({
       <Flame
         className={styles.flame}
         aria-hidden="true"
+        // A pixel size prop, as the app's lucide icons all take (tokens.ts holds no icon size;
+        // weighed, review after release #302)
         size={56}
         /* lucide icons take their size as a prop, as everywhere in the app */ strokeWidth={1.75}
       />
