@@ -274,6 +274,9 @@ export function QuestionView({
           );
         })}
       </div>
+      {/* "Not quite." with the Why, then Try again: the owner's choice (2026-11-17), weighed
+          against keeping the Why for a right answer only; the marks and the chart no longer point
+          at the answer */}
       {answered && (
         <AnswerResult right={answer === q.correct} explain={q.explain} onRetry={onRetry} />
       )}
