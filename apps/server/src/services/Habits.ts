@@ -7,7 +7,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import type { HabitBadge, HabitBadgeId, HabitsResponse } from '@crypto-dashboard/sdk';
-import { LEARN_TOUR_IDS } from '../constants.js';
+import { LEARN_TOUR_IDS, MAX_LEARN_EVENTS_PER_USER } from '../constants.js';
 import { USER_ORDER_TYPES } from './RetentionMetrics.js';
 
 type Prisma = FastifyInstance['prisma'];
@@ -220,7 +220,7 @@ export async function loadHabits(
   now: Date = new Date(),
   zone = 'UTC'
 ): Promise<HabitsResponse> {
-  const [stopLossOrders, notes, events, steps, toursCompleted] = await Promise.all([
+  const [stopLossOrders, notes, events, toursCompleted] = await Promise.all([
     prisma.order.count({
       where: {
         userId,
@@ -235,24 +235,18 @@ export async function loadHabits(
       select: { createdAt: true },
     }),
     // The rule (2026-11-17): a learning day is one with any learning event on it but a rating (a new
-    // rating deletes the earlier one of that lesson, and its day with it). Read in two parts, each
-    // with its own limit, so the many steps (about 25 a lesson) never crowd out the rest:
-    // - starts, finishes and closes: a few a run, each stored every time, so a run carried on past
-    //   midnight still marks its second day when it ends (a close or a finish);
-    // - steps: each stored once ever per learner, so they add the days a new screen was reached
-    // (Weighed, review round 25: at most 1,000 small rows a read, after a finish or on opening the
-    // map, with each quarter hour's date worked out once; a day bucket in the database would need
-    // raw SQL, which the server never uses)
+    // rating deletes the earlier one of that lesson, and its day with it): starts, finishes and
+    // closes (a few a run, each stored every time, so a run carried on past midnight still marks
+    // its second day when it ends) and steps (each stored once ever, the days a new screen was
+    // reached). One read: a learner never holds more than MAX_LEARN_EVENTS_PER_USER (500) events,
+    // so the limit takes them all (review round 37: the two reads it replaced read the same rows)
     prisma.learningEvent.findMany({
-      where: { userId, name: { in: ['tour_started', 'tour_completed', 'tour_closed'] } },
+      where: {
+        userId,
+        name: { in: ['tour_started', 'tour_completed', 'tour_closed', 'tour_step'] },
+      },
       orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
-      take: MAX_ROWS,
-      select: { at: true },
-    }),
-    prisma.learningEvent.findMany({
-      where: { userId, name: 'tour_step' },
-      orderBy: { at: 'desc' },
-      take: MAX_ROWS,
+      take: MAX_LEARN_EVENTS_PER_USER,
       select: { at: true },
     }),
     prisma.learningProgress.count({
@@ -264,7 +258,7 @@ export async function loadHabits(
     {
       stopLossOrders,
       noteTimes: notes.map((n) => n.createdAt),
-      tourTimes: [...events, ...steps].map((e) => e.at),
+      tourTimes: events.map((e) => e.at),
       toursCompleted,
     },
     now,

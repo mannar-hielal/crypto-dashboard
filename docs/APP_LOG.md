@@ -904,7 +904,7 @@ of it shipped in release #289 on 2026-11-14.
   - Practice paper trades from a card, with a guided arrow and resume.
   - A streak screen on the lesson close, with the Learn panel's counter refreshed after a lesson. A lesson
     already counts as a learning day: it sends `tour_started` (and `tour_completed`), which `Habits` counts
-    (since 2026-11-17 any learning event but a rating counts a day, steps read apart).
+    (since 2026-11-17 any learning event but a rating counts a day, all read at once: a learner holds at most 500).
   - Learners part-way through a lesson have their progress reset. The new Lesson 1 ships as soon as it's written,
     which ends the pilot's 4-week measurement early.
   - The path follows the topic order with our own titles and look; the owner places the practice (dumbbell) lessons
@@ -4666,8 +4666,8 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   own (the funnel's steps don't move). Once per lesson run; ✕ or Esc on it only finish. The days are the learner's
   own: the client sends its IANA time zone (an `X-Time-Zone: Europe/Zurich` header, the SDK's default), so the dots, the streak and
   the learning days follow the learner's calendar, each day with its own date's offset (a daylight-saving change
-  moves nothing). A day counts with any learning event on it but a rating (a start, a step, a close, a finish; steps read with
-  their own limit). The streak screen reads the habits at once: the lesson's own start already counted today (only a run
+  moves nothing). A day counts with any learning event on it but a rating (a start, a step, a close, a finish; all read in one
+  query, as a learner never holds more than 500 events). The streak screen reads the habits at once: the lesson's own start already counted today (only a run
   carried past midnight shows its new day on the next read). UTC when absent or unknown (an odd device zone never fails
   the request), and the zone is never logged: a header, never the URL, which the request log records (privacy
   policy 1.6 says so; every authenticated read already makes a CORS preflight, so the header costs

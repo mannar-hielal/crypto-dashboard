@@ -1,3 +1,4 @@
+import { MAX_LEARN_EVENTS_PER_USER } from '../constants.js';
 import { config } from '../config.js';
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
@@ -855,23 +856,22 @@ describe('GET /api/learn/habits', () => {
     });
   });
 
-  it('should count a day by any learning event but a rating, steps read apart', async () => {
+  it('should count a day by any learning event but a rating, all read at once', async () => {
     await app.inject({
       method: 'GET',
       url: '/api/learn/habits',
       headers: { authorization: `Bearer ${token}` },
     });
+    // One read: a learner never holds more events than its limit
+    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledTimes(1);
     expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           userId: 'user-1',
-          name: { in: ['tour_started', 'tour_completed', 'tour_closed'] },
+          name: { in: ['tour_started', 'tour_completed', 'tour_closed', 'tour_step'] },
         },
+        take: MAX_LEARN_EVENTS_PER_USER,
       })
-    );
-    // Steps with their own limit, so they never crowd out the rest
-    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: 'user-1', name: 'tour_step' } })
     );
   });
 
