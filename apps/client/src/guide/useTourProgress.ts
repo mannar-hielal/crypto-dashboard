@@ -1,7 +1,10 @@
 /**
  * Keeps the account's tour progress and the store in step: read it once signed in, write each new
- * finish / dismissal as it happens, and report the tour's events (the funnel). A failed write is dropped — progress then lives only in this
- * session, which is the worst case, never a broken tour.
+ * finish / dismissal as it happens, and report the tour's events (the funnel). A lesson finish or a
+ * checkpoint pass that can't be saved is kept on the device and sent again on each progress read
+ * (learn/pendingDone.ts), and shown as done meanwhile; one the server refuses as an earlier version
+ * is taken back. Any other failed write is dropped: that progress then lives only in this session,
+ * the worst case, never a broken tour.
  */
 
 import { useEffect } from 'react';
@@ -28,10 +31,25 @@ import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './to
 /** Set while the server's furthest screens are merged in: they're already stored, so never sent */
 let applyingServer = false;
 
+/** A lesson finish or a checkpoint pass refused as an earlier version: no longer shown as done */
+function undone(itemId: PendingDone['itemId']): void {
+  if (isLessonId(itemId)) {
+    const { completed, setCompleted } = useLessonStore.getState();
+    setCompleted((Object.keys(completed) as LessonId[]).filter((id) => id !== itemId));
+    return;
+  }
+  const { skippedTours, checkpoints, setProgress } = usePathStore.getState();
+  setProgress({
+    skippedTours: Object.keys(skippedTours) as TourId[],
+    checkpoints: (Object.keys(checkpoints) as CheckpointId[]).filter((id) => id !== itemId),
+  });
+}
+
 /**
- * A lesson finish or a checkpoint pass, with its version step. One that can't be saved is kept on
- * the device and sent again when the progress next loads (learn/pendingDone.ts), unless it was
- * refused as an earlier version, which no retry changes
+ * A lesson finish or a checkpoint pass, with its version step. Shown as done from the start; one
+ * that can't be saved is kept on the device and sent again on each progress read
+ * (learn/pendingDone.ts), still shown as done. One refused as an earlier version (409), which no
+ * retry changes, is dropped and taken back off the screen
  */
 function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: string): void {
   const account = useAuthStore.getState().user?.id;
@@ -45,6 +63,7 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
       // 409: an earlier version, which no retry changes (by status, never the message's words)
       if ((err as { status?: unknown } | null)?.status === 409) {
         dropDone(account, itemId);
+        undone(itemId);
       } else queueDone(account, { itemId, step });
     });
 }
@@ -74,19 +93,24 @@ export function useTourProgress(): void {
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as PathTourId);
-        // Finishes and passes this device couldn't save yet: sent again (one the server already
-        // has is dropped). Shown as done only once saved: the server stays the one record
+        // Finishes and passes this device couldn't save yet: still shown as done, and sent again
+        // (one the server already has is dropped; one refused as an earlier version is taken back)
         const account = useAuthStore.getState().user?.id;
+        const queued = account ? pendingDone(account) : [];
+        const stillQueued = queued.filter(
+          (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
+        );
         if (account) {
-          for (const q of pendingDone(account)) {
-            const saved = items.some((i) => i.itemId === q.itemId && i.status === 'completed');
-            if (saved) dropDone(account, q.itemId);
-            else saveDone(q.itemId, q.step, accessToken);
-          }
+          for (const q of queued) if (!stillQueued.includes(q)) dropDone(account, q.itemId);
         }
-        const lessons = items
-          .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
-          .map((i) => i.itemId as LessonId);
+        const lessons = [
+          ...new Set([
+            ...items
+              .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
+              .map((i) => i.itemId as LessonId),
+            ...stillQueued.map((q) => q.itemId).filter(isLessonId),
+          ]),
+        ];
         // Lesson 1 (or its primer) finished means the offer is done with, dismissed or not
         const cardDismissed =
           items.some((i) => i.itemId === 'welcome-card') ||
@@ -121,12 +145,18 @@ export function useTourProgress(): void {
           skippedTours: items
             .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
             .map((i) => i.itemId as TourId),
-          checkpoints: items
-            .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
-            .map((i) => i.itemId as CheckpointId),
+          checkpoints: [
+            ...new Set([
+              ...items
+                .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
+                .map((i) => i.itemId as CheckpointId),
+              ...stillQueued.map((q) => q.itemId).filter(isCheckpointId),
+            ]),
+          ],
         });
         const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
         useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
+        for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken);
       })
       .catch(() => {
         // Can't read it: show no offer rather than one that may already have been answered

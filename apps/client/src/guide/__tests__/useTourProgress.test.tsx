@@ -306,7 +306,7 @@ describe('useTourProgress', () => {
       expect(useLessonStore.getState()).toMatchObject({ activeId: null, finishes: 1 });
     });
 
-    it('should keep a finish that could not be saved and send it again on the next load', async () => {
+    it('should keep a finish that could not be saved, show it done, and send it again on the next read', async () => {
       localStorage.clear();
       await loaded([]);
       act(() => useLessonStore.getState().start('lesson-01'));
@@ -316,13 +316,25 @@ describe('useTourProgress', () => {
       await waitFor(() =>
         expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }])
       );
-      // Next load: sent again; it leaves the queue only once a save lands (the helper clears the
-      // write mock, so the queue is the proof). Not shown as done before: the server is the record
+      // Next read (a reload, a session refresh): still shown as done, and sent again; it leaves the
+      // queue only once a save lands (the helper clears the write mock, so the queue is the proof)
       useLessonStore.getState().reset();
       useTourStore.getState().reset();
       await loaded([]);
-      expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined();
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
       await waitFor(() => expect(pendingDone('u1')).toEqual([]));
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+    });
+
+    it('should take a finish back off the screen when the server refuses it as an earlier version', async () => {
+      localStorage.clear();
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+      act(() => useLessonStore.getState().finish());
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined());
+      expect(pendingDone('u1')).toEqual([]);
     });
 
     it('should drop a kept finish the server already has, without sending it again', async () => {

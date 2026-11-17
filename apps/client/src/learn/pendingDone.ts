@@ -20,6 +20,12 @@ const MAX_PENDING = 20;
 
 const key = (account: string) => `cd-pending-done:${account}`;
 
+/**
+ * 🔐 The stored shape's version (security.md: persisted client state is versioned): `{ v, items }`.
+ * Another version, or anything else, reads as nothing kept; a new shape bumps it and migrates here
+ */
+const VERSION = 1;
+
 function isPending(v: unknown): v is PendingDone {
   if (typeof v !== 'object' || v === null) return false;
   const { itemId, step } = v as Record<string, unknown>;
@@ -36,8 +42,12 @@ function isPending(v: unknown): v is PendingDone {
 /** The account's finishes and passes still to save */
 export function pendingDone(account: string): PendingDone[] {
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? '[]');
-    return Array.isArray(raw) ? raw.filter(isPending).slice(0, MAX_PENDING) : [];
+    const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
+    if (typeof raw !== 'object' || raw === null) return [];
+    const { v, items } = raw as Record<string, unknown>;
+    return v === VERSION && Array.isArray(items)
+      ? items.filter(isPending).slice(0, MAX_PENDING)
+      : [];
   } catch {
     return [];
   }
@@ -46,7 +56,10 @@ export function pendingDone(account: string): PendingDone[] {
 function write(account: string, items: PendingDone[]): void {
   try {
     if (items.length === 0) localStorage.removeItem(key(account));
-    else localStorage.setItem(key(account), JSON.stringify(items.slice(0, MAX_PENDING)));
+    else {
+      const stored = { v: VERSION, items: items.slice(0, MAX_PENDING) };
+      localStorage.setItem(key(account), JSON.stringify(stored));
+    }
   } catch {
     // No storage (private mode, full): nothing is kept
   }
