@@ -73,14 +73,15 @@ describe('pendingDone', () => {
     expect(pendingDone('a')).toEqual([]);
   });
 
-  it('should never keep one dated in the future (a wrong clock, an edit)', () => {
-    localStorage.setItem(
-      'cd-pending-done:a',
-      JSON.stringify({
-        v: 1,
-        items: [{ itemId: 'lesson-01', step: 81, since: Date.now() + 86_400_000 }],
-      })
-    );
-    expect(pendingDone('a')).toEqual([]);
+  it('should never keep one dated far in the future, but keep one from a clock a little fast', () => {
+    const kept = (since: number) => {
+      localStorage.setItem(
+        'cd-pending-done:a',
+        JSON.stringify({ v: 1, items: [{ itemId: 'lesson-01', step: 81, since }] })
+      );
+      return pendingDone('a').length;
+    };
+    expect(kept(Date.now() + 2 * 86_400_000)).toBe(0); // a wrong clock or an edit: never expires
+    expect(kept(Date.now() + 600_000)).toBe(1); // ten minutes fast, corrected since: still kept
   });
 });

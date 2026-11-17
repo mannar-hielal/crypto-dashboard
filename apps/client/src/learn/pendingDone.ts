@@ -37,7 +37,9 @@ function isPending(v: unknown): v is PendingDone {
   return (
     typeof since === 'number' &&
     Number.isFinite(since) &&
-    since <= Date.now() && // 🔐 never from the future (a wrong clock, an edit): the 30 days hold
+    // 🔐 never more than a day ahead (a clock corrected later stays fine; a far-future date, a wrong
+    // clock or an edit, would never expire)
+    since <= Date.now() + 86_400_000 &&
     typeof itemId === 'string' &&
     (isLessonId(itemId) || isCheckpointId(itemId)) &&
     typeof step === 'number' &&
