@@ -210,12 +210,13 @@ export async function loadHabits(
       select: { createdAt: true },
     }),
     prisma.learningEvent.findMany({
-      // A finish counts too: the streak screen shows right after a finish, and a learner who only
-      // went back and finished today did learn today. Never a rating: a new one deletes the
-      // learner's earlier rating of that lesson (and with it that day)
+      // A day is learned when a tour or a lesson is started or finished on it: every session
+      // starts one (opening a lesson again is a start), and the streak screen shows right after a
+      // finish. Not each step (about 25 a lesson), so the rows read cover far more days. Never a
+      // rating: a new one deletes the learner's earlier rating of that lesson (and that day)
       where: {
         userId,
-        name: { in: ['tour_started', 'tour_step', 'tour_completed'] },
+        name: { in: ['tour_started', 'tour_completed'] },
       },
       orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
       take: MAX_ROWS,

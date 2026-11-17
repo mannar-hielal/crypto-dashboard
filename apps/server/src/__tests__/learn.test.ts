@@ -743,7 +743,7 @@ describe('GET /api/learn/habits', () => {
     });
   });
 
-  it('should count a finish as learning, not only starts and steps (never a rating)', async () => {
+  it('should count a day by its starts and finishes (not each step, never a rating)', async () => {
     await app.inject({
       method: 'GET',
       url: '/api/learn/habits',
@@ -753,7 +753,7 @@ describe('GET /api/learn/habits', () => {
       expect.objectContaining({
         where: {
           userId: 'user-1',
-          name: { in: ['tour_started', 'tour_step', 'tour_completed'] },
+          name: { in: ['tour_started', 'tour_completed'] },
         },
       })
     );

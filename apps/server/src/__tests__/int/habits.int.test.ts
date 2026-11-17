@@ -77,9 +77,8 @@ describe('loadHabits (Postgres)', () => {
     await db.learningEvent.create({
       data: {
         userId,
-        name: 'tour_step',
+        name: 'tour_started',
         itemId: 'primer',
-        stepId: 'primer.1',
         at: new Date('2026-10-14T08:00:00Z'),
       },
     });
@@ -99,7 +98,7 @@ describe('loadHabits (Postgres)', () => {
 
     const h = await loadHabits(db, userId, NOW);
 
-    // the 13th (a note) and the 14th (a tour step); a close and an automatic line add nothing
+    // the 13th (a note) and the 14th (a tour started); a close and an automatic line add nothing
     expect(h.learningDays).toBe(2);
     expect(h.streakDays).toBe(2);
     expect(h.badges.find((b) => b.id === 'first-tour')!.earned).toBe(true);
