@@ -68,6 +68,8 @@ export function pendingDone(account: string): PendingDone[] {
   const oldest = Date.now() - MAX_AGE_MS;
   // The list a failed storage write left in memory, for this session
   const held = unstored.get(account);
+  // (write() is its only writer and keeps it capped and checked: no second pass here. Weighed,
+  // review after #311)
   if (held) return held.filter((p) => p.since >= oldest);
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
