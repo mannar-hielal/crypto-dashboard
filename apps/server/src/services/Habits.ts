@@ -48,70 +48,60 @@ export function dayCounter(zone = 'UTC'): (d: Date) => number {
 
 const QUARTER_HOUR_MS = 15 * 60_000;
 
-/** 🔐 A map capped at `MAX_ZONE_FORMATS`, least recently used out first (a hit moves to the back) */
-function lruGet<V>(map: Map<string, V>, key: string): V | undefined {
-  const value = map.get(key);
-  if (value !== undefined) {
-    map.delete(key);
-    map.set(key, value);
-  }
-  return value;
-}
-
-function lruSet<V>(map: Map<string, V>, key: string, value: V): void {
-  if (!map.has(key) && map.size >= MAX_ZONE_FORMATS) {
-    const oldest = map.keys().next().value;
-    if (oldest !== undefined) map.delete(oldest);
-  }
-  map.delete(key);
-  map.set(key, value);
-}
-
-const MAX_ZONE_FORMATS = 200;
 /**
- * Formatters by known zone, so a request doesn't build one (zones in use are a few dozen). An
- * unknown zone is never kept: made-up names can't push real ones out
+ * 🔐 The zones this runtime knows (418 on Node 24), as Intl names them. A formatter is kept only for
+ * one of these, so that cache never holds more than the list, whatever is sent
  */
+const KNOWN_ZONES: ReadonlySet<string> = new Set(Intl.supportedValuesOf('timeZone'));
 const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
-/**
- * Other spellings (Intl takes `eUROPE/zurich` too) → the canonical name, or null for a name found
- * unknown or an offset (never built again). A map of its own, capped: made-up names only push out
- * each other, never a real zone's formatter
- */
-const ZONE_ALIASES = new Map<string, string | null>();
 
-/** The zone's date formatter, or null for UTC and for a zone this runtime doesn't know */
+/**
+ * 🔐 Any other text sent as a zone → the known zone Intl reads it as (`asia/kolkata`, `US/Eastern`),
+ * or null (a made-up name, an offset such as `+05:07`), so it is never worked out twice. Capped, least
+ * recently used out first: such names only ever push out each other
+ */
+const ZONE_SPELLINGS = new Map<string, string | null>();
+const MAX_ZONE_SPELLINGS = 200;
+
+/** A zone's name as the known list has it, or null: UTC for anything else */
+function knownZone(zone: string): string | null {
+  if (KNOWN_ZONES.has(zone)) return zone;
+  const seen = ZONE_SPELLINGS.get(zone);
+  if (seen !== undefined) {
+    ZONE_SPELLINGS.delete(zone);
+    ZONE_SPELLINGS.set(zone, seen);
+    return seen;
+  }
+  let canonical: string | null;
+  try {
+    const named = new Intl.DateTimeFormat('en-US', { timeZone: zone }).resolvedOptions().timeZone;
+    canonical = KNOWN_ZONES.has(named) ? named : null;
+  } catch {
+    canonical = null;
+  }
+  if (ZONE_SPELLINGS.size >= MAX_ZONE_SPELLINGS) {
+    const oldest = ZONE_SPELLINGS.keys().next().value;
+    if (oldest !== undefined) ZONE_SPELLINGS.delete(oldest);
+  }
+  ZONE_SPELLINGS.set(zone, canonical);
+  return canonical;
+}
+
+/** The zone's date formatter, or null for UTC and for anything not a known zone */
 function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   if (zone === 'UTC') return null;
-  const alias = lruGet(ZONE_ALIASES, zone);
-  // A name already found unknown (or an offset): UTC, without building a formatter again
-  if (alias === null) return null;
-  const known = lruGet(ZONE_FORMATS, alias ?? zone);
-  if (known) return known;
-  let format: Intl.DateTimeFormat;
-  try {
+  const name = knownZone(zone);
+  if (!name) return null;
+  let format = ZONE_FORMATS.get(name);
+  if (!format) {
     format = new Intl.DateTimeFormat('en-US', {
-      timeZone: zone,
+      timeZone: name,
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
     });
-  } catch {
-    lruSet(ZONE_ALIASES, zone, null);
-    return null;
+    ZONE_FORMATS.set(name, format);
   }
-  // Kept under the zone's canonical name: spellings of one zone share one formatter
-  const canonical = format.resolvedOptions().timeZone;
-  // 🔐 An offset is no zone ('+05:07': Intl takes any): not on a quarter hour, and thousands of
-  // them could push the real zones out, so it counts in UTC
-  if (/^[+-]/.test(canonical)) {
-    lruSet(ZONE_ALIASES, zone, null);
-    return null;
-  }
-  if (canonical !== zone) lruSet(ZONE_ALIASES, zone, canonical);
-  const same = lruGet(ZONE_FORMATS, canonical);
-  if (same) return same;
-  lruSet(ZONE_FORMATS, canonical, format);
   return format;
 }
 

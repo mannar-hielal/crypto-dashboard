@@ -194,6 +194,22 @@ describe('streakEndingAt', () => {
     built.mockRestore();
   });
 
+  it('should keep no more formatters than the zones the runtime knows, whatever is sent', () => {
+    const before = zoneFormatsKept();
+    for (let i = 0; i < 300; i++) dayCounter(`Made/Up${i}`);
+    for (let i = 0; i < 60; i++)
+      dayCounter(`+${String(i % 14).padStart(2, '0')}:${String(i).padStart(2, '0')}`);
+    expect(zoneFormatsKept()).toBe(before);
+    expect(zoneFormatsKept()).toBeLessThanOrEqual(Intl.supportedValuesOf('timeZone').length);
+  });
+
+  it('should read an older or other spelling of a known zone as that zone', () => {
+    const late = new Date('2026-10-23T20:00:00Z'); // 01:30 on the 24th in India (UTC+5:30)
+    const day24 = Date.UTC(2026, 9, 24) / 86_400_000;
+    expect(dayCounter('Asia/Kolkata')(late)).toBe(day24);
+    expect(dayCounter('Asia/Calcutta')(late)).toBe(day24);
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
