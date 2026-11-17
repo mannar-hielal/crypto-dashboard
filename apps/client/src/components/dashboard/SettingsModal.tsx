@@ -1,3 +1,4 @@
+import { forgetSignedOutAccount } from '@/learn/signedOut';
 import { guide } from '@/lib/guideAnchors';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -243,6 +244,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           // Password change forces logout server-side
           clearAuth();
           usePaperStore.getState().clear();
+          forgetSignedOutAccount();
           window.location.href = '/login';
         }, 2000)
       );
@@ -272,6 +274,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       // Success: requestDeletion forces logout server-side
       clearAuth();
       usePaperStore.getState().clear();
+      forgetSignedOutAccount();
       // Wipe localStorage as per plan (trading state is server-side since BP-1)
       localStorage.removeItem('cd-layout');
       localStorage.removeItem('cd-paper-col-prefs');

@@ -1,3 +1,4 @@
+import { forgetSignedOutAccount } from '@/learn/signedOut';
 import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useEffect, useState } from 'react';
@@ -247,6 +248,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                             useAuthStore.getState().clearAuth();
                             // 🔐 Never leave the account on screen for the next user
                             usePaperStore.getState().clear();
+                            forgetSignedOutAccount();
                           }
                         })();
                       }}

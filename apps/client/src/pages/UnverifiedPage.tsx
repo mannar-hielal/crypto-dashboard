@@ -1,3 +1,4 @@
+import { forgetSignedOutAccount } from '@/learn/signedOut';
 import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
@@ -33,6 +34,7 @@ export function UnverifiedPage() {
     // 🔐 Never throws; an unreachable server is remembered and finished on the next load
     await signOutOnServer();
     clearAuth();
+    forgetSignedOutAccount();
     void navigate('/login');
   };
 

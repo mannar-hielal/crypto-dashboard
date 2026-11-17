@@ -1,33 +1,43 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { forgetOnSignOut } from '@/learn/signedOut';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { forgetSignedOutAccount } from '@/learn/signedOut';
 import { pendingDone, queueDone } from '@/learn/pendingDone';
 import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from '@/guide/lessonStore';
+import { useTourStore } from '@/guide/tourStore';
+import { usePathStore } from '@/learn/pathStore';
 
-describe('forgetOnSignOut', () => {
-  let stop: () => void = () => undefined;
+describe('forgetSignedOutAccount', () => {
   beforeEach(() => {
     localStorage.clear();
-    useAuthStore.getState().clearAuth();
     useLessonStore.getState().reset();
-    stop = forgetOnSignOut();
+    useTourStore.getState().reset();
+    usePathStore.getState().reset();
   });
-  afterEach(() => stop());
 
-  it('should forget the device’s kept finishes and furthest screens at sign-out, whatever cleared it', () => {
+  /** An account's progress on this device: what a shared device must not show the next person */
+  function accountOnDevice() {
     useAuthStore.getState().setAuth('tok', { id: 'u1', email: 'a@b', username: 'a' } as never);
     queueDone('u1', { itemId: 'lesson-02', step: 81 });
+    useLessonStore.getState().setCompleted(['lesson-01']);
     useLessonStore.getState().setReached({ 'lesson-02': 4 });
-    // The sign-out itself (the menu, settings, an expired session all clear the auth)
-    useAuthStore.getState().clearAuth();
-    expect(pendingDone('u1')).toEqual([]);
-    expect(useLessonStore.getState().reached).toEqual({});
+    useTourStore.getState().setProgress({ completed: ['primer'], cardDismissed: true });
+    usePathStore.getState().setProgress({ skippedTours: [], checkpoints: ['checkpoint-ch1'] });
+  }
+
+  it('should keep everything when a session only expires (the same person signs back in)', () => {
+    accountOnDevice();
+    useAuthStore.getState().clearAuth(); // an expired session: no sign-out flow ran
+    expect(pendingDone('u1')).toHaveLength(1);
+    expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
   });
 
-  it('should keep them while signed in, through a session refresh', () => {
-    useAuthStore.getState().setAuth('tok', { id: 'u1', email: 'a@b', username: 'a' } as never);
-    queueDone('u1', { itemId: 'lesson-02', step: 81 });
-    useAuthStore.getState().setAuth('tok2', { id: 'u1', email: 'a@b', username: 'a' } as never);
-    expect(pendingDone('u1')).toHaveLength(1);
+  it('should forget the account’s progress and kept finishes at an explicit sign-out', () => {
+    accountOnDevice();
+    useAuthStore.getState().clearAuth();
+    forgetSignedOutAccount();
+    expect(pendingDone('u1')).toEqual([]);
+    expect(useLessonStore.getState()).toMatchObject({ completed: {}, reached: {} });
+    expect(useTourStore.getState()).toMatchObject({ completed: {}, loaded: false });
+    expect(usePathStore.getState()).toMatchObject({ checkpoints: {}, loaded: false });
   });
 });
