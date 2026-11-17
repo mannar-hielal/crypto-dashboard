@@ -208,11 +208,6 @@ export interface HabitsResponse {
   /** This week's days (the learner's, in their time zone), Monday first: a learning day or not (the streak screen's dots) */
   // Optional: an API from before 2026-11-16 (a rollback of the API alone) doesn't send it
   thisWeek?: boolean[];
-  /**
-   * Today's place in `thisWeek` (0 = Monday), in the zone the server counted in (UTC when it didn't
-   * know the learner's): never worked out from this device's clock. Optional, as `thisWeek` is
-   */
-  todayIndex?: number;
 }
 
 // ─── Notifications ───────────────────────────────────────────────────────────

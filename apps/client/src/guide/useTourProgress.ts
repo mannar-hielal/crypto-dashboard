@@ -12,7 +12,6 @@ import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { resetLearningStores } from '@/learn/signedOut';
-import { noteFinishSent } from '@/learn/finishSync';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
@@ -390,13 +389,7 @@ export function useTourProgress(): void {
         const lesson = getLesson(finished);
         const last = lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
         saveDone(finished, last, accessToken);
-        // Noted, so the streak screen reads the habits after it lands (learn/finishSync.ts)
-        // (noteFinishSent takes the request as it is: whether it landed decides what the streak
-        // screen can say, and it never rejects past that)
-        noteFinishSent(
-          accountOf(accessToken),
-          learnApi.trackEvent({ name: 'tour_completed', itemId: finished }, accessToken)
-        );
+        send('tour_completed', finished);
       }
 
       // A start ends the run before it, if that wasn't finished: during a look back, the lesson the

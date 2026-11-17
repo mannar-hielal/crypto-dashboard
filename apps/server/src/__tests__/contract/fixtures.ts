@@ -135,7 +135,6 @@ export const habitsResponse: HabitsResponse = {
   learningDays: 3,
   streakDays: 2,
   thisWeek: [true, true, false, false, false, false, false],
-  todayIndex: 1,
 };
 
 export const notificationSettings = { fillEmail: true } as const;

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { accountFor } from './account';
-import { finishSaved } from './finishSync';
 
 /**
  * The account's habits (badges, the learning streak, this week's days), counted on the server.
@@ -34,24 +33,16 @@ export function useHabits(
   useEffect(() => {
     if (!signedIn) return;
     let cancelled = false;
-    // After the last finish's event lands: the server then counts today's finish
-    finishSaved(account)
-      // (a run cancelled while it waited sends nothing)
-      .then(async (counted) => {
-        const now = token.current;
-        if (cancelled || !now) return null;
-        const read = await learnApi.getHabits(now);
-        // The finish didn't land (failed, or still slow): the count is right only if today was
-        // already counted (the lesson's own start counts it); else it would miss today, a failed read
-        // (today's place as the server counted it, in its zone: never this device's guess)
-        const today = read.todayIndex;
-        if (!counted && (today === undefined || !read.thisWeek?.[today])) {
-          throw new Error('Today is not counted yet');
-        }
-        return read;
-      })
+    // Read at once, never waiting for a finish to land: a lesson's own start already counted today
+    // (Habits counts starts), so the streak screen right after a finish shows today. Only a run
+    // begun before midnight and finished after it shows its new day on the next read (weighed,
+    // review round 30: the wait that covered it cost a 4 s hold on every read and kept failing)
+    const now = token.current;
+    if (!now) return;
+    learnApi
+      .getHabits(now)
       .then((r) => {
-        if (!cancelled && r) setRead({ account, habits: r, failed: false });
+        if (!cancelled) setRead({ account, habits: r, failed: false });
       })
       .catch(() => {
         if (cancelled) return;

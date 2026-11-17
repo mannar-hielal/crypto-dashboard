@@ -7,7 +7,6 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 }));
 
 import { useHabits } from '@/learn/useHabits';
-import { finishSaved, noteFinishSent } from '@/learn/finishSync';
 import { useAuthStore } from '@/store/authStore';
 
 const habits = { badges: [], learningDays: 1, streakDays: 1, thisWeek: [] };
@@ -41,24 +40,6 @@ describe('useHabits', () => {
     expect(getHabits).toHaveBeenCalledTimes(2);
   });
 
-  it('should read the habits only after the last finish’s event has landed', async () => {
-    let land: () => void = () => undefined;
-    noteFinishSent(null, new Promise<void>((resolve) => (land = resolve)));
-    getHabits.mockResolvedValueOnce(habits);
-    const { result } = renderHook(() => useHabits('t'));
-    await act(async () => {});
-    expect(getHabits).not.toHaveBeenCalled();
-    await act(async () => land());
-    await waitFor(() => expect(result.current.habits).toEqual(habits));
-  });
-
-  it('should wait for nothing, and set no timer, when no finish is on its way', async () => {
-    const timer = vi.spyOn(globalThis, 'setTimeout');
-    await finishSaved(null);
-    expect(timer).not.toHaveBeenCalled();
-    timer.mockRestore();
-  });
-
   it('should show no other account’s habits, but keep its own through a session refresh', async () => {
     useAuthStore.setState({ user: { id: 'a', email: 'a@x', username: 'a' } as never });
     getHabits.mockResolvedValue(habits);
@@ -75,16 +56,6 @@ describe('useHabits', () => {
     expect(result.current.habits).toBeNull();
   });
 
-  it('should send nothing for a read cancelled while it waited for a finish', async () => {
-    let land: () => void = () => undefined;
-    noteFinishSent(null, new Promise<void>((resolve) => (land = resolve)));
-    getHabits.mockResolvedValue(habits);
-    const { unmount } = renderHook(() => useHabits('t'));
-    unmount(); // the map closed (or the token changed) while it waited
-    await act(async () => land());
-    expect(getHabits).not.toHaveBeenCalled();
-  });
-
   it('should not read again when only the token rotates (the same account)', async () => {
     useAuthStore.getState().setAuth('t1', { id: 'u1', email: 'a@b', username: 'a' } as never);
     getHabits.mockResolvedValue(habits);
@@ -95,30 +66,12 @@ describe('useHabits', () => {
     expect(getHabits).toHaveBeenCalledTimes(1);
   });
 
-  it('should treat the habits as not loaded when the finish they would count failed to save', async () => {
-    let fail: (e: Error) => void = () => undefined;
-    noteFinishSent(null, new Promise<void>((_, reject) => (fail = reject)));
-    getHabits.mockResolvedValue(habits);
-    const { result } = renderHook(() => useHabits('t'));
-    await act(async () => fail(new Error('5xx')));
-    await waitFor(() => expect(result.current.failed).toBe(true));
-    // A count that misses today's finish is never shown
+  it('should send nothing for a read cancelled before it answered', async () => {
+    let answer: (v: unknown) => void = () => undefined;
+    getHabits.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    const { result, unmount } = renderHook(() => useHabits('t'));
+    unmount(); // the map closed (or the account changed) before the answer
+    await act(async () => answer(habits));
     expect(result.current.habits).toBeNull();
-  });
-
-  it('should still show the streak when the finish failed but today was already counted', async () => {
-    let fail: (e: Error) => void = () => undefined;
-    noteFinishSent(null, new Promise<void>((_, reject) => (fail = reject)));
-    // Today as the server counted it (its zone), whatever this device's clock says
-    const counted = {
-      ...habits,
-      thisWeek: [false, false, true, false, false, false, false],
-      todayIndex: 2,
-    };
-    getHabits.mockResolvedValue(counted);
-    const { result } = renderHook(() => useHabits('t'));
-    await act(async () => fail(new Error('5xx')));
-    await waitFor(() => expect(result.current.habits).toEqual(counted));
-    expect(result.current.failed).toBe(false);
   });
 });

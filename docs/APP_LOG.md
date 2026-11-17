@@ -4667,9 +4667,10 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   own: the client sends its IANA time zone (`?tz=Europe/Zurich`, the SDK's default), so the dots, the streak and
   the learning days follow the learner's calendar, each day with its own date's offset (a daylight-saving change
   moves nothing). A day counts with any learning event on it but a rating (a start, a step, a close, a finish; steps read with
-  their own limit), and the streak screen reads the habits once the finish's event has landed (`learn/finishSync.ts`), so
-  the server alone counts today. UTC when absent or unknown (an odd device zone never fails the request). Known zones' formatters
-  are cached (at most 200, least recently used out first; unknown names never kept), and each quarter hour is
+  their own limit). The streak screen reads the habits at once: the lesson's own start already counted today (only a run
+  carried past midnight shows its new day on the next read). UTC when absent or unknown (an odd device zone never fails
+  the request). Formatters are kept for zone names Intl returns (capped at 1,000; other text is worked out once into a
+  capped map and never kept as a zone), and each quarter hour is
   formatted once per request (every zone's offset is a whole number of quarter hours). `thisWeek` is optional
   in the SDK: an API rolled back on its own doesn't send it, and the dots then show no days.
 - **Everyone's progress on Lessons 1–3 is reset** (owner: begun and finished alike), by the data migration

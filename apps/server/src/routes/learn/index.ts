@@ -430,7 +430,7 @@ export async function learnRoutes(app: FastifyInstance) {
         response: {
           200: {
             type: 'object',
-            required: ['badges', 'learningDays', 'streakDays', 'thisWeek', 'todayIndex'],
+            required: ['badges', 'learningDays', 'streakDays', 'thisWeek'],
             properties: {
               badges: {
                 type: 'array',
@@ -453,12 +453,6 @@ export async function learnRoutes(app: FastifyInstance) {
                 minItems: 7,
                 maxItems: 7,
                 description: 'This week (the learner’s days), Monday first: a learning day or not',
-              },
-              todayIndex: {
-                type: 'integer',
-                minimum: 0,
-                maximum: 6,
-                description: 'Today’s place in thisWeek, in the zone the days were counted in',
               },
             },
           },
