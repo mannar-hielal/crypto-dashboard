@@ -110,4 +110,28 @@ describe('pendingDone', () => {
     const fresh = await import('@/learn/pendingDone');
     expect(fresh.pendingDone('a').some((p) => p.itemId === 'lesson-01')).toBe(false);
   });
+
+  it('should keep earlier finishes stored when one more try after freeing the old list works', async () => {
+    queueDone('a', { itemId: 'lesson-01', step: 81 }); // stored
+    let refusals = 1;
+    const real = Storage.prototype.setItem;
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+      this: Storage,
+      k: string,
+      v: string
+    ) {
+      if (refusals-- > 0) throw new Error('QuotaExceededError'); // full, once
+      real.call(this, k, v);
+    });
+    queueDone('a', { itemId: 'checkpoint-ch1', step: 2 });
+    setItem.mockRestore();
+    vi.resetModules(); // a reload
+    const fresh = await import('@/learn/pendingDone');
+    expect(
+      fresh
+        .pendingDone('a')
+        .map((p) => p.itemId)
+        .sort()
+    ).toEqual(['checkpoint-ch1', 'lesson-01']);
+  });
 });

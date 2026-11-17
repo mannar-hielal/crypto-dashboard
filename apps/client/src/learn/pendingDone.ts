@@ -93,13 +93,18 @@ function write(account: string, items: PendingDone[]): void {
     }
     unstored.delete(account);
   } catch {
-    // No storage (private mode, full): held in memory for this session, and the older stored list
-    // removed if it can be, so a reload never brings back finishes given up on meanwhile
-    unstored.set(account, items.slice(0, MAX_PENDING));
+    // Refused (full, blocked, private mode): the older stored list goes (so a reload never brings
+    // back finishes given up on meanwhile), then one more try, which its freed bytes often allow.
+    // Still refused: held in memory for this session
     try {
       localStorage.removeItem(key(account));
+      if (items.length > 0) {
+        const stored = { v: VERSION, items: items.slice(0, MAX_PENDING) };
+        localStorage.setItem(key(account), JSON.stringify(stored));
+      }
+      unstored.delete(account);
     } catch {
-      // Storage refuses everything: the old list stays until it expires or a read prunes it
+      unstored.set(account, items.slice(0, MAX_PENDING));
     }
   }
 }
