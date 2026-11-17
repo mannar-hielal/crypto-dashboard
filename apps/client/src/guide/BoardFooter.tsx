@@ -5,11 +5,12 @@
  */
 
 import { guide } from '@/lib/guideAnchors';
+import { AnswerResult } from './AnswerResult';
 import styles from './QuizBoard.module.css';
 
 interface BoardFooterProps {
-  /** 0 right, 1 not quite; undefined until checked */
-  answer: number | undefined;
+  /** Right or not, once checked (undefined until then) */
+  right: boolean | undefined;
   /** Every slot or term is filled: Check can grade */
   ready: boolean;
   onCheck: () => void;
@@ -21,14 +22,14 @@ interface BoardFooterProps {
 }
 
 export function BoardFooter({
-  answer,
+  right,
   ready,
   onCheck,
   revisit,
   revisitLabel,
   explain,
 }: BoardFooterProps) {
-  const answered = answer !== undefined;
+  const answered = right !== undefined;
   return (
     <>
       {!answered && (
@@ -43,12 +44,7 @@ export function BoardFooter({
         </button>
       )}
       {revisit && <p className={styles.explain}>{revisitLabel}</p>}
-      {answered && (
-        <p className={styles.explain} role="status">
-          <strong>{answer === 0 ? 'Right. ' : 'Not quite. '}</strong>
-          {explain}
-        </p>
-      )}
+      {right !== undefined && <AnswerResult right={right} explain={explain} />}
     </>
   );
 }

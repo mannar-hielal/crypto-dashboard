@@ -131,7 +131,7 @@ export function MatchQuiz({
         </div>
       </div>
       <BoardFooter
-        answer={answer}
+        right={answer === undefined ? undefined : answer === q.correct}
         ready={complete}
         onCheck={check}
         revisit={revisit}

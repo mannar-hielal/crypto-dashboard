@@ -48,11 +48,6 @@
   opacity: 0.45;
 }
 
-.explain {
-  margin: 0;
-  color: var(--color-brand-muted);
-}
-
 .after {
   margin: 0;
   color: var(--color-brand-muted);

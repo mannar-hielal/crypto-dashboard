@@ -116,7 +116,7 @@ export function OrderQuiz({
         </div>
       )}
       <BoardFooter
-        answer={answer}
+        right={answer === undefined ? undefined : answer === q.correct}
         ready={slots.every((x) => x !== null)}
         onCheck={check}
         revisit={revisit}

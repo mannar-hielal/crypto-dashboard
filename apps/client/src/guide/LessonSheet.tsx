@@ -10,6 +10,7 @@
  * history cards show a real mini chart; the close lists what the learner can now do.
  */
 
+import { AnswerResult } from './AnswerResult';
 import { useTourWide } from './useTourWide';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -238,14 +239,7 @@ export function QuestionView({
           );
         })}
       </div>
-      {answered && (
-        <p className={styles.explain} role="status">
-          {/* Right or not, then why: no "You picked …" (owner 2026-11-13; the chosen option is
-              already marked above) */}
-          <strong>{answer === q.correct ? 'Right. ' : 'Not quite. '}</strong>
-          {q.explain}
-        </p>
-      )}
+      {answered && <AnswerResult right={answer === q.correct} explain={q.explain} />}
     </>
   );
 }

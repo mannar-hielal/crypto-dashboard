@@ -401,6 +401,19 @@ describe('lessons', () => {
     for (const c of CHECKPOINTS) expect(c.version, c.id).toBe(CHECKPOINT_VERSIONS[c.id]);
   });
 
+  it('should grade drag-and-drop and match boxes as right when the answer is 0 (their correct)', () => {
+    // The boards answer 0 when every slot or pair is right: their `correct` is always 0, so every
+    // view judges them with answer === correct like any other question
+    for (const l of LESSONS) {
+      for (const q of [
+        ...l.checks,
+        ...(l.cards.map((c) => c.quiz).filter(Boolean) as LessonQuestion[]),
+      ]) {
+        if (q.format === 'order' || q.format === 'match') expect(q.correct, q.question).toBe(0);
+      }
+    }
+  });
+
   it('should give each drag-and-drop step and each match a text of its own (their keys)', () => {
     for (const l of LESSONS) {
       for (const q of [

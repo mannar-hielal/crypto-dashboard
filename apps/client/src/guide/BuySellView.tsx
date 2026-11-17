@@ -7,6 +7,7 @@
  * didn't depend on what came next. The arrow keys move between the two buttons.
  */
 
+import { AnswerResult } from './AnswerResult';
 import { useRef, type KeyboardEvent } from 'react';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
@@ -68,13 +69,8 @@ export function BuySellView({
           );
         })}
       </div>
-      {answered && (
-        <p className={styles.explain} role="status">
-          {/* Right or not, then why (owner 2026-11-13): the Why points at the plan, not the price */}
-          <strong>{answer === q.correct ? 'Right. ' : 'Not quite. '}</strong>
-          {q.explain}
-        </p>
-      )}
+      {/* The Why points at the plan, not the price */}
+      {answered && <AnswerResult right={answer === q.correct} explain={q.explain} />}
       {answered && q.chart?.freezeAt && (
         <p className={styles.after}>What happened next (the plan doesn&apos;t depend on it)</p>
       )}
