@@ -6,9 +6,18 @@
 
 import styles from './QuizBoard.module.css';
 
-export function AnswerResult({ right, explain }: { right: boolean; explain: string }) {
+export function AnswerResult({
+  right,
+  explain,
+  className = styles.explain,
+}: {
+  right: boolean;
+  explain: string;
+  /** The surface's own text style (a tour bubble's); the lesson boards' by default */
+  className?: string;
+}) {
   return (
-    <p className={styles.explain} role="status">
+    <p className={className} role="status">
       <strong>{right ? 'Right. ' : 'Not quite. '}</strong>
       {explain}
     </p>

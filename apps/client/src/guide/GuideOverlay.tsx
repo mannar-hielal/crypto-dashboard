@@ -6,6 +6,7 @@
  * what to open.
  */
 
+import { AnswerResult } from './AnswerResult';
 import { useTourWide } from './useTourWide';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -395,10 +396,11 @@ function TourBubble({
               })}
             </div>
             {quizAnswer !== null && (
-              <p className={styles.explain}>
-                {quizAnswer === step.quiz.correct ? 'Right. ' : 'Not quite. '}
-                {step.quiz.explain}
-              </p>
+              <AnswerResult
+                right={quizAnswer === step.quiz.correct}
+                explain={step.quiz.explain}
+                className={styles.explain}
+              />
             )}
           </>
         ) : (

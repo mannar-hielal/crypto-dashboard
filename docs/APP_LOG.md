@@ -5128,7 +5128,8 @@ recommendations, and chose our own drawing over a photo for the cold open.
   (a hard drive, a bin and Tock): the Newport landfill with a digger, and an inset portrait of James Howells. No
   drawing and no guide, as Lesson 1. The owner confirmed on 2026-11-12 that they hold the rights to publish it and
   gave no credit line, so none is shown: `photo.credit` is now optional and the caption renders only when given.
-  It ships as `src/assets/lessons/howells-landfill.jpg` (884 px, about 165 kB), with alt text. The `hardDrive`
+  It ships as `src/assets/lessons/howells-landfill.jpg` (884 px, about 165 kB), with alt text. (Deleted
+  2026-11-16 with Lesson 2's keys and custody cards, which move to a later lesson; git keeps it.) The `hardDrive`
   drawing is gone.
 - Tests: Lesson 2's cold open has the photo with no credit, drawing or guide (`lessons.test`, `LessonSheet.test`).
 - **No Nora in Lesson 2** (owner, same day): a learner may come back days later and not remember her. Card 2 is now

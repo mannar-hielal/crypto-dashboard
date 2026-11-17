@@ -186,8 +186,9 @@ export async function learnRoutes(app: FastifyInstance) {
         description:
           'Idempotent. `completed` is never downgraded: a dismissal or a start after a completion is a no-op. ' +
           '`started` takes a lesson and its furthest screen as `step` (the funnel step number); the stored step only rises. ' +
-          "A lesson's `completed` takes its last screen's `step` too. A lesson's start or finish from an earlier " +
-          'version of it (a step below its first) gets 409.',
+          "A lesson's `completed` takes its last screen's `step` too; a checkpoint's `completed` takes its " +
+          'question set version as `step`. One from an earlier version (no step, or below its first) gets 409; ' +
+          'a step past the current version gets 400. A lesson or a checkpoint is never dismissed (400).',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
