@@ -419,7 +419,8 @@ with paper money, and then picks up where it left off.
 
 - Markup: `**bold**`, `*italic*` and `[[term]]` render through one renderer (`RichText`). Never put a
   `[[term]]` inside `*…*` (its asterisks would show), and write sums with `×`, never `*` (the
-  run between two `*` would turn italic). The lesson tests check both.
+  run between two `*` would turn italic). The tests catch a nested term (any `*` left on screen)
+  and a `*` with spaces around it or flush between digits; other uses of `*` are on you.
 
 - A term in card text links with `[[label|concept-id]]` (or `[[concept-id]]`): it opens a peek, and
   the peek opens its article. Concept ids must exist in `apps/client/src/learn/graph.ts`
