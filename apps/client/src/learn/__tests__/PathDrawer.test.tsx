@@ -7,8 +7,11 @@ vi.mock('@crypto-dashboard/sdk', () => ({
   learnApi: { getHabits: (...a: unknown[]) => getHabits(...a) },
 }));
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { accessToken: string }) => unknown) =>
-    selector({ accessToken: 'tok' }),
+  useAuthStore: Object.assign(
+    (selector: (s: { accessToken: string; user: null }) => unknown) =>
+      selector({ accessToken: 'tok', user: null }),
+    { getState: () => ({ accessToken: 'tok', user: null }) }
+  ),
 }));
 
 let wide = true;

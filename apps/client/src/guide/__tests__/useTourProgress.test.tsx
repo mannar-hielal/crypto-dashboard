@@ -41,6 +41,8 @@ const LESSON_01_LAST_STEP = 60 + lessonScreens(getLesson('lesson-01')).length;
 describe('useTourProgress', () => {
   beforeEach(() => {
     profile = { id: 'u1' };
+    // The finish queue outlives a save (a read drops it): each test starts with none
+    localStorage.clear();
     token = 'tok';
     useTourStore.getState().reset();
     useLessonStore.getState().reset();
@@ -139,7 +141,11 @@ describe('useTourProgress', () => {
     act(() =>
       usePathStore.getState().setProgress({ skippedTours: [], checkpoints: ['checkpoint-ch1'] })
     );
-    await waitFor(() => expect(pendingDone('u9')).toEqual([{ itemId: 'checkpoint-ch1', step: 2 }]));
+    await waitFor(() =>
+      expect(pendingDone('u9')).toEqual([
+        expect.objectContaining({ itemId: 'checkpoint-ch1', step: 2 }),
+      ])
+    );
     token = 'tok';
     localStorage.clear();
   });
@@ -370,15 +376,20 @@ describe('useTourProgress', () => {
       setProgress.mockRejectedValueOnce(new Error('Only a start takes a step'));
       act(() => useLessonStore.getState().finish());
       await waitFor(() =>
-        expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }])
+        expect(pendingDone('u1')).toEqual([
+          expect.objectContaining({ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }),
+        ])
       );
-      // Next read (a reload, a session refresh): still shown as done, and sent again; it leaves the
-      // queue only once a save lands (the helper clears the write mock, so the queue is the proof)
+      // Next read (a reload, a session refresh): still shown as done, and sent again
       useLessonStore.getState().reset();
       useTourStore.getState().reset();
       await loaded([]);
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
-      await waitFor(() => expect(pendingDone('u1')).toEqual([]));
+      // It stays kept until a read shows the server has it (a read older than the save can't hide it)
+      expect(pendingDone('u1')).toHaveLength(1);
+      useTourStore.getState().reset();
+      await loaded([item('lesson-01', 'completed')]);
+      expect(pendingDone('u1')).toEqual([]);
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
     });
 
@@ -397,13 +408,42 @@ describe('useTourProgress', () => {
       localStorage.clear();
       await loaded([]);
       act(() => useLessonStore.getState().start('lesson-01'));
-      setProgress.mockReturnValueOnce(new Promise(() => undefined)); // the save never answers
+      let answer: () => void = () => undefined;
+      // The save hasn't answered yet (it does at the end, so nothing stays in flight)
+      setProgress.mockReturnValueOnce(new Promise<void>((resolve) => (answer = resolve)));
       act(() => useLessonStore.getState().finish());
       // Kept before it was sent: a read now (a session refresh) still shows it
-      expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }]);
+      expect(pendingDone('u1')).toEqual([
+        expect.objectContaining({ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }),
+      ]);
       useTourStore.getState().reset();
       await loaded([]);
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      await act(async () => answer());
+    });
+
+    it('should not send a finish again while its save is still on its way', async () => {
+      await loaded([]);
+      let sent = 0;
+      let answer: () => void = () => undefined;
+      setProgress.mockImplementation(
+        (_id: string, status: string) =>
+          new Promise<void>((resolve) => {
+            if (status === 'completed') {
+              sent++;
+              answer = resolve;
+            } else resolve();
+          })
+      );
+      act(() => useLessonStore.getState().start('lesson-01'));
+      act(() => useLessonStore.getState().finish());
+      // A read meanwhile (a session refresh) finds it kept: not sent a second time
+      useTourStore.getState().reset();
+      await loaded([]);
+      expect(sent).toBe(1);
+      await act(async () => answer());
+      setProgress.mockReset();
+      setProgress.mockResolvedValue({});
     });
 
     it('should keep a finish an older API refuses (a 400), shown as done, for when the API is back', async () => {
@@ -417,7 +457,9 @@ describe('useTourProgress', () => {
       act(() => useLessonStore.getState().finish());
       await act(async () => {});
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
-      expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }]);
+      expect(pendingDone('u1')).toEqual([
+        expect.objectContaining({ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }),
+      ]);
     });
 
     it('should drop a kept finish the server already has, without sending it again', async () => {

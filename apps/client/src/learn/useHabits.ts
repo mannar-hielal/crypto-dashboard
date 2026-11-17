@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
+import { accountOf } from './account';
 import { finishSaved } from './finishSync';
 
 /**
@@ -14,7 +15,9 @@ export function useHabits(
 ): { habits: HabitsResponse | null; failed: boolean } {
   // Whose answer it is, by account (a session refresh changes the token, not the account): another
   // account's (a sign-out, then a sign-in) is never shown
-  const account = useAuthStore((s) => s.user?.id ?? null);
+  // The profile's id, or the token's own user while the profile loads: one read, not two
+  const profileId = useAuthStore((s) => s.user?.id ?? null);
+  const account = profileId ?? accountOf(accessToken);
   const [read, setRead] = useState<{
     account: string | null;
     habits: HabitsResponse | null;
@@ -25,7 +28,7 @@ export function useHabits(
     if (!accessToken) return;
     let cancelled = false;
     // After the last finish's event lands: the server then counts today's finish
-    finishSaved()
+    finishSaved(account)
       .then(() => learnApi.getHabits(accessToken))
       .then((r) => {
         if (!cancelled) setRead({ account, habits: r, failed: false });

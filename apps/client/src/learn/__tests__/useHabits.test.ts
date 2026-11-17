@@ -36,7 +36,7 @@ describe('useHabits', () => {
 
   it('should read the habits only after the last finish’s event has landed', async () => {
     let land: () => void = () => undefined;
-    noteFinishSent(new Promise<void>((resolve) => (land = resolve)));
+    noteFinishSent(null, new Promise<void>((resolve) => (land = resolve)));
     getHabits.mockResolvedValueOnce(habits);
     const { result } = renderHook(() => useHabits('t'));
     await act(async () => {});
@@ -47,7 +47,7 @@ describe('useHabits', () => {
 
   it('should wait for nothing, and set no timer, when no finish is on its way', async () => {
     const timer = vi.spyOn(globalThis, 'setTimeout');
-    await finishSaved();
+    await finishSaved(null);
     expect(timer).not.toHaveBeenCalled();
     timer.mockRestore();
   });

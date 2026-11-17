@@ -13,7 +13,12 @@ export interface PendingDone {
   itemId: LessonId | CheckpointId;
   /** A lesson's last screen's step, or a checkpoint's question set version */
   step: number;
+  /** When it was first kept (ms): one older than `MAX_AGE_MS` is given up, never retried for ever */
+  since: number;
 }
+
+/** 🔐 How long one is retried at most: an API that keeps refusing it (a removed id) isn't asked again */
+const MAX_AGE_MS = 30 * 86_400_000;
 
 /** 🔐 Never more than this many kept (there are only a handful of lessons and checkpoints) */
 const MAX_PENDING = 20;
@@ -24,12 +29,14 @@ const key = (account: string) => `cd-pending-done:${account}`;
  * 🔐 The stored shape's version (security.md: persisted client state is versioned): `{ v, items }`.
  * Another version, or anything else, reads as nothing kept; a new shape bumps it and migrates here
  */
-const VERSION = 1;
+const VERSION = 2;
 
 function isPending(v: unknown): v is PendingDone {
   if (typeof v !== 'object' || v === null) return false;
-  const { itemId, step } = v as Record<string, unknown>;
+  const { itemId, step, since } = v as Record<string, unknown>;
   return (
+    typeof since === 'number' &&
+    Number.isFinite(since) &&
     typeof itemId === 'string' &&
     (isLessonId(itemId) || isCheckpointId(itemId)) &&
     typeof step === 'number' &&
@@ -46,7 +53,13 @@ function isPending(v: unknown): v is PendingDone {
 function migrate(raw: unknown): unknown[] {
   if (typeof raw !== 'object' || raw === null) return [];
   const { v, items } = raw as Record<string, unknown>;
-  if (v === VERSION && Array.isArray(items)) return items;
+  if (!Array.isArray(items)) return [];
+  if (v === VERSION) return items;
+  // 1 → 2: `since` added; an item kept under 1 counts from now
+  if (v === 1) {
+    const now = Date.now();
+    return items.map((i) => (typeof i === 'object' && i !== null ? { ...i, since: now } : i));
+  }
   return [];
 }
 
@@ -54,7 +67,11 @@ function migrate(raw: unknown): unknown[] {
 export function pendingDone(account: string): PendingDone[] {
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
-    return migrate(raw).filter(isPending).slice(0, MAX_PENDING);
+    const oldest = Date.now() - MAX_AGE_MS;
+    return migrate(raw)
+      .filter(isPending)
+      .filter((p) => p.since >= oldest)
+      .slice(0, MAX_PENDING);
   } catch {
     return [];
   }
@@ -72,9 +89,11 @@ function write(account: string, items: PendingDone[]): void {
   }
 }
 
-/** Keep one to save later (an item already kept is replaced) */
-export function queueDone(account: string, item: PendingDone): void {
-  write(account, [item, ...pendingDone(account).filter((p) => p.itemId !== item.itemId)]);
+/** Keep one to save later (an item already kept keeps its first `since`, with the new step) */
+export function queueDone(account: string, item: Omit<PendingDone, 'since'>): void {
+  const kept = pendingDone(account);
+  const since = kept.find((p) => p.itemId === item.itemId)?.since ?? Date.now();
+  write(account, [{ ...item, since }, ...kept.filter((p) => p.itemId !== item.itemId)]);
 }
 
 /** Saved, or refused for good (an earlier version): kept no longer */

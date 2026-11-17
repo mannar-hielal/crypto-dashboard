@@ -10,6 +10,7 @@
 import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
+import { accountOf } from '@/learn/account';
 import { noteFinishSent } from '@/learn/finishSync';
 import { dropDone, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
@@ -30,24 +31,6 @@ import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './to
 
 /** Set while the server's answer is put in the stores: it's already stored, so never sent back */
 let applyingServer = false;
-
-/**
- * The signed-in account, for the device's queue: the profile's id, or, while the profile is still
- * loading (a restored session), the access token's own `userId` (read, not verified: it only names
- * the queue)
- */
-function accountOf(accessToken: string): string | null {
-  const id = useAuthStore.getState().user?.id;
-  if (id) return id;
-  try {
-    const part = accessToken.split('.')[1] ?? '';
-    const payload: unknown = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
-    const userId = (payload as { userId?: unknown } | null)?.userId;
-    return typeof userId === 'string' && userId !== '' ? userId : null;
-  } catch {
-    return null;
-  }
-}
 
 /** A lesson finish or a checkpoint pass refused as an earlier version: no longer shown as done */
 function undone(itemId: PendingDone['itemId']): void {
@@ -71,24 +54,30 @@ function undone(itemId: PendingDone['itemId']): void {
  */
 function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: string): void {
   const account = accountOf(accessToken);
-  // Kept before it's sent: a progress read that lands while the save is on its way still shows it
+  // Kept before it's sent, and until a read shows the server has it (not dropped when the save
+  // lands: a read that left before the save and answers after it would hide it again)
   if (account) queueDone(account, { itemId, step });
+  // One save of an item at a time: a read meanwhile doesn't send it again
+  const key = `${account ?? ''}:${itemId}`;
+  if (inFlight.has(key)) return;
+  inFlight.add(key);
   learnApi
     .setProgress(itemId, 'completed', accessToken, step)
-    .then(() => {
-      if (account) dropDone(account, itemId);
-    })
     .catch((err: unknown) => {
       // Refused for good (REFUSED_FOR_GOOD): no retry changes it, so it's dropped and taken back off
-      // the screen. Anything else (offline, a 5xx, an expired session, an older API's 400) stays
-      // kept for the next read. Told apart by status, never the words
+      // the screen, if that account is still the one signed in. Anything else (offline, a 5xx, an
+      // expired session, an older API's 400) stays kept. Told apart by status, never the words
       const status = (err as { status?: unknown } | null)?.status;
       if (typeof status === 'number' && REFUSED_FOR_GOOD.has(status)) {
         if (account) dropDone(account, itemId);
-        undone(itemId);
+        if (accountOf(useAuthStore.getState().accessToken) === account) undone(itemId);
       }
-    });
+    })
+    .finally(() => inFlight.delete(key));
 }
+
+/** Saves on their way, by account and item */
+const inFlight = new Set<string>();
 
 /**
  * Answers no retry changes: not found, a version conflict (an earlier version, a step past it),
@@ -331,6 +320,7 @@ export function useTourProgress(): void {
         saveDone(finished, last, accessToken);
         // Noted, so the streak screen reads the habits after it lands (learn/finishSync.ts)
         noteFinishSent(
+          accountOf(accessToken),
           learnApi
             .trackEvent({ name: 'tour_completed', itemId: finished }, accessToken)
             .catch(() => undefined)
