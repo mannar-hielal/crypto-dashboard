@@ -71,11 +71,6 @@ const versionFloorOf = (itemId: string): number | null => {
 };
 
 /**
- * 🔐 A row from an earlier version of a lesson or a checkpoint: no step, or one below the current
- * version's floor. Written by an old client, or by an old API machine during a rolling deploy
- * (the reset migrations run before the old machines are gone), so it never counts.
- */
-/**
  * 🔐 The steps of an item's current version, `from` up to (not including) `to`: a lesson's span
  * from its first step, a checkpoint's one question set. Null for an item with no versions. The one
  * rule the write check, the reads and the takeover all use
@@ -90,6 +85,11 @@ const versionRange = (itemId: string): { from: number; to: number } | null => {
 const outsideVersion = (range: { from: number; to: number }, step: number | null | undefined) =>
   typeof step !== 'number' || step < range.from || step >= range.to;
 
+/**
+ * 🔐 A row from another version of a lesson or a checkpoint: no step, or one outside the current
+ * version's range. Written by an old client, or by an old API machine during a rolling deploy (the
+ * reset migrations run before the old machines are gone), so it never counts.
+ */
 const isStaleRow = (r: { itemId: string; step?: number | null }) => {
   const range = versionRange(r.itemId);
   return range !== null && outsideVersion(range, r.step);
@@ -215,7 +215,6 @@ export async function learnRoutes(app: FastifyInstance) {
       const { status, step } = request.body as { status: LearnStatus; step?: number };
       const lessonId = lessonOf(itemId);
       const range = versionRange(itemId);
-      const floor = range?.from ?? null;
 
       // 🔐 One check of what each kind of item may send, before any write:
       // - a dismissal (an offer, a tour skipped) carries no step, and a lesson or a checkpoint is
@@ -232,21 +231,19 @@ export async function learnRoutes(app: FastifyInstance) {
             : 'An earlier version of this checkpoint',
         });
       if (status === 'dismissed') {
-        if (floor !== null) return bad('A lesson or a checkpoint can’t be dismissed');
+        if (range) return bad('A lesson or a checkpoint can’t be dismissed');
         if (step !== undefined) return bad('Only a lesson or a checkpoint takes a step');
-      } else if (floor === null) {
+      } else if (!range) {
         if (status === 'started') return bad('A start needs a lesson and its step');
         if (step !== undefined) return bad('Only a lesson or a checkpoint takes a step');
-      } else if (status === 'started' && !lessonId) {
+      } else if (status === 'started' && (!lessonId || step === undefined)) {
         return bad('A start needs a lesson and its step');
-      } else if (step === undefined) {
-        return status === 'started' ? bad('A start needs a lesson and its step') : earlier();
-      } else if (step < floor) {
-        return earlier();
-      } else if (range && outsideVersion(range, step)) {
-        // 🔐 Past the current version (a lesson's span, a checkpoint's own set): no stored step may
-        // reach a later version's range
-        return bad('A step past this version');
+      } else if (outsideVersion(range, step)) {
+        // Below the version (or none): an earlier one, 409. 🔐 Past it (a lesson's span, a
+        // checkpoint's own set): refused, so no stored step can reach a later version's range
+        return step === undefined || step < range.from
+          ? earlier()
+          : bad('A step past this version');
       }
 
       // (checked above: a start is a lesson's, with its step; this only narrows the types)
@@ -282,7 +279,7 @@ export async function learnRoutes(app: FastifyInstance) {
         // read is one, so the start that changes nothing costs no more. One transaction with Lesson
         // 1's welcome card: that old finish is the only sign the card was done with, so it never
         // goes without the dismissal saved
-        if (row && isStaleRow(row) && range) {
+        if (row && range && isStaleRow(row)) {
           const replaced = await app.prisma.$transaction(async (tx) => {
             const taken = await tx.learningProgress.updateMany({
               where: {
@@ -293,7 +290,8 @@ export async function learnRoutes(app: FastifyInstance) {
               },
               data: { status, step },
             });
-            if (taken.count === 1 && itemId === 'lesson-01') {
+            // Only an old Lesson 1 *finish* means the card is done with (as GET reads it)
+            if (taken.count === 1 && itemId === 'lesson-01' && row.status === 'completed') {
               await dismissWelcomeCard(tx, userId);
             }
             return taken;
@@ -320,18 +318,17 @@ export async function learnRoutes(app: FastifyInstance) {
         // step of the current version counts: progress is the learner's own, so a client claiming
         // a finish it didn't reach only changes its own path. A Lesson 1 finish also means the
         // welcome card is done with (the migration's and the takeover's rule): saved with it
-        const row = await app.prisma.$transaction(async (tx) => {
-          const done = await tx.learningProgress.upsert({
-            where: { userId_itemId: { userId, itemId } },
-            create: { userId, itemId, status, step: step ?? null },
-            update: { status, step: step ?? null },
-            select: ROW,
-          });
-          if (itemId === 'lesson-01') {
-            await dismissWelcomeCard(tx, userId);
-          }
-          return done;
+        const finish = app.prisma.learningProgress.upsert({
+          where: { userId_itemId: { userId, itemId } },
+          create: { userId, itemId, status, step: step ?? null },
+          update: { status, step: step ?? null },
+          select: ROW,
         });
+        // One batched transaction (one round trip) for Lesson 1; any other finish is the upsert alone
+        const row =
+          itemId === 'lesson-01'
+            ? (await app.prisma.$transaction([finish, dismissWelcomeCard(app.prisma, userId)]))[0]
+            : await finish;
         return reply.send({ item: toItem(row) });
       }
 

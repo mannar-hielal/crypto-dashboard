@@ -43,9 +43,13 @@ vi.mock('../plugins/prisma.js', () => {
       order: { count: vi.fn() },
       journalEntry: { findMany: vi.fn() },
       user: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      // An interactive transaction runs its callback; a batch runs its operations
       $transaction: vi
         .fn()
-        .mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(prismaClient)),
+        .mockImplementation(
+          async (arg: ((tx: unknown) => Promise<unknown>) | Promise<unknown>[]) =>
+            Array.isArray(arg) ? Promise.all(arg) : arg(prismaClient)
+        ),
     };
     app.decorate('prisma', prismaClient as never);
   };
@@ -446,6 +450,43 @@ describe('/api/learn/progress', () => {
       payload: { status: 'started', step: 64 },
     });
     expect(res.json().item).toMatchObject({ itemId: 'lesson-02', status: 'started', step: 64 });
+  });
+
+  it('PUT started: should not dismiss the welcome card for a taken-over Lesson 1 that was never finished', async () => {
+    vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
+    vi.mocked(app.prisma.learningProgress.updateMany)
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
+      itemId: 'lesson-01',
+      status: 'started',
+      step: 105, // past today's span: taken over, but no finish
+      updatedAt: AT,
+    } as never);
+    await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-01',
+      headers: auth(),
+      payload: { status: 'started', step: 61 },
+    });
+    expect(app.prisma.learningProgress.createMany).toHaveBeenCalledTimes(1); // the start's own
+  });
+
+  it('PUT completed: should finish any other lesson with the upsert alone, no transaction', async () => {
+    vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
+      itemId: 'lesson-02',
+      status: 'completed',
+      step: 81,
+      updatedAt: AT,
+    } as never);
+    await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-02',
+      headers: auth(),
+      payload: { status: 'completed', step: 81 },
+    });
+    expect(app.prisma.$transaction).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
   });
 
   it('PUT started: a finished lesson stays finished', async () => {
