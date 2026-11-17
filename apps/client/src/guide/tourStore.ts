@@ -121,6 +121,11 @@ export const useTourStore = create<TourState>()((set, get) => ({
     const tour = getTour(activeId);
     const all = tour.steps.map((s) => s.id);
     const current = all.indexOf(tourSteps(tour, wide)[stepIndex]?.id ?? '');
+    // A step this size's list doesn't hold (a stale index): stay put, within the new list
+    if (current === -1) {
+      set({ wide: next, stepIndex: Math.min(stepIndex, tourSteps(tour, next).length - 1) });
+      return;
+    }
     const { seen } = get();
     const missed = next
       ? -1

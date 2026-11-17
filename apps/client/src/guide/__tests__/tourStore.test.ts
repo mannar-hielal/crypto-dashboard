@@ -140,4 +140,11 @@ describe('tourStore', () => {
       delete window.matchMedia;
     }
   });
+
+  it('should stay put when rotated with a step its list does not hold', () => {
+    s().start('practice-buy');
+    useTourStore.setState({ stepIndex: 40 }); // a stale index
+    s().setWide(false);
+    expect(s().stepIndex).toBe(tourSteps(getTour('practice-buy'), false).length - 1);
+  });
 });
