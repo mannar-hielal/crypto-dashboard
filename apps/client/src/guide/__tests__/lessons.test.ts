@@ -7,6 +7,7 @@ import {
 import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   LESSON_IDS,
+  LESSON_LABELS,
   LESSONS,
   cardTermIds,
   cardWords,
@@ -77,8 +78,6 @@ describe('lessons', () => {
               !!card.quiz,
             card.title
           ).toBe(true);
-          // The Next button's words fit one line on a phone
-          if (card.nextLabel) expect(card.nextLabel.length, card.title).toBeLessThanOrEqual(40);
         }
       });
 
@@ -439,9 +438,13 @@ describe('lessons', () => {
     for (const l of LESSONS) expect(!!l.teaser, l.id).toBe(!!l.next);
   });
 
-  it('should start every lesson with an "Unlock" button on its first card', () => {
-    // Owner 2026-11-12
-    for (const l of LESSONS) expect(l.cards[0].nextLabel, l.id).toMatch(/^Unlock /);
+  it('should give no card a button label of its own: Continue, Back and Finish lesson everywhere', () => {
+    // Owner 2026-11-17 (replacing 2026-11-12's "Unlock …" first button and the question-style
+    // labels): one label set, in the sheet (LESSON_LABELS); a card's data can't carry another
+    for (const l of LESSONS) {
+      for (const card of l.cards) expect(Object.keys(card), card.title).not.toContain('nextLabel');
+    }
+    expect(LESSON_LABELS).toEqual({ next: 'Continue', back: 'Back', finish: 'Finish lesson' });
   });
 
   it('should say "Lesson N" wherever a lesson reuses a term an earlier lesson taught', () => {

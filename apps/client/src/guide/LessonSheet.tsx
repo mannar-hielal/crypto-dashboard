@@ -47,6 +47,7 @@ import { isStartDone, useLessonStore } from './lessonStore';
 import {
   getLesson,
   GUIDE_NAMES,
+  LESSON_LABELS,
   lessonScreens,
   type CanDo,
   type Lesson,
@@ -872,7 +873,8 @@ export function LessonSheet() {
   // "Try it": its own main action in the same full-width footer as every screen's Next, with Skip
   // and Back under it (owner 2026-11-13)
   const tourTry = screen.kind === 'try' && !lesson.tryWidget && (desktop || lessonTourPhone);
-  const nextWords = (screenCard?.nextLabel ?? 'Continue') + ' →';
+  // One label set (owner 2026-11-17): Continue on, Finish lesson on the summary
+  const nextWords = screen.kind === 'summary' ? LESSON_LABELS.finish : `${LESSON_LABELS.next} →`;
 
   return createPortal(
     <div className={styles.overlay} {...guide('lesson.overlay')}>
@@ -965,7 +967,7 @@ export function LessonSheet() {
                 onClick={goBack}
                 {...guide('lesson.back')}
               >
-                ← Back
+                ← {LESSON_LABELS.back}
               </button>
             )}
           </div>
@@ -977,7 +979,7 @@ export function LessonSheet() {
               onClick={tourTry ? startTour : next}
               {...(lesson.tryWidget || tourTry ? guide('lesson.try') : {})}
             >
-              {tourTry ? 'Show me' : 'Continue'}
+              {tourTry ? 'Show me' : LESSON_LABELS.next}
             </button>
             {tourTry && (
               <button type="button" className={styles.link} onClick={next}>
@@ -991,7 +993,7 @@ export function LessonSheet() {
                 onClick={goBack}
                 {...guide('lesson.back')}
               >
-                ← Back
+                ← {LESSON_LABELS.back}
               </button>
             )}
           </div>
@@ -1027,7 +1029,7 @@ export function LessonSheet() {
                 onClick={goBack}
                 {...guide('lesson.back')}
               >
-                ← Back
+                ← {LESSON_LABELS.back}
               </button>
             )}
             <span className={styles.spacer} />

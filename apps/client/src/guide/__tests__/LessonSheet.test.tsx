@@ -528,13 +528,14 @@ describe('LessonSheet', () => {
     fireEvent.keyDown(sheet()!, { key: 'Enter' });
     expect(useLessonStore.getState().screen).toBe(0);
     expect(nextBtn()!.dataset.ready).toBe('true');
-    expect(nextBtn()!.textContent).toBe('Unlock how trading works →');
+    // One label set (owner 2026-11-17): Continue, never a card's own words
+    expect(nextBtn()!.textContent).toBe('Continue →');
 
     fireEvent.keyDown(sheet()!, { key: 'ArrowRight' });
     expect(useLessonStore.getState().screen).toBe(1);
     expect(sheet()!.textContent).toContain('I’m Pulin.');
     expect(sheet()!.textContent).toContain('how you can win when a price goes up or down');
-    expect(nextBtn()!.textContent).toBe('Show me the up-or-down trick →');
+    expect(nextBtn()!.textContent).toBe('Continue →');
 
     // Back to the cold open: it doesn't play again
     fireEvent.click(screen.getByText('← Back'));
@@ -584,7 +585,7 @@ describe('LessonSheet', () => {
   it('should not move on from an unanswered question', () => {
     at(15, 'lesson-ownership'); // NFTs, briefly
     renderSheet();
-    expect(nextBtn()!.textContent).toBe('Your call →');
+    expect(nextBtn()!.textContent).toBe('Continue →');
     fireEvent.keyDown(sheet()!, { key: 'ArrowRight' });
     expect(useLessonStore.getState().screen).toBe(16); // the moment
     fireEvent.keyDown(sheet()!, { key: 'Enter' });
@@ -642,6 +643,9 @@ describe('LessonSheet', () => {
     expect(highlight.textContent).toContain('Decide when and why before you click.');
     expect(highlight.querySelector('button')).toBeNull();
     expect(nextBtn()!.dataset.ready).toBe('true');
+    // The summary's button: the one finish label, in every lesson (owner 2026-11-17)
+    expect(nextBtn()!.textContent).toBe('Finish lesson');
+    expect(document.querySelector('[data-guide="lesson.back"]')!.textContent).toBe('← Back');
   });
 
   it('should open the paper card’s Read more on Lesson 2’s story article', () => {
