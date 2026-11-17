@@ -246,8 +246,28 @@ describe('LessonSheet', () => {
       'tock'
     );
     expect(sheet()!.textContent).toContain('hindsight');
-    expect(nextBtn()!.disabled).toBe(false);
+    // Not quite: no way on yet, only another go (owner 2026-11-17)
+    expect(nextBtn()!.disabled).toBe(true);
     expect(option(0).disabled).toBe(true);
+    fireEvent.click(document.querySelector('[data-guide="lesson.retry"]')!);
+    expect(sheet()!.textContent).not.toContain('Not quite.');
+    expect(option(0).disabled).toBe(false);
+    expect(document.activeElement).toBe(sheet());
+    fireEvent.click(option(lesson.moment.correct));
+    expect(sheet()!.textContent).toContain('Right.');
+    expect(document.querySelector('[data-guide="lesson.retry"]')).toBeNull();
+    expect(nextBtn()!.disabled).toBe(false);
+  });
+
+  it('should clear a wrong answer on Back, so the board starts afresh on the way forward', () => {
+    at(5); // the moment
+    renderSheet();
+    fireEvent.click(option(1));
+    fireEvent.click(screen.getByText('← Back'));
+    fireEvent.click(nextBtn()!);
+    expect(useLessonStore.getState().screen).toBe(5);
+    expect(sheet()!.textContent).not.toContain('Not quite.');
+    expect(nextBtn()!.disabled).toBe(true);
   });
 
   it('should praise the honest answer', () => {

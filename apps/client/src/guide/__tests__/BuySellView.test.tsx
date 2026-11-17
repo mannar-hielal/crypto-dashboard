@@ -81,4 +81,14 @@ describe('BuySellView', () => {
     fireEvent.keyDown(side('sell'), { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(side('buy'));
   });
+
+  it('should offer Try again after a wrong pick, and none after a right one (owner 2026-11-17)', () => {
+    const retry = vi.fn();
+    render(<BuySellView q={q} answer={1} onAnswer={() => {}} onRetry={retry} />);
+    fireEvent.click(document.querySelector(guideSelector('lesson.retry'))!);
+    expect(retry).toHaveBeenCalledTimes(1);
+    cleanup();
+    render(<BuySellView q={q} answer={0} onAnswer={() => {}} onRetry={retry} />);
+    expect(document.querySelector(guideSelector('lesson.retry'))).toBeNull();
+  });
 });

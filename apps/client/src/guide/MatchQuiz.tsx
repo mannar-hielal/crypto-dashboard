@@ -2,8 +2,9 @@
  * Match boxes (owner's visual Q&A, 2026-11-16): terms on the left, meanings on the right in a fixed
  * shuffle. Tap a term, then its meaning: both get the same numbered chip, so colour is never the
  * only cue. Tapping a paired box undoes its pair. "Check" grades once every term is paired: each pair
- * gets ✓ or ✕, then "Right." / "Not quite." and the Why. Coming back to an answered question shows
- * the right pairs.
+ * gets ✓ or ✕, then "Right." / "Not quite." and the Why; after a "Not quite.", "Try again" undoes
+ * every pair for another go (owner 2026-11-17). Coming back to a rightly answered question shows the
+ * right pairs.
  */
 
 import { useMemo, useState } from 'react';
@@ -25,10 +26,13 @@ export function MatchQuiz({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** "Try again" after a wrong check (owner 2026-11-17): the pairs are undone, then the answer */
+  onRetry?: () => void;
 }) {
   const pairs = useMemo(() => q.pairs ?? [], [q.pairs]);
   const answered = answer !== undefined;
@@ -143,6 +147,14 @@ export function MatchQuiz({
         revisit={revisit}
         revisitLabel="The right pairs:"
         explain={q.explain}
+        onRetry={
+          onRetry &&
+          (() => {
+            setLinks({});
+            setSelected(null);
+            onRetry();
+          })
+        }
       />
     </>
   );

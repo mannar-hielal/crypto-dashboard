@@ -3,7 +3,8 @@
  * fixed shuffle. Drag a step into a slot, or tap a step then tap a slot (keyboard: Tab to a step,
  * Enter to pick it, Tab to a slot, Enter to place it). Tapping a filled slot sends its step back.
  * "Check" grades once every slot is filled: each slot gets ✓ or ✕, then "Right." / "Not quite." and
- * the Why. Coming back to an answered question shows the right order.
+ * the Why; after a "Not quite.", "Try again" empties the slots for another go (owner 2026-11-17).
+ * Coming back to a rightly answered question shows the right order.
  */
 
 import { useMemo, useState, type DragEvent } from 'react';
@@ -20,10 +21,13 @@ export function OrderQuiz({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** "Try again" after a wrong check (owner 2026-11-17): the slots are emptied, then the answer */
+  onRetry?: () => void;
 }) {
   const steps = useMemo(() => q.steps ?? [], [q.steps]);
   const answered = answer !== undefined;
@@ -126,6 +130,14 @@ export function OrderQuiz({
         revisit={revisit}
         revisitLabel="The right order:"
         explain={q.explain}
+        onRetry={
+          onRetry &&
+          (() => {
+            setSlots(steps.map(() => null));
+            setPicked(null);
+            onRetry();
+          })
+        }
       />
     </>
   );

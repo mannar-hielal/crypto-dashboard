@@ -188,11 +188,15 @@ function QuestionBody({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** "Try again" after a wrong answer (owner 2026-11-17) */
+  onRetry: () => void;
 }) {
+  const props = { q, answer, onAnswer, onRetry };
   return (
     <>
       {q.chart && (
@@ -203,13 +207,13 @@ function QuestionBody({
         />
       )}
       {q.format === 'buy-sell' ? (
-        <BuySellView q={q} answer={answer} onAnswer={onAnswer} />
+        <BuySellView {...props} />
       ) : q.format === 'order' ? (
-        <OrderQuiz q={q} answer={answer} onAnswer={onAnswer} />
+        <OrderQuiz {...props} />
       ) : q.format === 'match' ? (
-        <MatchQuiz q={q} answer={answer} onAnswer={onAnswer} />
+        <MatchQuiz {...props} />
       ) : (
-        <QuestionView q={q} answer={answer} onAnswer={onAnswer} />
+        <QuestionView {...props} />
       )}
     </>
   );
@@ -219,10 +223,13 @@ export function QuestionView({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** A lesson's "Try again" after a wrong pick; a checkpoint has none (its answers are scored) */
+  onRetry?: () => void;
 }) {
   const answered = answer !== undefined;
   const guideNow = questionGuide(q, answer);
@@ -260,7 +267,9 @@ export function QuestionView({
           );
         })}
       </div>
-      {answered && <AnswerResult right={answer === q.correct} explain={q.explain} />}
+      {answered && (
+        <AnswerResult right={answer === q.correct} explain={q.explain} onRetry={onRetry} />
+      )}
     </>
   );
 }
@@ -604,7 +613,13 @@ export function LessonSheet() {
       : screen.kind === 'check'
         ? lesson.checks[screen.index]
         : cardQuiz;
-  const answered = answers[screenIndex] !== undefined;
+  // Continue waits for a right answer: a wrong one offers "Try again" (owner 2026-11-17)
+  const answeredRight = !!question && answers[screenIndex] === question.correct;
+  // Another go: the board starts afresh, and the focus returns to the sheet (the button is gone)
+  const retry = () => {
+    useLessonStore.getState().retry();
+    dialogRef.current?.focus();
+  };
 
   // The lesson's own tour: handed over, the lesson waiting on this Try screen (`afterNote.ts`)
   const startTour = () => {
@@ -676,6 +691,7 @@ export function LessonSheet() {
             q={card.quiz}
             answer={answers[screenIndex]}
             onAnswer={answer}
+            onRetry={retry}
           />
         );
         break;
@@ -776,6 +792,7 @@ export function LessonSheet() {
           q={question}
           answer={answers[screenIndex]}
           onAnswer={answer}
+          onRetry={retry}
         />
       );
       break;
@@ -908,7 +925,7 @@ export function LessonSheet() {
               key={`${screenIndex}:${ready}`}
               type="button"
               className={`${styles.primary} ${styles.nextButton}`}
-              disabled={isQuestion && !answered}
+              disabled={isQuestion && !answeredRight}
               data-ready={ready}
               aria-hidden={ready ? undefined : true}
               tabIndex={ready ? undefined : -1}

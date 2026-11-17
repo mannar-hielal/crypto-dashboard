@@ -1199,6 +1199,17 @@ export function screenTour(lesson: Lesson, screen: LessonScreen | undefined): To
   return undefined;
 }
 
+/** The question a screen asks: the moment, a check, or a quiz card (null for any other screen) */
+export function screenQuestion(
+  lesson: Lesson,
+  screen: LessonScreen | undefined
+): LessonQuestion | null {
+  if (screen?.kind === 'moment') return lesson.moment;
+  if (screen?.kind === 'check') return lesson.checks[screen.index] ?? null;
+  if (screen?.kind === 'card') return lesson.cards[screen.index].quiz ?? null;
+  return null;
+}
+
 /** A tour one of the lesson's screens hands over */
 export function lessonOwnsTour(lesson: Lesson, tour: TourId): boolean {
   return lessonScreens(lesson).some((screen) => screenTour(lesson, screen) === tour);

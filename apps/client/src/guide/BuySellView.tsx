@@ -25,10 +25,13 @@ export function BuySellView({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** "Try again" after a wrong pick (owner 2026-11-17) */
+  onRetry?: () => void;
 }) {
   const answered = answer !== undefined;
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -78,7 +81,9 @@ export function BuySellView({
         })}
       </div>
       {/* The Why points at the plan, not the price */}
-      {answered && <AnswerResult right={answer === q.correct} explain={q.explain} />}
+      {answered && (
+        <AnswerResult right={answer === q.correct} explain={q.explain} onRetry={onRetry} />
+      )}
       {answered && q.chart?.freezeAt && (
         <p className={styles.after}>What happened next (the plan doesn&apos;t depend on it)</p>
       )}

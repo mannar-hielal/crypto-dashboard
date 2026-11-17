@@ -11,7 +11,7 @@
 
 import type { TourId } from './tours';
 import { create } from 'zustand';
-import { getLesson, lessonScreens, type LessonId, screenTour } from './lessons';
+import { getLesson, lessonScreens, type LessonId, screenQuestion, screenTour } from './lessons';
 
 /** The journal line on the last screen: typed, on its way, or in the journal */
 export type NoteStatus = 'draft' | 'saving' | 'saved';
@@ -82,6 +82,11 @@ interface LessonState extends LessonRun {
   next: () => void;
   back: () => void;
   answer: (option: number) => void;
+  /**
+   * "Try again" after a wrong answer (owner 2026-11-17): the screen's answer is cleared, so the board
+   * starts afresh and Continue waits for a right one. A right answer stands
+   */
+  retry: () => void;
   /** "Show me": hide the sheet while the lesson's tour runs */
   enterTour: (tour: TourId) => void;
   /** Another tour took the handed-over one's place: its end brings the learner back, not on */
@@ -120,6 +125,19 @@ interface LessonState extends LessonRun {
 /** Whether leaving the last screen must save the journal line first: typed, not saved, not failed */
 export function noteToSave(s: Pick<LessonRun, 'note' | 'noteStatus' | 'noteError'>): boolean {
   return s.noteStatus === 'draft' && s.note.trim() !== '' && !s.noteError;
+}
+
+/** The answers without this screen's, when that one is wrong (a right one stands) */
+function withoutWrong(
+  s: Pick<LessonRun, 'activeId' | 'answers'>,
+  screen: number
+): Record<number, number> {
+  const given = s.answers[screen];
+  if (!s.activeId || given === undefined) return s.answers;
+  const lesson = getLesson(s.activeId);
+  const q = screenQuestion(lesson, lessonScreens(lesson)[screen]);
+  if (!q || given === q.correct) return s.answers;
+  return Object.fromEntries(Object.entries(s.answers).filter(([at]) => Number(at) !== screen));
 }
 
 /** A screen index kept within the lesson */
@@ -245,15 +263,20 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
 
   back: () => {
     const { screen } = get();
-    if (screen > 0) set({ screen: screen - 1 });
+    if (screen <= 0) return;
+    // A wrong answer isn't kept: coming back, the board starts afresh rather than showing the right
+    // answer to a learner who hasn't found it yet (owner 2026-11-17: try again until right)
+    set({ screen: screen - 1, answers: withoutWrong(get(), screen) });
   },
 
   answer: (option) => {
     const { screen, answers } = get();
-    // First answer stands: the "Why" is shown against it
+    // An answer stands until "Try again" (a wrong one) clears it: the "Why" is shown against it
     if (answers[screen] !== undefined) return;
     set({ answers: { ...answers, [screen]: option } });
   },
+
+  retry: () => set((s) => ({ answers: withoutWrong(s, s.screen) })),
 
   enterTour: (tour) => set({ inTour: true, tourFrom: tour }),
 

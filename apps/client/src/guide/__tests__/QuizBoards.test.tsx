@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MatchQuiz } from '@/guide/MatchQuiz';
 import { OrderQuiz } from '@/guide/OrderQuiz';
@@ -196,5 +197,69 @@ describe('MatchQuiz (Match boxes)', () => {
     expect(el('lesson.match-term', 1).getAttribute('aria-label')).toBe('Beta, pair 2');
     expect(screen.getByText('The right pairs:')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toBe('Right. They go in order.');
+  });
+});
+
+// ─── Try again (owner 2026-11-17): after a wrong check, another go until it's right ──────────
+
+/** A board with the lesson's part played: the answer kept, and cleared by Try again */
+function Retrying({ board, q }: { board: 'order' | 'match'; q: LessonQuestion }) {
+  const [answer, setAnswer] = useState<number | undefined>(undefined);
+  const props = { q, answer, onAnswer: setAnswer, onRetry: () => setAnswer(undefined) };
+  return board === 'order' ? <OrderQuiz {...props} /> : <MatchQuiz {...props} />;
+}
+const retryButton = () => document.querySelector<HTMLButtonElement>(guideSelector('lesson.retry'));
+
+describe('Try again on the boards', () => {
+  it('should empty the Drag and drop slots for another go after a wrong check', () => {
+    render(<Retrying board="order" q={order} />);
+    for (const [step, slot] of [
+      [1, 0],
+      [0, 1],
+      [2, 2],
+    ]) {
+      fireEvent.click(el('lesson.step', step));
+      fireEvent.click(el('lesson.slot', slot));
+    }
+    fireEvent.click(checkButton());
+    expect(status()).toMatch(/^Not quite\./);
+    fireEvent.click(retryButton()!);
+    expect(status()).toBeUndefined();
+    expect(retryButton()).toBeNull();
+    for (const i of [0, 1, 2])
+      expect(el('lesson.slot', i).getAttribute('aria-label')).toMatch(/empty$/);
+    expect(checkButton().disabled).toBe(true);
+    // Right this time: no Try again
+    for (const i of [0, 1, 2]) {
+      fireEvent.click(el('lesson.step', i));
+      fireEvent.click(el('lesson.slot', i));
+    }
+    fireEvent.click(checkButton());
+    expect(status()).toMatch(/^Right\./);
+    expect(retryButton()).toBeNull();
+  });
+
+  it('should undo every Match boxes pair for another go after a wrong check', () => {
+    render(<Retrying board="match" q={match} />);
+    for (const [t, m] of [
+      [0, 1],
+      [1, 0],
+      [2, 2],
+    ]) {
+      fireEvent.click(el('lesson.match-term', t));
+      fireEvent.click(el('lesson.match-meaning', m));
+    }
+    fireEvent.click(checkButton());
+    fireEvent.click(retryButton()!);
+    expect(status()).toBeUndefined();
+    expect(el('lesson.match-term', 0).getAttribute('aria-label')).toBe('Alpha');
+    expect(el('lesson.match-meaning', 2).getAttribute('aria-label')).toBe('The third');
+    expect(screen.queryByText('The right pairs:')).toBeNull();
+  });
+
+  it('should offer no Try again where the surface gives none (a checkpoint)', () => {
+    render(<MatchQuiz q={match} answer={-1} onAnswer={() => {}} />);
+    expect(status()).toMatch(/^Not quite\./);
+    expect(retryButton()).toBeNull();
   });
 });
