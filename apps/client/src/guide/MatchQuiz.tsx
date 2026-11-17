@@ -2,13 +2,15 @@
  * Match boxes (owner's visual Q&A, 2026-11-16): terms on the left, meanings on the right in a fixed
  * shuffle. Tap a term, then its meaning: both get the same numbered chip, so colour is never the
  * only cue. Tapping a paired box undoes its pair. "Check" grades once every term is paired: each pair
- * gets ✓ or ✕, then "Right." / "Not quite." and the Why. Coming back to an answered question shows
- * the right pairs.
+ * gets ✓ or ✕, then "Right." / "Not quite." and the Why; after a "Not quite.", "Try again" undoes
+ * every pair for another go (owner 2026-11-17). Coming back to a rightly answered question shows the
+ * right pairs.
  */
 
 import { useMemo, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
+import { QUIZ_MARK_SIZE_SMALL } from './quizMarks';
 import { shuffledOrder, type LessonQuestion } from './lessons';
 import { BoardFooter } from './BoardFooter';
 import styles from './QuizBoard.module.css';
@@ -24,10 +26,13 @@ export function MatchQuiz({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** "Try again" after a wrong check (owner 2026-11-17): the pairs are undone, then the answer */
+  onRetry?: () => void;
 }) {
   const pairs = useMemo(() => q.pairs ?? [], [q.pairs]);
   const answered = answer !== undefined;
@@ -40,7 +45,8 @@ export function MatchQuiz({
   const [selected, setSelected] = useState<number | null>(null);
   const complete = Object.keys(links).length === pairs.length;
   // Answered on an earlier visit: no pairs in memory, so the right pairs are shown, unmarked
-  const revisit = answered && !complete;
+  // Coming back to a right answer only: a wrong one (kept until Try again) never shows the pairs
+  const revisit = answered && answer === q.correct && !complete;
   const shown: Record<number, number> = revisit
     ? Object.fromEntries(pairs.map((_, i) => [i, i]))
     : links;
@@ -101,8 +107,12 @@ export function MatchQuiz({
                     {chip(t)}
                   </span>
                 )}
-                {mark === 'right' && <Check aria-hidden="true" size={16} strokeWidth={3} />}
-                {mark === 'wrong' && <X aria-hidden="true" size={16} strokeWidth={3} />}
+                {mark === 'right' && (
+                  <Check aria-hidden="true" size={QUIZ_MARK_SIZE_SMALL} strokeWidth={3} />
+                )}
+                {mark === 'wrong' && (
+                  <X aria-hidden="true" size={QUIZ_MARK_SIZE_SMALL} strokeWidth={3} />
+                )}
               </button>
             );
           })}
@@ -138,6 +148,14 @@ export function MatchQuiz({
         revisit={revisit}
         revisitLabel="The right pairs:"
         explain={q.explain}
+        onRetry={
+          onRetry &&
+          (() => {
+            setLinks({});
+            setSelected(null);
+            onRetry();
+          })
+        }
       />
     </>
   );

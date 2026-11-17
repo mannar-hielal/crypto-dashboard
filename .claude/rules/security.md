@@ -219,7 +219,8 @@ Before calling a feature "done," confirm:
 - [ ] Any new env var is in both `criticalVars` (`config.ts`) and `.env.example`.
 - [ ] Any new outbound `fetch` has `AbortSignal.timeout(...)`.
 - [ ] `pnpm audit --audit-level=high` is clean, or a new CVE is resolved via a `pnpm.overrides`
-      entry, not suppressed.
+      entry, not suppressed (the one exception: an owner-accepted advisory with no fix, on a path
+      that never ships, listed under Supply-chain's "Accepted advisories").
 - [ ] Any new native/build dependency is deliberately added to `.npmrc`'s
       `only-built-dependencies` — not silently allowed to run install scripts.
 - [ ] User-controllable content never reaches `dangerouslySetInnerHTML`/`innerHTML` unsanitized.

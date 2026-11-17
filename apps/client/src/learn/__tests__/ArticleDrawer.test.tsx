@@ -13,7 +13,7 @@ vi.mock('react-router', async (importOriginal) => ({
 
 import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
-import { ArticleDrawer, RichText } from '@/learn/ArticleDrawer';
+import { ArticleDrawer } from '@/learn/ArticleDrawer';
 import { useArticleStore } from '@/learn/articleStore';
 
 const drawer = () => document.querySelector('[role="dialog"]');
@@ -207,14 +207,5 @@ describe('ArticleDrawer', () => {
     open('suncoin');
     fireEvent.click(document.querySelector('[data-guide="article.drawer"]')!);
     expect(drawer()).toBeNull();
-  });
-});
-
-describe('RichText', () => {
-  it('should bold **runs** and keep everything else plain text, never HTML', () => {
-    const { container } = render(<RichText text="A **ledger** is <b>a list</b>." />);
-    expect(container.querySelector('strong')!.textContent).toBe('ledger');
-    expect(container.querySelector('b')).toBeNull();
-    expect(container.textContent).toBe('A ledger is <b>a list</b>.');
   });
 });

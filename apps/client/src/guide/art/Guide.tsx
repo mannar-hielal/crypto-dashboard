@@ -132,6 +132,28 @@ function Face({ mood, top }: { mood: Mood; top: number }): JSX.Element {
   }
 }
 
+/** Lens radius: two thin round frames around the eyes, a hair apart (the biggest eye is 5.5) */
+const LENS = 5.6;
+
+/**
+ * The guides' glasses (owner 2026-11-17: either guide puts them on for the math or an analogy): thin
+ * round frames in the face's own line colour, a bridge between them and short arms to the body's
+ * sides, so they read as glasses on green and red alike
+ */
+function Glasses({ top }: { top: number }) {
+  const L = CX - 6;
+  const R = CX + 6;
+  return (
+    <g className={styles.glasses} data-glasses="">
+      <circle cx={L} cy={top} r={LENS} />
+      <circle cx={R} cy={top} r={LENS} />
+      <path d={`M${L + LENS} ${top} L${R - LENS} ${top}`} />
+      <path d={`M${L - LENS} ${top - 1} L${BODY_X} ${top - 2}`} />
+      <path d={`M${R + LENS} ${top - 1} L${BODY_X + BODY_W} ${top - 2}`} />
+    </g>
+  );
+}
+
 /** Arms from the body's sides; `point` and `wave` raise the right one toward the scene */
 function Arms({ pose, shoulder }: { pose: Pose; shoulder: number }) {
   const left = (
@@ -168,13 +190,23 @@ interface GuideProps {
   who: Speaker;
   mood: Mood;
   pose?: Pose;
+  /** The thin round glasses: the guide doing the math or explaining an analogy */
+  glasses?: boolean;
   /** Top-left corner and scale of the 64 × 92 figure, in the parent SVG's units */
   x?: number;
   y?: number;
   scale?: number;
 }
 
-export function Guide({ who, mood, pose = 'stand', x = 0, y = 0, scale = 1 }: GuideProps) {
+export function Guide({
+  who,
+  mood,
+  pose = 'stand',
+  glasses = false,
+  x = 0,
+  y = 0,
+  scale = 1,
+}: GuideProps) {
   const tick = who === 'tick';
   const bodyTop = tick ? 22 : 14;
   const bodyH = 52;
@@ -194,6 +226,7 @@ export function Guide({ who, mood, pose = 'stand', x = 0, y = 0, scale = 1 }: Gu
       <Arms pose={pose} shoulder={bodyTop + 26} />
       <rect x={BODY_X} y={bodyTop} width={BODY_W} height={bodyH} rx="9" className={styles.body} />
       <Face mood={mood} top={bodyTop + 16} />
+      {glasses && <Glasses top={bodyTop + 16} />}
     </g>
   );
 }
@@ -203,11 +236,13 @@ export function GuideFigure({
   who,
   mood,
   pose,
+  glasses,
   className,
 }: {
   who: Speaker;
   mood: Mood;
   pose?: Pose;
+  glasses?: boolean;
   className?: string;
 }) {
   return (
@@ -217,7 +252,7 @@ export function GuideFigure({
       aria-hidden="true"
       focusable="false"
     >
-      <Guide who={who} mood={mood} pose={pose} />
+      <Guide who={who} mood={mood} pose={pose} glasses={glasses} />
     </svg>
   );
 }

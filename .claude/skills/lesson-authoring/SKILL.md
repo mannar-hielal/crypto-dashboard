@@ -1,6 +1,6 @@
 ---
 name: lesson-authoring
-description: "Use when writing or rewriting a guided lesson (cards, quizzes, the 'Your call' moment, Try it) for cryptopapertrade.com's learning path, benchmarked against a reference course (its screenshots and the comparison files live in the git-ignored guided-learning-topics/). Covers: same concepts and a similar length, never paraphrased text; the beginner tone; quiz formats (multiple choice, drag and drop, choose buy or sell, match boxes); practice paper trades from a card; linking terms to articles; the technical-writer fact check; illustrations; the learning path's order; lessons.ts rules, tests and docs. Trigger words: write a lesson, new card, rewrite Lesson N, match the benchmark, compare lessons, lesson quiz, drag and drop, buy or sell quiz, match boxes, lesson coverage, fact check a lesson, lesson illustration, path order, new unit, practice trade, paper trade from the lesson, try it on the chart."
+description: "Use when writing or rewriting a guided lesson (cards, quizzes, the 'Your call' moment, Try it) for cryptopapertrade.com's learning path, benchmarked against a reference course (its screenshots and the comparison files live in the git-ignored guided-learning-topics/). Covers: same concepts and a similar length, never paraphrased text; the beginner tone; quiz formats (multiple choice, drag and drop, choose buy or sell, match boxes); practice paper trades from a card and the look at what just happened; the one label set (Continue, Back, Finish lesson); Try again until right; the math breakdown and the analogy (a guide in glasses); pictures on top; linking terms to articles; the technical-writer fact check; illustrations; the learning path's order; lessons.ts rules, tests and docs. Trigger words: write a lesson, new card, rewrite Lesson N, match the benchmark, compare lessons, lesson quiz, drag and drop, buy or sell quiz, match boxes, lesson coverage, fact check a lesson, lesson illustration, path order, new unit, practice trade, paper trade from the lesson, try it on the chart, do the math, percent, analogy, glasses, try again, button label."
 ---
 
 # Lesson authoring — cryptopapertrade.com
@@ -169,6 +169,12 @@ trust), and list in the report to the owner which were applied and which decline
 
 ## Illustrations
 
+- **Picture on top, text below** (owner 2026-11-17): a card's drawing, chart or photo always comes
+  first, its text under it. `LessonSheet` lays every card out that way, and a `LessonSheet` test
+  checks every card of every lesson.
+- **Let the picture carry the text** (owner 2026-11-17): when a picture makes sense, choose or draw
+  it so the learner understands most of the card by looking at it (the chart with its dated markers,
+  the worked sum, the queue running thin). A picture that only decorates isn't enough.
 - First reuse what we have: `LessonArt` drawings (`LessonArtId` in `lessons.ts`), the guides, real
   photos with a stated `credit`, charts from real market history.
 - When a screen needs an illustration we don't have (owner 2026-11-14), take it from a **free
@@ -237,7 +243,36 @@ rewritten, and to quizzes, Whys, summaries and titles.
 - Two guides present: Pulin (`tick`, asks the questions a beginner is too polite to ask) and Berwyn
   (`tock`, answers them, usually). A card has `text` (may hold `[[terms]]`), or `lines` (a short
   exchange), or `beats` (a cold open), plus a `presenter` or a real `photo` (with its `credit`).
-- Short: one idea per card; the Next button (`nextLabel`) names the question the next card answers.
+- Short: one idea per card.
+- **One label set** (owner 2026-11-17): the main button always says **Continue**, the back link
+  **← Back**, and the summary's button (the last screen that teaches) **Finish lesson**, in every
+  lesson (`LESSON_LABELS` in `lessons.ts`). A card has no label of its own (no `nextLabel`: the lesson
+  rules test refuses one), so no question-style labels.
+- **A new, harder idea gets an analogy** (owner 2026-11-17), told by **one** guide wearing glasses
+  (`analogy: { who, text }`), in place of the guides' chit-chat on that card: "Think of it as …".
+  Say where it stops matching (Lesson 1's short: borrow a game, sell it, buy one back cheaper, return
+  it, keep the difference; "our perpetual borrows nothing"). It counts toward the card's 80 words.
+- **Do the math** (owner 2026-11-17): a card that works out a gain, a loss or a percent shows the
+  sum (`math: { who, steps, answer }`). A guide in glasses says "Let's do the math", then numbered
+  steps, one operation each with its result, then the answer set apart:
+
+  ```
+  1. Price rise           73,079 − 27,500 = 45,579
+  2. Divide by the start  45,579 ÷ 27,500 = 1.657
+  3. As a percent         1.657 × 100 = 165.7%
+  ➜ Bitcoin rose about 166%.
+  ```
+
+  - Every figure comes from the card's own data (the dated candles beside it, noted in a code
+    comment), recomputed when written; the same numbers on every card that uses them.
+  - 2–6 steps, a short label, one operation (`a − b = c`, `≈` when rounded); the lesson rules test
+    checks the shape. The sums don't count toward the 80 words.
+  - Our numbers only, never an example from the benchmark course or an owner's illustration of the
+    format.
+
+- **The glasses** (owner 2026-11-17): either guide may wear them (`GuideFigure glasses`: thin round
+  frames in the face's line colour), per card, for the math and for an analogy; Pulin and Berwyn take
+  turns.
 - Plain words, then the term: say what it does before its name.
 - Our own examples: Nora and her notebook, SunCoin, Emi, the pizzas, our charts from real market
   history (`ChartScene`, BTCUSDT daily candles). Invent fresh ones rather than borrowing a
@@ -257,6 +292,11 @@ rewritten, and to quizzes, Whys, summaries and titles.
 
 - Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
   2026-11-13); the chosen option is already marked.
+- **Try again until right** (owner 2026-11-17), on every lesson question (Match boxes, Drag and
+  drop, Choose buy or sell, multiple choice, Your call): after "Not quite." and the Why, a **Try
+  again** button (`lesson.retry`) clears the answer and empties the board; Continue shows only once
+  the answer is right. Back off a wrong answer clears it too. Checkpoints keep their scored, one-go
+  answers.
 - Every quiz has a Why that teaches, not only "correct".
 - A buy-or-sell quiz never rewards guessing a price direction: the right answer follows from a stated
   plan or rule in the situation (the same honesty rule as "Your call").
@@ -266,7 +306,7 @@ rewritten, and to quizzes, Whys, summaries and titles.
   - **Drag and drop:** numbered empty slots on top, cards below. Drag a card into a slot, or tap a
     card then tap a slot (keyboard: Tab to a card, Enter to pick, Tab to a slot, Enter to place).
     "Check" grades: each slot turns green with ✓ or red with ✕, then "Right." / "Not quite." and the
-    Why. No retry (as with the other quizzes).
+    Why, and after a "Not quite." Try again (2026-11-17).
   - **Match boxes:** two columns, terms on the left, meanings on the right (shuffled). Tap a term, then
     its meaning: the pair gets the same numbered chip (①②③), so colour is never the only cue; tap a
     paired box to undo. "Check" marks each pair ✓ / ✕, then "Right." / "Not quite." and the Why.
@@ -321,7 +361,11 @@ with paper money, and then picks up where it left off.
 3. A guided tour, the arrow ring and bubble, walks them through the paper trade: the right market
    (Spot for buy/sell; **USDT Perpetual for long/short**, since shorting needs it), Market or Limit,
    the amount, then Buy or Sell. A long/short tour also shows how to close the position.
-4. At the end (or on Skip / ✕ in the tour) a clear way back, e.g. "Back to the lesson", which
+4. **What just happened** (owner 2026-11-17, every practice trade): once the order fills, the tour
+   stays on the chart and shows the result in the account panel ("Orders & Account" on a phone),
+   highlighting what matters for that action: the coin bought (Assets tab, its row, Unrealized PnL),
+   the open long or short (Positions tab, its row: side, entry, Unrealized P&L, the ✕ that closes it).
+5. At the end (or on Skip / ✕ in the tour) a clear way back, "Back to the lesson", which
    **resumes the lesson on the screen after the card**, not at the start, with the answers and
    progress kept (`lessonStore` in memory, the furthest screen synced to the account).
 
@@ -333,9 +377,12 @@ with paper money, and then picks up where it left off.
 - **The practice tours** are in `apps/client/src/guide/tours.ts` (`PRACTICE_TOURS`,
   `PRACTICE_TOUR_IDS`): `practice-buy` (spot, `/dashboard/spot/BTC/USDT`), `practice-long` and
   `practice-short` (USDT Perpetual, `/dashboard/usdt/BTCUSDT`). Each opens the form, picks Market,
-  USDT and $100, and places the order. **No `next`**: the chain ends back in the lesson. A new
-  practice tour gets its entry there, built with the `practice()` helper and the shared step builders
-  (`steps.ts`).
+  USDT and $100, and places the order. Its `next` is its **review** (`PRACTICE_REVIEWS`,
+  `PRACTICE_REVIEW_IDS`: `review-buy`, `review-long`, `review-short`), a short chapter on the account
+  panel with existing anchors (`account.tab`, `assets.row`, `assets.row.upnl`, `positions.row`) whose
+  last step's button says "Back to the lesson"; the review has no `next`, so the chain ends back in
+  the lesson. A chain keeps each chapter to five steps. A new practice tour gets its entry there,
+  built with the `practice()` helper (with its review) and the shared step builders (`steps.ts`).
 - **Handing over and resuming:** `startTour` (`afterNote.ts`) treats a card's practice tour as the
   lesson's own (`own()`), so the lesson waits. `LessonSheet` resumes when **no tour runs any
   more** (a chain such as `buy-first-coin → sell-and-review` included), and `lessonStore.leaveTour()`
@@ -362,7 +409,7 @@ with paper money, and then picks up where it left off.
 ### Tests when adding one
 
 - `tours.test.ts`: at most five steps on each screen size, registered anchors, phone and desktop
-  first steps, no `next`.
+  first steps, `next` = its review, and the review's steps (which tab, which row).
 - `LessonSheet.test.tsx`: the practice button hands over and the lesson resumes one screen on; a
   chain keeps the lesson waiting.
 - `lessons.test.ts`: the cards that offer a practice, and which tour.

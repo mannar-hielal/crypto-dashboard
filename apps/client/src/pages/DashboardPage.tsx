@@ -1,4 +1,4 @@
-import { NARROW_LAYOUT_QUERY } from '@/lib/breakpoints';
+import { isNarrowNow, NARROW_LAYOUT_QUERY } from '@/lib/breakpoints';
 import { guide } from '@/lib/guideAnchors';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
@@ -189,26 +189,11 @@ export function DashboardInner() {
 
   const isMobile = useMediaQuery(NARROW_LAYOUT_QUERY);
 
-  const [panelSize, setPanelSize] = useState<PanelSize>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia(NARROW_LAYOUT_QUERY).matches) {
-      return 'collapsed';
-    }
-    return 'open';
-  });
-
-  const [tradingPanelOpen, setTradingPanelOpen] = useState(() => {
-    if (typeof window !== 'undefined' && window.matchMedia(NARROW_LAYOUT_QUERY).matches) {
-      return false;
-    }
-    return true;
-  });
-
-  const [leftToolbarOpen, setLeftToolbarOpen] = useState(() => {
-    if (typeof window !== 'undefined' && window.matchMedia(NARROW_LAYOUT_QUERY).matches) {
-      return false;
-    }
-    return true;
-  });
+  const [panelSize, setPanelSize] = useState<PanelSize>(() =>
+    isNarrowNow() ? 'collapsed' : 'open'
+  );
+  const [tradingPanelOpen, setTradingPanelOpen] = useState(() => !isNarrowNow());
+  const [leftToolbarOpen, setLeftToolbarOpen] = useState(() => !isNarrowNow());
   /** Persisted across symbol changes so the user stays on their chosen tab */
   const [tradingTab, setTradingTab] = useState<OrderTab>('market');
   /** Persisted across remounts so the user stays on their chosen side — mirrors TV */

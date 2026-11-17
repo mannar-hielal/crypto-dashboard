@@ -56,12 +56,14 @@ describe('BuySellView', () => {
     expect(side('buy').className).not.toMatch(/unpicked/);
   });
 
-  it('should say Not quite. and mark both the pick and the right side when the pick was wrong', () => {
-    render(<BuySellView q={q} answer={1} onAnswer={() => {}} />);
-    expect(document.querySelector('[role="status"]')!.textContent).toBe(`Not quite. ${q.explain}`);
+  it('should say Not quite. and mark only the wrong pick, never pointing at the right side', () => {
+    render(<BuySellView q={q} answer={1} onAnswer={() => {}} onRetry={() => {}} />);
+    expect(document.querySelector('[role="status"]')!.textContent).toMatch(
+      `Not quite. ${q.explain}`
+    );
     expect(side('sell').querySelector('[aria-label="your pick, not quite"]')).toBeTruthy();
-    expect(side('buy').querySelector('[aria-label="right answer"]')).toBeTruthy();
-    // Both are marked, so neither is dimmed: the right answer never fades
+    // Try again still asks (owner 2026-11-17): the right side carries no mark and isn't dimmed
+    expect(side('buy').querySelector('[aria-label="right answer"]')).toBeNull();
     expect(side('buy').className).not.toMatch(/unpicked/);
     expect(side('sell').className).not.toMatch(/unpicked/);
   });
@@ -80,5 +82,30 @@ describe('BuySellView', () => {
     expect(document.activeElement).toBe(side('sell'));
     fireEvent.keyDown(side('sell'), { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(side('buy'));
+  });
+
+  it('should offer Try again after a wrong pick, and none after a right one (owner 2026-11-17)', () => {
+    const retry = vi.fn();
+    render(<BuySellView q={q} answer={1} onAnswer={() => {}} onRetry={retry} />);
+    fireEvent.click(document.querySelector(guideSelector('lesson.retry'))!);
+    expect(retry).toHaveBeenCalledTimes(1);
+    cleanup();
+    render(<BuySellView q={q} answer={0} onAnswer={() => {}} onRetry={retry} />);
+    expect(document.querySelector(guideSelector('lesson.retry'))).toBeNull();
+  });
+
+  it('should show the right side after a wrong pick where there is no Try again (one scored go)', () => {
+    render(<BuySellView q={q} answer={1} onAnswer={() => {}} />);
+    expect(side('buy').querySelector('[aria-label="right answer"]')).toBeTruthy();
+  });
+
+  it('should keep what happened next hidden after a wrong pick until the answer is right', () => {
+    const chartQ = { ...q, chart: { ...(q.chart ?? {}), freezeAt: '2024-01-10' } } as typeof q;
+    const { rerender } = render(
+      <BuySellView q={chartQ} answer={1} onAnswer={() => {}} onRetry={() => {}} />
+    );
+    expect(screen.queryByText(/What happened next/)).toBeNull();
+    rerender(<BuySellView q={chartQ} answer={0} onAnswer={() => {}} onRetry={() => {}} />);
+    expect(screen.getByText(/What happened next/)).toBeTruthy();
   });
 });

@@ -76,8 +76,12 @@ describe('tourStore', () => {
       for (let i = 0; i < phone - 1; i++) s().next();
       expect(s().activeId).toBe('practice-buy');
       s().next();
+      // On to its look at what just happened (2026-11-17), its phone steps too
+      expect(s().activeId).toBe('review-buy');
+      expect(s().wide).toBe(false);
+      for (let i = 0; i < tourSteps(getTour('review-buy'), false).length; i++) s().next();
       expect(s().activeId).toBeNull();
-      // A practice trade is no tour of the path: never marked finished or counted
+      // A practice trade and its review are no tours of the path: never marked finished or counted
       expect(s().completed).toEqual({});
       expect(s().finishes).toBe(0);
     } finally {
@@ -203,6 +207,10 @@ describe('tourStore', () => {
     s().start('primer'); // not phone-ready
     s().setWide(false);
     expect(s().activeId).toBeNull();
+    // Closed by the app, which the lesson tells apart from the learner's own close
+    expect(s().closedForSize).toBe(true);
+    s().start('primer');
+    expect(s().closedForSize).toBe(false);
   });
 
   it('should never hand over to a next chapter that needs a larger screen on a phone', () => {

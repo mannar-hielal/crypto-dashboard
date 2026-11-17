@@ -62,6 +62,24 @@ describe('StreakView', () => {
     await waitFor(() => expect(screen.getByText('3-day streak')).toBeTruthy(), { timeout: 3000 });
   });
 
+  it('should move on from the number shown when the streak changes, never back from 0', async () => {
+    reduced = false;
+    getHabits.mockResolvedValueOnce(habits); // a 3-day streak
+    const { container, rerender } = render(
+      <StreakView accessToken="t-one" onContinue={() => {}} />
+    );
+    await waitFor(() => expect(screen.getByText('3-day streak')).toBeTruthy(), { timeout: 3000 });
+    // Every number shown from here on, as the count runs
+    const seen: string[] = [];
+    const watch = new MutationObserver(() => seen.push(container.textContent ?? ''));
+    watch.observe(container, { subtree: true, characterData: true, childList: true });
+    getHabits.mockResolvedValue({ ...habits, streakDays: 4 });
+    rerender(<StreakView accessToken="t-two" onContinue={() => {}} />); // read again (past midnight)
+    await waitFor(() => expect(screen.getByText('4-day streak')).toBeTruthy(), { timeout: 3000 });
+    watch.disconnect();
+    expect(seen.some((t) => /\b[0-2]-day streak/.test(t))).toBe(false);
+  });
+
   it('should say so when the streak can’t load, and still go on', async () => {
     getHabits.mockRejectedValue(new Error('offline'));
     const onContinue = vi.fn();

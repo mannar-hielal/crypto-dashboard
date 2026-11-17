@@ -307,6 +307,13 @@ export const GUIDE_ANCHORS = [
   'lesson.match-meaning',
   // Drag and drop / Match boxes: the Check button that grades the board
   'lesson.check',
+  // A card's worked sum (owner 2026-11-17): the breakdown, and its answer under the steps
+  'lesson.math',
+  'lesson.math.answer',
+  // A card's analogy, told by one guide in glasses (owner 2026-11-17)
+  'lesson.analogy',
+  // Any lesson question after "Not quite.": Try again, which clears the answer (owner 2026-11-17)
+  'lesson.retry',
   // The streak screen after a lesson's close, and its Continue
   'lesson.streak',
   'lesson.streak.continue',
@@ -321,7 +328,6 @@ export const GUIDE_ANCHORS = [
   /** The close's line on what the next lesson brings */
   'lesson.teaser',
   'lesson.highlight',
-  'lesson.genesis',
   'lesson.finish-line',
   'lesson.rating',
   'lesson.finish',

@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getLesson, LESSONS, lessonScreens } from '@/guide/lessons';
+import { cardTermIds, getLesson, LESSONS, lessonScreens } from '@/guide/lessons';
 import { isGuideAnchor } from '@/lib/guideAnchors';
 import { canOpen, FREE } from '@/learn/access';
 import { ARTICLE_IDS, ARTICLES, getArticle, isArticleId } from '@/learn/articles';
 import { CONCEPT_IDS, CONCEPTS, getConcept, isConceptId } from '@/learn/concepts';
 import { conceptFor, conceptsOf, lessonPlacesOf, practiceFor } from '@/learn/graph';
-import { termIds } from '@/learn/terms';
 
 /** Hype the education reports rule out, as for the lessons (reports/: "trust is the product") */
 const HYPE = [
@@ -34,10 +33,10 @@ describe('the learning graph', () => {
     for (const id of ARTICLE_IDS) expect(conceptsOf(id).length, id).toBeGreaterThan(0);
   });
 
-  it('should mark only known concepts in lesson cards, at most two a card', () => {
+  it('should mark only known concepts in lesson cards (text and lines), at most two a card', () => {
     for (const lesson of LESSONS) {
       for (const card of lesson.cards) {
-        const ids = termIds(card.text ?? '');
+        const ids = cardTermIds(card);
         expect(ids.length, card.title).toBeLessThanOrEqual(2);
         for (const id of ids) expect(isConceptId(id), `${card.title}: ${id}`).toBe(true);
       }
@@ -73,6 +72,8 @@ describe('the learning graph', () => {
       'Lesson 2: Sealed by hard work',
     ]);
     expect(labels('exchange-price')).toEqual([
+      // Berwyn's line marks slippage: a line's terms are taught there too (2026-11-17)
+      'Lesson 1: The market never sleeps',
       'Lesson 2: Liquidity, briefly',
       'Lesson 3: Thin or deep',
       'Lesson 3: Bitcoin is deep',
@@ -108,7 +109,7 @@ describe('the learning graph', () => {
     for (const lesson of LESSONS) {
       if (lesson.access !== FREE) continue;
       for (const card of lesson.cards) {
-        for (const id of termIds(card.text ?? '')) {
+        for (const id of cardTermIds(card)) {
           const concept = getConcept(id as never);
           expect(concept.access, id).toBe(FREE);
           expect(getArticle(concept.article).access, concept.article).toBe(FREE);

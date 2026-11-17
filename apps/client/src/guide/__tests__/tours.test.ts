@@ -5,6 +5,8 @@ import {
   TOURS,
   getTour,
   isTourId,
+  PRACTICE_REVIEW_IDS,
+  PRACTICE_REVIEWS,
   PRACTICE_TOURS,
   PRACTICE_TOUR_IDS,
   tourSteps,
@@ -18,7 +20,7 @@ describe('tours', () => {
     expect(isTourId('nope')).toBe(false);
   });
 
-  for (const tour of [...TOURS, ...PRACTICE_TOURS]) {
+  for (const tour of [...TOURS, ...PRACTICE_TOURS, ...PRACTICE_REVIEWS]) {
     describe(tour.id, () => {
       it('should have at most five steps on each screen size (completion falls fast past five)', () => {
         for (const wide of [true, false]) {
@@ -56,7 +58,12 @@ describe('tours', () => {
 
       it('should start on a dashboard path and chain only to a known tour', () => {
         expect(tour.startUrl).toMatch(/^\/dashboard\//);
-        if (tour.next) expect(isTourId(tour.next)).toBe(true);
+        // A path tour chains to a path tour; a practice trade to its review (2026-11-17)
+        if (tour.next) {
+          expect(
+            isTourId(tour.next) || (PRACTICE_REVIEW_IDS as readonly string[]).includes(tour.next)
+          ).toBe(true);
+        }
       });
     });
   }
@@ -103,11 +110,23 @@ describe('tours', () => {
     expect(getTour('primer').phoneReady).toBeUndefined();
   });
 
-  it('should keep practice trades out of the saved, reported tours, and chain them to nothing', () => {
+  it('should keep practice trades out of the saved, reported tours, and chain each to its review only', () => {
     expect(PRACTICE_TOURS.map((t) => t.id)).toEqual([...PRACTICE_TOUR_IDS]);
-    for (const t of PRACTICE_TOURS) {
-      expect(isTourId(t.id)).toBe(false);
-      expect(t.next).toBeUndefined();
+    expect(PRACTICE_REVIEWS.map((t) => t.id)).toEqual([...PRACTICE_REVIEW_IDS]);
+    // Owner 2026-11-17: after the trade, a look at what just happened, then the lesson
+    expect(PRACTICE_TOURS.map((t) => t.next)).toEqual([
+      'review-buy',
+      'review-long',
+      'review-short',
+    ]);
+    for (const t of [...PRACTICE_TOURS, ...PRACTICE_REVIEWS]) expect(isTourId(t.id)).toBe(false);
+    for (const t of PRACTICE_REVIEWS) {
+      expect(t.next, t.id).toBeUndefined();
+      expect(t.phoneReady, t.id).toBe(true);
+      // On the practice trade's own page, and back to the lesson from its last step
+      const from = PRACTICE_TOURS.find((p) => p.next === t.id)!;
+      expect(t.startUrl, t.id).toBe(from.startUrl);
+      expect(t.steps.at(-1)!.nextLabel, t.id).toBe('Back to the lesson');
     }
     // On Ethereum: one position per symbol, so a short on Bitcoin would only close the practice long
     expect(getTour('practice-long').startUrl).toBe('/dashboard/usdt/BTCUSDT');
@@ -122,5 +141,46 @@ describe('tours', () => {
     expect(backIndex(phone, 1, [])).toBe(0); // not done in this run: it may be shown again
     expect(backIndex(phone, 2, [tap])).toBe(1);
     expect(backIndex(phone, 0, [])).toBeNull();
+  });
+
+  it('should show what each practice trade changed in the account panel (owner 2026-11-17)', () => {
+    const where = (id: 'review-buy' | 'review-long' | 'review-short') =>
+      getTour(id).steps.map((st) => [st.kind, st.anchor, st.key]);
+    // The coin bought: the Assets tab, Bitcoin's row, its unrealized PnL
+    expect(where('review-buy')).toEqual([
+      ['click', 'account.tab', 'assets'],
+      ['observe', 'assets.row', 'BTC'],
+      ['observe', 'assets.row.upnl', 'BTC'],
+    ]);
+    // The open long and the open short: the Positions tab, the position's row
+    expect(where('review-long')).toEqual([
+      ['click', 'account.tab', 'positions'],
+      ['observe', 'positions.row', 'linear:BTCUSDT'],
+    ]);
+    expect(where('review-short')).toEqual([
+      ['click', 'account.tab', 'positions'],
+      ['observe', 'positions.row', 'linear:ETHUSDT'],
+    ]);
+    expect(getTour('review-short').steps.at(-1)!.text).toMatch(/grows when the price falls/);
+    // Fact check 2026-11-17: the fee in the coin and in Avg cost; PnL before the selling fee
+    const buy = getTour('review-buy').steps.map((st) => st.text);
+    expect(buy[1]).toBe(
+      'This row is your Bitcoin. You paid $100; you hold a hair less (about $99.90 of Bitcoin) because Spot’s 0.1% fee is taken in the coin. Avg cost is what you paid per coin, fee included, so a hair above the price you bought at.'
+    );
+    expect(buy[2]).toMatch(
+      /^Unrealized PnL is what you’d gain or lose if you sold right now, before the selling fee\. It changes/
+    );
+    // The long's P&L follows the Mark Price, not every tick
+    const long = getTour('review-long').steps.at(-1)!.text;
+    expect(long).toMatch(/Unrealized P&L moves with the Mark Price\./);
+    for (const id of ['review-long', 'review-short'] as const) {
+      const last = getTour(id).steps.at(-1)!.text;
+      expect(last, id).not.toMatch(/every tick/);
+      // One phrase for closing a position, as Lesson 1 says it (fact check 2026-11-17)
+      expect(last, id).toMatch(/with the ✕ \(Close\) at the end of the row\.$/);
+    }
+    // The trade's last step says a look comes next, not that the lesson carries on
+    for (const t of PRACTICE_TOURS)
+      expect(t.steps.at(-1)!.text, t.id).toMatch(/Next, a quick look/);
   });
 });

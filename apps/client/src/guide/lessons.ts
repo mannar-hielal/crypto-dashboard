@@ -16,7 +16,7 @@
 
 import { FREE, type Entitlement } from '@/learn/access';
 import type { ArticleId, WidgetId } from '@/learn/articles';
-import { plainText } from '@/learn/terms';
+import { plainText, termIds } from '@/learn/terms';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId, PracticeTourId } from './tours';
 
@@ -39,7 +39,50 @@ export type LessonArtId =
   | 'staircase'
   | 'candleAnatomy'
   | 'swings'
-  | 'checkCoin';
+  | 'checkCoin'
+  // Pictures that tell most of their card (owner 2026-11-17), each with its `ART_LABELS` line
+  /** Lesson 1, Up or down: a price that climbs, one that slides, one that drifts sideways */
+  | 'threePaths'
+  /** Lesson 1, Buy and Sell: money for a coin, a coin for money */
+  | 'buySell'
+  /** Lesson 1, Close it to keep it: a result on paper, then locked in */
+  | 'closeToKeep'
+  /** Lesson 1, Going short: the borrowed game sold at $60, bought back at $40, $20 kept */
+  | 'shortGame'
+  /** Lesson 1, The market never sleeps: a shop's week of hours against crypto's */
+  | 'alwaysOpen'
+  /** Lesson 2, The hash links the chain: blocks carrying the one before's fingerprint */
+  | 'hashChain'
+  /** Lesson 2, Sealed by hard work: one old number changed, every later block broken */
+  | 'sealBroken';
+
+/**
+ * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
+ * The pictures drawn to tell most of their card (owner 2026-11-17) say what they show.
+ */
+export const ART_LABELS: Record<LessonArtId, string | null> = {
+  ledger: null,
+  bitcoin: null,
+  etf: null,
+  flashCrash: null,
+  staircase: null,
+  candleAnatomy: null,
+  swings: null,
+  checkCoin: null,
+  threePaths:
+    'Three price paths: one climbs, where betting up wins; one slides, where betting down wins; one drifts sideways.',
+  buySell: 'Buy: you pay money and get a coin. Sell: you hand over the coin and get money.',
+  closeToKeep:
+    'An open position shows +$120 on paper, which can still shrink. Closed, the +$120 is locked in and yours to keep.',
+  shortGame:
+    'A game’s price falls from $60 to $40: you sell a borrowed game at $60, buy one back at $40 to return, and keep $20.',
+  alwaysOpen:
+    'A week of opening hours: a shop opens only by day and closes on Sunday; crypto is open all day, every day.',
+  hashChain:
+    'Three blocks in a row: each carries the fingerprint, or hash, of the block before it, which links them into a chain.',
+  sealBroken:
+    'An old block’s number is changed from 5 to 9, so its fingerprint changes and the blocks after it no longer match: each must be redone.',
+};
 
 export type Speaker = 'tick' | 'tock';
 
@@ -92,11 +135,18 @@ export interface ChartMarker {
 
 /**
  * A real mini chart on a card (owner's visual Q&A 2026-10-23): daily candles from our market
- * history (Bybit's USDT perpetual, which reaches back before 2021 — spot doesn't), with markers.
+ * history (Bybit's USDT perpetual by default, which reaches back before 2021 — spot doesn't), with
+ * markers.
  */
 export interface ChartScene {
   /** Bitcoin, or Solana for the "smaller coins swing harder" comparison (Lesson 1, owner 2026-11-16) */
   symbol: 'BTCUSDT' | 'SOLUSDT';
+  /**
+   * Which Bybit market the candles come from: `linear` (the USDT perpetual, the default) or `spot`,
+   * when the card's text is about a spot trade and its prices must match (Lesson 1's worked long,
+   * fact check 2026-11-17)
+   */
+  category?: 'spot' | 'linear';
   /** The newest candle's date (YYYY-MM-DD, UTC) and how many daily candles end there */
   end: string;
   bars: number;
@@ -147,6 +197,40 @@ export interface LessonPhoto {
   credit: string | null;
 }
 
+/**
+ * A worked sum under a card (owner 2026-11-17): a guide in glasses says "Let's do the math", then
+ * numbered steps, one operation each with its result, and the answer set apart. Every figure comes
+ * from the card's own data (the dated candles beside it) and is checked when written.
+ */
+export interface MathBreakdown {
+  /** The guide doing the math, in glasses */
+  who: Speaker;
+  /** In order: what the step does ("Divide by the start") and the sum ("1.50 ÷ 12.34 = 0.12") */
+  steps: { label: string; sum: string }[];
+  /** The result in words, highlighted under the steps */
+  answer: string;
+}
+
+/**
+ * A new, harder idea told as an analogy by one guide in glasses (owner 2026-11-17), in place of the
+ * guides' chit-chat. It says where the analogy stops matching when that matters.
+ */
+export interface Analogy {
+  who: Speaker;
+  text: string;
+}
+
+/**
+ * The sheet's one label set, in every lesson (owner 2026-11-17): the main button always says
+ * Continue, the back link Back, and the summary's button (the last screen that teaches) Finish
+ * lesson. A card has no label of its own, so a question-style one can't come back.
+ */
+export const LESSON_LABELS = {
+  next: 'Continue',
+  back: 'Back',
+  finish: 'Finish lesson',
+} as const;
+
 export interface LessonCard {
   title: string;
   /** Pulin or Berwyn, standing in the picture and presenting it (a photo stands alone) */
@@ -166,12 +250,14 @@ export interface LessonCard {
    * right, they meet in the middle, then what the lesson will answer fades in
    */
   meet?: GuidesMeeting;
+  /** A worked sum under the text (gain, loss, percent): numbered steps, one operation each */
+  math?: MathBreakdown;
+  /** A new, harder idea as an analogy, told by one guide in glasses (under the text) */
+  analogy?: Analogy;
   /** Bold-labelled points under the text ("**Print coins.** Write …") */
   points?: CardPoint[];
   /** A Read more under the card, to the article that goes deeper (owner 2026-11-12) */
   more?: { article: ArticleId; section?: string };
-  /** The Next button's words: the question the next card answers (default "Continue") */
-  nextLabel?: string;
   /**
    * A quick check between cards (owner 2026-11-16: quizzes can sit mid-lesson). The card is then a
    * question screen: its `title` is the heading, the question replaces the text, and Next waits for
@@ -186,15 +272,6 @@ export interface LessonCard {
 }
 
 /** One "You can now…" line on the close, with the article that goes deeper */
-/**
- * The birth of Bitcoin, staged on a summary (`GenesisReveal`, owner 2026-11-12): after the problem
- * lines, each story line fades in and out in turn, then the Bitcoin mark, with the highlight under it
- */
-export interface BirthStory {
-  /** Each line in turn; `emphasis`, a part of its text, is set apart (Satoshi's name) */
-  lines: { text: string; emphasis?: string }[];
-}
-
 export interface CanDo {
   text: string;
   /** The article it opens; none yet = a plain line (owner 2026-11-16) */
@@ -270,7 +347,6 @@ export interface Lesson {
     points: CanDo[];
     /** The conclusion; with no article it has no Read more (Lesson 1's ending, owner 2026-11-12) */
     highlight?: { text: string; article?: ArticleId; section?: string };
-    genesis?: BirthStory;
   };
   /**
    * The lesson the close offers next. None: the path shows what comes next (Lesson 3 since the
@@ -292,24 +368,6 @@ export interface Lesson {
 
 /** Lesson 1's length: its card, the guides' meeting and the welcome card all say it */
 const LESSON_01_MINUTES = 9;
-
-/**
- * The birth of Bitcoin, staged on a summary (owner 2026-11-12). Lesson 1 told it until the rewrite
- * of 2026-11-16; Lesson 2 (why Bitcoin exists) tells it now. 2008: banks failed and governments and
- * central banks rescued them; Lehman Brothers, founded 1850, filed for bankruptcy on 15 September
- * 2008; the Bitcoin paper is dated 31 October 2008 (bitcoin-story).
- */
-export const BITCOIN_BIRTH: BirthStory = {
-  lines: [
-    { text: 'However, for most people there was no other choice.' },
-    { text: 'In 2008, that trust broke: Lehman Brothers, a 158-year-old bank, collapsed.' },
-    { text: 'Banks failed, and governments rushed to rescue them with newly printed money.' },
-    {
-      text: 'Then someone called Satoshi Nakamoto proposed money that no one holds or controls.',
-      emphasis: 'Satoshi Nakamoto',
-    },
-  ],
-};
 
 // ─── Lesson 1's charts: Bybit BTCUSDT / SOLUSDT perpetual daily candles (UTC closes, read and
 // fact-checked 2026-11-16, guided-learning-topics notes 13) ─────────────────────────────────────
@@ -342,17 +400,19 @@ const EXIT_2024: ChartScene = {
   fallback: 'swings',
 };
 
-// The worked long: 2 Oct 2023 closed 27,484.1; 13 Mar 2024 closed 73,133.0
+// The worked long, a spot buy, so spot candles (fact check 2026-11-17; the perpetual closed 27,484.1
+// and 73,133.0): Bybit BTCUSDT spot, 2 Oct 2023 closed 27,499.97; 13 Mar 2024 closed 73,079.40
 const LONG_2023: ChartScene = {
   symbol: 'BTCUSDT',
+  category: 'spot',
   end: '2024-03-20',
   bars: 178,
   markers: [
-    { date: '2023-10-02', text: 'Buy $27,484', position: 'below' },
-    { date: '2024-03-13', text: 'Sell $73,133', position: 'above' },
+    { date: '2023-10-02', text: 'Buy $27,500', position: 'below' },
+    { date: '2024-03-13', text: 'Sell $73,079', position: 'above' },
   ],
   label:
-    'Bitcoin daily candles from late September 2023 to March 2024: a buy on 2 October at $27,484, a sale on 13 March at $73,133.',
+    'Bitcoin daily candles from late September 2023 to March 2024: a buy on 2 October at $27,500, a sale on 13 March at $73,079.',
   fallback: 'swings',
 };
 
@@ -428,7 +488,6 @@ const lesson01: Lesson = {
           emphasis: '$1 billion',
         },
       ],
-      nextLabel: 'Unlock how trading works',
     },
     {
       title: 'Meet your guides',
@@ -443,10 +502,10 @@ const lesson01: Lesson = {
           'why your plan beats your gut',
         ],
       },
-      nextLabel: 'Show me the up-or-down trick',
     },
     {
       title: 'Up or down, you can win',
+      art: 'threePaths',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
       text: 'Over time a price climbs, slides or drifts sideways. Most people think you only win when it climbs. Not quite. Traders can profit either way, as long as they picked the right side before the move.',
       lines: [
@@ -456,14 +515,13 @@ const lesson01: Lesson = {
           text: 'You can. You can also lose money when things go up. Same coin, two sides.',
         },
       ],
-      nextLabel: 'Which button is which?',
     },
     {
       title: 'Buy and Sell',
+      art: 'buySell',
       presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       text: 'Think of it like a shop. **Buy** means you pay to own some coin, hoping it’s worth more later. **Sell** means you hand over coin for money: to cash in, to cut a loss, or (as you’ll see) to bet on a fall.',
       practice: { tour: 'practice-buy', label: 'Try a buy on the real chart' },
-      nextLabel: 'Let’s practise',
     },
     {
       title: 'Quick check',
@@ -477,7 +535,6 @@ const lesson01: Lesson = {
           'Your plan set the rule before the move: a close above $31,000 means buy. It closed at $33,093, so the plan says buy. Notice you didn’t have to guess where the price goes next.',
         chart: BREAKOUT_2023,
       },
-      nextLabel: 'One more',
     },
     {
       title: 'Quick check',
@@ -491,7 +548,6 @@ const lesson01: Lesson = {
           'The close went under your $58,000 line, so the plan says sell and keep the loss small. It recovered to about $64,000 later that month, still below the $67,500 you paid. A plan can’t promise the best price; it promises you won’t freeze while a loss grows.',
         chart: EXIT_2024,
       },
-      nextLabel: 'What does “long” mean?',
     },
     {
       title: 'Going long',
@@ -502,58 +558,85 @@ const lesson01: Lesson = {
         { speaker: 'tock', text: 'Buy and plan to sell. The “later” part matters just as much.' },
       ],
       practice: { tour: 'practice-long', label: 'Try a long on the real chart' },
-      nextLabel: 'Show me a real one',
     },
     {
       title: 'A real long',
       presenter: { who: 'tock', mood: 'curious', pose: 'point' },
       chart: LONG_2023,
-      text: 'Say you bought $1,000 of Bitcoin on the spot market at the close on 2 October 2023, at $27,484. Over the winter the price climbed. On 13 March 2024 you sold at the close: $73,133.',
-      nextLabel: 'So how much is that?',
+      text: 'Say you bought $1,000 of Bitcoin on the spot market at the close on 2 October 2023, at $27,500. Over the winter the price climbed. On 13 March 2024 you sold at the close: $73,079.',
     },
     {
+      // Owner 2026-11-17: rewritten around the math (the hindsight line dropped). From LONG_2023's
+      // spot closes (fact check 2026-11-17), rounded to $27,500 and $73,079: 73,079 − 27,500 =
+      // 45,579; ÷ 27,500 = 1.6574; $1,000 → $2,657 before fees (unrounded 73,079.40 ÷ 27,499.97 =
+      // 2.6574: $2,657.44); a 0.1% fee each way keeps 0.999² = 99.8%: $2,651.69 ($2,652.13 unrounded)
       title: 'The result',
       presenter: { who: 'tock', mood: 'grin', pose: 'stand' },
-      text: 'Your $1,000 became about **$2,661**. That’s around **$1,661 profit**. Spot takes a 0.1% fee on each trade: about $1 to buy and $2.66 to sell. Still a very good trade.',
-      lines: [
-        { speaker: 'tick', text: 'Easy! I’ll just do that every time.' },
-        {
-          speaker: 'tock',
-          text: '[[Hindsight|hindsight]] makes every chart look easy. Nobody knew in October.',
-        },
-      ],
-      nextLabel: 'What does selling actually do?',
+      text: 'You bought $1,000 of Bitcoin at $27,500 and sold it at $73,079. How much is that, in percent and in dollars? One more thing: Spot takes a 0.1% fee when you buy and again when you sell, so you keep about 99.8%.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Price rise', sum: '73,079 − 27,500 = 45,579' },
+          { label: 'Divide by the start', sum: '45,579 ÷ 27,500 = 1.657' },
+          { label: 'As a percent', sum: '1.657 × 100 = 165.7%' },
+          { label: 'Your gain', sum: '$1,000 × 1.657 = $1,657' },
+          { label: 'Add your $1,000', sum: '$1,000 + $1,657 = $2,657' },
+          { label: 'Keep 99.8% after fees', sum: '$2,657 × 0.998 ≈ $2,652' },
+        ],
+        answer:
+          'Bitcoin rose about 166%. After fees, your $1,000 became about **$2,652**: about **$1,652 profit**.',
+      },
     },
     {
       title: 'Close it to keep it',
+      art: 'closeToKeep',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the Close button on your position row. Until then, it can still shrink.',
-      nextLabel: 'Can I win when it falls?',
+      text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the ✕ (Close) at the end of your position row. Until then, it can still shrink.',
     },
     {
+      // Owner 2026-11-17: the borrowing analogy, by one guide in glasses, replaces the chit-chat; it
+      // says where it stops matching (a perpetual borrows nothing)
       title: 'Going short',
+      art: 'shortGame',
       presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
-      text: 'Going **short** is the mirror move: you win when the price falls. In our app you short on the USDT Perpetual market: you open a contract that gains as the price drops. No coin changes hands; you put up USDT as margin, and the difference is paid in USDT.',
-      lines: [
-        { speaker: 'tick', text: 'Selling something I don’t own feels illegal.' },
-        { speaker: 'tock', text: 'It’s a contract. Very normal. Very risky. Hold that thought.' },
-      ],
+      text: 'Going **short**, on our USDT Perpetual market, is the mirror move: you win when the price falls.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as borrowing. A friend lends you a $60 game, and you sell it. Next month it’s $40: buy one, give it back, keep $20. If it hits $90, you lose $30. Our perpetual borrows nothing: you put up USDT as margin, the contract settles the difference in USDT, and while it’s open you pay or receive a small funding fee.',
+      },
       practice: { tour: 'practice-short', label: 'Try a short on the real chart' },
-      nextLabel: 'Show me a real one',
     },
     {
       title: 'A real short',
       presenter: { who: 'tock', mood: 'curious', pose: 'point' },
       chart: SHORT_2021,
       text: 'On 10 November 2021 Bitcoin hit a then-record near $69,000 and closed at $64,894. Say you shorted 0.01 BTC there. Over the next months the price slid. On 18 June 2022 you bought it back at the close: $18,965.',
-      nextLabel: 'And the result?',
     },
     {
-      // A real warning (the lesson rules): a short's loss has no ceiling; liquidation on a perpetual
+      // A real warning (the lesson rules): a short's loss has no ceiling; liquidation on a perpetual.
+      // The math (owner 2026-11-17), from SHORT_2021's closes: 0.01 × 64,893.5 = 648.94;
+      // 0.01 × 18,964.5 = 189.65; 459.29 ÷ 648.94 = 0.7078
       title: 'The catch',
       presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
-      text: 'Your short opened at about $649 and closed at about $190: roughly **$459 profit**, before fees and funding. Now the catch: a price can only fall to zero, but it can rise without a ceiling. On a perpetual, the exchange closes a losing short once your margin is gone (liquidation). Shorts need a stop, always.',
-      nextLabel: 'Ready for a tricky one?',
+      text: 'Back to your short of 0.01 BTC: opened at $64,894, bought back at $18,965. What did it make?',
+      math: {
+        who: 'tock',
+        steps: [
+          { label: 'Value when opened', sum: '0.01 × 64,894 = $648.94' },
+          { label: 'Value when closed', sum: '0.01 × 18,965 = $189.65' },
+          { label: 'Your profit', sum: '$648.94 − $189.65 = $459.29' },
+          { label: 'Divide by the start', sum: '459.29 ÷ 648.94 = 0.708' },
+          { label: 'As a percent', sum: '0.708 × 100 = 70.8%' },
+        ],
+        answer:
+          'Bitcoin fell about 71%, and your short made about **$459**, before fees and funding.',
+      },
+      lines: [
+        {
+          speaker: 'tock',
+          text: 'Now the catch: a price can only fall to zero, but it can rise without a ceiling. On a perpetual, the exchange closes a losing short before your margin runs out (liquidation), and that margin is lost. Shorts need a stop, always.',
+        },
+      ],
     },
     {
       title: 'Quick check',
@@ -566,10 +649,10 @@ const lesson01: Lesson = {
         explain:
           'No plan, no reason, just a tip. Long or short, you’d be guessing, and hyped tiny coins can jump 50% in an hour. Staying out is a real choice, and here it’s the smart one.',
       },
-      nextLabel: 'Your call',
     },
     {
       title: 'The market never sleeps',
+      art: 'alwaysOpen',
       presenter: { who: 'tick', mood: 'surprised', pose: 'stand' },
       text: 'Shops close at night. Crypto doesn’t. It trades **24 hours a day, 7 days a week**, holidays included. Big moves can happen while you sleep.',
       lines: [
@@ -580,21 +663,30 @@ const lesson01: Lesson = {
         },
       ],
       more: { article: 'price-swings', section: 'always-open' },
-      nextLabel: 'Do all coins move the same?',
     },
     {
       title: 'Smaller coins swing harder',
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: SOL_2024,
-      text: 'In the week to 5 August 2024, Bitcoin fell about **19%**. Solana, a smaller coin, fell about **29%**. That’s [[volatility]]: smaller coins usually swing harder, up and down. Bigger moves mean bigger chances, and bigger losses.',
+      text: 'In the week to 5 August 2024, Bitcoin fell about **19%**. Solana, a smaller coin, fell about **29%**, from $182.57 to $129.70. That’s [[volatility]]: smaller coins usually swing harder, up and down. Bigger moves mean bigger chances, and bigger losses.',
+      // The math (owner 2026-11-17), from SOL_2024's closes: 52.87 ÷ 182.57 = 0.2896; Bitcoin's
+      // 66,757.7 → 53,988.2: 12,769.5 ÷ 66,757.7 = 0.1913
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Price fall', sum: '182.57 − 129.70 = 52.87' },
+          { label: 'Divide by the start', sum: '52.87 ÷ 182.57 = 0.290' },
+          { label: 'As a percent', sum: '0.290 × 100 = 29.0%' },
+        ],
+        answer:
+          'Solana fell about **29%**. The same three steps for Bitcoin ($66,758 → $53,988) give about **19%**.',
+      },
       more: { article: 'price-swings', section: 'volatility' },
-      nextLabel: 'Is that dangerous?',
     },
     {
       title: 'Big swings, big risks',
       presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
       text: 'Fast swings attract people who promise quick riches. Some coins are hyped only to be dumped on newcomers (a [[rug pull|rug-pull]]), and some are outright scams. Rule of thumb: if someone promises a sure thing, it isn’t one. Lesson 3 shows you how to spot the tricks.',
-      nextLabel: 'Let me try a trade',
     },
   ],
   // Your call follows the long-short-or-stay-out quiz
@@ -686,7 +778,6 @@ const lessonOwnership: Lesson = {
           text: `In the next ${LESSON_02_MINUTES} minutes: why Bitcoin exists, how thousands of computers keep one record, and what makes it different.`,
         },
       ],
-      nextLabel: 'Unlock why Bitcoin exists',
     },
     {
       title: 'From the price to the thing',
@@ -701,14 +792,12 @@ const lessonOwnership: Lesson = {
           text: 'Money that nobody controls. To see why anyone wanted that, go back to 2008.',
         },
       ],
-      nextLabel: 'What happened in 2008?',
     },
     {
       // Lehman Brothers, founded 1850, filed for bankruptcy on 15 September 2008 (bitcoin-story)
       title: '2008: trust broke',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
       text: 'In September 2008 Lehman Brothers, a bank founded in 1850, collapsed. Others nearly followed. Governments rushed to rescue the banks with taxpayers’ money and newly created money. Many people asked a hard question: if the people in charge of money can get it this wrong, why must we trust them?',
-      nextLabel: 'Did anyone answer?',
     },
     {
       // The paper is dated 31 October 2008 (bitcoin.org/bitcoin.pdf); block 0 was created on 3 January
@@ -717,7 +806,6 @@ const lessonOwnership: Lesson = {
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'On 31 October 2008 someone called **Satoshi Nakamoto** shared a short paper: *Bitcoin: A Peer-to-Peer Electronic Cash System*. Money that people send each other directly, with no bank in the middle. On 3 January 2009 the first block was created, with that newspaper headline inside. Nobody knows who Satoshi is.',
       more: { article: 'bitcoin-story', section: 'timeline' },
-      nextLabel: 'How can money work without a bank?',
     },
     {
       title: 'One record, many copies',
@@ -729,35 +817,32 @@ const lessonOwnership: Lesson = {
         { speaker: 'tock', text: 'Exactly. And no one teacher to lose the sheet.' },
       ],
       more: { article: 'bitcoin-network', section: 'three-jobs' },
-      nextLabel: 'So how do I send bitcoin?',
     },
     {
       title: 'Sending bitcoin',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'When you send bitcoin, your wallet signs the payment with your private key, a secret that only its holder can use, a bit like a signature nobody else can copy. Then it shares the payment with the network. Nodes pass it on to each other, and within seconds thousands of computers have seen it.',
-      nextLabel: 'Does anyone check it?',
     },
     {
       title: 'Two checks, then a block',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
       text: 'Nodes make two key checks: is the signature really yours, and do you still have those coins, not already spent? A payment that fails is dropped. [[Miners|mining]] then pick waiting payments, mostly by fee, and bundle them into a **block**, a new page of the ledger, on average every 10 minutes.',
       more: { article: 'bitcoin-network', section: 'checks' },
-      nextLabel: 'What stops someone editing a page?',
     },
     {
       // Proof of work (white paper §4, §11): costly to redo, not impossible (fact check 2026-11-16)
       title: 'Sealed by hard work',
+      art: 'sealBroken',
       presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
       text: 'Each block is sealed with a code that took huge computing work to find. Change one number in an old block and the code changes. To fake it, you’d have to redo that work for the block and every block after it, faster than all the other miners together. Practically, nobody can.',
       more: { article: 'bitcoin-story', section: 'mining' },
-      nextLabel: 'And how do pages stay in order?',
     },
     {
       title: 'The hash links the chain',
+      art: 'hashChain',
       presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       text: 'Every block carries the **hash** of the block before it: a short code that works like a fingerprint. Change anything in an earlier block and its fingerprint changes, so the next block no longer matches, and the next. That’s why it’s called a [[blockchain]].',
       more: { article: 'bitcoin-network', section: 'blocks' },
-      nextLabel: 'Let’s put it in order',
     },
     {
       title: 'Quick check',
@@ -776,13 +861,11 @@ const lessonOwnership: Lesson = {
         explain:
           'Sign, check, bundle, seal, share. No one in the middle approves it: the network does.',
       },
-      nextLabel: 'So who’s in charge?',
     },
     {
       title: 'No one in charge',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
       text: 'That’s what [[decentralized]] means: no one in charge. No bank can freeze the ledger and no single company can switch it off. There will never be more than 21 million bitcoin, nobody can print more, and anyone can read the whole ledger. Changing the rules needs most of the network to adopt the change.',
-      nextLabel: 'Who does what again?',
     },
     {
       title: 'Quick check',
@@ -800,32 +883,27 @@ const lessonOwnership: Lesson = {
         explain:
           'Nodes check, miners bundle, the hash links, and your signature proves it’s yours.',
       },
-      nextLabel: 'Does it work everywhere?',
     },
     {
       title: 'No borders',
       presenter: { who: 'tick', mood: 'surprised', pose: 'stand' },
       text: 'Bitcoin follows the same rules everywhere. Sending it from Lisbon to Lagos works like sending it next door: no bank holidays, no opening hours. The network itself has no borders.',
-      nextLabel: 'Can I always buy and sell it?',
     },
     {
       title: 'Liquidity, briefly',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'How easily you can buy or sell something without moving its price is called [[liquidity]]. Bitcoin has lots of buyers and sellers, so it usually trades smoothly. Smaller coins have fewer, and prices jump more. Lesson 3 shows what that looks like.',
-      nextLabel: 'Is crypto only money?',
     },
     {
       title: 'Money that runs code',
       presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
       text: 'Bitcoin is mostly money. Other networks let people write small programs on top: rules that run by themselves, like “pay this person when that happens”. That’s why those networks are called programmable. Code can have bugs, though, so new and clever doesn’t mean safe.',
-      nextLabel: 'Then what’s an NFT?',
     },
     {
       // EIP-721: the token points to metadata, usually off-chain (fact check 2026-11-16)
       title: 'NFTs, briefly',
       presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
       text: 'An NFT is a unique token on a blockchain, often linked to a digital ticket or a piece of art. The token usually points to the item rather than holding it, and holding it doesn’t always mean you own the item or its copyright. Like any collectible, its price is whatever someone will pay, and that can be nothing.',
-      nextLabel: 'Your call',
     },
     {
       title: 'Quick check',
@@ -843,7 +921,6 @@ const lessonOwnership: Lesson = {
         explain:
           'Together they make money that no one controls, no one can print, and anyone can check.',
       },
-      nextLabel: 'Now try it yourself',
     },
   ],
   momentAfter: 15,
@@ -866,11 +943,17 @@ const lessonOwnership: Lesson = {
   notePrompt: 'In your own words: why does Bitcoin need thousands of copies?',
   teaser: 'Next: why prices swing so hard, and how to spot a trap.',
   canDo: [],
-  // The birth story Lesson 1 told until the rewrite, staged here (owner 2026-11-16: "our genesis reveal
-  // can stay")
+  // Plain lines (owner 2026-11-17: the staged birth of Bitcoin dropped after the makeover); the
+  // fact check (2026-11-17) put the actual why first, and points "no one is in charge" at the
+  // network article's answer to the one-Nora problem
   recap: {
     title: 'Why Bitcoin exists',
     points: [
+      {
+        text: 'Bitcoin was made so people can pay each other online without trusting a bank in the middle.',
+        article: 'bitcoin-story',
+        section: 'plan',
+      },
       {
         text: 'Bitcoin keeps one ledger, copied on thousands of computers.',
         article: 'bitcoin-network',
@@ -883,12 +966,10 @@ const lessonOwnership: Lesson = {
       },
       {
         text: 'No one is in charge: the network agrees.',
-        article: 'bitcoin-story',
-        section: 'timeline',
+        article: 'bitcoin-network',
+        section: 'answered',
       },
     ],
-    genesis: BITCOIN_BIRTH,
-    highlight: { text: 'That was the birth of Bitcoin.' },
   },
   next: 'lesson-02',
   access: FREE,
@@ -989,13 +1070,13 @@ const lesson02: Lesson = {
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
   cards: [
     {
-      title: 'One bitcoin for $8,200',
+      title: 'One Bitcoin for $8,200',
       art: 'flashCrash',
       beats: [
         { kind: 'kicker', text: '21 October 2021 · Binance.US' },
         {
           kind: 'headline',
-          text: 'For a moment, one bitcoin sold for $8,200.',
+          text: 'For a moment, one Bitcoin sold for $8,200.',
           emphasis: '$8,200',
         },
         {
@@ -1011,7 +1092,6 @@ const lesson02: Lesson = {
           text: `In the next ${LESSON_03_MINUTES} minutes: why prices swing so hard, what moves them, and how to spot a trap.`,
         },
       ],
-      nextLabel: 'Unlock why prices swing',
     },
     {
       title: 'Why so much?',
@@ -1023,35 +1103,42 @@ const lesson02: Lesson = {
           text: 'News, hype, thin markets, and sometimes a trap. Let’s take them one by one.',
         },
       ],
-      nextLabel: 'Show me a big swing',
     },
     {
       title: 'Big swings, both ways',
       presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
       chart: MAY_2021,
-      text: 'Swings like these are [[volatility]] (Lesson 1). On 19 May 2021 bitcoin fell from about $42,900 to as low as $28,800, then closed near $36,700. It swings up just as hard, which is why no one can time it. So size for the fall: only put in what you could watch drop by a third.',
+      text: 'Swings like these are [[volatility]] (Lesson 1). On 19 May 2021 Bitcoin fell from about $42,900 to as low as $28,800 on Bybit’s perpetual chart, then closed near $36,700. It can swing up just as hard, often without warning, so no one can reliably time it. So size for the fall: only put in what you could watch drop by a third.',
+      // The math (owner 2026-11-17), from MAY_2021: (42,903.5 − 28,801) ÷ 42,903.5 = 0.3287. Kept
+      // (reviewed 2026-11-17): the text never states the percent, and the sum is where "a third", the
+      // sizing rule's number, comes from
+      math: {
+        who: 'tock',
+        steps: [
+          { label: 'Price fall', sum: '42,900 − 28,800 = 14,100' },
+          { label: 'Divide by the start', sum: '14,100 ÷ 42,900 = 0.329' },
+          { label: 'As a percent', sum: '0.329 × 100 = 32.9%' },
+        ],
+        answer: 'At its low that day, Bitcoin was down about **33%**: a third.',
+      },
       more: { article: 'price-swings', section: 'size' },
-      nextLabel: 'What makes it move?',
     },
     {
       title: 'News moves it, fast',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'Crypto trades all day, every day, so news hits the price within minutes, even at 3 a.m. A new law, an exchange in trouble, a big company buying: people react, and the price moves before most of us have read the headline.',
       more: { article: 'price-swings', section: 'news' },
-      nextLabel: 'Does good news mean up?',
     },
     {
       title: 'Same news, either way',
       presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
       chart: HALVING_2024,
       text: 'About every four years, the reward for each new block halves: the halving. It happened on 20 April 2024, expected for years. After the 19 April close at $63,775, the price fell to $58,299 by 1 May, then rose to $71,437 by 20 May. Expected news, both directions.',
-      nextLabel: 'Your call',
     },
     {
       title: 'The power of hype',
       presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
       text: 'Hype is a crowd getting excited at once: posts, videos, “everyone’s buying”. It can push a price up fast, and it can vanish just as fast, leaving late buyers with the loss. When you feel you must buy *right now*, that’s the hype talking: a warning sign. Your plan should do the deciding.',
-      nextLabel: 'How fast is fast?',
     },
     {
       title: 'Thousands of deals, one candle',
@@ -1059,14 +1146,15 @@ const lesson02: Lesson = {
       presenter: { who: 'tock', mood: 'smile' },
       text: 'Thousands of deals happen every minute, so charts sum them up. A [[candle]] covers one slice of time: its body runs from the first deal (the open) to the last (the close), and thin wicks reach the highest and lowest deals. Green means it closed higher than it opened; red, lower. Crypto never closes, so new candles keep coming, nights and holidays too. A candle shows what happened, never what comes next.',
       more: { article: 'price-swings', section: 'candles' },
-      nextLabel: 'Can one company shake it all?',
     },
     {
       title: 'A market shock',
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: FTX_2022,
+      // No math (owner 2026-11-17, reviewed): the text states the 23% itself (4,691 ÷ 20,582.5 =
+      // 0.2279), the sum would be the third identical fall-in-percent in a row, and the card's point is
+      // one company shaking the whole market, not the size of the fall
       text: 'In November 2022 FTX, then one of the biggest exchanges, ran into trouble and stopped paying people out. Bitcoin closed at $20,583 on 7 November and at $15,892 two days later, down about 23%. One company’s collapse shook the whole market.',
-      nextLabel: 'How do I not panic?',
     },
     {
       title: 'A plan beats panic',
@@ -1078,14 +1166,24 @@ const lesson02: Lesson = {
           text: 'That’s why the plan comes first: your stop, your target, how much you’d risk. Then a shock is something you prepared for, not something that decides for you. And no plan says “hurry in”.',
         },
       ],
-      nextLabel: 'Can it go up, then down?',
     },
     {
       title: 'Up, then down',
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: PEAK_2021,
-      text: 'On 13 April 2021 bitcoin closed at $63,588, a record close at the time. Three months later, on 20 July, it closed at $29,765, down more than half. People who bought at the top waited about six months to get back to even.',
-      nextLabel: 'Why do some coins jump more?',
+      text: 'On 13 April 2021 Bitcoin closed at $63,588, a record close at the time. Three months later, on 20 July, it closed at $29,765, down more than half. People who bought at the top waited about six months to get back to even.',
+      // The math (owner 2026-11-17), from PEAK_2021: 33,822.5 ÷ 63,587.5 = 0.5319. Kept (reviewed
+      // 2026-11-17): the text says only "more than half", and the sum turns two five-digit closes into
+      // the 53% that proves it
+      math: {
+        who: 'tock',
+        steps: [
+          { label: 'Price fall', sum: '63,588 − 29,765 = 33,823' },
+          { label: 'Divide by the start', sum: '33,823 ÷ 63,588 = 0.532' },
+          { label: 'As a percent', sum: '0.532 × 100 = 53.2%' },
+        ],
+        answer: 'Bitcoin fell about **53%**: more than half.',
+      },
     },
     {
       title: 'Thin or deep',
@@ -1093,20 +1191,17 @@ const lesson02: Lesson = {
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'Remember [[liquidity]] from Lesson 2? Picture buyers and sellers waiting with their prices. When many wait close to the price, the market is **deep**: a big order barely moves it. When few wait, it’s **thin**: a big order runs through them and the price jumps.',
       more: { article: 'exchange-price', section: 'liquidity' },
-      nextLabel: 'So what happened at $8,200?',
     },
     {
       title: 'The $8,200 moment',
       presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
       text: 'Back to 21 October 2021. One program sold a huge amount at once on one exchange. It took the best buyer, then the next, then the next, down a list that ran thin fast. Each deal was lower, and each was “the price” for a moment, until buyers came back.',
-      nextLabel: 'Is Bitcoin thin?',
     },
     {
       title: 'Bitcoin is deep',
       presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
       text: 'On the big exchanges, Bitcoin is one of the deepest markets in crypto: billions of dollars change hands every day. Smaller coins are thinner, which is one reason they swing harder. Deep doesn’t mean calm, though. It just means one order rarely moves it far.',
       more: { article: 'exchange-price', section: 'small-coins' },
-      nextLabel: 'Let’s check',
     },
     {
       title: 'Quick check',
@@ -1129,14 +1224,12 @@ const lesson02: Lesson = {
         correct: 0,
         explain: 'Thin markets jump, deep ones absorb. Panic and hype can move even deep markets.',
       },
-      nextLabel: 'Can a coin be a trap?',
     },
     {
       title: 'A rug pull',
       presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
       text: 'Some coins are traps from the start. The creators hype a new coin, people buy, the price climbs, and then the creators sell everything at once or make sure buyers can’t sell. The price collapses and the creators vanish with the money. That’s a [[rug pull|rug-pull]] (Lesson 1), a scam.',
       more: { article: 'spot-a-scam', section: 'rug-pull' },
-      nextLabel: 'How do I avoid it?',
     },
     {
       title: 'Check before you trust',
@@ -1144,7 +1237,6 @@ const lesson02: Lesson = {
       presenter: { who: 'tock', mood: 'frank' },
       text: 'Before you trust any coin, check: who runs it, and are they named? Can you actually sell it? Does anyone promise easy or sure profits? A rising price only means people traded. It doesn’t mean the coin is real.',
       more: { article: 'spot-a-scam', section: 'checklist' },
-      nextLabel: 'Put a trap in order',
     },
     {
       title: 'Quick check',
@@ -1163,7 +1255,6 @@ const lesson02: Lesson = {
         explain:
           'Hype, buying, a climb, the creators cash out, the collapse. The first two steps are your chance to check and stay out.',
       },
-      nextLabel: 'Now try it on the real chart',
     },
   ],
   // Your call follows the halving card (owner-approved outline: screen 6)
@@ -1272,6 +1363,17 @@ export function screenTour(lesson: Lesson, screen: LessonScreen | undefined): To
   return undefined;
 }
 
+/** The question a screen asks: the moment, a check, or a quiz card (null for any other screen) */
+export function screenQuestion(
+  lesson: Lesson,
+  screen: LessonScreen | undefined
+): LessonQuestion | null {
+  if (screen?.kind === 'moment') return lesson.moment;
+  if (screen?.kind === 'check') return lesson.checks[screen.index] ?? null;
+  if (screen?.kind === 'card') return lesson.cards[screen.index].quiz ?? null;
+  return null;
+}
+
 /** A tour one of the lesson's screens hands over */
 export function lessonOwnsTour(lesson: Lesson, tour: TourId): boolean {
   return lessonScreens(lesson).some((screen) => screenTour(lesson, screen) === tour);
@@ -1306,17 +1408,37 @@ export function lessonStepNumber(lesson: Lesson, screen: number): number {
   return (lesson.stepBase ?? 0) + screen + 1;
 }
 
+/** A finish's step: the lesson's last screen, the one rule every finish sends */
+export function lessonFinishStep(lesson: Lesson): number {
+  return lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
+}
+
 /** The screen (0-based) a step number stands for today, or null for an earlier version's step */
 export function lessonScreenOfStep(lesson: Lesson, step: number): number | null {
   const screen = step - (lesson.stepBase ?? 0) - 1;
   return screen >= 0 && screen < lessonScreens(lesson).length ? screen : null;
 }
 
+/**
+ * The terms a card marks, in its text, its guides' lines and its analogy (all open the peek since
+ * 2026-11-17):
+ * the two-terms rule, and where a concept is taught (`learn/graph.ts`)
+ */
+export function cardTermIds(card: LessonCard): string[] {
+  return [
+    card.text ?? '',
+    ...(card.lines ?? []).map((l) => l.text),
+    card.analogy?.text ?? '',
+  ].flatMap(termIds);
+}
+
 /** Every word in a card, for the 80-word rule (a term counts as the words of its label) */
 export function cardWords(card: LessonCard): number {
   const text = [
     plainText(card.text ?? ''),
-    ...(card.lines ?? []).map((l) => l.text),
+    ...(card.lines ?? []).map((l) => plainText(l.text)),
+    // An analogy is prose, so it counts; a math breakdown's numbered sums don't (a worked figure)
+    plainText(card.analogy?.text ?? ''),
     ...(card.meet ? [card.meet.tick, card.meet.tock, card.meet.lead, ...card.meet.list] : []),
     ...(card.points ?? []).flatMap((p) => [p.label, p.text]),
     ...(card.beats ?? []).map((b) => b.text),

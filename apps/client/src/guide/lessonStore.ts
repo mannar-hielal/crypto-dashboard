@@ -11,7 +11,7 @@
 
 import type { TourId } from './tours';
 import { create } from 'zustand';
-import { getLesson, lessonScreens, type LessonId, screenTour } from './lessons';
+import { getLesson, lessonScreens, type LessonId, screenQuestion, screenTour } from './lessons';
 
 /** The journal line on the last screen: typed, on its way, or in the journal */
 export type NoteStatus = 'draft' | 'saving' | 'saved';
@@ -82,6 +82,11 @@ interface LessonState extends LessonRun {
   next: () => void;
   back: () => void;
   answer: (option: number) => void;
+  /**
+   * "Try again" after a wrong answer (owner 2026-11-17): the screen's answer is cleared, so the board
+   * starts afresh and Continue waits for a right one. A right answer stands
+   */
+  retry: () => void;
   /** "Show me": hide the sheet while the lesson's tour runs */
   enterTour: (tour: TourId) => void;
   /** Another tour took the handed-over one's place: its end brings the learner back, not on */
@@ -90,7 +95,8 @@ interface LessonState extends LessonRun {
    * The tour ended (finished, skipped or closed): back to the sheet, on the screen after Try if it
    * was started from there; handed over from elsewhere (an article), where the lesson was
    */
-  leaveTour: () => void;
+  /** `moveOn` false: the tour was closed by the app (a rotation), not done: stay on the screen */
+  leaveTour: (moveOn?: boolean) => void;
   rate: (rating: number) => void;
   setNote: (text: string) => void;
   /**
@@ -119,6 +125,19 @@ interface LessonState extends LessonRun {
 /** Whether leaving the last screen must save the journal line first: typed, not saved, not failed */
 export function noteToSave(s: Pick<LessonRun, 'note' | 'noteStatus' | 'noteError'>): boolean {
   return s.noteStatus === 'draft' && s.note.trim() !== '' && !s.noteError;
+}
+
+/** The answers without this screen's, when that one is wrong (a right one stands) */
+function withoutWrong(
+  s: Pick<LessonRun, 'activeId' | 'answers'>,
+  screen: number
+): Record<number, number> {
+  const given = s.answers[screen];
+  if (!s.activeId || given === undefined) return s.answers;
+  const lesson = getLesson(s.activeId);
+  const q = screenQuestion(lesson, lessonScreens(lesson)[screen]);
+  if (!q || given === q.correct) return s.answers;
+  return Object.fromEntries(Object.entries(s.answers).filter(([at]) => Number(at) !== screen));
 }
 
 /** A screen index kept within the lesson */
@@ -162,7 +181,8 @@ const initial = {
 } as const;
 
 /**
- * This start of the lesson is already counted as finished (`markFinished` or `finish` ran for it):
+ * This start of the lesson is already counted as finished (`markFinished` ran for it; `finish`
+ * alone sets no `doneAt`, so a run finished only that way, signed out or from a look back, reads false):
  * the one rule the finish count, the streak screen and the funnel's close all use. A look back and
  * the way back from it never change `starts`
  */
@@ -243,21 +263,26 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
 
   back: () => {
     const { screen } = get();
-    if (screen > 0) set({ screen: screen - 1 });
+    if (screen <= 0) return;
+    // A wrong answer isn't kept: coming back, the board starts afresh rather than showing the right
+    // answer to a learner who hasn't found it yet (owner 2026-11-17: try again until right)
+    set({ screen: screen - 1, answers: withoutWrong(get(), screen) });
   },
 
   answer: (option) => {
     const { screen, answers } = get();
-    // First answer stands: the "Why" is shown against it
+    // An answer stands until "Try again" (a wrong one) clears it: the "Why" is shown against it
     if (answers[screen] !== undefined) return;
     set({ answers: { ...answers, [screen]: option } });
   },
+
+  retry: () => set((s) => ({ answers: withoutWrong(s, s.screen) })),
 
   enterTour: (tour) => set({ inTour: true, tourFrom: tour }),
 
   forgetTour: () => set({ tourFrom: null }),
 
-  leaveTour: () => {
+  leaveTour: (moveOn = true) => {
     const { inTour, activeId, screen, tourFrom } = get();
     if (!inTour || !activeId) return;
     set({ inTour: false, tourFrom: null });
@@ -268,7 +293,9 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     // practice link) brings the learner back to the same screen
     const lesson = getLesson(activeId);
     const at = lessonScreens(lesson)[screen];
-    if (tourFrom !== null && screenTour(lesson, at) === tourFrom) get().next();
+    // (never one the app closed itself: a rotation to a size the tour can't run at is no ending of
+    // the learner's, so they stay on the screen and can start it again where it runs)
+    if (moveOn && tourFrom !== null && screenTour(lesson, at) === tourFrom) get().next();
   },
 
   rate: (rating) => set({ rating }),
@@ -300,7 +327,9 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       const counted = isStartDone(s, activeId);
       return {
         ...freshRun(null),
-        completed: { ...s.completed, [activeId]: true },
+        // A start markFinished already counted keeps `completed` as it is now: the server may have
+        // refused it since (undone() took it back), and leaving must not show it done again
+        completed: counted ? s.completed : { ...s.completed, [activeId]: true },
         finishes: counted ? s.finishes : s.finishes + 1,
         returnTo: null,
         run: s.run + 1,
@@ -308,6 +337,9 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     });
   },
 
+  // (finish and markFinished stay two: one ends the run and closes, the other counts the finish
+  // and keeps the sheet for the streak; isStartDone is their one shared rule. Weighed, review
+  // after release #302)
   markFinished: () => {
     const { activeId, returnTo, starts } = get();
     if (!activeId || returnTo || isStartDone(get(), activeId)) return;

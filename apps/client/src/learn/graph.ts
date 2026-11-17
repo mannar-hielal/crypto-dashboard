@@ -5,11 +5,17 @@
  * practice, and a free item never links to a paid one. Pure: no React.
  */
 
-import { getLesson, LESSONS, lessonScreens, type LessonCard, type LessonId } from '@/guide/lessons';
+import {
+  cardTermIds,
+  getLesson,
+  LESSONS,
+  lessonScreens,
+  type LessonCard,
+  type LessonId,
+} from '@/guide/lessons';
 import { getTour, type TourId } from '@/guide/tours';
 import type { ArticleId } from './articles';
 import { CONCEPTS, getConcept, isConceptId, type Concept, type ConceptId } from './concepts';
-import { termIds } from './terms';
 
 export type PracticeLink =
   | { kind: 'lesson'; lesson: LessonId; screen: number; label: string }
@@ -30,7 +36,7 @@ function cardPlaces(test: (card: LessonCard) => boolean): { lesson: LessonId; sc
 
 /** Where each concept is taught in a lesson: the lesson and the screen of the card that marks it */
 export function lessonPlacesOf(concept: ConceptId): { lesson: LessonId; screen: number }[] {
-  return cardPlaces((card) => termIds(card.text ?? '').includes(concept));
+  return cardPlaces((card) => cardTermIds(card).includes(concept));
 }
 
 /** A lesson screen as a link's label: "Lesson 1: A notebook, not coins" (its card's title) */

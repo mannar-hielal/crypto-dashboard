@@ -24,13 +24,13 @@ import { useAuthStore } from '@/store/authStore';
 import { ArticleWidget } from '@/learn/ArticleWidgets';
 import type { Concept } from '@/learn/concepts';
 import { conceptFor, lessonPlaceLabel, lessonPlacesOf } from '@/learn/graph';
-import { parseTerms } from '@/learn/terms';
+import { RichText } from '@/learn/RichText';
 import { usePaperStore } from '@/store/paperStore';
 import { GuideFigure } from './art/Guide';
 import { CardBeats } from './CardBeats';
 import { FinishLine } from './FinishLine';
-import { GenesisReveal } from './GenesisReveal';
 import { GuidesMeet } from './GuidesMeet';
+import { GuideSays, MathBreakdownView } from './GuideSays';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
 import { BuySellView } from './BuySellView';
@@ -47,12 +47,14 @@ import { isStartDone, useLessonStore } from './lessonStore';
 import {
   getLesson,
   GUIDE_NAMES,
+  LESSON_LABELS,
   lessonScreens,
   type CanDo,
   type Lesson,
   type LessonPhoto,
   questionGuide,
   type LessonQuestion,
+  screenQuestion,
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
@@ -62,34 +64,45 @@ const NOTE_MAX = 500;
 
 // ─── Terms and their peek ────────────────────────────────────────────────────
 
-/** Card text with its terms as buttons; an unknown id stays plain text */
-function CardText({
-  text,
-  openTerm,
-  onTerm,
-}: {
+interface LessonTextProps {
   text: string;
   openTerm: string | null;
   onTerm: (id: string) => void;
-}) {
+}
+
+/**
+ * Lesson text through the one inline renderer: bold and italic runs, and its terms as buttons that
+ * open the peek (an unknown id stays plain text). Card text and the guides' lines alike (owner
+ * 2026-11-17: a line's term showed its brackets)
+ */
+function LessonText({ text, openTerm, onTerm }: LessonTextProps) {
   return (
-    <p className={styles.text}>
-      {parseTerms(text).map((seg) => {
-        const concept = seg.concept ? conceptFor(seg.concept) : null;
-        if (!concept) return seg.text;
+    <RichText
+      text={text}
+      renderTerm={(label, id) => {
+        const concept = conceptFor(id);
+        if (!concept) return label;
         return (
           <button
-            key={`term:${concept.id}`}
             type="button"
             className={styles.term}
             aria-expanded={openTerm === concept.id}
             onClick={() => onTerm(concept.id)}
             {...guide('lesson.term', concept.id)}
           >
-            {seg.text}
+            {label}
           </button>
         );
-      })}
+      }}
+    />
+  );
+}
+
+/** A card's text paragraph */
+function CardText(props: LessonTextProps) {
+  return (
+    <p className={styles.text}>
+      <LessonText {...props} />
     </p>
   );
 }
@@ -154,7 +167,8 @@ function TermPeek({
 
 /**
  * ✕ or Esc on the streak screen: back to the close, then the finish the learner asked for (never the
- * next lesson or tour the main button would have opened). A failed journal save shows on the close.
+ * next lesson or tour the main button would have opened: owner's visual Q&A, 2026-11-16, APP_LOG
+ * "✕ or Esc on it only finish"; Continue does what was pressed). A failed journal save shows on the close.
  */
 function leaveStreakFinishing(clear: (v: null) => void) {
   clear(null);
@@ -176,28 +190,34 @@ function QuestionBody({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** "Try again" after a wrong answer (owner 2026-11-17) */
+  onRetry: () => void;
 }) {
+  const props = { q, answer, onAnswer, onRetry };
   return (
     <>
       {q.chart && (
         <LessonChart
           scene={q.chart}
-          revealed={answer !== undefined}
+          // What happened next only once it can't give the answer away: a right answer (a wrong one
+          // waits for Try again, owner 2026-11-17)
+          revealed={answer === q.correct}
           fallback={<LessonArt id={q.chart.fallback} />}
         />
       )}
       {q.format === 'buy-sell' ? (
-        <BuySellView q={q} answer={answer} onAnswer={onAnswer} />
+        <BuySellView {...props} />
       ) : q.format === 'order' ? (
-        <OrderQuiz q={q} answer={answer} onAnswer={onAnswer} />
+        <OrderQuiz {...props} />
       ) : q.format === 'match' ? (
-        <MatchQuiz q={q} answer={answer} onAnswer={onAnswer} />
+        <MatchQuiz {...props} />
       ) : (
-        <QuestionView q={q} answer={answer} onAnswer={onAnswer} />
+        <QuestionView {...props} />
       )}
     </>
   );
@@ -207,27 +227,37 @@ export function QuestionView({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** A lesson's "Try again" after a wrong pick; a checkpoint has none (its answers are scored) */
+  onRetry?: () => void;
 }) {
   const answered = answer !== undefined;
   const guideNow = questionGuide(q, answer);
   return (
     <>
-      {q.context && <p className={styles.context}>{q.context}</p>}
+      {q.context && (
+        <p className={styles.context}>
+          <RichText text={q.context} />
+        </p>
+      )}
       <div className={styles.questionHead}>
         <GuideFigure who={guideNow.who} mood={guideNow.mood} className={styles.reactGuide} />
         <p className={styles.question}>{q.question}</p>
       </div>
       <div className={styles.options}>
         {q.options.map((option, i) => {
-          const cls = !answered
-            ? styles.option
-            : i === q.correct
+          // With Try again (the lessons) only the learner's own pick is marked: a wrong one never
+          // points at the right option (owner 2026-11-17). Without it (the checkpoint: one scored
+          // go) the right option is shown, so the learner still learns it
+          const showRight = answered && (answer === q.correct || !onRetry);
+          const cls =
+            showRight && i === q.correct
               ? `${styles.option} ${styles.right}`
-              : i === answer
+              : answered && i === answer && answer !== q.correct
                 ? `${styles.option} ${styles.wrong}`
                 : styles.option;
           return (
@@ -244,7 +274,12 @@ export function QuestionView({
           );
         })}
       </div>
-      {answered && <AnswerResult right={answer === q.correct} explain={q.explain} />}
+      {/* "Not quite." with the Why, then Try again: the owner's choice (2026-11-17), weighed
+          against keeping the Why for a right answer only; the marks and the chart no longer point
+          at the answer */}
+      {answered && (
+        <AnswerResult right={answer === q.correct} explain={q.explain} onRetry={onRetry} />
+      )}
     </>
   );
 }
@@ -348,18 +383,7 @@ function ReadMore({
 }
 
 /** The summary before the end: the lesson's recap, or what the learner can now do */
-function SummaryView({
-  lesson,
-  screen,
-  done,
-  onDone,
-}: {
-  lesson: Lesson;
-  screen: number;
-  /** For a staged summary (`recap.genesis`): everything shown */
-  done: boolean;
-  onDone: () => void;
-}) {
+function SummaryView({ lesson, screen }: { lesson: Lesson; screen: number }) {
   const recap = lesson.recap;
   if (!recap) {
     return (
@@ -367,51 +391,26 @@ function SummaryView({
         {lesson.canDo.map((item) => (
           <li key={item.text}>
             <span aria-hidden="true">✓ </span>
-            {item.text}. <ReadMore item={item} lesson={lesson} screen={screen} />
+            <RichText text={item.text} />. <ReadMore item={item} lesson={lesson} screen={screen} />
           </li>
         ))}
       </ul>
     );
   }
-  // A highlight with no article has no Read more (the end of Lesson 1, owner 2026-11-12). Its words
-  // are built once: in the purple box on a plain recap, under the Bitcoin mark on a staged one
+  // A highlight with no article has no Read more (the end of Lesson 1, owner 2026-11-12)
   const { article, section } = recap.highlight ?? {};
-  const highlightWords = recap.highlight && (
-    <>
-      {recap.highlight.text}{' '}
-      {article && <ReadMore item={{ article, section }} lesson={lesson} screen={screen} />}
-    </>
-  );
-  const highlight = highlightWords && (
+  const highlight = recap.highlight && (
     <p className={styles.highlight} {...guide('lesson.highlight')}>
-      {highlightWords}
+      <RichText text={recap.highlight.text} />{' '}
+      {article && <ReadMore item={{ article, section }} lesson={lesson} screen={screen} />}
     </p>
   );
-  if (recap.genesis) {
-    return (
-      <GenesisReveal
-        story={recap.genesis}
-        points={recap.points.map((item) => ({
-          text: item.text,
-          node: (
-            <>
-              {item.text} <ReadMore item={item} lesson={lesson} screen={screen} />
-            </>
-          ),
-        }))}
-        // The story's last line under the Bitcoin mark, not in the purple box
-        highlight={highlightWords && <span {...guide('lesson.highlight')}>{highlightWords}</span>}
-        done={done}
-        onDone={onDone}
-      />
-    );
-  }
   return (
     <>
       <ol className={styles.recap}>
         {recap.points.map((item) => (
           <li key={item.text}>
-            {item.text} <ReadMore item={item} lesson={lesson} screen={screen} />
+            <RichText text={item.text} /> <ReadMore item={item} lesson={lesson} screen={screen} />
           </li>
         ))}
       </ol>
@@ -520,7 +519,7 @@ export function LessonSheet() {
     return useTourStore.subscribe((s, prev) => {
       if (prev.activeId === null || s.activeId === prev.activeId) return;
       const lessons = useLessonStore.getState();
-      if (s.activeId === null) lessons.leaveTour();
+      if (s.activeId === null) lessons.leaveTour(!s.closedForSize);
       else if (s.activeId !== getTour(prev.activeId).next && s.activeId !== lessons.tourFrom) {
         lessons.forgetTour();
       }
@@ -573,11 +572,8 @@ export function LessonSheet() {
   const screens = lesson ? lessonScreens(lesson) : [];
   const screen = screens.at(screenIndex);
   const screenCard = lesson && screen?.kind === 'card' ? lesson.cards[screen.index] : null;
-  // A cold open, the guides' meeting and a staged summary (the birth of Bitcoin) each play first
-  const staged =
-    !!screenCard?.beats ||
-    !!screenCard?.meet ||
-    (!!lesson?.recap?.genesis && screen?.kind === 'summary');
+  // A cold open and the guides' meeting each play first
+  const staged = !!screenCard?.beats || !!screenCard?.meet;
   const ready = !staged || revealed.has(beatsKey);
   const reveal = () => setRevealed((r) => (r.has(beatsKey) ? r : new Set(r).add(beatsKey)));
 
@@ -619,15 +615,16 @@ export function LessonSheet() {
   // failure the learner stays, reads why, and the next press goes on without it
   const finish = finishLesson;
   // A card can be a quick check between cards (owner 2026-11-16)
-  const cardQuiz = screen.kind === 'card' ? (lesson.cards[screen.index].quiz ?? null) : null;
-  const isQuestion = screen.kind === 'moment' || screen.kind === 'check' || !!cardQuiz;
-  const question =
-    screen.kind === 'moment'
-      ? lesson.moment
-      : screen.kind === 'check'
-        ? lesson.checks[screen.index]
-        : cardQuiz;
-  const answered = answers[screenIndex] !== undefined;
+  // (screenQuestion: the one rule the store's retry and Back use too)
+  const question = screenQuestion(lesson, screen);
+  const isQuestion = question !== null;
+  // Continue waits for a right answer: a wrong one offers "Try again" (owner 2026-11-17)
+  const answeredRight = !!question && answers[screenIndex] === question.correct;
+  // Another go: the board starts afresh, and the focus returns to the sheet (the button is gone)
+  const retry = () => {
+    useLessonStore.getState().retry();
+    dialogRef.current?.focus();
+  };
 
   // The lesson's own tour: handed over, the lesson waiting on this Try screen (`afterNote.ts`)
   const startTour = () => {
@@ -699,6 +696,7 @@ export function LessonSheet() {
             q={card.quiz}
             answer={answers[screenIndex]}
             onAnswer={answer}
+            onRetry={retry}
           />
         );
         break;
@@ -732,6 +730,15 @@ export function LessonSheet() {
             card.art && <LessonArt id={card.art} presenter={card.presenter} />
           )}
           {card.text && <CardText text={card.text} openTerm={openTerm} onTerm={toggleTerm} />}
+          {card.analogy && (
+            // A harder idea as an analogy, by one guide in glasses (owner 2026-11-17)
+            <div {...guide('lesson.analogy')}>
+              <GuideSays who={card.analogy.who}>
+                <LessonText text={card.analogy.text} openTerm={openTerm} onTerm={toggleTerm} />
+              </GuideSays>
+            </div>
+          )}
+          {card.math && <MathBreakdownView math={card.math} />}
           {card.practice && (
             // A practice trade on the real chart (owner 2026-11-16): the lesson waits, then goes on
             <button
@@ -762,7 +769,7 @@ export function LessonSheet() {
             <ul className={styles.points}>
               {card.points.map((point) => (
                 <li key={point.label}>
-                  <strong>{point.label}</strong> {point.text}
+                  <strong>{point.label}</strong> <RichText text={point.text} />
                 </li>
               ))}
             </ul>
@@ -781,7 +788,8 @@ export function LessonSheet() {
             <p key={line.text} className={styles.line}>
               <GuideAvatar who={line.speaker} />
               <span>
-                <strong className={styles.speaker}>{GUIDE_NAMES[line.speaker]}</strong> {line.text}
+                <strong className={styles.speaker}>{GUIDE_NAMES[line.speaker]}</strong>{' '}
+                <LessonText text={line.text} openTerm={openTerm} onTerm={toggleTerm} />
               </span>
             </p>
           ))}
@@ -798,6 +806,7 @@ export function LessonSheet() {
           q={question}
           answer={answers[screenIndex]}
           onAnswer={answer}
+          onRetry={retry}
         />
       );
       break;
@@ -828,7 +837,7 @@ export function LessonSheet() {
       break;
     case 'summary':
       heading = lesson.recap?.title ?? 'You can now';
-      body = <SummaryView lesson={lesson} screen={screenIndex} done={ready} onDone={reveal} />;
+      body = <SummaryView lesson={lesson} screen={screenIndex} />;
       break;
     case 'close':
       if (streakActive && streakThen && accessToken) {
@@ -855,7 +864,8 @@ export function LessonSheet() {
   // "Try it": its own main action in the same full-width footer as every screen's Next, with Skip
   // and Back under it (owner 2026-11-13)
   const tourTry = screen.kind === 'try' && !lesson.tryWidget && (desktop || lessonTourPhone);
-  const nextWords = (screenCard?.nextLabel ?? 'Continue') + ' →';
+  // One label set (owner 2026-11-17): Continue on, Finish lesson on the summary
+  const nextWords = screen.kind === 'summary' ? LESSON_LABELS.finish : `${LESSON_LABELS.next} →`;
 
   return createPortal(
     <div className={styles.overlay} {...guide('lesson.overlay')}>
@@ -929,7 +939,7 @@ export function LessonSheet() {
               key={`${screenIndex}:${ready}`}
               type="button"
               className={`${styles.primary} ${styles.nextButton}`}
-              disabled={isQuestion && !answered}
+              disabled={isQuestion && !answeredRight}
               data-ready={ready}
               aria-hidden={ready ? undefined : true}
               tabIndex={ready ? undefined : -1}
@@ -948,7 +958,7 @@ export function LessonSheet() {
                 onClick={goBack}
                 {...guide('lesson.back')}
               >
-                ← Back
+                ← {LESSON_LABELS.back}
               </button>
             )}
           </div>
@@ -960,7 +970,7 @@ export function LessonSheet() {
               onClick={tourTry ? startTour : next}
               {...(lesson.tryWidget || tourTry ? guide('lesson.try') : {})}
             >
-              {tourTry ? 'Show me' : 'Continue'}
+              {tourTry ? 'Show me' : LESSON_LABELS.next}
             </button>
             {tourTry && (
               <button type="button" className={styles.link} onClick={next}>
@@ -974,7 +984,7 @@ export function LessonSheet() {
                 onClick={goBack}
                 {...guide('lesson.back')}
               >
-                ← Back
+                ← {LESSON_LABELS.back}
               </button>
             )}
           </div>
@@ -988,7 +998,8 @@ export function LessonSheet() {
               onClick={viaStreak(offerNext ? startNext : finish)}
               {...guide(offerNext ? 'lesson.next-lesson' : 'lesson.finish')}
             >
-              {offerNext ? nextLabel : 'Finish'}
+              {/* No way on: the one button says Finish lesson (owner 2026-11-17) */}
+              {offerNext ? nextLabel : LESSON_LABELS.finish}
             </button>
             {offerNext && !returnTo && (
               <button
@@ -1010,7 +1021,7 @@ export function LessonSheet() {
                 onClick={goBack}
                 {...guide('lesson.back')}
               >
-                ← Back
+                ← {LESSON_LABELS.back}
               </button>
             )}
             <span className={styles.spacer} />

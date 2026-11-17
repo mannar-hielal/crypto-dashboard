@@ -3,14 +3,17 @@
  * finish / dismissal as it happens, and report the tour's events (the funnel). A lesson finish or a
  * checkpoint pass is kept on the device until its save lands and sent again on each progress read
  * (learn/pendingDone.ts), shown as done meanwhile; one the server refuses for good (an earlier
- * version: a 409, REFUSED_FOR_GOOD) is taken back. A 400 is kept: an older API's answer. Any other failed write is dropped: that progress then lives only in this session,
- * the worst case, never a broken tour.
+ * version: a 409, REFUSED_FOR_GOOD) is taken back. Every other failure of those (offline, a 5xx,
+ * an expired session, an older API's 400) stays kept and is sent again, for up to 30 days. Other
+ * writes (a tour skipped, a card dismissed, a screen reached) aren't kept: a failed one lives only
+ * in this session, the worst case, never a broken tour.
  */
 
 import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest, LearnProgressItem } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
+import { onePerKey } from '@/lib/onePerKey';
 import { lastReadAccount, resetLearningStores, setLastReadAccount } from '@/learn/signedOut';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
@@ -21,7 +24,7 @@ import {
   getLesson,
   isLessonId,
   lessonScreenOfStep,
-  lessonScreens,
+  lessonFinishStep,
   lessonStepId,
   lessonStepNumber,
   type LessonId,
@@ -47,7 +50,10 @@ function isCurrentVersion(q: PendingDone): boolean {
 function undone(itemId: PendingDone['itemId'], items: LearnProgressItem[]): void {
   if (isLessonId(itemId)) {
     const { completed, setCompleted } = useLessonStore.getState();
-    setCompleted((Object.keys(completed) as LessonId[]).filter((id) => id !== itemId));
+    // (the server's answer, never sent back as the learner's own change, like the pass below)
+    asServerAnswer(() =>
+      setCompleted((Object.keys(completed) as LessonId[]).filter((id) => id !== itemId))
+    );
     // The welcome card, if only this kept Lesson 1 finish was hiding it
     // (never one the account has answered since, here or on another device: the server's items say)
     if (itemId === 'lesson-01' && cardByKeptFinish) {
@@ -57,11 +63,15 @@ function undone(itemId: PendingDone['itemId'], items: LearnProgressItem[]): void
     }
     return;
   }
-  const { skippedTours, checkpoints, setProgress } = usePathStore.getState();
-  setProgress({
-    skippedTours: Object.keys(skippedTours) as PathTourId[],
-    checkpoints: (Object.keys(checkpoints) as CheckpointId[]).filter((id) => id !== itemId),
-  });
+  // Only the pass goes: the map's `loaded` stays as the progress read left it (it may not have
+  // landed yet), and nothing here is sent back as the learner's own change
+  asServerAnswer(() =>
+    usePathStore.setState((s) => {
+      const checkpoints = { ...s.checkpoints };
+      delete checkpoints[itemId as CheckpointId];
+      return { checkpoints };
+    })
+  );
 }
 
 /**
@@ -85,14 +95,7 @@ function saveDone(
   // One save of an item at a time: a read meanwhile doesn't send it again
   const key = `${account ?? ''}:${itemId}`;
   if (inFlight.has(key)) return;
-  // Each save holds its own token: a stalled one released by the timer never frees a later one
-  const mine = Symbol(key);
-  inFlight.set(key, mine);
-  const release = () => {
-    if (inFlight.get(key) === mine) inFlight.delete(key);
-  };
-  // A save that never answers (a hung link) stops holding later resends back after a while
-  const released = setTimeout(release, SAVE_HOLD_MS);
+  inFlight.add(key);
   learnApi
     .setProgress(itemId, 'completed', accessToken, step)
     .catch((err: unknown) => {
@@ -102,7 +105,6 @@ function saveDone(
       // session, an older API's 400) stays kept. Told apart by status, never the words
       const status = (err as { status?: unknown } | null)?.status;
       if (typeof status !== 'number' || !REFUSED_FOR_GOOD.has(status)) return;
-      // (only this finish: a newer one of the item, kept meanwhile, stays)
       if (account) dropDone(account, itemId, step);
       if (accountOf(useAuthStore.getState().accessToken) !== account) return;
       // With the token signed in now (it may have rotated since this save left)
@@ -120,10 +122,12 @@ function saveDone(
           .catch(() => undefined)
       );
     })
-    .finally(() => {
-      clearTimeout(released);
-      release();
-    });
+    // Always settles: every learn request (the save, the check) times out at SDK_REQUEST_TIMEOUT_MS.
+    // (Not onePerKey: a second save of the item is dropped, not handed this one's outcome)
+    // (No "newer finish" follow-up: within one build an item always sends the same step, a lesson
+    // its last screen and a checkpoint its version, so a second finish meanwhile is this one; a
+    // new build starts with no save in flight. Weighed, review after release #302)
+    .finally(() => inFlight.delete(key));
 }
 
 /**
@@ -132,19 +136,12 @@ function saveDone(
  */
 const checks = new Map<string, Promise<{ items: LearnProgressItem[] }>>();
 function checkProgress(account: string | null, token: string) {
-  const key = account ?? '';
-  const onTheWay = checks.get(key);
-  if (onTheWay) return onTheWay;
-  const check = learnApi.getProgress(token).finally(() => checks.delete(key));
-  checks.set(key, check);
-  return check;
+  // Keyed by the token too: a check never joins one sent with an older, perhaps expired token
+  return onePerKey(checks, `${account ?? ''}|${token}`, () => learnApi.getProgress(token));
 }
 
-/** How long one save holds back resends of its item at most (the SDK's own fetch has no timeout) */
-const SAVE_HOLD_MS = 20_000;
-
 /** Saves on their way, by account and item */
-const inFlight = new Map<string, symbol>();
+const inFlight = new Set<string>();
 
 /**
  * The one answer no retry changes: an earlier version (409), the only final refusal the route
@@ -169,6 +166,17 @@ function asServerAnswer(apply: () => void): void {
 
 /** No one is signed in any more (a token rotation is still signed in) */
 const signedOut = () => !useAuthStore.getState().accessToken;
+
+/**
+ * 🔐 Every write subscription's guard, in one place: signed out meanwhile (the stores reset before
+ * the subscription goes), nothing is sent for an account that has left
+ */
+function whileSignedIn<S>(handler: (state: S, prev: S) => void) {
+  return (state: S, prev: S) => {
+    if (signedOut()) return;
+    handler(state, prev);
+  };
+}
 
 /**
  * The kept finishes and passes shown as done, on a read that lands and on one that fails alike:
@@ -230,10 +238,13 @@ export function useTourProgress(): void {
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)
+        // (Progress done here signed out isn't kept, but for the screens reached: the stores can't
+        // tell it from the server's answers, and each guess at it lost or resent progress. A queue
+        // filled at the finish itself would be its own feature. Weighed, review after release #302)
+        const onServer = (id: string) =>
+          items.some((i) => i.itemId === id && i.status === 'completed');
         const kept = account ? pendingDone(account) : [];
-        const stillQueued = keptToShow(kept).filter(
-          (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
-        );
+        const stillQueued = keptToShow(kept).filter((q) => !onServer(q.itemId));
         if (account && stillQueued.length !== kept.length) keepOnly(account, stillQueued);
         const lessons = [
           ...new Set([
@@ -322,174 +333,171 @@ export function useTourProgress(): void {
   // Write
   useEffect(() => {
     if (!accessToken) return;
-    return useTourStore.subscribe((state, prev) => {
-      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
-      // an account that has left
-      if (signedOut()) return;
-      // The read above flips `loaded`: that change is the server's answer, not the learner's
-      if (!prev.loaded || applyingServer) return;
-      for (const id of Object.keys(state.completed) as PathTourId[]) {
-        if (!prev.completed[id]) {
-          learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
+    return useTourStore.subscribe(
+      whileSignedIn((state, prev) => {
+        // The read above flips `loaded`: that change is the server's answer, not the learner's
+        if (!prev.loaded || applyingServer) return;
+        for (const id of Object.keys(state.completed) as PathTourId[]) {
+          if (!prev.completed[id]) {
+            learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
+          }
         }
-      }
-      if (state.cardDismissed && !prev.cardDismissed) {
-        learnApi.setProgress('welcome-card', 'dismissed', accessToken).catch(() => undefined);
-      }
+        if (state.cardDismissed && !prev.cardDismissed) {
+          learnApi.setProgress('welcome-card', 'dismissed', accessToken).catch(() => undefined);
+        }
 
-      if (state.fillOfferDismissed && !prev.fillOfferDismissed) {
-        learnApi.setProgress('fill-email-offer', 'dismissed', accessToken).catch(() => undefined);
-      }
+        if (state.fillOfferDismissed && !prev.fillOfferDismissed) {
+          learnApi.setProgress('fill-email-offer', 'dismissed', accessToken).catch(() => undefined);
+        }
 
-      // The funnel (privacy policy §3 "Learning events"): started → each step → completed / closed
-      const send = (name: LearnEventRequest['name'], itemId: TourId, stepId?: string) => {
-        // A practice trade from a lesson card is no tour of its own (the lesson's screens report)
-        if (!isTourId(itemId)) return;
-        learnApi
-          .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
-          .catch(() => undefined);
-      };
-      // A step's own id (`<tour>.<n>` over every step), not its place among this screen size's
-      const stepIdAt = (id: TourId, index: number, wide: boolean) =>
-        tourSteps(getTour(id), wide)[index]?.id;
-      // A finish, a replay of a finished tour included (`completed` doesn't change then)
-      // (a reset sets the count back to 0: that's no finish)
-      const finished = state.finishes > prev.finishes ? prev.activeId : null;
-      if (finished) send('tour_completed', finished);
+        // The funnel (privacy policy §3 "Learning events"): started → each step → completed / closed
+        const send = (name: LearnEventRequest['name'], itemId: TourId, stepId?: string) => {
+          // A practice trade from a lesson card is no tour of its own (the lesson's screens report)
+          if (!isTourId(itemId)) return;
+          learnApi
+            .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
+            .catch(() => undefined);
+        };
+        // A step's own id (`<tour>.<n>` over every step), not its place among this screen size's
+        const stepIdAt = (id: TourId, index: number, wide: boolean) =>
+          tourSteps(getTour(id), wide)[index]?.id;
+        // A finish, a replay of a finished tour included (`completed` doesn't change then)
+        // (a reset sets the count back to 0: that's no finish)
+        const finished = state.finishes > prev.finishes ? prev.activeId : null;
+        if (finished) send('tour_completed', finished);
 
-      const { activeId, stepIndex } = state;
-      if (activeId !== null && activeId !== prev.activeId) {
-        // Started over another one left unfinished (from the map or an article): that run ends as
-        // a close, so every start ends once
-        if (prev.activeId !== null && !finished) {
+        const { activeId, stepIndex } = state;
+        if (activeId !== null && activeId !== prev.activeId) {
+          // Started over another one left unfinished (from the map or an article): that run ends as
+          // a close, so every start ends once
+          if (prev.activeId !== null && !finished) {
+            send('tour_closed', prev.activeId, stepIdAt(prev.activeId, prev.stepIndex, prev.wide));
+          }
+          send('tour_started', activeId);
+          send('tour_step', activeId, stepIdAt(activeId, 0, state.wide));
+        } else if (
+          activeId !== null &&
+          stepIdAt(activeId, stepIndex, state.wide) !==
+            stepIdAt(activeId, prev.stepIndex, prev.wide)
+        ) {
+          // A new step, also when only the screen size changed it (a rotation mid-tour)
+          send('tour_step', activeId, stepIdAt(activeId, stepIndex, state.wide));
+        } else if (activeId === null && prev.activeId !== null && !finished) {
+          // Closed (Skip, ✕, Esc) on the step it was showing. A close by the app (closedForSize: a rotation
+          // to a size the tour can't run at) is one too: the learner couldn't go on there, a real drop
+          // at that step, and every start still ends once (weighed, review after release #302)
           send('tour_closed', prev.activeId, stepIdAt(prev.activeId, prev.stepIndex, prev.wide));
         }
-        send('tour_started', activeId);
-        send('tour_step', activeId, stepIdAt(activeId, 0, state.wide));
-      } else if (
-        activeId !== null &&
-        stepIdAt(activeId, stepIndex, state.wide) !== stepIdAt(activeId, prev.stepIndex, prev.wide)
-      ) {
-        // A new step, also when only the screen size changed it (a rotation mid-tour)
-        send('tour_step', activeId, stepIdAt(activeId, stepIndex, state.wide));
-      } else if (activeId === null && prev.activeId !== null && !finished) {
-        // Closed (Skip, ✕, Esc) on the step it was showing
-        send('tour_closed', prev.activeId, stepIdAt(prev.activeId, prev.stepIndex, prev.wide));
-      }
-    });
+      })
+    );
   }, [accessToken]);
 
   // The learning map: a tour skipped for now, a checkpoint passed
   useEffect(() => {
     if (!accessToken) return;
-    return usePathStore.subscribe((state, prev) => {
-      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
-      // an account that has left
-      if (signedOut()) return;
-      if (applyingServer) return;
-      // A pass is saved even before the first read lands: queued first, so that read keeps it shown
-      for (const id of Object.keys(state.checkpoints) as CheckpointId[]) {
-        if (!prev.checkpoints[id]) {
-          // With its question set's version: the server ignores a pass from an earlier set
-          saveDone(id, getCheckpoint(id).version, accessToken);
+    return usePathStore.subscribe(
+      whileSignedIn((state, prev) => {
+        if (applyingServer) return;
+        // A pass is saved even before the first read lands: queued first, so that read keeps it shown
+        for (const id of Object.keys(state.checkpoints) as CheckpointId[]) {
+          if (!prev.checkpoints[id]) {
+            // With its question set's version: the server ignores a pass from an earlier set
+            saveDone(id, getCheckpoint(id).version, accessToken);
+          }
         }
-      }
-      // The read above flips `loaded`: that change is the server's answer, not the learner's
-      if (!prev.loaded) return;
-      for (const id of Object.keys(state.skippedTours) as PathTourId[]) {
-        if (!prev.skippedTours[id]) {
-          learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);
+        // The read above flips `loaded`: that change is the server's answer, not the learner's
+        if (!prev.loaded) return;
+        for (const id of Object.keys(state.skippedTours) as PathTourId[]) {
+          if (!prev.skippedTours[id]) {
+            learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);
+          }
         }
-      }
-    });
+      })
+    );
   }, [accessToken]);
 
   // A lesson's furthest screen, synced: one write each time it rises (never for the server's own
   // answer, which arrives through `setReached` with the furthest screens it already holds)
   useEffect(() => {
     if (!accessToken) return;
-    return useLessonStore.subscribe((state, prev) => {
-      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
-      // an account that has left
-      if (signedOut()) return;
-      if (state.reached === prev.reached || state.activeId === null || applyingServer) return;
-      const id = state.activeId;
-      const now = state.reached[id];
-      // A replay of a finished lesson changes nothing on the server: no write
-      if (now === undefined || now <= (prev.reached[id] ?? -1) || state.completed[id]) return;
-      sendReached(id, now, accessToken);
-    });
+    return useLessonStore.subscribe(
+      whileSignedIn((state, prev) => {
+        if (state.reached === prev.reached || state.activeId === null || applyingServer) return;
+        const id = state.activeId;
+        const now = state.reached[id];
+        // A replay of a finished lesson changes nothing on the server: no write
+        if (now === undefined || now <= (prev.reached[id] ?? -1) || state.completed[id]) return;
+        sendReached(id, now, accessToken);
+      })
+    );
   }, [accessToken]);
 
   // Lessons: progress, and their screens as the funnel's steps (`lesson-02.<n>`), plus the rating
   useEffect(() => {
     if (!accessToken) return;
-    return useLessonStore.subscribe((state, prev) => {
-      // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
-      // an account that has left
-      if (signedOut()) return;
-      const send = (name: LearnEventRequest['name'], itemId: LessonId, stepId?: string) =>
-        learnApi
-          .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
-          .catch(() => undefined);
+    return useLessonStore.subscribe(
+      whileSignedIn((state, prev) => {
+        const send = (name: LearnEventRequest['name'], itemId: LessonId, stepId?: string) =>
+          learnApi
+            .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
+            .catch(() => undefined);
 
-      // A finish (Finish or the next lesson), a replay included. Counted, not read from `completed`:
-      // that also changes when the server's progress loads, which is no finish at all
-      // (a reset sets the count back to 0: that's no finish)
-      const finished = state.finishes > prev.finishes ? prev.activeId : null;
-      if (finished) {
-        // With its last screen's step: the server refuses a finish from an earlier version. An API
-        // from before 2026-11-16 (rolled back on its own) refuses the step instead: saveDone keeps
-        // the finish and sends it again once the API is back
-        const lesson = getLesson(finished);
-        const last = lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
-        saveDone(finished, last, accessToken);
-        send('tour_completed', finished);
-      }
-
-      // A start ends the run before it, if that wasn't finished: during a look back, the lesson the
-      // learner came from. A look back ("From Lesson 1") and the way back from it are no lesson of
-      // their own: nothing is sent for them, and the lesson carries on where it was left
-      const { activeId, screen, returnTo } = state;
-      // (the lesson already on screen, opened again, is no start: the store keeps its run)
-      const started = activeId !== null && state.starts !== prev.starts;
-      const home = prev.returnTo
-        ? { id: prev.returnTo.lesson, screen: prev.returnTo.screen }
-        : prev.activeId !== null
-          ? { id: prev.activeId, screen: prev.screen }
-          : null;
-      // (a run already counted as finished, its streak screen then left, is no close: also when it's
-      // the lesson a look back came from, as a look back never changes `starts`)
-      const alreadyDone = home !== null && isStartDone(prev, home.id);
-      const closeHome = () => {
-        if (home && !alreadyDone) {
-          send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));
+        // A finish (Finish or the next lesson), a replay included. Counted, not read from `completed`:
+        // that also changes when the server's progress loads, which is no finish at all
+        // (a reset sets the count back to 0: that's no finish)
+        const finished = state.finishes > prev.finishes ? prev.activeId : null;
+        if (finished) {
+          // With its last screen's step: the server refuses a finish from an earlier version. An API
+          // from before 2026-11-16 (rolled back on its own) refuses the step instead: saveDone keeps
+          // the finish and sends it again once the API is back
+          saveDone(finished, lessonFinishStep(getLesson(finished)), accessToken);
+          send('tour_completed', finished);
         }
-      };
-      if (started) {
-        if (!finished) closeHome();
-        send('tour_started', activeId);
-        send('tour_step', activeId, lessonStepId(getLesson(activeId), screen));
-      } else if (returnTo || prev.returnTo) {
-        // A reset during a look back closes the lesson the learner came from
-        if (activeId === null && !finished) closeHome();
-      } else if (activeId !== null && screen !== prev.screen) {
-        send('tour_step', activeId, lessonStepId(getLesson(activeId), screen));
-      } else if (activeId === null && prev.activeId !== null && !finished) {
-        closeHome();
-      }
 
-      // A rating given now, in a lesson's own run (not during a look back)
-      if (
-        state.rating !== null &&
-        state.rating !== prev.rating &&
-        activeId !== null &&
-        activeId === prev.activeId &&
-        !started &&
-        !returnTo
-      ) {
-        send('lesson_rated', activeId, `${activeId}.${state.rating}`);
-      }
-    });
+        // A start ends the run before it, if that wasn't finished: during a look back, the lesson the
+        // learner came from. A look back ("From Lesson 1") and the way back from it are no lesson of
+        // their own: nothing is sent for them, and the lesson carries on where it was left
+        const { activeId, screen, returnTo } = state;
+        // (the lesson already on screen, opened again, is no start: the store keeps its run)
+        const started = activeId !== null && state.starts !== prev.starts;
+        const home = prev.returnTo
+          ? { id: prev.returnTo.lesson, screen: prev.returnTo.screen }
+          : prev.activeId !== null
+            ? { id: prev.activeId, screen: prev.screen }
+            : null;
+        // (a run already counted as finished, its streak screen then left, is no close: also when it's
+        // the lesson a look back came from, as a look back never changes `starts`)
+        const alreadyDone = home !== null && isStartDone(prev, home.id);
+        const closeHome = () => {
+          if (home && !alreadyDone) {
+            send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));
+          }
+        };
+        if (started) {
+          if (!finished) closeHome();
+          send('tour_started', activeId);
+          send('tour_step', activeId, lessonStepId(getLesson(activeId), screen));
+        } else if (returnTo || prev.returnTo) {
+          // A reset during a look back closes the lesson the learner came from
+          if (activeId === null && !finished) closeHome();
+        } else if (activeId !== null && screen !== prev.screen) {
+          send('tour_step', activeId, lessonStepId(getLesson(activeId), screen));
+        } else if (activeId === null && prev.activeId !== null && !finished) {
+          closeHome();
+        }
+
+        // A rating given now, in a lesson's own run (not during a look back)
+        if (
+          state.rating !== null &&
+          state.rating !== prev.rating &&
+          activeId !== null &&
+          activeId === prev.activeId &&
+          !started &&
+          !returnTo
+        ) {
+          send('lesson_rated', activeId, `${activeId}.${state.rating}`);
+        }
+      })
+    );
   }, [accessToken]);
 }

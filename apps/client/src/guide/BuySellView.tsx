@@ -11,6 +11,8 @@ import { AnswerResult } from './AnswerResult';
 import { useRef, type KeyboardEvent } from 'react';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
+import { RichText } from '@/learn/RichText';
+import { QUIZ_MARK_SIZE } from './quizMarks';
 import type { LessonQuestion } from './lessons';
 import styles from './BuySellView.module.css';
 
@@ -23,10 +25,13 @@ export function BuySellView({
   q,
   answer,
   onAnswer,
+  onRetry,
 }: {
   q: LessonQuestion;
   answer: number | undefined;
   onAnswer: (i: number) => void;
+  /** "Try again" after a wrong pick (owner 2026-11-17) */
+  onRetry?: () => void;
 }) {
   const answered = answer !== undefined;
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -40,11 +45,19 @@ export function BuySellView({
 
   return (
     <>
-      {q.plan && <p className={styles.plan}>{q.plan}</p>}
+      {q.plan && (
+        <p className={styles.plan}>
+          <RichText text={q.plan} />
+        </p>
+      )}
       <p className={styles.question}>{q.question}</p>
       <div className={styles.sides} role="group" aria-label={q.question}>
         {SIDES.map(({ label, Icon, className }, i) => {
-          const mark = !answered ? null : i === q.correct ? 'right' : i === answer ? 'wrong' : null;
+          // With Try again only the learner's own pick is marked: a wrong one never points at the
+          // right side (owner 2026-11-17). Without it (one scored go) the right side is shown
+          const showRight = answered && (answer === q.correct || !onRetry);
+          const mark =
+            showRight && i === q.correct ? 'right' : answered && i === answer ? 'wrong' : null;
           return (
             <button
               key={label}
@@ -52,26 +65,31 @@ export function BuySellView({
                 buttons.current[i] = el;
               }}
               type="button"
-              // Dimmed: only a side with no mark (never the right answer after a wrong pick)
-              className={`${styles.side} ${className} ${answered && mark === null ? styles.unpicked : ''}`}
+              // Dimmed: the other side once the answer is right; after a wrong pick nothing is dimmed,
+              // so the dimming never hints at the right side either
+              className={`${styles.side} ${className} ${showRight && mark === null ? styles.unpicked : ''}`}
               disabled={answered}
               onClick={() => onAnswer(i)}
               onKeyDown={(e) => onKeyDown(e, i)}
               {...guide('lesson.side', label.toLowerCase())}
             >
-              <Icon aria-hidden="true" size={18} strokeWidth={2.5} />
+              <Icon aria-hidden="true" size={QUIZ_MARK_SIZE} strokeWidth={2.5} />
               {label}
-              {mark === 'right' && <Check aria-label="right answer" size={18} strokeWidth={3} />}
+              {mark === 'right' && (
+                <Check aria-label="right answer" size={QUIZ_MARK_SIZE} strokeWidth={3} />
+              )}
               {mark === 'wrong' && (
-                <X aria-label="your pick, not quite" size={18} strokeWidth={3} />
+                <X aria-label="your pick, not quite" size={QUIZ_MARK_SIZE} strokeWidth={3} />
               )}
             </button>
           );
         })}
       </div>
       {/* The Why points at the plan, not the price */}
-      {answered && <AnswerResult right={answer === q.correct} explain={q.explain} />}
-      {answered && q.chart?.freezeAt && (
+      {answered && (
+        <AnswerResult right={answer === q.correct} explain={q.explain} onRetry={onRetry} />
+      )}
+      {answered && (answer === q.correct || !onRetry) && q.chart?.freezeAt && (
         <p className={styles.after}>What happened next (the plan doesn&apos;t depend on it)</p>
       )}
     </>
