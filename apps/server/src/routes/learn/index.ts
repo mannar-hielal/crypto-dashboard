@@ -258,8 +258,10 @@ export async function learnRoutes(app: FastifyInstance) {
           : bad('A step past this version');
       }
 
-      // (checked above: a start is a lesson's, with its step; this only narrows the types)
-      if (status === 'started' && lessonId && step !== undefined) {
+      if (status === 'started') {
+        // (checked above; repeated so the types narrow, and so a start never falls through to the
+        // finish below whatever changes up there)
+        if (!lessonId || step === undefined) return bad('A start needs a lesson and its step');
         // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
         // lesson is unfinished (a completed row is left as it is)
         const created = await app.prisma.learningProgress.createMany({

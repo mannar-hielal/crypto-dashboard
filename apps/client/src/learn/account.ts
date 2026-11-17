@@ -10,7 +10,11 @@ export function accountOf(accessToken: string | null): string | null {
   return accountFor(useAuthStore.getState().user?.id ?? null, accessToken);
 }
 
-/** The rule itself, for a hook that watches the profile's id: that id, else the token's own user */
+/**
+ * The rule itself, for a hook that watches the profile's id: that id, else the token's own user.
+ * (Three names for three callers, weighed in review round 33: a store reader (`accountOf`), a hook
+ * that subscribes to the profile id (this), and the token alone (`accountFromToken`)
+ */
 export function accountFor(profileId: string | null, accessToken: string | null): string | null {
   return profileId ?? accountFromToken(accessToken);
 }

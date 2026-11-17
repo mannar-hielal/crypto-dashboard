@@ -83,7 +83,9 @@ function isZoneName(name: string): boolean {
 /**
  * 🔐 Any other text sent as a zone → the known zone Intl reads it as (`asia/kolkata`, `US/Eastern`),
  * or null (a made-up name, an offset such as `+05:07`), so it is never worked out twice. Capped, least
- * recently used out first: such names only ever push out each other
+ * recently used out first: such names only ever push out each other. (Weighed, review round 33: one
+ * cache keyed by the sent text would be shorter, but then text a client makes up could push out the
+ * real zones' formatters; kept apart, it never touches them)
  */
 const ZONE_SPELLINGS = new Map<string, string | null>();
 const MAX_ZONE_SPELLINGS = 200;
