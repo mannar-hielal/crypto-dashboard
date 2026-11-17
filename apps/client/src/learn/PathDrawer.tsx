@@ -270,7 +270,13 @@ export function PathDrawer() {
 
   // Habits are counted on the server: read whenever the map opens, and again after a new finish
   const finished = view.chapters.reduce((n, c) => n + c.done, 0);
-  const { habits, failed: habitsError } = useHabits(open ? accessToken : null, finished);
+  // Read once the account's progress is in: its arrival moves `finished` without a finish, which
+  // would otherwise read the habits a second time
+  const progressIn = useTourStore((s) => s.loaded);
+  const { habits, failed: habitsError } = useHabits(
+    open && progressIn ? accessToken : null,
+    finished
+  );
 
   // Esc closes
   useEffect(() => {

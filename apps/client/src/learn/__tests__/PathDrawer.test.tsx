@@ -211,7 +211,7 @@ describe('PathDrawer', () => {
       streakDays: 2,
       badges: [{ id: 'ten-stop-losses', earned: false, progress: 4, target: 10 }],
     });
-    useTourStore.setState({ panelOpen: true });
+    useTourStore.setState({ panelOpen: true, loaded: true });
     renderDrawer();
 
     await waitFor(() =>
@@ -227,9 +227,19 @@ describe('PathDrawer', () => {
     expect(useArticleStore.getState().openId).toBe('exchange-price');
   });
 
+  it('should read the habits once the progress is in, not before and again after', async () => {
+    getHabits.mockResolvedValue({ learningDays: 0, streakDays: 0, badges: [], thisWeek: [] });
+    useTourStore.setState({ panelOpen: true, loaded: false });
+    renderDrawer();
+    await act(async () => {});
+    expect(getHabits).not.toHaveBeenCalled();
+    act(() => useTourStore.setState({ loaded: true }));
+    await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(1));
+  });
+
   it('should say so when the habits cannot be loaded', async () => {
     getHabits.mockRejectedValue(new Error('offline'));
-    useTourStore.setState({ panelOpen: true });
+    useTourStore.setState({ panelOpen: true, loaded: true });
     renderDrawer();
     fireEvent.click(document.querySelector(guideSelector('path.tab', 'library'))!);
     await waitFor(() => expect(screen.getByText(/Could not load your habits/)).toBeTruthy());
