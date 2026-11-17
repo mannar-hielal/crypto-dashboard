@@ -203,6 +203,10 @@ describe('tourStore', () => {
     s().start('primer'); // not phone-ready
     s().setWide(false);
     expect(s().activeId).toBeNull();
+    // Closed by the app, which the lesson tells apart from the learner's own close
+    expect(s().closedForSize).toBe(true);
+    s().start('primer');
+    expect(s().closedForSize).toBe(false);
   });
 
   it('should never hand over to a next chapter that needs a larger screen on a phone', () => {

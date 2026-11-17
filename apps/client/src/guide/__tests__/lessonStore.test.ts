@@ -66,6 +66,14 @@ describe('lessonStore', () => {
     expect(s()).toMatchObject({ screen: 3, inTour: false, tourFrom: null });
   });
 
+  it('should stay on the screen when the app closed the tour (a rotation), not the learner', () => {
+    s().start('lesson-01');
+    useLessonStore.setState({ screen: 18 }); // try it
+    s().enterTour('buy-first-coin');
+    s().leaveTour(false);
+    expect(s()).toMatchObject({ screen: 18, inTour: false, tourFrom: null });
+  });
+
   it('should mark the lesson completed on finish, and not on close', () => {
     s().start('lesson-01');
     s().close();

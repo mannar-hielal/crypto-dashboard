@@ -154,7 +154,8 @@ function TermPeek({
 
 /**
  * ✕ or Esc on the streak screen: back to the close, then the finish the learner asked for (never the
- * next lesson or tour the main button would have opened). A failed journal save shows on the close.
+ * next lesson or tour the main button would have opened: owner's visual Q&A, 2026-11-16, APP_LOG
+ * "✕ or Esc on it only finish"; Continue does what was pressed). A failed journal save shows on the close.
  */
 function leaveStreakFinishing(clear: (v: null) => void) {
   clear(null);
@@ -520,7 +521,7 @@ export function LessonSheet() {
     return useTourStore.subscribe((s, prev) => {
       if (prev.activeId === null || s.activeId === prev.activeId) return;
       const lessons = useLessonStore.getState();
-      if (s.activeId === null) lessons.leaveTour();
+      if (s.activeId === null) lessons.leaveTour(!s.closedForSize);
       else if (s.activeId !== getTour(prev.activeId).next && s.activeId !== lessons.tourFrom) {
         lessons.forgetTour();
       }

@@ -90,7 +90,8 @@ interface LessonState extends LessonRun {
    * The tour ended (finished, skipped or closed): back to the sheet, on the screen after Try if it
    * was started from there; handed over from elsewhere (an article), where the lesson was
    */
-  leaveTour: () => void;
+  /** `moveOn` false: the tour was closed by the app (a rotation), not done: stay on the screen */
+  leaveTour: (moveOn?: boolean) => void;
   rate: (rating: number) => void;
   setNote: (text: string) => void;
   /**
@@ -162,7 +163,8 @@ const initial = {
 } as const;
 
 /**
- * This start of the lesson is already counted as finished (`markFinished` or `finish` ran for it):
+ * This start of the lesson is already counted as finished (`markFinished` ran for it; `finish`
+ * alone sets no `doneAt`, so a run finished only that way, signed out or from a look back, reads false):
  * the one rule the finish count, the streak screen and the funnel's close all use. A look back and
  * the way back from it never change `starts`
  */
@@ -257,7 +259,7 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
 
   forgetTour: () => set({ tourFrom: null }),
 
-  leaveTour: () => {
+  leaveTour: (moveOn = true) => {
     const { inTour, activeId, screen, tourFrom } = get();
     if (!inTour || !activeId) return;
     set({ inTour: false, tourFrom: null });
@@ -268,7 +270,9 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     // practice link) brings the learner back to the same screen
     const lesson = getLesson(activeId);
     const at = lessonScreens(lesson)[screen];
-    if (tourFrom !== null && screenTour(lesson, at) === tourFrom) get().next();
+    // (never one the app closed itself: a rotation to a size the tour can't run at is no ending of
+    // the learner's, so they stay on the screen and can start it again where it runs)
+    if (moveOn && tourFrom !== null && screenTour(lesson, at) === tourFrom) get().next();
   },
 
   rate: (rating) => set({ rating }),
