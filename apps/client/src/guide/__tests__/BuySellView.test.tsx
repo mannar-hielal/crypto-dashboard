@@ -51,6 +51,9 @@ describe('BuySellView', () => {
     expect(side('buy').disabled).toBe(true);
     expect(side('sell').disabled).toBe(true);
     expect(screen.getByLabelText('right answer')).toBeTruthy();
+    // The side not picked, with no mark, is dimmed so the tick reads first
+    expect(side('sell').className).toMatch(/unpicked/);
+    expect(side('buy').className).not.toMatch(/unpicked/);
   });
 
   it('should say Not quite. and mark both the pick and the right side when the pick was wrong', () => {
@@ -58,6 +61,9 @@ describe('BuySellView', () => {
     expect(document.querySelector('[role="status"]')!.textContent).toBe(`Not quite. ${q.explain}`);
     expect(side('sell').querySelector('[aria-label="your pick, not quite"]')).toBeTruthy();
     expect(side('buy').querySelector('[aria-label="right answer"]')).toBeTruthy();
+    // Both are marked, so neither is dimmed: the right answer never fades
+    expect(side('buy').className).not.toMatch(/unpicked/);
+    expect(side('sell').className).not.toMatch(/unpicked/);
   });
 
   it('should caption the reveal of a frozen chart only after the answer', () => {

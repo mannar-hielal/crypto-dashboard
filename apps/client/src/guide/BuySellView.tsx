@@ -51,7 +51,8 @@ export function BuySellView({
                 buttons.current[i] = el;
               }}
               type="button"
-              className={`${styles.side} ${className} ${answered && i !== answer ? styles.unpicked : ''}`}
+              // Dimmed: only a side with no mark (never the right answer after a wrong pick)
+              className={`${styles.side} ${className} ${answered && mark === null ? styles.unpicked : ''}`}
               disabled={answered}
               onClick={() => onAnswer(i)}
               onKeyDown={(e) => onKeyDown(e, i)}
