@@ -158,6 +158,11 @@ function TermPeek({
  */
 function leaveStreakFinishing(clear: (v: null) => void) {
   clear(null);
+  finishLesson();
+}
+
+/** The lesson's finish, after the journal line (if one is typed) is saved: the one sequence */
+function finishLesson() {
   afterNote(() => useLessonStore.getState().finish(), { finishing: true });
 }
 
@@ -496,6 +501,15 @@ export function LessonSheet() {
   const startKey = `${activeId ?? ''}:${starts}`;
   // On the close it was opened from: the same run moved to another screen (the lesson opened again
   // at a card from the map) leaves it, so ✕ and Esc there just close
+  // Leaving the close any other way (the lesson opened again at a card, Back) ends the streak's wait:
+  // coming back to the close shows the close, never the same finish's streak again
+  useEffect(
+    () =>
+      useLessonStore.subscribe((state, prev) => {
+        if (state.screen !== prev.screen || state.run !== prev.run) setStreakThen(null);
+      }),
+    []
+  );
   const streakActive =
     streakThen?.run === run && streakThen.screen === screenIndex && !!accessToken;
 
@@ -611,7 +625,7 @@ export function LessonSheet() {
   };
   // The last screen's buttons save a journal line typed but not saved first, and wait for it: on a
   // failure the learner stays, reads why, and the next press goes on without it
-  const finish = () => afterNote(() => useLessonStore.getState().finish(), { finishing: true });
+  const finish = finishLesson;
   // A card can be a quick check between cards (owner 2026-11-16)
   const cardQuiz = screen.kind === 'card' ? (lesson.cards[screen.index].quiz ?? null) : null;
   const isQuestion = screen.kind === 'moment' || screen.kind === 'check' || !!cardQuiz;

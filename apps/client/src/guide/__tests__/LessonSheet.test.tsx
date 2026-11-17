@@ -101,6 +101,26 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
   });
 
+  it('should never show the same finish’s streak twice after the learner left the close another way', async () => {
+    useAuthStore.setState({ accessToken: 'token' });
+    getHabits.mockResolvedValue({
+      badges: [],
+      learningDays: 2,
+      streakDays: 2,
+      thisWeek: [true, true, false, false, false, false, false],
+    });
+    const last = lessonScreens(lesson).length - 1;
+    at(last);
+    renderSheet();
+    fireEvent.click(finishBtn());
+    await waitFor(() => expect(screen.getByText('2-day streak')).toBeTruthy());
+    // Opened again at a card from the map (the same run), then back to the close
+    act(() => useLessonStore.setState({ screen: 0 }));
+    act(() => useLessonStore.setState({ screen: last }));
+    expect(screen.queryByText('2-day streak')).toBeNull();
+    expect(finishBtn()).toBeTruthy();
+  });
+
   it('should still show the streak when Finish is pressed again after a journal line failed to save', async () => {
     useAuthStore.setState({ accessToken: 'token' });
     getHabits.mockResolvedValue({

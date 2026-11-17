@@ -45,7 +45,12 @@ export function StreakView({
 
   return (
     <div className={styles.streak} {...guide('lesson.streak')}>
-      <Flame className={styles.flame} aria-hidden="true" size={56} strokeWidth={1.75} />
+      <Flame
+        className={styles.flame}
+        aria-hidden="true"
+        size={56}
+        /* lucide icons take their size as a prop, as everywhere in the app */ strokeWidth={1.75}
+      />
       {habits ? (
         <>
           {/* Screen readers get the final number, not each step of the count-up */}
