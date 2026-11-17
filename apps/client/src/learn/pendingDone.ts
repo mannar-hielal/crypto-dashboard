@@ -84,12 +84,17 @@ export function pendingDone(account: string): PendingDone[] {
  */
 const unstored = new Map<string, PendingDone[]>();
 
+/** The stored shape, written in one place (may throw: storage full or blocked) */
+function store(account: string, items: PendingDone[]): void {
+  const stored = { v: VERSION, items: items.slice(0, MAX_PENDING) };
+  localStorage.setItem(key(account), JSON.stringify(stored));
+}
+
 function write(account: string, items: PendingDone[]): void {
   try {
     if (items.length === 0) localStorage.removeItem(key(account));
     else {
-      const stored = { v: VERSION, items: items.slice(0, MAX_PENDING) };
-      localStorage.setItem(key(account), JSON.stringify(stored));
+      store(account, items);
     }
     unstored.delete(account);
   } catch {
@@ -98,10 +103,7 @@ function write(account: string, items: PendingDone[]): void {
     // Still refused: held in memory for this session
     try {
       localStorage.removeItem(key(account));
-      if (items.length > 0) {
-        const stored = { v: VERSION, items: items.slice(0, MAX_PENDING) };
-        localStorage.setItem(key(account), JSON.stringify(stored));
-      }
+      if (items.length > 0) store(account, items);
       unstored.delete(account);
     } catch {
       unstored.set(account, items.slice(0, MAX_PENDING));
