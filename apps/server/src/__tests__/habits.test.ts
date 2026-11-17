@@ -222,6 +222,8 @@ describe('streakEndingAt', () => {
     expect(dayCounter('America/Argentina/Buenos_Aires')(late)).toBe(
       Date.UTC(2026, 9, 23) / 86_400_000
     );
+    // One-part aliases, however this runtime names them: Japan is UTC+9 (07:00 on the 24th)
+    expect(dayCounter('Japan')(late)).toBe(Date.UTC(2026, 9, 24) / 86_400_000);
     // An offset still isn't a zone
     expect(dayCounter('+03:00')(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
   });
