@@ -354,6 +354,34 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 
+  it('PUT started: should answer what is stored when another request took the old finish over first', async () => {
+    vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
+    vi.mocked(app.prisma.learningProgress.updateMany)
+      .mockResolvedValueOnce({ count: 0 }) // not raised: the row read is a finish
+      .mockResolvedValueOnce({ count: 0 }); // a second tab took it over meanwhile
+    vi.mocked(app.prisma.learningProgress.findUnique)
+      .mockResolvedValueOnce({
+        itemId: 'lesson-01',
+        status: 'completed',
+        step: null,
+        updatedAt: AT,
+      } as never)
+      .mockResolvedValueOnce({
+        itemId: 'lesson-01',
+        status: 'started',
+        step: 61,
+        updatedAt: AT,
+      } as never);
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-01',
+      headers: auth(),
+      payload: { status: 'started', step: 61 },
+    });
+    // Not the old finish it read: the start the other tab stored
+    expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 61 });
+  });
+
   it('PUT started: a finished lesson stays finished', async () => {
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });

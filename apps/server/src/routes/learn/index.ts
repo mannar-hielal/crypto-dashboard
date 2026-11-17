@@ -268,6 +268,14 @@ export async function learnRoutes(app: FastifyInstance) {
           if (replaced.count === 1) {
             return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
           }
+          // Another request (a second tab) took it over first: answer what is stored now
+          const now = await app.prisma.learningProgress.findUnique({
+            where: { userId_itemId: { userId, itemId } },
+            select: ROW,
+          });
+          return reply.send({
+            item: toItem(now ?? { itemId, status, step, updatedAt: new Date() }),
+          });
         }
         return reply.send({
           item: toItem(row ?? { itemId, status, step, updatedAt: new Date() }),
