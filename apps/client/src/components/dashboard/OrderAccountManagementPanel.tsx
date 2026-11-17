@@ -912,6 +912,7 @@ export function OrderAccountManagementPanel({
                   },
                   {
                     label: 'Realized P&L',
+                    anchor: 'account.summary.realized-pnl',
                     value: fmtSignedUsd(realizedPnl),
                     col: realizedPnl >= 0 ? color.green : color.red,
                   },

@@ -385,13 +385,42 @@ with paper money, and then picks up where it left off.
   built with the `practice()` helper (with its review) and the shared step builders (`steps.ts`).
 - **Handing over and resuming:** `startTour` (`afterNote.ts`) treats a card's practice tour as the
   lesson's own (`own()`), so the lesson waits. `LessonSheet` resumes when **no tour runs any
-  more** (a chain such as `buy-first-coin → sell-and-review` included), and `lessonStore.leaveTour()`
+  more** (a chain such as `buy-first-coin → review-first-coin` included), and `lessonStore.leaveTour()`
   moves on from the Try screen or from the card that offered the practice.
 - **Phones (owner 2026-11-16):** a step may be `screen: 'phone'` or `'desktop'`; `tourStore` reads the
   width (`WIDE_LAYOUT_QUERY` in `lib/breakpoints.ts`, lg; `useTourWide` in components) when a tour starts and runs only those steps (`tourSteps`). A
   phone-ready tour (`phoneReady: true`) opens the form from `MobileTradeBar` (`trade.mobile.buy` /
   `trade.mobile.sell`); a lesson's Try and the close's way on are then offered on phones too. The
   primer's hover steps need a pointer, so it isn't phone-ready.
+
+### Every practical lesson ends with a walkthrough (owner 2026-11-17)
+
+- **One job per practical lesson.** A map stop with the dumbbell does one trade action: the Buy lesson
+  buys, the Sell lesson sells. No `next` hands one practical lesson over to another: each is its own
+  map stop, started from the map. A lesson that needs another one first says so on the map
+  (`NEEDS_DONE` in `learn/path.ts`: Sell stays locked until Buy is done), and its first step that
+  depends on it says what to do instead in its `missingHint` (Sell with no Bitcoin: "do “Buy your
+  first coin” on the learning map first").
+- **Then what just happened.** Every practical lesson, and every card's practice trade, ends with a
+  walkthrough of what the trade changed in Order & Account Management ("Orders & Account" on a
+  phone). It points at the important rows and columns for that action, by the panel's own column
+  labels, e.g.:
+  - after a buy: Assets, the coin's row, Avg cost, Unrealized PnL;
+  - after a sell: Assets (the coin gone, USDT back), Order History (Side, Type, Qty, Fill Price,
+    Status, Commission), the account summary's Realized P&L, Balance History (Balance Before,
+    Balance After, Realized P&L, Action);
+  - after going long or short: Positions, Side, Avg Fill Price, Unrealized P&L, the ✕ (Close).
+- **How:** the walkthrough is a review chapter the trade's tour chains to with `next`
+  (`PRACTICE_REVIEWS` after a card's practice trade; `PATH_REVIEWS` after a map lesson:
+  `review-first-coin`, `review-sell`, `review-sell-result`). Five steps at most per chapter: a longer
+  walkthrough chains a second chapter, so the lesson stays one map stop. The same look in two places
+  shares one source (`boughtSteps` builds both `review-buy` and `review-first-coin`); only the last
+  button differs ("Back to the lesson" after a card, Finish on the map).
+- Point at existing anchors (`account.tab`, `assets.row`, `order-history.row`, …). A row or figure
+  with none gets a static `guide()` anchor registered in `lib/guideAnchors.ts` (no user data in it);
+  a step with no key rings the first match, the newest row in a newest-first table.
+- A lesson's tour is marked done (and counted) when its own steps end, at the order: the review
+  chapters, like the practice tours, are neither saved nor reported.
 
 ### Rules
 
@@ -409,7 +438,8 @@ with paper money, and then picks up where it left off.
 ### Tests when adding one
 
 - `tours.test.ts`: at most five steps on each screen size, registered anchors, phone and desktop
-  first steps, `next` = its review, and the review's steps (which tab, which row).
+  first steps, `next` = its review (never another practical lesson), and the review's steps (which
+  tab, which row, the column labels its text names).
 - `LessonSheet.test.tsx`: the practice button hands over and the lesson resumes one screen on; a
   chain keeps the lesson waiting.
 - `lessons.test.ts`: the cards that offer a practice, and which tour.

@@ -311,6 +311,14 @@ describe('Section 4 — Account Summary Bar', () => {
     expect(screen.getAllByText('$10,000.00').length).toBeGreaterThanOrEqual(1);
   });
 
+  it('4.6: Realized P&L carries its own anchor, for the Sell lesson to point at (2026-11-17)', () => {
+    usePaperStore.setState({ realizedPnl: -0.2 });
+    renderPanel();
+    const value = document.querySelector('[data-guide="account.summary.realized-pnl"]')!;
+    expect(value.previousElementSibling!.textContent).toBe('Realized P&L');
+    expect(value.textContent).toBe('-$0.20');
+  });
+
   it('4.6: Reserved shows "—" when there are no pending orders', () => {
     renderPanel();
     expect(screen.getByText('Reserved')).toBeTruthy();

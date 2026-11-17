@@ -1,4 +1,4 @@
-import { isNarrowNow, NARROW_LAYOUT_QUERY } from '@/lib/breakpoints';
+import { NARROW_LAYOUT_QUERY } from '@/lib/breakpoints';
 import { guide } from '@/lib/guideAnchors';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
@@ -189,11 +189,10 @@ export function DashboardInner() {
 
   const isMobile = useMediaQuery(NARROW_LAYOUT_QUERY);
 
-  const [panelSize, setPanelSize] = useState<PanelSize>(() =>
-    isNarrowNow() ? 'collapsed' : 'open'
-  );
-  const [tradingPanelOpen, setTradingPanelOpen] = useState(() => !isNarrowNow());
-  const [leftToolbarOpen, setLeftToolbarOpen] = useState(() => !isNarrowNow());
+  // (from isMobile, read on the first render too: one source for "narrow" here)
+  const [panelSize, setPanelSize] = useState<PanelSize>(() => (isMobile ? 'collapsed' : 'open'));
+  const [tradingPanelOpen, setTradingPanelOpen] = useState(() => !isMobile);
+  const [leftToolbarOpen, setLeftToolbarOpen] = useState(() => !isMobile);
   /** Persisted across symbol changes so the user stays on their chosen tab */
   const [tradingTab, setTradingTab] = useState<OrderTab>('market');
   /** Persisted across remounts so the user stays on their chosen side — mirrors TV */

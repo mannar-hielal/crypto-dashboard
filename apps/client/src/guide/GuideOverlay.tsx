@@ -106,7 +106,11 @@ function useTracked(step: TourStep): Tracked {
           rect = { top: r.top, left: r.left, width: r.width, height: r.height };
           if (!scrolled) {
             scrolled = true;
-            if (r.top < 0 || r.bottom > window.innerHeight) el.scrollIntoView({ block: 'nearest' });
+            // Only when it can't be seen: off the screen, or clipped by a row that scrolls across
+            // (the account summary on a phone); a step already in view never moves the page
+            if (r.top < 0 || r.bottom > window.innerHeight || clippedSideways(el, r)) {
+              el.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+            }
           }
         }
         if (el instanceof HTMLInputElement) value = el.value;
@@ -463,6 +467,17 @@ function TourBubble({
     </>,
     document.body
   );
+}
+
+/** Cut off by an ancestor that scrolls sideways (overflow-x auto or scroll) */
+function clippedSideways(el: Element, r: DOMRect): boolean {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const overflow = getComputedStyle(p).overflowX;
+    if (overflow !== 'auto' && overflow !== 'scroll') continue;
+    const box = p.getBoundingClientRect();
+    if (r.left < box.left || r.right > box.right) return true;
+  }
+  return false;
 }
 
 export function GuideOverlay() {

@@ -1,8 +1,9 @@
 /**
  * The guided tours (docs/GUIDED_TRADE_MVP.md, reshaped 2026-10-11): short chapters of at most five
  * steps — a primer of three small tasks on the live chart (Lesson 3's "Try it", guide/lessons.ts),
- * then buying a first coin chained to selling it back and reading the result. Research (reports/)
- * says completion falls fast past five steps.
+ * then buying a first coin, and (its own map stop, owner 2026-11-17) selling it back; each ends with
+ * a look at what it changed in the account panel. Research (reports/) says completion falls fast
+ * past five steps.
  *
  * Steps that repeat a scenario action reuse the shared builders in `steps.ts` (one wording for the
  * form's controls everywhere); the learner-facing text for the new ones lives here. Pure data: no
@@ -30,9 +31,18 @@ export type PracticeTourId = (typeof PRACTICE_TOUR_IDS)[number];
  */
 export const PRACTICE_REVIEW_IDS = ['review-buy', 'review-long', 'review-short'] as const;
 export type PracticeReviewId = (typeof PRACTICE_REVIEW_IDS)[number];
+/**
+ * The same look after a practical lesson of the map (owner 2026-11-17: one job per practical lesson,
+ * then a walkthrough of what it changed): Buy's look at the coin bought, and Sell's two chapters
+ * (Assets and Order History, then the result and Balance History). Chained from the lesson's own
+ * tour, so the lesson stays one map stop and each chapter keeps to five steps; not saved or
+ * reported on their own (the lesson's tour is, finished at its order)
+ */
+export const PATH_REVIEW_IDS = ['review-first-coin', 'review-sell', 'review-sell-result'] as const;
+export type PathReviewId = (typeof PATH_REVIEW_IDS)[number];
 /** The path's tours: saved, reported and counted (a practice trade is none of these) */
 export type PathTourId = (typeof TOUR_IDS)[number];
-export type TourId = PathTourId | PracticeTourId | PracticeReviewId;
+export type TourId = PathTourId | PracticeTourId | PracticeReviewId | PathReviewId;
 
 /** A Learn panel tour (not a practice trade): what the account's progress may hold */
 export function isTourId(value: string): value is PathTourId {
@@ -107,6 +117,15 @@ const FORM_HINT_SELL =
 const PHONE_BAR_HINT =
   'Close the open panel first: the Buy / Long and Sell / Short bar is at the bottom of the screen.';
 
+/** The account panel's way in, when it isn't on screen (a phone opens it after an order) */
+const PANEL_HINT = 'Open the account panel under the chart.';
+/**
+ * The Sell lesson with no Bitcoin to sell (owner 2026-11-17): buy a little first. A hint, not a
+ * button: a step has no action of its own, and the Buy lesson is one tap away on the map
+ */
+const NO_BITCOIN_HINT =
+  'Open the Assets tab to find your Bitcoin. None there? You need some to sell: do “Buy your first coin” on the learning map first, then come back to this lesson.';
+
 /** A shared scenario step as a tour step (click / type / observe, same anchor, same words) */
 function fromDraft(draft: StepDraft, over: Partial<TourStep> = {}): Omit<TourStep, 'id'> {
   const kind: TourStepKind =
@@ -134,7 +153,7 @@ function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
 
 /**
  * The wide layout right now. Its own query (`WIDE_LAYOUT_QUERY`, the narrow one's exact negation),
- * not `!isNarrowNow()`: the same answer in a browser, but the tests stub matchMedia per query, and
+ * not the narrow query negated: the same answer in a browser, but the tests stub matchMedia per query, and
  * the tours' tests stub this one (weighed, review after release #302)
  */
 export function isWideScreen(): boolean {
@@ -206,7 +225,8 @@ const buyFirstCoin: Tour = {
   blurb: 'Spend $100 of practice money on Bitcoin.',
   minutes: 2,
   startUrl: '/dashboard/spot/BTC/USDT',
-  next: 'sell-and-review',
+  // One job (owner 2026-11-17): buy, then a look at the coin bought; selling is its own map stop
+  next: 'review-first-coin',
   phoneReady: true,
   steps: numbered('buy-first-coin', [
     // A phone opens the form from its bar (it isn't docked beside the chart there)
@@ -254,11 +274,11 @@ const buyFirstCoin: Tour = {
       { suggest: '100', missingHint: FORM_HINT }
     ),
     fromDraft(
-      // Owner 2026-11-12 (the benchmark gaps): what you hold now, and that it's only on paper until
-      // closed
+      // Owner 2026-11-12: what you hold now, and that it's only on paper until closed (selling is
+      // its own map stop since 2026-11-17, not the next tour)
       submit({
         explain:
-          'Place the order. It fills immediately and the amount field clears. You now hold a position: $100 of Bitcoin, long. Its profit or loss is only on paper until you close it by selling, in the next tour.',
+          'Place the order. It fills immediately and the amount field clears. You now hold a position: $100 of Bitcoin, long. Its profit or loss is only on paper until you close it by selling. Next, a quick look at where it shows up.',
       }),
       {
         doneWhenEmpty: 'trade.amount',
@@ -270,55 +290,43 @@ const buyFirstCoin: Tour = {
 
 // ─── 3. Sell it back and read the result ─────────────────────────────────────
 
+// (Tours carry no version like a lesson's stepBase: after the 2026-11-17 split the funnel lists the
+// old sell-and-review.4/.5 events as bare steps, and "completed" now means sold, not quizzed. Weighed,
+// review after #308: one-off, read with the APP_LOG note)
 const sellAndReview: Tour = {
   id: 'sell-and-review',
   title: 'Sell it and read the result',
   blurb: 'Sell your Bitcoin back and see what the fees did.',
-  minutes: 2,
+  minutes: 3,
   startUrl: '/dashboard/spot/BTC/USDT',
+  // One job (owner 2026-11-17): sell, then a look at what it changed, in two chapters
+  next: 'review-sell',
   phoneReady: true,
   steps: numbered('sell-and-review', [
     fromDraft(
       openTab('assets', {
-        explain:
-          'You now own Bitcoin. Spot takes its 0.1% fee in the coin you receive, so you got a hair less than you paid for.',
+        explain: 'Open Assets to find the Bitcoin you bought in “Buy your first coin”.',
       }),
-      { missingHint: 'Open the account panel under the chart, then the Assets tab.' }
+      { missingHint: `${PANEL_HINT} Then its Assets tab.` }
     ),
     {
       kind: 'click',
       anchor: 'assets.row.sell',
       key: 'BTC',
       text: 'Press Sell to put all of your Bitcoin into the order form, ready to sell.',
-      missingHint: 'Open the Assets tab to find your Bitcoin.',
+      // Nothing to sell (sold elsewhere, or the lesson started from a checkpoint): buy first
+      missingHint: NO_BITCOIN_HINT,
     },
     fromDraft(
       submit({
         explain:
-          'Place the sell order. Selling all of your Bitcoin closes your position (any you bought in a practice trade too). It fills at the Sell price.',
+          'Place the sell order. Selling all of your Bitcoin closes your position (any you bought in a practice trade too). It fills at the Sell price. Next, a look at what changed.',
       }),
       {
         doneWhenEmpty: 'trade.amount',
         missingHint: 'Open the Assets tab and press Sell on your Bitcoin again.',
       }
     ),
-    {
-      kind: 'observe',
-      text: 'Done: your position is closed, so the result is now real. Had the price risen by more than the fees, you’d have taken a profit. You paid a 0.1% fee when you bought and again when you sold, so unless the price moved in your favour you finish a little behind. A small loss is normal: this is what practice is for.',
-      nextLabel: 'One quick question',
-    },
-    {
-      kind: 'quiz',
-      text: 'Check yourself',
-      quiz: {
-        question:
-          'The price rose 0.05% between your buy and your sell. After fees, are you in profit?',
-        options: ['Yes, the price went up', 'No, the fees were bigger'],
-        correct: 1,
-        explain:
-          'Fees were 0.1% each way, about 0.2% in total. A 0.05% rise does not cover that, so you are slightly behind — price has to move further than the fees before a trade pays.',
-      },
-    },
   ]),
 };
 
@@ -428,19 +436,16 @@ const practiceShort = practice(
 
 // ─── What just happened: after each practice trade (owner 2026-11-17) ────────
 
-/** The account panel's way in, when it isn't on screen (a phone opens it after an order) */
-const PANEL_HINT = 'Open the account panel under the chart.';
 /** The last step's button: the lesson carries on after it */
 const BACK_TO_LESSON = 'Back to the lesson';
 
-const reviewBuy: Tour = {
-  id: 'review-buy',
-  title: 'What just happened',
-  blurb: 'Where your practice buy shows up.',
-  minutes: 1,
-  startUrl: '/dashboard/spot/BTC/USDT',
-  phoneReady: true,
-  steps: numbered('review-buy', [
+/**
+ * The coin just bought, in Assets: open the tab, Bitcoin's row (the fee, Avg cost), its unrealized
+ * PnL. One wording for a card's practice buy and the Buy lesson (owner 2026-11-17); only where it
+ * ends differs (`last`: the last step's button, the default Finish when absent)
+ */
+function boughtSteps(id: 'review-buy' | 'review-first-coin', last?: string): TourStep[] {
+  return numbered(id, [
     fromDraft(
       openTab('assets', {
         explain: 'Your order filled. Open Assets: it lists every coin you hold.',
@@ -458,11 +463,21 @@ const reviewBuy: Tour = {
       kind: 'observe',
       anchor: 'assets.row.upnl',
       key: 'BTC',
-      text: 'Unrealized PnL is what you’d gain or lose if you sold right now, before the selling fee. It changes with every tick, and becomes real only when you sell.',
+      text: 'Unrealized PnL is what you’d gain or lose if you sold right now, before the selling fee. It changes as the price moves, and becomes real only when you sell.',
       missingHint: 'Open the Assets tab to find your Bitcoin.',
-      nextLabel: BACK_TO_LESSON,
+      ...(last ? { nextLabel: last } : {}),
     },
-  ]),
+  ]);
+}
+
+const reviewBuy: Tour = {
+  id: 'review-buy',
+  title: 'What just happened',
+  blurb: 'Where your practice buy shows up.',
+  minutes: 1,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  phoneReady: true,
+  steps: boughtSteps('review-buy', BACK_TO_LESSON),
 };
 
 /** The long or short just opened, in Positions: open the tab, then read its row */
@@ -512,15 +527,112 @@ const reviewShort = reviewPosition(
   'This is your short on Ethereum: Side says Short. Its Unrealized P&L grows when the price falls and shrinks when it rises. It becomes real when you close it with the ✕ (Close) at the end of the row.'
 );
 
+// ─── What just happened: after the Buy and Sell lessons (owner 2026-11-17) ───
+
+/** The Buy lesson's look: the same steps as a card's practice buy, ending the lesson */
+const reviewFirstCoin: Tour = {
+  id: 'review-first-coin',
+  title: 'What just happened',
+  blurb: 'Where your first coin shows up.',
+  minutes: 1,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  phoneReady: true,
+  // "Done": the map's lesson ends here, and from Lesson 1's Try it hands back to the lesson
+  steps: boughtSteps('review-first-coin', 'Done'),
+};
+
+/** The Sell lesson's look, chapter 1: the coin gone from Assets, the sell in Order History */
+const reviewSell: Tour = {
+  id: 'review-sell',
+  title: 'What just happened',
+  blurb: 'Where your sell shows up.',
+  minutes: 1,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  next: 'review-sell-result',
+  phoneReady: true,
+  steps: numbered('review-sell', [
+    {
+      kind: 'observe',
+      anchor: 'assets.row',
+      key: 'USDT',
+      text: 'You sold your Bitcoin: its row is gone (unless some is still held for an order). The dollars are back in USDT, usually a little under what you started with: you paid a 0.1% fee on the buy and another on the sell.',
+      missingHint: `${PANEL_HINT} Then its Assets tab.`,
+    },
+    fromDraft(
+      openTab('orderhistory', {
+        explain: 'Open Order History: every order you placed, newest first.',
+      }),
+      { missingHint: PANEL_HINT }
+    ),
+    {
+      kind: 'observe',
+      anchor: 'order-history.row',
+      // (one step for the row, Commission included: that column can be hidden, so no step of its own)
+      text: 'The top row is your sell. Side says Sell, Type says Market (it filled at once), Qty is how much Bitcoin you sold, Fill Price is the price you got, and Status says Filled. Commission is its fee: 0.1% of what you sold, paid in USDT (your buy paid its 0.1% in Bitcoin).',
+      missingHint: 'Open the Order History tab to find your sell.',
+      nextLabel: 'Next →',
+    },
+  ]),
+};
+
+/** The Sell lesson's look, chapter 2: the result made real, Balance History, then the fees' lesson */
+const reviewSellResult: Tour = {
+  id: 'review-sell-result',
+  title: 'Your result',
+  blurb: 'What your sell made or lost, fees included.',
+  minutes: 1,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  phoneReady: true,
+  steps: numbered('review-sell-result', [
+    {
+      kind: 'observe',
+      anchor: 'account.summary.realized-pnl',
+      text: 'Realized P&L, above the tabs, adds up the results of the trades you have closed, fees included. This trade’s result is in it now, and it no longer moves with the price: it’s real.',
+      missingHint: PANEL_HINT,
+    },
+    fromDraft(
+      openTab('balancehistory', {
+        explain: 'Open Balance History: every change to your USDT balance, newest first.',
+      }),
+      { missingHint: PANEL_HINT }
+    ),
+    {
+      kind: 'observe',
+      anchor: 'balance-history.row',
+      text: 'The top row is your sell. Balance Before and Balance After show the USDT it brought back, Realized P&L is this trade’s result after both fees, and Action says what made the change: the Spot sell, its amount and its price.',
+      missingHint: 'Open the Balance History tab to find your sell.',
+    },
+    {
+      kind: 'observe',
+      text: 'Done: your position is closed, so the result is now real. Had the price risen by more than the fees, you’d have taken a profit. You paid a 0.1% fee when you bought and again when you sold, so unless the price moved in your favour you finish a little behind. A small loss is normal: this is what practice is for.',
+      nextLabel: 'One quick question',
+    },
+    {
+      kind: 'quiz',
+      text: 'Check yourself',
+      quiz: {
+        question:
+          'The price rose 0.05% between your buy and your sell. After fees, are you in profit?',
+        options: ['Yes, the price went up', 'No, the fees were bigger'],
+        correct: 1,
+        explain:
+          'Fees were 0.1% each way, about 0.2% in total. A 0.05% rise does not cover that, so you are slightly behind — price has to move further than the fees before a trade pays.',
+      },
+    },
+  ]),
+};
+
 export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview];
 export const PRACTICE_TOURS: readonly Tour[] = [practiceBuy, practiceLong, practiceShort];
 export const PRACTICE_REVIEWS: readonly Tour[] = [reviewBuy, reviewLong, reviewShort];
+export const PATH_REVIEWS: readonly Tour[] = [reviewFirstCoin, reviewSell, reviewSellResult];
 
 export function getTour(id: TourId): Tour {
   const tour =
     TOURS.find((t) => t.id === id) ??
     PRACTICE_TOURS.find((t) => t.id === id) ??
-    PRACTICE_REVIEWS.find((t) => t.id === id);
+    PRACTICE_REVIEWS.find((t) => t.id === id) ??
+    PATH_REVIEWS.find((t) => t.id === id);
   if (!tour) throw new Error(`Unknown tour ${id}`);
   return tour;
 }

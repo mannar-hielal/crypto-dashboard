@@ -282,8 +282,10 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      its peek; Read more → _Price swings_, always open), **Smaller coins swing harder** (the SOL chart above the
      text, "−29%"; then Pulin's math: "182.57 − 129.70 = 52.87" … "29.0%"), **Big swings, big risks**
      ([lesson.term `rug-pull`]).
-   - Screen 19: **Try it on the real screen** (on a phone too) → [lesson.try] → the buy tour, then the sell tour,
-     the lesson waiting through both → back on screen 20.
+   - Screen 19: **Try it on the real screen** (on a phone too; "…buy a little Bitcoin on the live chart, then show
+     you what changed in your account. Selling it is its own practice on the learning map.") → [lesson.try] → the
+     buy tour, then its **What just happened** (the same three bubbles as the practice buy, the last one's button
+     **Finish**), the lesson waiting through both → back on screen 20. No sell tour follows (2026-11-17).
    - Screen 20: **What you learned**: five lines, only the last with [lesson.recap] Read more, and the highlight
      "Decide when and why before you click." with no Read more. **Finish lesson** → screen 21, **Lesson 1 done**: the
      ribbon, the journal line, the rating, [lesson.teaser] "Next: where Bitcoin came from…", and
@@ -341,7 +343,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    - Desktop: **Try it** → [lesson.try] Show me → the primer's three tasks, then the summary. A phone gets Continue
      and "needs a larger screen" (the primer's hover steps).
    - **What moves a price**: four lines with Read more and "Your plan decides, not the headline."; the close with no
-     teaser and one button, [lesson.finish] **Finish lesson** (2026-11-17; Lesson 1's Try already ran the buy and sell tours).
+     teaser and one button, [lesson.finish] **Finish lesson** (2026-11-17; the map's practice stops, buy then sell, come next).
 5. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of nine articles;
    [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
    In **When the queue runs thin**, [article.queue.size] to 10 → Expect the thin queue down to 90; [article.queue.limit]
@@ -372,14 +374,32 @@ the analogy, and the math's steps (a sum wraps under its label on a narrow phone
 4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 17 %, **Continue** on Lesson 2,
    and the dot back on the Route icon before reopening.
 5. [path.test-out] → answer one wrong, four right → Expect "Checkpoint passed · 4 of 5 right";
-   [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked.
-6. Phone width (a fresh account with Lessons 1–3 done): [path.node `tour:buy-first-coin`] → Expect the laptop note;
-   [path.tour.skip `buy-first-coin`] → Expect a hollow ring and **Start** on "Sell it and read the result".
-7. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
+   [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked, except
+   "Sell it and read the result": still a padlock until "Buy your first coin" is done (2026-11-17).
+6. A fresh account with Lessons 1–3 done: **Start** on "Buy your first coin" and a padlock on "Sell it and read the
+   result"; [path.node `tour:sell-and-review`] → Expect "Finish “Buy your first coin” first." and no tour (2026-11-17:
+   Sell needs Buy done, even when Buy was skipped or the chapter tested out).
+   [path.node `tour:buy-first-coin`] (a phone too) → Expect the buy steps (a phone: **Buy / Long**, then Market, USDT,
+   100, Place; a larger screen: the form's Buy, then the same), the Place bubble ending "…until you close it by
+   selling. Next, a quick look at where it shows up."; then **What just happened**: [account.tab `assets`],
+   [assets.row `BTC`] (the fee in the coin, Avg cost), [assets.row.upnl `BTC`] with **Finish** → Expect the tour
+   closed (no sell tour), the stop ticked and **Start** on "Sell it and read the result".
+7. [path.node `tour:sell-and-review`] → [account.tab `assets`] → [assets.row.sell `BTC`] → Place (the bubble ends
+   "Next, a look at what changed.") → Expect **What just happened** in four bubbles: [assets.row `USDT`] ("Your Bitcoin
+   row is gone…"), [account.tab `orderhistory`], the top [order-history.row] (Side, Type, Qty, Fill Price, Status),
+   its [order-history.row.commission] (0.1% in USDT; the buy's in Bitcoin), the last button **Next →**; then **Your
+   result** in five: [account.summary.realized-pnl] ("…fees included… it's real"), [account.tab `balancehistory`], the
+   top [balance-history.row] (Balance Before, Balance After, Realized P&L, Action), the fees card **One quick
+   question**, and **Check yourself** → **Finish** → Expect the tour closed and the stop ticked.
+   With no Bitcoin held (sold from Assets first, or the tour started from a failed checkpoint's **Review**): the
+   second bubble shows "Open the Assets tab to find your Bitcoin. None there? You need some to sell: do “Buy your
+   first coin” on the learning map first, then come back to this lesson." and no ring.
+8. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen), **Back to the path** full width and **Try again** under it.
 
 **Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
-the bubble, Pulin and a progress ring never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
+the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the
+bubble (2026-11-17). Frequency: per release touching `learn/Path*`, `learn/CheckpointSheet.tsx` or `guide/tours.ts`.
 
 ### PWA — install, the notch and home bar, offline (no Part B rows yet)
 

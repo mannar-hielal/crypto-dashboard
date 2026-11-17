@@ -14,6 +14,10 @@
 > **2026-10-23:** the primer's steps are now checked tasks (tap the live price; hover the newest candle; hover a red
 > one): a new `hover` step kind, fed by `guide/chartHover.ts`. See APP_LOG.
 >
+> **2026-11-17:** `buy-first-coin` no longer chains to `sell-and-review`: one job per practical lesson, each its own
+> map stop (Sell locked until Buy is done), each ending with a walkthrough of the account panel (`PATH_REVIEWS`).
+> See APP_LOG.
+>
 > Moved here from the test implementation plan (retired 2026-09-30): its scenario format, the per-section "Guided
 > trade" verdicts, the Rollout milestone and its Q1 / Q2. The UI reproductions in `docs/UI_REPRODUCTIONS.md` are
 > the step-by-step source for each tour; `docs/TRADING_TEST_PLAN.md` Part B holds the cases they cite.

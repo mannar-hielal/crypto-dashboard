@@ -11,6 +11,7 @@ const ARTS: LessonArtId[] = [
   'etf',
   'flashCrash',
   'staircase',
+  'deepThin',
   'candleAnatomy',
   'swings',
   'checkCoin',
@@ -25,6 +26,8 @@ const ARTS: LessonArtId[] = [
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
 const TELLING: LessonArtId[] = [
+  'staircase',
+  'deepThin',
   'threePaths',
   'buySell',
   'closeToKeep',

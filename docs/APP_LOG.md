@@ -4845,6 +4845,34 @@ drop):
 - **`technical-analyst`** reads a pasted chart directly (it routed images through an opencode plugin and a Grok
   sub-agent). **`session-bootstrap`** names Claude Code's tools and points at `CLAUDE.md` for the quick commands.
 
+### 2026-11-17 — One job per practical lesson: Buy buys, Sell sells, each ends with a walkthrough
+
+The owner's request ("single responsibility practical lesson"). Tour ids are unchanged (`buy-first-coin`,
+`sell-and-review`), so nobody's progress resets; no lesson screen is added or removed.
+
+- **Buy no longer hands over to Sell.** `buy-first-coin` places the order, then chains to `review-first-coin`, a look
+  at the coin bought in the account panel: the Assets tab, Bitcoin's row (the fee taken in the coin, Avg cost) and
+  its Unrealized PnL. Its steps come from the same builder as the card's practice buy (`review-buy`, one wording);
+  only the last button differs (Finish, not "Back to the lesson"). The Place step now ends "…until you close it by
+  selling. Next, a quick look at where it shows up." (it said "in the next tour"). Lesson 1's Try runs this alone; its
+  intro now says selling is its own practice on the map.
+- **Sell is its own map stop**, locked until Buy is done (`NEEDS_DONE` in `learn/path.ts`), even with Buy skipped or
+  the chapter tested out; its locked note names Buy. The stops after it aren't held up. A learner who reaches it with
+  no Bitcoin (sold elsewhere, or from a failed checkpoint's Review) sees, on the Sell-button step, "None there? You
+  need some to sell: do “Buy your first coin” on the learning map first…". A hint, not a button: a tour step has no
+  action of its own, and adding one would be a UI change for the visual gate.
+- **Sell's walkthrough**, in two chained chapters after the sell (five steps at most each):
+  `review-sell` (Assets: the Bitcoin row gone, USDT back; Order History: the sell's Side, Type, Qty, Fill Price,
+  Status and Commission) and `review-sell-result` (the account summary's Realized P&L, fees included and now real;
+  Balance History: Balance Before, Balance After, Realized P&L and Action; the fees card and the "Check yourself"
+  quiz, unchanged). The Realized P&L figure got its anchor, `account.summary.realized-pnl`.
+- **Saved and reported as before:** each lesson is marked done (and counted in the funnel) when its own tour ends, at
+  the order; the walkthrough chapters, like a practice trade's, are neither saved nor reported. The quiz's steps
+  (`sell-and-review.4`, `.5`) are no longer in the funnel.
+- **The rule for every future lesson** is in `.claude/skills/lesson-authoring` (Practice trades): every practical
+  lesson and every card's practice trade ends with a walkthrough of what it changed, pointing at the important rows
+  and columns, and no hand-over chains two practical lessons.
+
 ### 2026-11-17 — A picomatch advisory accepted (no fixed version)
 
 On 2026-11-17 `pnpm audit --audit-level=high` began to fail on GHSA-fc5q-39xc-vjpf: a ReDoS in `picomatch` with

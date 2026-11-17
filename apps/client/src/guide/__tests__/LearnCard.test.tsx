@@ -79,6 +79,12 @@ describe('LearnCard', () => {
     expect(screen.queryByText('New to crypto?')).toBeNull();
   });
 
+  it('should retire as soon as Lesson 1 is finished, before any progress read says so', () => {
+    act(() => useLessonStore.getState().setCompleted(['lesson-01']));
+    renderCard();
+    expect(screen.queryByText('New to crypto?')).toBeNull();
+  });
+
   it('should offer Start on a phone too (the lesson cards work there)', () => {
     desktop = false;
     renderCard();

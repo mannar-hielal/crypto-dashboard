@@ -13,6 +13,8 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { guide } from '@/lib/guideAnchors';
 import { startLesson, startTour } from '@/guide/afterNote';
+import { NEEDS_DONE } from './path';
+import { isTourId } from '@/guide/tours';
 import { runsHere } from '@/guide/tours';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
@@ -105,7 +107,12 @@ export function CheckpointSheet() {
     closeCheckpoint();
     // As the map's and the articles' links (`afterNote.ts`): one lesson or tour on screen
     if (t.kind === 'lesson') startLesson(t.id);
-    else startTour(t.id, navigate);
+    else {
+      // A tour locked behind another (Sell behind Buy, NEEDS_DONE): the one it needs comes first
+      const needs = isTourId(t.id) ? NEEDS_DONE[t.id] : undefined;
+      const ready = !needs || !!useTourStore.getState().completed[needs];
+      startTour(ready ? t.id : needs!, navigate);
+    }
   };
 
   const score = checkpointScore(checkpoint, answers);
