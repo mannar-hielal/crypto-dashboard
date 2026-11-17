@@ -29,17 +29,18 @@ export function StreakView({
   const { habits, failed } = useHabits(accessToken);
   const [shown, setShown] = useState(0);
 
-  // Count up to the streak; with reduced motion the number is shown as it is
-  const streak = habits?.streakDays ?? 0;
+  // Count up to the streak once it's known; with reduced motion the number is shown as it is. Keyed
+  // on the number alone: a read again (a session refresh) with the same streak doesn't replay it
+  const streak = habits ? habits.streakDays : null;
   useEffect(() => {
-    if (!habits || reduced) return;
+    if (streak === null || reduced) return;
     const controls = animate(0, streak, {
       duration: COUNT_UP_S,
       onUpdate: (v) => setShown(Math.round(v)),
     });
     return () => controls.stop();
-  }, [habits, streak, reduced]);
-  const display = reduced ? streak : shown;
+  }, [streak, reduced]);
+  const display = reduced ? (streak ?? 0) : shown;
 
   return (
     <div className={styles.streak} {...guide('lesson.streak')}>
