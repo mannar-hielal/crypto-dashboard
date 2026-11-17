@@ -7,6 +7,7 @@
 import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
+import { noteFinishSent } from '@/learn/finishSync';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
@@ -218,7 +219,12 @@ export function useTourProgress(): void {
         const lesson = getLesson(finished);
         const last = lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
         learnApi.setProgress(finished, 'completed', accessToken, last).catch(() => undefined);
-        send('tour_completed', finished);
+        // Noted, so the streak screen reads the habits after it lands (learn/finishSync.ts)
+        noteFinishSent(
+          learnApi
+            .trackEvent({ name: 'tour_completed', itemId: finished }, accessToken)
+            .catch(() => undefined)
+        );
       }
 
       // A start ends the run before it, if that wasn't finished: during a look back, the lesson the

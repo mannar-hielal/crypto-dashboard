@@ -7,8 +7,8 @@
  * if they can't load, the screen says so and Continue still goes on.
  */
 
-import { useHabits, withTodayLearned } from '@/learn/useHabits';
-import { useEffect, useState, useMemo } from 'react';
+import { useHabits } from '@/learn/useHabits';
+import { useEffect, useState } from 'react';
 import { animate, useReducedMotion } from 'framer-motion';
 import { Flame } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
@@ -25,10 +25,8 @@ export function StreakView({
   onContinue: () => void;
 }) {
   const reduced = useReducedMotion();
-  const { habits: read, failed } = useHabits(accessToken);
-  // Today counted as learned: the learner just finished, and the finish's event may still be on
-  // its way when the habits are read
-  const habits = useMemo(() => (read ? withTodayLearned(read, new Date()) : null), [read]);
+  // Read after the finish's event lands (useHabits): the server then counts today
+  const { habits, failed } = useHabits(accessToken);
   const [shown, setShown] = useState(0);
 
   // Count up to the streak; with reduced motion the number is shown as it is
