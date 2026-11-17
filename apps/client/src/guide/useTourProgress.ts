@@ -3,7 +3,7 @@
  * finish / dismissal as it happens, and report the tour's events (the funnel). A lesson finish or a
  * checkpoint pass is kept on the device until its save lands and sent again on each progress read
  * (learn/pendingDone.ts), shown as done meanwhile; one the server refuses for good (an earlier
- * version, a step it won't take) is taken back. Any other failed write is dropped: that progress then lives only in this session,
+ * version: a 409, REFUSED_FOR_GOOD) is taken back. A 400 is kept: an older API's answer. Any other failed write is dropped: that progress then lives only in this session,
  * the worst case, never a broken tour.
  */
 
@@ -137,8 +137,8 @@ function sendReached(id: LessonId, screen: number, accessToken: string): void {
 export function useTourProgress(): void {
   const accessToken = useAuthStore((s) => s.accessToken);
 
-  // No account: the furthest screens belong to the one that made them (sign-out itself is handled
-  // by learn/signedOut.ts, which also forgets the device's unsaved finishes)
+  // No account (an expired session included, which keeps the queue): the furthest screens belong to
+  // the one that made them. An explicit sign-out also resets everything (learn/signedOut.ts)
   useEffect(() => {
     if (!accessToken) useLessonStore.getState().clearReached();
   }, [accessToken]);

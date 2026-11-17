@@ -91,7 +91,6 @@ export function queueDone(account: string, item: Omit<PendingDone, 'since'>): vo
   write(account, [{ ...item, since }, ...kept.filter((p) => p.itemId !== item.itemId)]);
 }
 
-/** Saved, or refused for good (an earlier version): kept no longer */
 /**
  * Drop one: only while it still holds `step` when given (a newer finish of the item, kept while
  * this one was on its way, stays)

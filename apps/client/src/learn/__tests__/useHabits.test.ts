@@ -84,4 +84,14 @@ describe('useHabits', () => {
     await act(async () => land());
     expect(getHabits).not.toHaveBeenCalled();
   });
+
+  it('should not read again when only the token rotates (the same account)', async () => {
+    useAuthStore.getState().setAuth('t1', { id: 'u1', email: 'a@b', username: 'a' } as never);
+    getHabits.mockResolvedValue(habits);
+    const { rerender } = renderHook(({ t }) => useHabits(t), { initialProps: { t: 't1' } });
+    await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(1));
+    rerender({ t: 't2' });
+    await act(async () => {});
+    expect(getHabits).toHaveBeenCalledTimes(1);
+  });
 });

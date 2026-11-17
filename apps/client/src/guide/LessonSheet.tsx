@@ -495,8 +495,11 @@ export function LessonSheet() {
     screen: number;
     go: () => void;
   } | null>(null);
-  /** The run the streak was shown on: once per lesson run (a retry after a failed save goes on) */
-  const [streakSeenRun, setStreakSeenRun] = useState<number | null>(null);
+  const [streakSeenAt, setStreakSeenAt] = useState<string | null>(null);
+  // Which lesson start the streak was shown for: a look back and the way back from it change the
+  // run, never the start, so the same finish never shows its streak twice
+  const starts = useLessonStore((s) => s.starts);
+  const startKey = `${activeId ?? ''}:${starts}`;
   // On the close it was opened from: the same run moved to another screen (the lesson opened again
   // at a card from the map) leaves it, so ✕ and Esc there just close
   const streakActive =
@@ -643,12 +646,12 @@ export function LessonSheet() {
   // The finish and the journal line are saved at the press, before the streak shows: leaving from
   // the streak screen (a closed tab) loses neither. Continue, ✕ or Esc then only leave
   const viaStreak = (go: () => void) => () => {
-    if (accessToken && !returnTo && streakSeenRun !== run) {
+    if (accessToken && !returnTo && streakSeenAt !== startKey) {
       // Seen once the finish goes through (a journal line that fails to save keeps the learner on
       // the close: the next press still shows the streak)
       afterNote(
         () => {
-          setStreakSeenRun(run);
+          setStreakSeenAt(startKey);
           useLessonStore.getState().markFinished();
           setStreakThen({ run, screen: screenIndex, go });
         },

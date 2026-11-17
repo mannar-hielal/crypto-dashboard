@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { accountFromToken } from './account';
@@ -24,13 +24,23 @@ export function useHabits(
     failed: boolean;
   } | null>(null);
 
+  // The token at the moment of the read: a rotation (the same account) reads nothing again
+  const token = useRef(accessToken);
   useEffect(() => {
-    if (!accessToken) return;
+    token.current = accessToken;
+  }, [accessToken]);
+  const signedIn = !!accessToken;
+
+  useEffect(() => {
+    if (!signedIn) return;
     let cancelled = false;
     // After the last finish's event lands: the server then counts today's finish
     finishSaved(account)
       // (a run cancelled while it waited sends nothing)
-      .then(() => (cancelled ? null : learnApi.getHabits(accessToken)))
+      .then(() => {
+        const now = token.current;
+        return cancelled || !now ? null : learnApi.getHabits(now);
+      })
       .then((r) => {
         if (!cancelled && r) setRead({ account, habits: r, failed: false });
       })
@@ -46,7 +56,7 @@ export function useHabits(
     return () => {
       cancelled = true;
     };
-  }, [accessToken, account, refresh]);
+  }, [signedIn, account, refresh]);
 
   const mine = accessToken && read && read.account === account ? read : null;
   return { habits: mine?.habits ?? null, failed: mine?.failed ?? false };
