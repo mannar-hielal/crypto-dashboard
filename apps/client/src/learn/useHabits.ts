@@ -8,6 +8,19 @@ import { accountFor } from './account';
  * `accessToken` null: nothing is read. Read again when `refresh` changes (a new finish); the last
  * answer stays shown meanwhile, and `failed` says the latest read didn't arrive.
  */
+/**
+ * One habits read per account at a time: the map (refreshing on a finish) and the streak screen
+ * opening with it share the request on its way instead of sending two
+ */
+const reading = new Map<string | null, Promise<HabitsResponse>>();
+function readHabits(account: string | null, token: string): Promise<HabitsResponse> {
+  const onTheWay = reading.get(account);
+  if (onTheWay) return onTheWay;
+  const read = learnApi.getHabits(token).finally(() => reading.delete(account));
+  reading.set(account, read);
+  return read;
+}
+
 export function useHabits(
   accessToken: string | null,
   refresh: unknown = null
@@ -39,8 +52,7 @@ export function useHabits(
     // review round 30: the wait that covered it cost a 4 s hold on every read and kept failing)
     const now = token.current;
     if (!now) return;
-    learnApi
-      .getHabits(now)
+    readHabits(account, now)
       .then((r) => {
         if (!cancelled) setRead({ account, habits: r, failed: false });
       })

@@ -74,4 +74,14 @@ describe('useHabits', () => {
     await act(async () => answer(habits));
     expect(result.current.habits).toBeNull();
   });
+
+  it('should share one habits request between two readers of the same account', async () => {
+    getHabits.mockResolvedValue(habits);
+    // The map and the streak screen opening together after a finish
+    const a = renderHook(() => useHabits('t', 1));
+    const b = renderHook(() => useHabits('t'));
+    await waitFor(() => expect(a.result.current.habits).toEqual(habits));
+    await waitFor(() => expect(b.result.current.habits).toEqual(habits));
+    expect(getHabits).toHaveBeenCalledTimes(1);
+  });
 });

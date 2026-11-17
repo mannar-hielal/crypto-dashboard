@@ -25,7 +25,8 @@ export function StreakView({
   onContinue: () => void;
 }) {
   const reduced = useReducedMotion();
-  // Read after the finish's event lands (useHabits): the server then counts today
+  // Read at once (useHabits): the lesson's own start already counted today; a run carried past
+  // midnight shows its new day on the next read (recorded in useHabits)
   const { habits, failed } = useHabits(accessToken);
   const [shown, setShown] = useState(0);
 

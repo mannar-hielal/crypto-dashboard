@@ -561,6 +561,17 @@ describe('useTourProgress', () => {
       expect(pendingDone('u1')).toHaveLength(1);
     });
 
+    it('should show the welcome card again when the kept Lesson 1 finish hiding it is refused', async () => {
+      queueDone('u1', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      // Shown as done, the card hidden, until the resend is refused: then both come back
+      await waitFor(() => expect(useTourStore.getState().cardDismissed).toBe(false));
+      expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined();
+    });
+
     it('should drop a kept finish the server already has, without sending it again', async () => {
       localStorage.clear();
       queueDone('u1', { itemId: 'lesson-01', step: 81 });

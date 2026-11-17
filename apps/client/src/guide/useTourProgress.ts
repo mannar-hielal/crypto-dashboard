@@ -48,6 +48,11 @@ function undone(itemId: PendingDone['itemId']): void {
   if (isLessonId(itemId)) {
     const { completed, setCompleted } = useLessonStore.getState();
     setCompleted((Object.keys(completed) as LessonId[]).filter((id) => id !== itemId));
+    // The welcome card, if only this kept Lesson 1 finish was hiding it
+    if (itemId === 'lesson-01' && cardByKeptFinish) {
+      cardByKeptFinish = false;
+      asServerAnswer(() => useTourStore.setState({ cardDismissed: false }));
+    }
     return;
   }
   const { skippedTours, checkpoints, setProgress } = usePathStore.getState();
@@ -142,6 +147,9 @@ function asServerAnswer(apply: () => void): void {
 /** No one is signed in any more (a token rotation is still signed in) */
 const signedOut = () => !useAuthStore.getState().accessToken;
 
+/** The welcome card is hidden only by a Lesson 1 finish still to save (the last read worked it out) */
+let cardByKeptFinish = false;
+
 /** The account the progress was last read for: another one's read starts from clean stores */
 let readFor: string | null = null;
 
@@ -199,10 +207,13 @@ export function useTourProgress(): void {
           ]),
         ];
         // Lesson 1 (or its primer) finished means the offer is done with, dismissed or not
-        const cardDismissed =
+        const cardBySaved =
           items.some((i) => i.itemId === 'welcome-card') ||
           completed.includes('primer') ||
-          lessons.includes('lesson-01');
+          items.some((i) => i.itemId === 'lesson-01' && i.status === 'completed');
+        // Hidden only by a Lesson 1 finish still to save: undone() shows it again if that's refused
+        cardByKeptFinish = !cardBySaved && lessons.includes('lesson-01');
+        const cardDismissed = cardBySaved || cardByKeptFinish;
         useLessonStore.getState().setCompleted(lessons);
         // How far each begun lesson got (the map's ring). A step from an earlier version of the
         // lesson names no screen today: that lesson's ring starts again
