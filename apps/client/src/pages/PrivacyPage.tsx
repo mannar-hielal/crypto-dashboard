@@ -13,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="November 12, 2026" version="1.5">
+      <LegalLayout title="Privacy Policy" lastUpdated="November 17, 2026" version="1.6">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -211,7 +211,9 @@ export function PrivacyPage() {
             <li>To detect and prevent abuse, fraud, or unauthorised access.</li>
             <li>
               To show you your own habit badges and learning streak, counted from your own orders,
-              journal notes and tour progress (nothing extra is stored for them).
+              journal notes and tour progress (nothing extra is stored for them). So that your days
+              are your own, your device&apos;s time zone (for example Europe/Zurich) is sent with
+              that request; it is used for that count only, and neither stored nor logged.
             </li>
             <li>
               To count, in aggregate, how many people come back to the service, so we can see

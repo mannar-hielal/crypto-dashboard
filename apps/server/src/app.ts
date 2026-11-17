@@ -12,7 +12,7 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { config } from './config.js';
-import { clientIp, requestLogSerializerFor } from './lib/clientIp.js';
+import { clientIp, requestLogSerializerFor, loggableUrl } from './lib/clientIp.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth/index.js';
@@ -165,7 +165,7 @@ export async function buildApp() {
 
     if (statusCode >= 500) {
       app.log.error(
-        { err: error, method: request.method, url: request.url },
+        { err: error, method: request.method, url: loggableUrl(request.url) },
         'Unhandled server error'
       );
       // 🔐 Never leak internal details (DB errors, stack traces) to the client

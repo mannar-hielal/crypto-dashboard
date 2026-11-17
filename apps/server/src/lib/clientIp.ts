@@ -83,6 +83,21 @@ export function clientIpFor(
   };
 }
 
+/**
+ * 🔐 A request's URL as a log may keep it: without query values that say something about the person
+ * (the learner's time zone, `tz`, a rough location: privacy policy, "nothing extra is stored" for
+ * the habits). Everything else stays, so a log still shows what was asked
+ */
+const PERSONAL_QUERY = ['tz'];
+export function loggableUrl(url: string): string {
+  const q = url.indexOf('?');
+  if (q === -1) return url;
+  const params = new URLSearchParams(url.slice(q + 1));
+  for (const name of PERSONAL_QUERY) params.delete(name);
+  const rest = params.toString();
+  return rest ? `${url.slice(0, q)}?${rest}` : url.slice(0, q);
+}
+
 /** The visitor's IP for this environment. */
 export const clientIp = clientIpFor({ nodeEnv: config.nodeEnv, onFly: config.onFly });
 
@@ -95,7 +110,7 @@ export function requestLogSerializerFor(env: IpEnv) {
   const read = clientIpFor(env, () => undefined);
   return (request: Pick<FastifyRequest, 'ip' | 'headers' | 'method' | 'url' | 'host'>) => ({
     method: request.method,
-    url: request.url,
+    url: loggableUrl(request.url),
     host: request.host,
     remoteAddress: read(request),
   });

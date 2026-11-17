@@ -4669,7 +4669,8 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   moves nothing). A day counts with any learning event on it but a rating (a start, a step, a close, a finish; steps read with
   their own limit). The streak screen reads the habits at once: the lesson's own start already counted today (only a run
   carried past midnight shows its new day on the next read). UTC when absent or unknown (an odd device zone never fails
-  the request). Formatters are kept for zone names Intl returns (capped at 1,000; other text is worked out once into a
+  the request), and the zone is never logged (`loggableUrl` drops `tz` from logged URLs; privacy policy 1.6 says
+  so). Formatters are kept for zone names Intl returns (capped at 1,000; other text is worked out once into a
   capped map and never kept as a zone), and each quarter hour is
   formatted once per request (every zone's offset is a whole number of quarter hours). `thisWeek` is optional
   in the SDK: an API rolled back on its own doesn't send it, and the dots then show no days.

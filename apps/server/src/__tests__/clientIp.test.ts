@@ -8,7 +8,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import Fastify from 'fastify';
 import rateLimit from '@fastify/rate-limit';
-import { clientIpFor, isFlyProxyPeer, requestLogSerializerFor } from '../lib/clientIp.js';
+import {
+  clientIpFor,
+  isFlyProxyPeer,
+  loggableUrl,
+  requestLogSerializerFor,
+} from '../lib/clientIp.js';
 
 /** The socket peer of public traffic in production (Fly's proxy, from the 2026-09-27 logs) */
 const FLY_PROXY = '172.16.23.42';
@@ -189,5 +194,19 @@ describe('clientIpFor', () => {
       url: '/x',
       remoteAddress: '89.217.38.229',
     });
+  });
+
+  it('should keep the learner’s time zone out of a logged URL, and the rest of the query in', () => {
+    expect(loggableUrl('/api/learn/habits?tz=Europe%2FZurich')).toBe('/api/learn/habits');
+    expect(loggableUrl('/api/x?a=1&tz=Asia%2FTokyo&b=2')).toBe('/api/x?a=1&b=2');
+    expect(loggableUrl('/api/learn/progress')).toBe('/api/learn/progress');
+    const line = requestLogSerializerFor({ nodeEnv: 'test', onFly: false })({
+      ip: '1.2.3.4',
+      headers: {},
+      method: 'GET',
+      url: '/api/learn/habits?tz=Europe%2FZurich',
+      host: 'x',
+    } as never);
+    expect(line.url).toBe('/api/learn/habits');
   });
 });
