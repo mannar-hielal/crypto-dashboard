@@ -557,10 +557,10 @@ describe('LessonSheet', () => {
     expect(math.querySelector('[data-guide-who="tick"] [data-glasses]')).not.toBeNull();
     const steps = [...math.querySelectorAll('ol li')].map((li) => li.textContent);
     expect(steps).toHaveLength(6);
-    expect(steps[0]).toBe('1.Price rise73,133 − 27,484 = 45,649');
+    expect(steps[0]).toBe('1.Price rise73,079 − 27,500 = 45,579');
     const answer = document.querySelector('[data-guide="lesson.math.answer"]')!;
     expect(answer.querySelectorAll('strong')).toHaveLength(2);
-    expect(answer.textContent).toContain('$2,656');
+    expect(answer.textContent).toContain('$2,652');
     // The text first, then the math; no hindsight line, no chit-chat
     const text = sheet()!.querySelector('p')!;
     expect(text.compareDocumentPosition(math) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

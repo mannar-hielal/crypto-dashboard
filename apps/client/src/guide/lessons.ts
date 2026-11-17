@@ -135,11 +135,18 @@ export interface ChartMarker {
 
 /**
  * A real mini chart on a card (owner's visual Q&A 2026-10-23): daily candles from our market
- * history (Bybit's USDT perpetual, which reaches back before 2021 — spot doesn't), with markers.
+ * history (Bybit's USDT perpetual by default, which reaches back before 2021 — spot doesn't), with
+ * markers.
  */
 export interface ChartScene {
   /** Bitcoin, or Solana for the "smaller coins swing harder" comparison (Lesson 1, owner 2026-11-16) */
   symbol: 'BTCUSDT' | 'SOLUSDT';
+  /**
+   * Which Bybit market the candles come from: `linear` (the USDT perpetual, the default) or `spot`,
+   * when the card's text is about a spot trade and its prices must match (Lesson 1's worked long,
+   * fact check 2026-11-17)
+   */
+  category?: 'spot' | 'linear';
   /** The newest candle's date (YYYY-MM-DD, UTC) and how many daily candles end there */
   end: string;
   bars: number;
@@ -393,17 +400,19 @@ const EXIT_2024: ChartScene = {
   fallback: 'swings',
 };
 
-// The worked long: 2 Oct 2023 closed 27,484.1; 13 Mar 2024 closed 73,133.0
+// The worked long, a spot buy, so spot candles (fact check 2026-11-17; the perpetual closed 27,484.1
+// and 73,133.0): Bybit BTCUSDT spot, 2 Oct 2023 closed 27,499.97; 13 Mar 2024 closed 73,079.40
 const LONG_2023: ChartScene = {
   symbol: 'BTCUSDT',
+  category: 'spot',
   end: '2024-03-20',
   bars: 178,
   markers: [
-    { date: '2023-10-02', text: 'Buy $27,484', position: 'below' },
-    { date: '2024-03-13', text: 'Sell $73,133', position: 'above' },
+    { date: '2023-10-02', text: 'Buy $27,500', position: 'below' },
+    { date: '2024-03-13', text: 'Sell $73,079', position: 'above' },
   ],
   label:
-    'Bitcoin daily candles from late September 2023 to March 2024: a buy on 2 October at $27,484, a sale on 13 March at $73,133.',
+    'Bitcoin daily candles from late September 2023 to March 2024: a buy on 2 October at $27,500, a sale on 13 March at $73,079.',
   fallback: 'swings',
 };
 
@@ -554,27 +563,28 @@ const lesson01: Lesson = {
       title: 'A real long',
       presenter: { who: 'tock', mood: 'curious', pose: 'point' },
       chart: LONG_2023,
-      text: 'Say you bought $1,000 of Bitcoin on the spot market at the close on 2 October 2023, at $27,484. Over the winter the price climbed. On 13 March 2024 you sold at the close: $73,133.',
+      text: 'Say you bought $1,000 of Bitcoin on the spot market at the close on 2 October 2023, at $27,500. Over the winter the price climbed. On 13 March 2024 you sold at the close: $73,079.',
     },
     {
       // Owner 2026-11-17: rewritten around the math (the hindsight line dropped). From LONG_2023's
-      // closes: 73,133.0 − 27,484.1 = 45,648.9; ÷ 27,484.1 = 1.6609; $1,000 → $2,660.92 before fees;
-      // a 0.1% fee each way keeps 0.999² = 99.8%: $2,655.60
+      // spot closes (fact check 2026-11-17), rounded to $27,500 and $73,079: 73,079 − 27,500 =
+      // 45,579; ÷ 27,500 = 1.6574; $1,000 → $2,657 before fees (unrounded 73,079.40 ÷ 27,499.97 =
+      // 2.6574: $2,657.44); a 0.1% fee each way keeps 0.999² = 99.8%: $2,651.69 ($2,652.13 unrounded)
       title: 'The result',
       presenter: { who: 'tock', mood: 'grin', pose: 'stand' },
-      text: 'You bought $1,000 of Bitcoin at $27,484 and sold it at $73,133. How much is that, in percent and in dollars? One more thing: Spot takes a 0.1% fee when you buy and again when you sell, so you keep about 99.8%.',
+      text: 'You bought $1,000 of Bitcoin at $27,500 and sold it at $73,079. How much is that, in percent and in dollars? One more thing: Spot takes a 0.1% fee when you buy and again when you sell, so you keep about 99.8%.',
       math: {
         who: 'tick',
         steps: [
-          { label: 'Price rise', sum: '73,133 − 27,484 = 45,649' },
-          { label: 'Divide by the start', sum: '45,649 ÷ 27,484 = 1.661' },
-          { label: 'As a percent', sum: '1.661 × 100 = 166.1%' },
-          { label: 'Your gain', sum: '$1,000 × 1.661 = $1,661' },
-          { label: 'Add your $1,000', sum: '$1,000 + $1,661 = $2,661' },
-          { label: 'Keep 99.8% after fees', sum: '$2,661 × 0.998 ≈ $2,656' },
+          { label: 'Price rise', sum: '73,079 − 27,500 = 45,579' },
+          { label: 'Divide by the start', sum: '45,579 ÷ 27,500 = 1.657' },
+          { label: 'As a percent', sum: '1.657 × 100 = 165.7%' },
+          { label: 'Your gain', sum: '$1,000 × 1.657 = $1,657' },
+          { label: 'Add your $1,000', sum: '$1,000 + $1,657 = $2,657' },
+          { label: 'Keep 99.8% after fees', sum: '$2,657 × 0.998 ≈ $2,652' },
         ],
         answer:
-          'Bitcoin rose about 166%. After fees, your $1,000 became about **$2,656**: about **$1,656 profit**.',
+          'Bitcoin rose about 166%. After fees, your $1,000 became about **$2,652**: about **$1,652 profit**.',
       },
     },
     {

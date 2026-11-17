@@ -279,10 +279,26 @@ describe('lessons', () => {
     const result = card('The result');
     expect(result.lines).toBeUndefined();
     expect(JSON.stringify(result)).not.toMatch(/hindsight/i);
-    expect(result.text).toMatch(/\$27,484.*\$73,133/);
-    expect(card('A real long').text).toMatch(/\$27,484.*\$73,133/);
-    expect(result.math?.steps[0].sum).toBe('73,133 − 27,484 = 45,649');
-    expect(result.math?.answer).toMatch(/\$2,656.*\$1,656 profit/);
+    // A spot buy, so Bybit's spot closes (fact check 2026-11-17): 27,499.97 → 73,079.40
+    const long = card('A real long');
+    expect(result.text).toMatch(/\$27,500.*\$73,079/);
+    expect(long.text).toMatch(/spot market.*\$27,500.*\$73,079/);
+    expect(long.chart?.category).toBe('spot');
+    expect(long.chart?.markers.map((m) => m.text)).toEqual(['Buy $27,500', 'Sell $73,079']);
+    expect(result.math?.steps.map((x) => x.sum)).toEqual([
+      '73,079 − 27,500 = 45,579',
+      '45,579 ÷ 27,500 = 1.657',
+      '1.657 × 100 = 165.7%',
+      '$1,000 × 1.657 = $1,657',
+      '$1,000 + $1,657 = $2,657',
+      '$2,657 × 0.998 ≈ $2,652',
+    ]);
+    expect(result.math?.answer).toMatch(/about 166%.*\$2,652.*\$1,652 profit/);
+    // Every other scene stays on the perpetual
+    const scenes = l.cards.flatMap((c) => [c.chart, c.quiz?.chart]).filter((x) => x !== undefined);
+    expect(scenes.filter((x) => x !== long.chart).every((x) => x.category === undefined)).toBe(
+      true
+    );
     // The catch: the short's numbers match the chart's markers and the card before it
     const short = card('A real short');
     expect(short.text).toMatch(/\$64,894.*0\.01 BTC.*\$18,965/);
