@@ -607,6 +607,28 @@ describe('useTourProgress', () => {
       expect(getProgress).toHaveBeenCalledTimes(2); // the read, then one check for both
     });
 
+    it('should send a newer finish kept behind a refused one, never taking it off the screen', async () => {
+      profile = { id: 'u9' }; // an account no other test has a save on its way for
+      queueDone('u9', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP - 1 });
+      let refuse: (e: unknown) => void = () => {};
+      setProgress.mockReturnValueOnce(new Promise((_, reject) => (refuse = reject)));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(setProgress).toHaveBeenCalledTimes(1));
+      // Finished again (a newer step) while the first save is on its way
+      queueDone('u9', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
+      await act(async () => refuse(Object.assign(new Error('x'), { status: 409 })));
+      await waitFor(() =>
+        expect(setProgress).toHaveBeenLastCalledWith(
+          'lesson-01',
+          'completed',
+          'tok',
+          LESSON_01_LAST_STEP
+        )
+      );
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+    });
+
     it('should send no close for a finished lesson left from a look back', async () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
