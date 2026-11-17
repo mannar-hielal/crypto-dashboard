@@ -23,9 +23,16 @@ export const TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const
  */
 export const PRACTICE_TOUR_IDS = ['practice-buy', 'practice-long', 'practice-short'] as const;
 export type PracticeTourId = (typeof PRACTICE_TOUR_IDS)[number];
+/**
+ * What just happened (owner 2026-11-17): each practice trade chains to a short look at the account
+ * panel (the coin bought, the open long or short) before the lesson carries on. Chained, never started
+ * on their own, so each chapter keeps to five steps; not saved or reported either.
+ */
+export const PRACTICE_REVIEW_IDS = ['review-buy', 'review-long', 'review-short'] as const;
+export type PracticeReviewId = (typeof PRACTICE_REVIEW_IDS)[number];
 /** The path's tours: saved, reported and counted (a practice trade is none of these) */
 export type PathTourId = (typeof TOUR_IDS)[number];
-export type TourId = PathTourId | PracticeTourId;
+export type TourId = PathTourId | PracticeTourId | PracticeReviewId;
 
 /** A Learn panel tour (not a practice trade): what the account's progress may hold */
 export function isTourId(value: string): value is PathTourId {
@@ -313,14 +320,18 @@ const sellAndReview: Tour = {
 
 // ─── Practice trades from a lesson card (owner 2026-11-16) ──────────────────
 
-/** A practice trade: open the form (the phone's bar, or the side button), Market, $100, place it */
+/**
+ * A practice trade: open the form (the phone's bar, or the side button), Market, $100, place it; then
+ * its review chapter (`next`) shows what just happened in the account panel
+ */
 function practice(
   id: PracticeTourId,
   title: string,
   startUrl: string,
   side: 'buy' | 'sell',
   sideText: string,
-  placed: string
+  placed: string,
+  next: PracticeReviewId
 ): Tour {
   const phoneButton = side === 'buy' ? 'Buy / Long' : 'Sell / Short';
   const formHint = side === 'buy' ? FORM_HINT : FORM_HINT_SELL;
@@ -330,6 +341,7 @@ function practice(
     blurb: 'A guided practice trade, then back to your lesson.',
     minutes: 1,
     startUrl,
+    next,
     phoneReady: true,
     steps: numbered(id, [
       {
@@ -386,7 +398,8 @@ const practiceBuy = practice(
   '/dashboard/spot/BTC/USDT',
   'buy',
   'Buy means you pay to own some coin.',
-  'Place the order. It fills right away: you now own $100 of Bitcoin. Your lesson carries on next.'
+  'Place the order. It fills right away: you now own $100 of Bitcoin. Next, a quick look at what changed.',
+  'review-buy'
 );
 const practiceLong = practice(
   'practice-long',
@@ -394,7 +407,8 @@ const practiceLong = practice(
   '/dashboard/usdt/BTCUSDT',
   'buy',
   'On the USDT Perpetual market, Buy / Long opens a long: you gain if the price rises.',
-  'Place the order. With no short open on Bitcoin, you now hold a long position (a Buy first shrinks a short you already hold). Your lesson carries on next.'
+  'Place the order. With no short open on Bitcoin, you now hold a long position (a Buy first shrinks a short you already hold). Next, a quick look at it.',
+  'review-long'
 );
 // On Ethereum: one position per symbol (one-way), so a short on Bitcoin would only close the
 // practice long instead of opening a short
@@ -404,14 +418,105 @@ const practiceShort = practice(
   '/dashboard/usdt/ETHUSDT',
   'sell',
   'On the USDT Perpetual market, Sell / Short opens a short: you gain if the price falls. This one is on Ethereum.',
-  'Place the order. With no long open on Ethereum, you now hold a short position (a Sell first shrinks a long you already hold). Your lesson carries on next.'
+  'Place the order. With no long open on Ethereum, you now hold a short position (a Sell first shrinks a long you already hold). Next, a quick look at it.',
+  'review-short'
+);
+
+// ─── What just happened: after each practice trade (owner 2026-11-17) ────────
+
+/** The account panel's way in, when it isn't on screen (a phone opens it after an order) */
+const PANEL_HINT = 'Open the account panel under the chart.';
+/** The last step's button: the lesson carries on after it */
+const BACK_TO_LESSON = 'Back to the lesson';
+
+const reviewBuy: Tour = {
+  id: 'review-buy',
+  title: 'What just happened',
+  blurb: 'Where your practice buy shows up.',
+  minutes: 1,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  phoneReady: true,
+  steps: numbered('review-buy', [
+    fromDraft(
+      openTab('assets', {
+        explain: 'Your order filled. Open Assets: it lists every coin you hold.',
+      }),
+      { missingHint: `${PANEL_HINT} Then its Assets tab.` }
+    ),
+    {
+      kind: 'observe',
+      anchor: 'assets.row',
+      key: 'BTC',
+      text: 'This row is your Bitcoin. The $100 you just bought is in it, a hair less: Spot’s 0.1% fee is taken in the coin. Avg cost is the price you paid on average.',
+      missingHint: 'Open the Assets tab to find your Bitcoin.',
+    },
+    {
+      kind: 'observe',
+      anchor: 'assets.row.upnl',
+      key: 'BTC',
+      text: 'Unrealized PnL is what you’d gain or lose if you sold right now. It changes with every tick, and becomes real only when you sell.',
+      missingHint: 'Open the Assets tab to find your Bitcoin.',
+      nextLabel: BACK_TO_LESSON,
+    },
+  ]),
+};
+
+/** The long or short just opened, in Positions: open the tab, then read its row */
+function reviewPosition(
+  id: Exclude<PracticeReviewId, 'review-buy'>,
+  startUrl: string,
+  symbol: 'BTCUSDT' | 'ETHUSDT',
+  row: string
+): Tour {
+  return {
+    id,
+    title: 'What just happened',
+    blurb: 'Where your practice position shows up.',
+    minutes: 1,
+    startUrl,
+    phoneReady: true,
+    steps: numbered(id, [
+      fromDraft(
+        openTab('positions', {
+          explain:
+            'Your order filled. Open Positions: every long and short you hold is listed there.',
+        }),
+        { missingHint: `${PANEL_HINT} Then its Positions tab.` }
+      ),
+      {
+        kind: 'observe',
+        anchor: 'positions.row',
+        key: `linear:${symbol}`,
+        text: row,
+        missingHint: 'Open the Positions tab to find your position.',
+        nextLabel: BACK_TO_LESSON,
+      },
+    ]),
+  };
+}
+
+const reviewLong = reviewPosition(
+  'review-long',
+  '/dashboard/usdt/BTCUSDT',
+  'BTCUSDT',
+  'This is your long on Bitcoin: Side says Long, Avg Fill Price is where you got in, and Unrealized P&L moves with every tick. It becomes real when you close the position with the ✕ at the end of the row.'
+);
+const reviewShort = reviewPosition(
+  'review-short',
+  '/dashboard/usdt/ETHUSDT',
+  'ETHUSDT',
+  'This is your short on Ethereum: Side says Short. Its Unrealized P&L grows when the price falls and shrinks when it rises. It becomes real when you close it with the ✕ at the end of the row.'
 );
 
 export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview];
 export const PRACTICE_TOURS: readonly Tour[] = [practiceBuy, practiceLong, practiceShort];
+export const PRACTICE_REVIEWS: readonly Tour[] = [reviewBuy, reviewLong, reviewShort];
 
 export function getTour(id: TourId): Tour {
-  const tour = TOURS.find((t) => t.id === id) ?? PRACTICE_TOURS.find((t) => t.id === id);
+  const tour =
+    TOURS.find((t) => t.id === id) ??
+    PRACTICE_TOURS.find((t) => t.id === id) ??
+    PRACTICE_REVIEWS.find((t) => t.id === id);
   if (!tour) throw new Error(`Unknown tour ${id}`);
   return tour;
 }

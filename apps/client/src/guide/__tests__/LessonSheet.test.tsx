@@ -690,6 +690,23 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 4 });
   });
 
+  it('should wait through the look at what just happened after a practice trade, then carry on', () => {
+    // Owner 2026-11-17: the trade's last step hands over to its review in the account panel
+    at(3, 'lesson-01'); // Buy and Sell
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.practice"]')!);
+    act(() => useTourStore.setState({ stepIndex: 4 })); // its last step: place the order
+    act(() => useTourStore.getState().next()); // the order placed: on to the review
+    expect(useTourStore.getState().activeId).toBe('review-buy');
+    expect(useLessonStore.getState()).toMatchObject({ inTour: true, screen: 3 });
+    expect(sheet()).toBeNull();
+    // Its last step's button, Back to the lesson: the lesson carries on one screen on
+    act(() => useTourStore.setState({ stepIndex: 2 }));
+    act(() => useTourStore.getState().next());
+    expect(useTourStore.getState().activeId).toBeNull();
+    expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 4 });
+  });
+
   it('should offer Lesson 1’s “Try it” on a phone too, and wait for the whole buy → sell chain', () => {
     desktop = false;
     at(18, 'lesson-01');
