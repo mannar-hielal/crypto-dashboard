@@ -335,5 +335,14 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
 
   // `run` keeps counting: a save from before the reset must never match a run after it
   reset: () =>
-    set((s) => ({ ...initial, answers: {}, completed: {}, reached: {}, run: s.run + 1 })),
+    // `run` and `starts` keep counting (never back to an earlier value): a key made from them, such
+    // as the streak's "seen" mark, never comes round again
+    set((s) => ({
+      ...initial,
+      answers: {},
+      completed: {},
+      reached: {},
+      run: s.run + 1,
+      starts: s.starts,
+    })),
 }));

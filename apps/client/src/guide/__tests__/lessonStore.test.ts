@@ -169,6 +169,7 @@ describe('lessonStore', () => {
   });
 
   it('should go home from a look back when its lesson is started, carry on in its own, and start any other afresh', () => {
+    const starts0 = s().starts; // keeps counting through a reset: measured from here
     s().start('lesson-ownership', 3);
     s().answer(0);
     s().visit('lesson-01', 1);
@@ -190,7 +191,7 @@ describe('lessonStore', () => {
 
     s().start('lesson-02'); // any other: a fresh run, the look back over
     expect(s()).toMatchObject({ activeId: 'lesson-02', screen: 0, returnTo: null });
-    expect(s().starts).toBe(2);
+    expect(s().starts).toBe(starts0 + 2);
   });
 
   it('should leave no rating behind once a lesson is finished', () => {
@@ -201,6 +202,7 @@ describe('lessonStore', () => {
   });
 
   it('should keep the lesson already on screen: its screen with none given, a card if asked, its tour', () => {
+    const starts0 = s().starts;
     s().start('lesson-02', 3);
     s().answer(1);
     const run = s().run;
@@ -208,7 +210,7 @@ describe('lessonStore', () => {
     expect(s()).toMatchObject({ activeId: 'lesson-02', screen: 3, answers: { 3: 1 }, run });
     s().start('lesson-02', 6);
     expect(s()).toMatchObject({ screen: 6, answers: { 3: 1 }, run });
-    expect(s().starts).toBe(1);
+    expect(s().starts).toBe(starts0 + 1);
 
     s().enterTour('primer');
     s().start('lesson-02', 2);
