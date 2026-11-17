@@ -56,6 +56,11 @@ function Headline({ beat }: { beat: Extract<Beat, { kind: 'headline' }> }) {
   return emphasize(beat.text, beat.emphasis, styles.big);
 }
 
+/**
+ * A cold open's kicker, headline, counter and guides' lines are plain text by design (a headline
+ * sets its part apart with `emphasis`); only a fact takes markup. LessonSheet's sweep fails any
+ * lesson that shows a * or [[ on screen (weighed, review after release #308)
+ */
 function BeatLine({ beat, run, active }: { beat: Beat; run: boolean; active: boolean }) {
   switch (beat.kind) {
     case 'kicker':

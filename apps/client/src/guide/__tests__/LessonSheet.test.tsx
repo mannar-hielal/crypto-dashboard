@@ -184,6 +184,27 @@ describe('LessonSheet', () => {
     expect(getHabits).not.toHaveBeenCalled();
   });
 
+  it('should finish the lesson when the close screen is left with ✕ or Esc (past "Finish lesson")', async () => {
+    at(lessonScreens(lesson).length - 1); // the close screen
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.close"]')!);
+    await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
+    expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
+
+    at(lessonScreens(lesson).length - 1);
+    act(() => useLessonStore.setState({ completed: {} }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => expect(useLessonStore.getState().completed['lesson-02']).toBe(true));
+  });
+
+  it('should only close, never finish, when an earlier screen is left with ✕', async () => {
+    at(2);
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.close"]')!);
+    await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
+    expect(useLessonStore.getState().completed['lesson-02']).toBeUndefined();
+  });
+
   it('should not move on past Try when another tour took its tour’s place (review 2026-11-16)', () => {
     const tryAt = lessonScreens(getLesson('lesson-01')).findIndex((x) => x.kind === 'try');
     at(tryAt, 'lesson-01');

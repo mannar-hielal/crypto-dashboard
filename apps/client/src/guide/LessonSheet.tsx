@@ -535,6 +535,13 @@ export function LessonSheet() {
   // Esc closes the sheet (not while the tour or an article is open: each has its own Esc)
   // (an open term peek closes first: Esc then dismisses just the peek; the map, if open over the
   // sheet, has its own Esc)
+  // ✕ or Esc: on the close screen (past the summary's "Finish lesson") the lesson is done, so leaving
+  // finishes it; anywhere earlier it only closes (review after release #308)
+  const leaveSheet = () => {
+    const onClose = !!lesson && lessonScreens(lesson)[screenIndex]?.kind === 'close';
+    if (onClose) finishLesson();
+    else afterNote(() => useLessonStore.getState().close());
+  };
   const peekOpen = peek !== null;
   useEffect(() => {
     if (!activeId || inTour || articleOpen || mapOpen) return;
@@ -542,7 +549,7 @@ export function LessonSheet() {
       if (e.key !== 'Escape') return;
       if (peekOpen) setPeek(null);
       else if (streakActive) leaveStreakFinishing(setStreakThen);
-      else afterNote(() => useLessonStore.getState().close());
+      else leaveSheet();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -603,10 +610,7 @@ export function LessonSheet() {
 
   if (!screen) return null;
   const { next, back, answer } = useLessonStore.getState();
-  const close = () =>
-    streakActive
-      ? leaveStreakFinishing(setStreakThen)
-      : afterNote(() => useLessonStore.getState().close());
+  const close = () => (streakActive ? leaveStreakFinishing(setStreakThen) : leaveSheet());
   const goBack = () => {
     setPeek(null);
     back();
