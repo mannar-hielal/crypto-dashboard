@@ -14,6 +14,8 @@ vi.mock('framer-motion', async (importOriginal) => ({
 import { StreakView } from '@/guide/StreakView';
 import { guideSelector } from '@/lib/guideAnchors';
 import { useTourStore } from '@/guide/tourStore';
+import { useLessonStore } from '@/guide/lessonStore';
+import { usePathStore } from '@/learn/pathStore';
 
 const habits = {
   badges: [],
@@ -26,6 +28,9 @@ describe('StreakView', () => {
   beforeEach(() => {
     getHabits.mockReset();
     reduced = true;
+    useTourStore.getState().reset();
+    useLessonStore.getState().reset();
+    usePathStore.getState().reset();
     useTourStore.setState({ loaded: true }); // the account's progress is in
   });
   afterEach(cleanup);

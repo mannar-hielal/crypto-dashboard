@@ -17,8 +17,10 @@ export function LearnCard() {
   const dismissed = useTourStore((s) => s.cardDismissed);
   const touring = useTourStore((s) => s.activeId !== null);
   const learning = useLessonStore((s) => s.activeId !== null);
+  // Lesson 1 finished is the offer done with, at once (the progress read says so only later)
+  const lessonOneDone = useLessonStore((s) => !!s.completed['lesson-01']);
 
-  if (!loaded || dismissed || touring || learning) return null;
+  if (!loaded || dismissed || touring || learning || lessonOneDone) return null;
 
   const start = () => {
     useTourStore.getState().dismissCard();

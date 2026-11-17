@@ -109,6 +109,14 @@ describe('lessonStore', () => {
     expect(s().completed['lesson-01']).toBeUndefined();
   });
 
+  it('should clear a wrong answer when the same lesson is opened at another screen', () => {
+    s().start('lesson-01');
+    useLessonStore.setState({ screen: 5 });
+    s().answer(-1); // wrong
+    s().start('lesson-01', 3); // an article's link to one of its cards
+    expect(s().answers[5]).toBeUndefined();
+  });
+
   it('should mark the lesson completed on finish, and not on close', () => {
     s().start('lesson-01');
     s().close();
