@@ -504,13 +504,13 @@ const reviewLong = reviewPosition(
   'review-long',
   '/dashboard/usdt/BTCUSDT',
   'BTCUSDT',
-  'This is your long on Bitcoin: Side says Long, Avg Fill Price is where you got in, and Unrealized P&L moves with the Mark Price. It becomes real when you close the position with the ✕ at the end of the row.'
+  'This is your long on Bitcoin: Side says Long, Avg Fill Price is where you got in, and Unrealized P&L moves with the Mark Price. It becomes real when you close the position with the ✕ (Close) at the end of the row.'
 );
 const reviewShort = reviewPosition(
   'review-short',
   '/dashboard/usdt/ETHUSDT',
   'ETHUSDT',
-  'This is your short on Ethereum: Side says Short. Its Unrealized P&L grows when the price falls and shrinks when it rises. It becomes real when you close it with the ✕ at the end of the row.'
+  'This is your short on Ethereum: Side says Short. Its Unrealized P&L grows when the price falls and shrinks when it rises. It becomes real when you close it with the ✕ (Close) at the end of the row.'
 );
 
 export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview];

@@ -591,7 +591,7 @@ const lesson01: Lesson = {
       title: 'Close it to keep it',
       art: 'closeToKeep',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the Close button on your position row. Until then, it can still shrink.',
+      text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the ✕ (Close) at the end of your position row. Until then, it can still shrink.',
     },
     {
       // Owner 2026-11-17: the borrowing analogy, by one guide in glasses, replaces the chit-chat; it

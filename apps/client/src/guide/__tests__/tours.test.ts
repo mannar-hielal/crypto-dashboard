@@ -173,8 +173,12 @@ describe('tours', () => {
     // The long's P&L follows the Mark Price, not every tick
     const long = getTour('review-long').steps.at(-1)!.text;
     expect(long).toMatch(/Unrealized P&L moves with the Mark Price\./);
-    for (const id of ['review-long', 'review-short'] as const)
-      expect(getTour(id).steps.at(-1)!.text, id).not.toMatch(/every tick/);
+    for (const id of ['review-long', 'review-short'] as const) {
+      const last = getTour(id).steps.at(-1)!.text;
+      expect(last, id).not.toMatch(/every tick/);
+      // One phrase for closing a position, as Lesson 1 says it (fact check 2026-11-17)
+      expect(last, id).toMatch(/with the ✕ \(Close\) at the end of the row\.$/);
+    }
     // The trade's last step says a look comes next, not that the lesson carries on
     for (const t of PRACTICE_TOURS)
       expect(t.steps.at(-1)!.text, t.id).toMatch(/Next, a quick look/);

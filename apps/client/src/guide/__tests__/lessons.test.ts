@@ -311,6 +311,10 @@ describe('lessons', () => {
       '0.708 × 100 = 70.8%',
     ]);
     expect(caught.lines?.[0].text).toMatch(/^Now the catch/);
+    // One phrase for closing a position, as the practice reviews say it (fact check 2026-11-17)
+    expect(card('Close it to keep it').text).toContain(
+      'In our app that’s the ✕ (Close) at the end of your position row.'
+    );
     // Fact check 2026-11-17: liquidation comes before the margin runs out, and the margin is lost
     expect(caught.lines?.[0].text).toContain(
       'the exchange closes a losing short before your margin runs out (liquidation), and that margin is lost'
