@@ -84,4 +84,14 @@ describe('useHabits', () => {
     await waitFor(() => expect(b.result.current.habits).toEqual(habits));
     expect(getHabits).toHaveBeenCalledTimes(1);
   });
+
+  it('should send a new read for a new refresh, never sharing the one from before it', async () => {
+    let answer: (h: typeof habits) => void = () => {};
+    getHabits.mockReturnValueOnce(new Promise((r) => (answer = r))).mockResolvedValue(habits);
+    const { rerender } = renderHook(({ n }) => useHabits('t', n), { initialProps: { n: 1 } });
+    await act(async () => {}); // later: the first read is on its way
+    rerender({ n: 2 }); // a finish meanwhile
+    expect(getHabits).toHaveBeenCalledTimes(2);
+    answer(habits);
+  });
 });

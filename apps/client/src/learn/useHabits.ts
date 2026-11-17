@@ -4,23 +4,45 @@ import { useAuthStore } from '@/store/authStore';
 import { accountFor } from './account';
 
 /**
+ * One habits read per account at a time: the map (refreshing on a finish) and the streak screen
+ * opening with it share the request on its way. A reader asking because of a new finish (`fresh`)
+ * joins only a read sent in the same render's effects; an older one may predate the finish, so it
+ * sends its own
+ */
+let tick = 0;
+let tickScheduled = false;
+function currentTick(): number {
+  if (!tickScheduled) {
+    tickScheduled = true;
+    queueMicrotask(() => {
+      tick += 1;
+      tickScheduled = false;
+    });
+  }
+  return tick;
+}
+const reading = new Map<string, { read: Promise<HabitsResponse>; tick: number }>();
+function readHabits(
+  account: string | null,
+  token: string,
+  fresh: boolean
+): Promise<HabitsResponse> {
+  const key = account ?? '';
+  const now = currentTick();
+  const onTheWay = reading.get(key);
+  if (onTheWay && (!fresh || onTheWay.tick === now)) return onTheWay.read;
+  const read = learnApi.getHabits(token).finally(() => {
+    if (reading.get(key)?.read === read) reading.delete(key);
+  });
+  reading.set(key, { read, tick: now });
+  return read;
+}
+
+/**
  * The account's habits (badges, the learning streak, this week's days), counted on the server.
  * `accessToken` null: nothing is read. Read again when `refresh` changes (a new finish); the last
  * answer stays shown meanwhile, and `failed` says the latest read didn't arrive.
  */
-/**
- * One habits read per account at a time: the map (refreshing on a finish) and the streak screen
- * opening with it share the request on its way instead of sending two
- */
-const reading = new Map<string | null, Promise<HabitsResponse>>();
-function readHabits(account: string | null, token: string): Promise<HabitsResponse> {
-  const onTheWay = reading.get(account);
-  if (onTheWay) return onTheWay;
-  const read = learnApi.getHabits(token).finally(() => reading.delete(account));
-  reading.set(account, read);
-  return read;
-}
-
 export function useHabits(
   accessToken: string | null,
   refresh: unknown = null
@@ -42,6 +64,8 @@ export function useHabits(
     token.current = accessToken;
   }, [accessToken]);
   const signedIn = !!accessToken;
+  // The refresh the last read was asked for: a change means a finish since
+  const lastRefresh = useRef<{ value: unknown } | null>(null);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -52,7 +76,9 @@ export function useHabits(
     // review round 30: the wait that covered it cost a 4 s hold on every read and kept failing)
     const now = token.current;
     if (!now) return;
-    readHabits(account, now)
+    const fresh = lastRefresh.current !== null && lastRefresh.current.value !== refresh;
+    lastRefresh.current = { value: refresh };
+    readHabits(account, now, fresh)
       .then((r) => {
         if (!cancelled) setRead({ account, habits: r, failed: false });
       })
