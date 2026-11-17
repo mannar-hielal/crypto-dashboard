@@ -113,7 +113,17 @@ describe('CheckpointSheet', () => {
     expect(useLessonStore.getState().activeId).toBe('lesson-02');
   });
 
+  it('should start the Buy lesson first when a missed question points at Sell before Buy is done', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch1');
+    renderSheet();
+    answerAll((i) => wrongFor(i));
+    fireEvent.click(document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!);
+    // Sell sells what Buy bought: locked until Buy is done (NEEDS_DONE), here as on the map
+    expect(useTourStore.getState().activeId).toBe('buy-first-coin');
+  });
+
   it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {
+    useTourStore.setState({ completed: { 'buy-first-coin': true } });
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));

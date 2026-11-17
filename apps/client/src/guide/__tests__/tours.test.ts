@@ -141,7 +141,9 @@ describe('tours', () => {
       expect(text('review-sell')).toContain(label);
     for (const label of ['Realized P&L', 'Balance Before', 'Balance After', 'Action'])
       expect(text('review-sell-result')).toContain(label);
-    expect(text('review-sell')).toMatch(/Your Bitcoin row is gone/);
+    expect(text('review-sell')).toMatch(
+      /its row is gone \(unless some is still held for an order\)/
+    );
     // The fees' lesson and the check stay at the end
     expect(getTour('review-sell-result').steps.at(-1)!.text).toBe('Check yourself');
   });

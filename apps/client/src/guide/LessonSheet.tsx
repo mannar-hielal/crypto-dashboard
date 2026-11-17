@@ -550,6 +550,8 @@ export function LessonSheet() {
       // to the sheet only while a line is being typed: the first Esc leaves the field (the line
       // stays), the next one closes. An empty or saved (read-only) field lets Esc close at once
       if (e.isComposing) return;
+      // (Any field being typed in is left first, not only the journal's: in a modal sheet Esc
+      // shouldn't close the lesson out from under typing. Weighed, review after #308)
       // An open term peek closes first, whatever has the focus
       if (peekOpen) {
         setPeek(null);

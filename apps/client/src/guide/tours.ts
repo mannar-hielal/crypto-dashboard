@@ -290,6 +290,9 @@ const buyFirstCoin: Tour = {
 
 // ─── 3. Sell it back and read the result ─────────────────────────────────────
 
+// (Tours carry no version like a lesson's stepBase: after the 2026-11-17 split the funnel lists the
+// old sell-and-review.4/.5 events as bare steps, and "completed" now means sold, not quizzed. Weighed,
+// review after #308: one-off, read with the APP_LOG note)
 const sellAndReview: Tour = {
   id: 'sell-and-review',
   title: 'Sell it and read the result',
@@ -552,7 +555,7 @@ const reviewSell: Tour = {
       kind: 'observe',
       anchor: 'assets.row',
       key: 'USDT',
-      text: 'Your Bitcoin row is gone: you sold all of it. The dollars are back in USDT, usually a little under what you started with: you paid a 0.1% fee on the buy and another on the sell.',
+      text: 'You sold your Bitcoin: its row is gone (unless some is still held for an order). The dollars are back in USDT, usually a little under what you started with: you paid a 0.1% fee on the buy and another on the sell.',
       missingHint: `${PANEL_HINT} Then its Assets tab.`,
     },
     fromDraft(

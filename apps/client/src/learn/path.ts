@@ -89,8 +89,8 @@ export const CHAPTERS: readonly Chapter[] = [
  * Buy skipped or the chapter tested out. (Its first steps still say to buy first, for a learner who
  * reaches it some other way with nothing to sell.)
  */
-// (The map's lock only: the Learn panel and an article's link still start Sell, where its step's
-// hint says to buy first. Weighed, review after #308: every learner meets Sell on the map first)
+// (Applied where Sell is offered: the map's stop and a checkpoint's Review, which starts Buy
+// first while Buy isn't done. A tour started any other way meets its first step's hint to buy first)
 export const NEEDS_DONE: Partial<Record<PathTourId, PathTourId>> = {
   'sell-and-review': 'buy-first-coin',
 };
