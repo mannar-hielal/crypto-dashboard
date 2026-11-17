@@ -7,7 +7,7 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 }));
 
 import { useHabits } from '@/learn/useHabits';
-import { noteFinishSent } from '@/learn/finishSync';
+import { finishSaved, noteFinishSent } from '@/learn/finishSync';
 import { useAuthStore } from '@/store/authStore';
 
 const habits = { badges: [], learningDays: 1, streakDays: 1, thisWeek: [] };
@@ -43,6 +43,13 @@ describe('useHabits', () => {
     expect(getHabits).not.toHaveBeenCalled();
     await act(async () => land());
     await waitFor(() => expect(result.current.habits).toEqual(habits));
+  });
+
+  it('should wait for nothing, and set no timer, when no finish is on its way', async () => {
+    const timer = vi.spyOn(globalThis, 'setTimeout');
+    await finishSaved();
+    expect(timer).not.toHaveBeenCalled();
+    timer.mockRestore();
   });
 
   it('should show no other account’s habits, but keep its own through a session refresh', async () => {
