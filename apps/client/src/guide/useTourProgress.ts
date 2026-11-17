@@ -32,6 +32,22 @@ import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './to
 /** Set while the server's answer is put in the stores: it's already stored, so never sent back */
 let applyingServer = false;
 
+/**
+ * The account's kept finishes and passes of today's versions: a lesson's step on one of its screens,
+ * a checkpoint's own question set. One kept under another version (a release since) is dropped,
+ * never shown as done or counted
+ */
+function currentQueued(account: string): PendingDone[] {
+  const kept = pendingDone(account);
+  const current = kept.filter((q) =>
+    isLessonId(q.itemId)
+      ? lessonScreenOfStep(getLesson(q.itemId), q.step) !== null
+      : q.step === getCheckpoint(q.itemId).version
+  );
+  for (const q of kept) if (!current.includes(q)) dropDone(account, q.itemId);
+  return current;
+}
+
 /** A lesson finish or a checkpoint pass refused as an earlier version: no longer shown as done */
 function undone(itemId: PendingDone['itemId']): void {
   if (isLessonId(itemId)) {
@@ -80,9 +96,10 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
 const inFlight = new Set<string>();
 
 /**
- * Answers no retry changes: not found, a version conflict (an earlier version, a step past it),
- * unprocessable. Never 400: an API from before 2026-11-16, rolled back on its own, answers a
- * finish's step with 400, and that finish is kept until the API is back
+ * Answers no retry changes: not found, an earlier version (409), unprocessable. Never 400: that is
+ * what an older API answers a newer client (one from before 2026-11-16 refuses the step; a later
+ * one refuses a step past its version), and that finish is kept until the API is back, at most 30
+ * days (learn/pendingDone.ts)
  */
 const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([404, 409, 422]);
 
@@ -114,7 +131,7 @@ export function useTourProgress(): void {
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         const account = accountOf(accessToken);
-        const queued = account ? pendingDone(account) : [];
+        const queued = account ? currentQueued(account) : [];
         const stillQueued = queued.filter(
           (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
         );
@@ -183,12 +200,13 @@ export function useTourProgress(): void {
         for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken);
       })
       .catch(() => {
-        // Can't read it: show no offer rather than one that may already have been answered
-        if (!cancelled) {
+        // Can't read it. A read again (a session refresh) leaves everything shown as it is; a first
+        // read shows no offer rather than one that may already have been answered
+        if (!cancelled && !useTourStore.getState().loaded) {
           // (finishes and passes this device still has to save stay shown, as on a read that lands;
           // nothing here is echoed back)
           const account = accountOf(accessToken);
-          const queued = (account ? pendingDone(account) : []).map((q) => q.itemId);
+          const queued = (account ? currentQueued(account) : []).map((q) => q.itemId);
           applyingServer = true;
           try {
             useTourStore

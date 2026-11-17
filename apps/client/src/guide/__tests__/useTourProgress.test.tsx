@@ -150,6 +150,30 @@ describe('useTourProgress', () => {
     localStorage.clear();
   });
 
+  it('should leave everything shown as it is when a read again fails (a session refresh)', async () => {
+    getProgress.mockResolvedValueOnce({ items: [item('checkpoint-ch1', 'completed')] });
+    const { rerender } = renderHook(() => useTourProgress());
+    await waitFor(() => expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true));
+    getProgress.mockRejectedValueOnce(new Error('offline'));
+    token = 'tok2';
+    rerender();
+    await act(async () => {});
+    expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
+    token = 'tok';
+  });
+
+  it('should drop a kept finish of another version, never showing it done', async () => {
+    queueDone('u1', { itemId: 'lesson-01', step: 30 }); // an earlier version's step
+    queueDone('u1', { itemId: 'checkpoint-ch1', step: 1 }); // an earlier question set
+    getProgress.mockResolvedValue({ items: [] });
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined();
+    expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBeUndefined();
+    expect(useTourStore.getState().cardDismissed).toBe(false);
+    expect(pendingDone('u1')).toEqual([]);
+  });
+
   it('should save a finished tour and a dismissed card, once each', async () => {
     getProgress.mockResolvedValue({ items: [] });
     renderHook(() => useTourProgress());
