@@ -15,8 +15,6 @@ type Prisma = FastifyInstance['prisma'];
 const DAY_MS = 86_400_000;
 /** 🔐 Bounds on the rows read for one user (the journal is capped at 200 per user anyway) */
 const MAX_ROWS = 500;
-/** How far back a step alone counts a day (its run began the day before) */
-const RECENT_STEP_DAYS = 60;
 
 /**
  * The learner's day counter: each moment's calendar date in their time zone (an IANA name such as
@@ -54,7 +52,15 @@ const QUARTER_HOUR_MS = 15 * 60_000;
  * 🔐 The zones this runtime knows (418 on Node 24), as Intl names them. A formatter is kept only for
  * one of these, so that cache never holds more than the list, whatever is sent
  */
-const KNOWN_ZONES: ReadonlySet<string> = new Set(Intl.supportedValuesOf('timeZone'));
+const KNOWN_ZONES: ReadonlySet<string> = new Set([
+  ...Intl.supportedValuesOf('timeZone'),
+  // The fixed whole-hour zones Intl leaves out of its list (a device may report one): Etc/GMT-14
+  // is UTC+14, Etc/GMT+12 is UTC−12
+  ...Array.from({ length: 14 }, (_, i) => `Etc/GMT-${i + 1}`),
+  ...Array.from({ length: 12 }, (_, i) => `Etc/GMT+${i + 1}`),
+  'Etc/GMT',
+  'Etc/UTC',
+]);
 const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
 
 /**
@@ -187,7 +193,7 @@ export async function loadHabits(
   now: Date = new Date(),
   zone = 'UTC'
 ): Promise<HabitsResponse> {
-  const [stopLossOrders, notes, events, recentSteps, toursCompleted] = await Promise.all([
+  const [stopLossOrders, notes, events, toursCompleted] = await Promise.all([
     prisma.order.count({
       where: {
         userId,
@@ -202,28 +208,16 @@ export async function loadHabits(
       select: { createdAt: true },
     }),
     prisma.learningEvent.findMany({
-      // A day is learned when a tour or a lesson is started or finished on it: every session
-      // starts one (opening a lesson again is a start), and the streak screen shows right after a
-      // finish. Two in a run, so the rows read reach far back. Never a rating: a new one deletes
-      // the learner's earlier rating of that lesson (and that day)
+      // The rule (2026-11-17): a learning day is one on which the learner starts or finishes a tour
+      // or a lesson. Every session starts one (opening a lesson again is a start), and the streak
+      // screen shows right after a finish. Not steps: each is stored once ever per learner, so a
+      // step can't mark a day (going over seen screens again stores none). Not ratings: a new one
+      // deletes the earlier rating of that lesson. Two rows a run, so the rows read reach far back
       where: {
         userId,
         name: { in: ['tour_started', 'tour_completed'] },
       },
       orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
-      take: MAX_ROWS,
-      select: { at: true },
-    }),
-    prisma.learningEvent.findMany({
-      // And the steps of the recent weeks: a day worked in a run begun the day before (a lesson
-      // carried on past midnight) has steps but no start. Recent only, about 25 a lesson: the
-      // streak and this week are what such a day changes
-      where: {
-        userId,
-        name: 'tour_step',
-        at: { gte: new Date(now.getTime() - RECENT_STEP_DAYS * DAY_MS) },
-      },
-      orderBy: { at: 'desc' },
       take: MAX_ROWS,
       select: { at: true },
     }),
@@ -236,7 +230,7 @@ export async function loadHabits(
     {
       stopLossOrders,
       noteTimes: notes.map((n) => n.createdAt),
-      tourTimes: [...events, ...recentSteps].map((e) => e.at),
+      tourTimes: events.map((e) => e.at),
       toursCompleted,
     },
     now,

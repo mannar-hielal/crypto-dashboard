@@ -210,6 +210,11 @@ describe('streakEndingAt', () => {
     expect(dayCounter('Asia/Calcutta')(late)).toBe(day24);
   });
 
+  it('should count a fixed whole-hour zone (Etc/GMT-10 is UTC+10), which Intl leaves off its list', () => {
+    const late = new Date('2026-10-23T22:00:00Z'); // 08:00 on the 24th at UTC+10
+    expect(dayCounter('Etc/GMT-10')(late)).toBe(Date.UTC(2026, 9, 24) / 86_400_000);
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);

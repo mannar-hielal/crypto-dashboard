@@ -785,24 +785,16 @@ describe('GET /api/learn/habits', () => {
     });
   });
 
-  it('should count a day by its starts and finishes, and recent steps (never a rating)', async () => {
+  it('should count a day by its starts and finishes only (the rule: not steps, never a rating)', async () => {
     await app.inject({
       method: 'GET',
       url: '/api/learn/habits',
       headers: { authorization: `Bearer ${token}` },
     });
+    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledTimes(1);
     expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          userId: 'user-1',
-          name: { in: ['tour_started', 'tour_completed'] },
-        },
-      })
-    );
-    // And recent steps: a day worked in a run begun the day before still counts
-    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ userId: 'user-1', name: 'tour_step' }),
+        where: { userId: 'user-1', name: { in: ['tour_started', 'tour_completed'] } },
       })
     );
   });
