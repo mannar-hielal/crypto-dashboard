@@ -31,7 +31,12 @@ export function parseTerms(text: string): TextSegment[] {
   return out;
 }
 
-/** Splits text into terms and plain, bold or italic runs (a term's label is never styled) */
+/**
+ * Splits text into terms and plain, bold or italic runs. A term's label is never styled, and a term
+ * never sits inside `*…*` (the emphasis pass sees the runs around a term apart, so its asterisks
+ * would show: LessonSheet's sweep fails any lesson that does). `*` is never a times sign in lesson
+ * copy (× is; the lesson rules test checks), or the run between two would turn italic
+ */
 export function parseInline(text: string): InlineSegment[] {
   const out: InlineSegment[] = [];
   for (const seg of parseTerms(text)) {

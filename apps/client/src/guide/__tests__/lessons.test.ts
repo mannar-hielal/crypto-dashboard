@@ -52,6 +52,24 @@ const HYPE = [
 ];
 
 describe('lessons', () => {
+  it('should never use * as a times sign in lesson copy (× is; * marks emphasis)', () => {
+    // Emphasis markers sit flush against their text: a * with spaces on both sides ("(2 + 3) * 4",
+    // "price * 2") or flush between digits ("5*3") is a times sign
+    for (const lesson of LESSONS) {
+      expect(JSON.stringify(lesson), lesson.id).not.toMatch(/\s\*\s|\d\*\d/);
+    }
+  });
+
+  it('should take a spaced or digit-flush * for a times sign, never an emphasis marker', () => {
+    const timesSign = /\s\*\s|\d\*\d/;
+    for (const sum of ['(2 + 3) * 4', '10% * 3', 'price * 2', '5*3']) {
+      expect(sum).toMatch(timesSign);
+    }
+    for (const markup of ['**19%**', 'a *word* here', 'about **$459**, before']) {
+      expect(markup).not.toMatch(timesSign);
+    }
+  });
+
   it('should define every lesson id once, numbered in order', () => {
     expect(LESSONS.map((l) => l.id)).toEqual([...LESSON_IDS]);
     expect(LESSONS.map((l) => l.number)).toEqual(LESSONS.map((_, i) => i + 1));
