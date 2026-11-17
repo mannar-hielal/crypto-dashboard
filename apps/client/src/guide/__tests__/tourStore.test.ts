@@ -223,4 +223,20 @@ describe('tourStore', () => {
       delete window.matchMedia;
     }
   });
+
+  it('should bring back an untapped Buy / Long step after a rotation and back', () => {
+    window.matchMedia = ((q: string) => ({ matches: false, media: q })) as never;
+    try {
+      s().start('practice-buy');
+      const at = () => tourSteps(getTour('practice-buy'), s().wide)[s().stepIndex];
+      const first = at();
+      expect(first.screen).toBe('phone'); // tap Buy / Long, not tapped yet
+      s().setWide(true);
+      s().setWide(false);
+      expect(at().id).toBe(first.id);
+    } finally {
+      // @ts-expect-error -- jsdom has no matchMedia: back to that
+      delete window.matchMedia;
+    }
+  });
 });

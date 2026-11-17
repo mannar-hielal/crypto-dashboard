@@ -141,12 +141,12 @@ function StepView({ stepIndex }: { stepIndex: number }) {
   const quizAnswer = useTourStore((s) => s.quizAnswer);
   const { next, back, close, answerQuiz } = useTourStore.getState();
   const wide = useTourStore((s) => s.wide);
-  const seen = useTourStore((s) => s.seen);
+  const passed = useTourStore((s) => s.passed);
   const tour = activeId ? getTour(activeId) : null;
   const steps = tour ? tourSteps(tour, wide) : [];
   const step = steps[stepIndex];
   // Back only where it goes somewhere (never onto a phone step already done)
-  const canGoBack = backIndex(steps, stepIndex, seen) !== null;
+  const canGoBack = backIndex(steps, stepIndex, passed) !== null;
 
   if (!tour || !step) return null;
   return (

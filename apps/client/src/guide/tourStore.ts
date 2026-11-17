@@ -20,8 +20,11 @@ interface TourState {
   stepIndex: number;
   /** The screen was wide when the tour started: which of its steps run (`tourSteps`) */
   wide: boolean;
-  /** The step ids this run has shown: a rotation never replays one the learner already did */
-  seen: readonly string[];
+  /**
+   * The step ids this run's learner moved past (Next, or the step's own action, such as tapping
+   * Buy / Long): a rotation never replays one they already did. A step only shown isn't one
+   */
+  passed: readonly string[];
   /** The option chosen on a quiz step, or null */
   quizAnswer: number | null;
   /** Tours finished, from the server and this session */
@@ -63,7 +66,7 @@ const initial = {
   activeId: null,
   stepIndex: 0,
   wide: true,
-  seen: [],
+  passed: [],
   quizAnswer: null,
   completed: {},
   finishes: 0,
@@ -83,7 +86,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
       stepIndex: 0,
       quizAnswer: null,
       wide,
-      seen: [tourSteps(getTour(id), wide)[0]?.id ?? ''],
+      passed: [],
     });
   },
 
@@ -96,9 +99,9 @@ export const useTourStore = create<TourState>()((set, get) => ({
       set((s) => ({
         stepIndex: stepIndex + 1,
         quizAnswer: null,
-        seen: s.seen.includes(steps[stepIndex + 1].id)
-          ? s.seen
-          : [...s.seen, steps[stepIndex + 1].id],
+        passed: s.passed.includes(steps[stepIndex].id)
+          ? s.passed
+          : [...s.passed, steps[stepIndex].id],
       }));
       return;
     }
@@ -115,7 +118,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
       stepIndex: 0,
       quizAnswer: null,
       wide: following ? isWideScreen() : s.wide,
-      seen: following ? [tourSteps(getTour(following), isWideScreen())[0]?.id ?? ''] : [],
+      passed: [],
     }));
   },
 
@@ -146,36 +149,36 @@ export const useTourStore = create<TourState>()((set, get) => ({
       set({ wide: next, stepIndex: Math.min(stepIndex, tourSteps(tour, next).length - 1) });
       return;
     }
-    const { seen } = get();
+    const { passed } = get();
     const missed = next
       ? -1
-      : tour.steps.findIndex((s, i) => i < current && s.screen === 'phone' && !seen.includes(s.id));
+      : tour.steps.findIndex(
+          (s, i) => i < current && s.screen === 'phone' && !passed.includes(s.id)
+        );
     const shared = tour.steps[current] && !tour.steps[current].screen;
     let lastShared = -1;
     for (let i = 0; i <= current; i++) if (!tour.steps[i].screen) lastShared = i;
     const from = missed !== -1 ? missed : shared ? current : lastShared + 1;
-    // Narrowing, whichever way `from` was found: a phone step this run already showed (the form
-    // opened from the bar) is never shown again, the form may still be open and the bar hidden
+    // Narrowing, whichever way `from` was found: a phone step this run's learner already passed (the
+    // form opened from the bar) is never shown again, the form may still be open and the bar hidden
     let start = from;
-    while (!next && tour.steps[start]?.screen === 'phone' && seen.includes(tour.steps[start].id)) {
+    while (
+      !next &&
+      tour.steps[start]?.screen === 'phone' &&
+      passed.includes(tour.steps[start].id)
+    ) {
       start++;
     }
     const shown = tourSteps(tour, next).map((s) => all.indexOf(s.id));
     const at = shown.findIndex((i) => i >= start);
     const stepIndexNow = at === -1 ? shown.length - 1 : at;
-    const nowId = tourSteps(tour, next)[stepIndexNow]?.id ?? '';
-    // (each step once: `seen` never holds more than the tour's steps)
-    set({
-      wide: next,
-      stepIndex: stepIndexNow,
-      seen: seen.includes(nowId) ? seen : [...seen, nowId],
-    });
+    set({ wide: next, stepIndex: stepIndexNow });
   },
 
   back: () => {
-    const { activeId, stepIndex, wide, seen } = get();
+    const { activeId, stepIndex, wide, passed } = get();
     if (!activeId) return;
-    const to = backIndex(tourSteps(getTour(activeId), wide), stepIndex, seen);
+    const to = backIndex(tourSteps(getTour(activeId), wide), stepIndex, passed);
     if (to !== null) set({ stepIndex: to, quizAnswer: null });
   },
 

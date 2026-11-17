@@ -133,15 +133,15 @@ export function isWideScreen(): boolean {
 
 /**
  * Where Back goes from `stepIndex`, or null when nowhere: never onto a phone-only step this run
- * already showed (tapping Buy / Long), since the form it opened may still be open and its bar hidden
+ * already passed (tapping Buy / Long), since the form it opened may still be open and its bar hidden
  */
 export function backIndex(
   steps: readonly TourStep[],
   stepIndex: number,
-  seen: readonly string[]
+  passed: readonly string[]
 ): number | null {
   let to = stepIndex - 1;
-  while (to >= 0 && steps[to].screen === 'phone' && seen.includes(steps[to].id)) to--;
+  while (to >= 0 && steps[to].screen === 'phone' && passed.includes(steps[to].id)) to--;
   return to >= 0 ? to : null;
 }
 
