@@ -215,6 +215,17 @@ describe('streakEndingAt', () => {
     expect(dayCounter('Etc/GMT-10')(late)).toBe(Date.UTC(2026, 9, 24) / 86_400_000);
   });
 
+  it('should accept a region/city name Intl returns as itself, not only the listed ones', () => {
+    // Whatever this runtime calls them, these are counted in their own zones, never UTC
+    const late = new Date('2026-10-23T22:00:00Z');
+    expect(dayCounter('Europe/Kyiv')(late)).toBe(Date.UTC(2026, 9, 24) / 86_400_000); // UTC+3
+    expect(dayCounter('America/Argentina/Buenos_Aires')(late)).toBe(
+      Date.UTC(2026, 9, 23) / 86_400_000
+    );
+    // An offset still isn't a zone
+    expect(dayCounter('+03:00')(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);

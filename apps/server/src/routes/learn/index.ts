@@ -292,7 +292,7 @@ export async function learnRoutes(app: FastifyInstance) {
                 userId,
                 itemId,
                 // The same range as isStaleRow: below the version, or past its span
-                ...staleWhere(range), // the same range as isStaleRow
+                ...staleWhere(range),
               },
               data: { status, step },
             });

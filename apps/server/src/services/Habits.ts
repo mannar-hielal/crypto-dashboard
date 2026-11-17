@@ -62,6 +62,8 @@ const KNOWN_ZONES: ReadonlySet<string> = new Set([
   'Etc/UTC',
 ]);
 const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
+/** A region/city zone name as Intl's own database writes them (Asia/Kolkata, America/Argentina/Salta) */
+const IANA_NAME = /^[A-Z][A-Za-z_]+(?:\/[A-Za-z0-9_+-]+)+$/;
 
 /**
  * 🔐 Any other text sent as a zone → the known zone Intl reads it as (`asia/kolkata`, `US/Eastern`),
@@ -83,7 +85,10 @@ function knownZone(zone: string): string | null {
   let canonical: string | null;
   try {
     const named = new Intl.DateTimeFormat('en-US', { timeZone: zone }).resolvedOptions().timeZone;
-    canonical = KNOWN_ZONES.has(named) ? named : null;
+    // A listed zone, or any region/city name Intl itself returns (its own database, so a finite
+    // set): a runtime that names Asia/Kolkata as itself, not as the listed Asia/Calcutta, still
+    // counts it. Never an offset ('+05:07'), which isn't on a quarter hour
+    canonical = KNOWN_ZONES.has(named) || IANA_NAME.test(named) ? named : null;
   } catch {
     canonical = null;
   }
