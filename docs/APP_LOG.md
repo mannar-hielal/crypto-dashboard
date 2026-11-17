@@ -4692,6 +4692,30 @@ The owner's ten tasks after the Lessons 1–3 release (screenshots; the new rule
     by hard work (`sealBroken`: one number changed, every later block broken). These are announced to screen
     readers (`role="img"` with their `ART_LABELS` line); the older decorative pictures stay hidden. The benchmark
     course's screenshots were looked at only for which kinds of cards get a picture, never for its drawings.
+- **Fact check applied (2026-11-17, a technical writer's review; the owner decided each item).** Still no screen
+  added or removed, nobody's progress resets.
+  - **Lesson 1's worked long is a spot buy, so it quotes Bybit BTCUSDT spot closes** (it quoted the perpetual's):
+    2 Oct 2023 $27,499.97 (written $27,500), 13 Mar 2024 $73,079.40 ($73,079). The math, recomputed: 73,079 −
+    27,500 = 45,579; ÷ 27,500 = 1.657; 165.7% ("about 166%"); $1,657 gain, $2,657 before fees, × 0.998 ≈ **$2,652**,
+    about **$1,652 profit**. A `ChartScene` may name its Bybit `category` (`spot` | `linear`, default `linear`, so
+    every other scene is unchanged); `lessonChartLoader` passes it to `getCandles` and keys its cache by it.
+    `LONG_2023` reads spot, its markers "Buy $27,500" and "Sell $73,079".
+  - **Going short:** the analogy ends "Our perpetual borrows nothing: you put up USDT as margin, the contract
+    settles the difference in USDT, and while it's open you pay or receive a small funding fee." The card's text
+    and analogy were trimmed to stay within 80 words. **The catch:** "the exchange closes a losing short before your
+    margin runs out (liquidation), and that margin is lost".
+  - **One phrase for closing a position:** "the ✕ (Close) at the end of your position row" (Lesson 1's Close it to
+    keep it), "of the row" in `review-long` / `review-short`.
+  - **`review-buy`:** you paid $100 and hold about $99.90 of Bitcoin (Spot's 0.1% fee is taken in the coin); Avg cost
+    is what you paid per coin, fee included; Unrealized PnL is before the selling fee. **`review-long`:** Unrealized
+    P&L moves with the Mark Price (not "every tick").
+  - **Lesson 2's summary, Why Bitcoin exists,** now opens with the why: "Bitcoin was made so people can pay each
+    other online without trusting a bank in the middle." (Read more: `bitcoin-story#plan`, a new section id). "No
+    one is in charge: the network agrees." opens `bitcoin-network#answered` (it opened the story's timeline). Four
+    points on the same one screen.
+  - **Lesson 3:** Bitcoin with a capital B throughout (the cold open: "One Bitcoin for $8,200"); Big swings, both
+    ways: "as low as $28,800 on Bybit's perpetual chart", and "It can swing up just as hard, often without warning,
+    so no one can reliably time it."
 
 ### 2026-11-16 — Lessons 1–3 rewrite: new quiz formats, practice trades, the streak screen, and Lesson 1
 

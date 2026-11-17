@@ -257,9 +257,9 @@ rewritten, and to quizzes, Whys, summaries and titles.
   steps, one operation each with its result, then the answer set apart:
 
   ```
-  1. Price rise           73,133 − 27,484 = 45,649
-  2. Divide by the start  45,649 ÷ 27,484 = 1.661
-  3. As a percent         1.661 × 100 = 166.1%
+  1. Price rise           73,079 − 27,500 = 45,579
+  2. Divide by the start  45,579 ÷ 27,500 = 1.657
+  3. As a percent         1.657 × 100 = 165.7%
   ➜ Bitcoin rose about 166%.
   ```
 

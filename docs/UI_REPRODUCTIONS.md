@@ -248,7 +248,9 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      buy on the real chart** → Expect the sheet to step aside, `/dashboard/spot/BTC/USDT`, the tour ring on the
      form's Buy (a phone: on the bottom bar's **Buy / Long**), Market, USDT, 100, Place; after the order → Expect
      **What just happened** (2026-11-17): the ring on the account panel's [account.tab `assets`], then on Bitcoin's
-     [assets.row `BTC`] and its [assets.row.upnl `BTC`], the last bubble's button **Back to the lesson** → Expect
+     [assets.row `BTC`] ("You paid $100; you hold a hair less (about $99.90 of Bitcoin)…", Avg cost "fee included") and
+     its [assets.row.upnl `BTC`] ("…if you sold right now, before the selling fee."), the last bubble's button
+     **Back to the lesson** → Expect
      the lesson back on screen 5. ✕ / Skip at any point → the lesson back on screen 5 as well.
    - Screens 5–6: **Quick check** (Choose buy or sell): the BTC chart frozen on 23 Oct 2023 under a dashed
      "Your plan" line at $31,000, the plan line under it, then Buy (green) and Sell (red) side by side. ← / → move
@@ -257,19 +259,23 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      quite." and the Why, Continue disabled, and [lesson.retry] **Try again** → the pick cleared and the chart
      frozen again; Buy then → Continue enabled. Screen 6: the 5 Aug 2024 exit at $58,000 ("Your exit line") → Sell.
    - Screens 7–13: **Going long** (practice-long on `/dashboard/usdt/BTCUSDT`, then **What just happened**:
-     [account.tab `positions`], the [positions.row `linear:BTCUSDT`] row, **Back to the lesson**), **A real long**
-     (markers "Buy $27,484" 2 Oct 2023, "Sell $73,133" 13 Mar 2024), **The result**: the text, then [lesson.math]:
-     Pulin in round glasses says "Let's do the math.", six numbered steps ("1. Price rise 73,133 − 27,484 = 45,649"
-     … "6. Keep 99.8% after fees $2,661 × 0.998 ≈ $2,656") and [lesson.math.answer] "➜ Bitcoin rose about 166%. After
-     fees, your $1,000 became about **$2,656**: about **$1,656 profit**." (no hindsight line), **Close it to keep
-     it** (the picture: "open: on paper" +$120? over a dashed wobble, **Close** →, "closed: real" +$120 framed in
+     [account.tab `positions`], the [positions.row `linear:BTCUSDT`] row: "…Unrealized P&L moves with the Mark
+     Price. It becomes real when you close the position with the ✕ (Close) at the end of the row.", **Back to the
+     lesson**), **A real long** (spot candles since 2026-11-17: markers "Buy $27,500" 2 Oct 2023, "Sell $73,079" 13
+     Mar 2024), **The result**: the text, then [lesson.math]: Pulin in round glasses says "Let's do the math.", six
+     numbered steps ("1. Price rise 73,079 − 27,500 = 45,579" … "6. Keep 99.8% after fees $2,657 × 0.998 ≈ $2,652")
+     and [lesson.math.answer] "➜ Bitcoin rose about 166%. After fees, your $1,000 became about **$2,652**: about
+     **$1,652 profit**." (no hindsight line), **Close it to keep it** ("…the ✕ (Close) at the end of your position
+     row."; the picture: "open: on paper" +$120? over a dashed wobble, **Close** →, "closed: real" +$120 framed in
      green with a lock), **Going short** (the picture: a price falling from "1. sell the borrowed game: $60" to "2. buy
      one back: $40, return it", the gap "you keep $20"): the text, then [lesson.analogy] Berwyn in glasses ("Think of it as borrowing. A friend
-     lends you a game…"), no exchange between the guides, then practice-short on `/dashboard/usdt/ETHUSDT` (the
+     lends you a $60 game…", ending "…you put up USDT as margin, the contract settles the difference in USDT, and
+     while it's open you pay or receive a small funding fee."), no exchange between the guides, then practice-short on `/dashboard/usdt/ETHUSDT` (the
      form's Sell / Short, a phone's **Sell / Short**; then **What just happened** on [positions.row
-     `linear:ETHUSDT`]), **A real short** (10 Nov 2021 → 18 Jun 2022), **The catch**: Berwyn in glasses works out
+     `linear:ETHUSDT`], "…close it with the ✕ (Close) at the end of the row."), **A real short** (10 Nov 2021 → 18 Jun 2022), **The catch**: Berwyn in glasses works out
      the 0.01 BTC short in five steps ($648.94 → $189.65, $459.29, 70.8%), "➜ Bitcoin fell about 71%…", then
-     Berwyn's line "Now the catch: …" (no ceiling, liquidation).
+     Berwyn's line "Now the catch: …" (no ceiling; the exchange closes a losing short before your margin runs out
+     (liquidation), and that margin is lost).
    - Screen 14: **Quick check** (long, short or stay out) → "Stay out for now" is right; screen 15: **Your call**.
    - Screens 16–18: **The market never sleeps** (the picture: a moon, a week of day bars, the shop's filled only by
      day and empty on Sunday, crypto's full every day, "crypto: open 24/7"; Berwyn's line: [lesson.term `slippage`] is a button that opens
@@ -308,7 +314,9 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      check** (Match boxes: Decentralized, Fixed supply, Open to check, Borderless).
    - Screen 19, **Try it** (any screen size): the blockchain piece in the sheet; [article.chain.change] → the later
      blocks break, [article.chain.reset] mends them; [lesson.try] Continue.
-   - Screen 20, **Why Bitcoin exists**: three numbered lines with Read more, shown at once (no story, no Bitcoin
+   - Screen 20, **Why Bitcoin exists**: four numbered lines with Read more, the first "Bitcoin was made so people
+     can pay each other online without trusting a bank in the middle." (→ `bitcoin-story#plan`), the last "No one is
+     in charge: the network agrees." (→ `bitcoin-network#answered`), shown at once (no story, no Bitcoin
      mark: dropped 2026-11-17), and **Finish lesson** ready straight away. Screen 21: the close,
      [lesson.teaser] "Next: why prices swing so hard…", [lesson.next-lesson] **Lesson 3: News, swings and traps**.
 3. The knowledge base from Lesson 2 (unchanged articles): in _Many notebooks, no Nora_, [article.gossip.send] → the
@@ -317,8 +325,9 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    [`sam`] → ✗; [article.chain.change] → the later blocks break; [article.answer.tile `lose`] → its answer shown. In
    _Mailboxes and keys_ (now "practised in a later lesson on keys and custody"): [article.mailbox.step `2`] → the
    stamp seated, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…".
-4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16), 21 screens → Expect the cold open **One bitcoin for
-   $8,200** (kept) and **Continue →**; **Why so much?**; **Big swings, both ways** (May 2021, then Berwyn's math in
+4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16), 21 screens → Expect the cold open **One Bitcoin for
+   $8,200** (kept) and **Continue →**; **Why so much?**; **Big swings, both ways** (May 2021, "as low as $28,800 on Bybit's perpetual chart", "It can swing up just as
+   hard, often without warning, so no one can reliably time it.", then Berwyn's math in
    glasses, "42,900 − 28,800 = 14,100" … "32.9%", "➜ … about **33%**: a third.", Read more → `price-swings#size`); **News moves it, fast**; **Same news, either way** (the halving chart: "Halving"
    20 Apr 2024, "$58,299", "$71,437"); then **Your call**: the ETF chart stopping on 10 Jan 2024, answer → it plays on
    to 23 Jan, "−14.5%", and the Why names the halving.
