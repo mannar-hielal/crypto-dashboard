@@ -94,4 +94,14 @@ describe('useHabits', () => {
     expect(getHabits).toHaveBeenCalledTimes(2);
     answer(habits);
   });
+
+  it('should never let a reader opened by a finish join a read sent before it', async () => {
+    getHabits.mockReturnValueOnce(new Promise(() => {})).mockResolvedValue(habits);
+    renderHook(() => useHabits('t', 1)); // the map, its read on its way
+    await act(async () => {});
+    // The streak screen opens after a finish
+    const streak = renderHook(() => useHabits('t', null, true));
+    await waitFor(() => expect(streak.result.current.habits).toEqual(habits));
+    expect(getHabits).toHaveBeenCalledTimes(2);
+  });
 });

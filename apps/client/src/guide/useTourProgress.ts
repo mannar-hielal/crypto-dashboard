@@ -9,7 +9,7 @@
 
 import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
-import type { LearnEventRequest } from '@crypto-dashboard/sdk';
+import type { LearnEventRequest, LearnProgressItem } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { resetLearningStores } from '@/learn/signedOut';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
@@ -44,13 +44,15 @@ function isCurrentVersion(q: PendingDone): boolean {
 }
 
 /** A lesson finish or a checkpoint pass refused as an earlier version: no longer shown as done */
-function undone(itemId: PendingDone['itemId']): void {
+function undone(itemId: PendingDone['itemId'], items: LearnProgressItem[]): void {
   if (isLessonId(itemId)) {
     const { completed, setCompleted } = useLessonStore.getState();
     setCompleted((Object.keys(completed) as LessonId[]).filter((id) => id !== itemId));
     // The welcome card, if only this kept Lesson 1 finish was hiding it
+    // (never one the account has answered since, here or on another device: the server's items say)
     if (itemId === 'lesson-01' && cardByKeptFinish) {
       cardByKeptFinish = false;
+      if (cardAnswered(items)) return;
       asServerAnswer(() => useTourStore.setState({ cardDismissed: false }));
     }
     return;
@@ -107,7 +109,9 @@ function saveDone(
         learnApi
           .getProgress(useAuthStore.getState().accessToken ?? accessToken)
           .then(({ items }) => {
-            if (!items.some((i) => i.itemId === itemId && i.status === 'completed')) undone(itemId);
+            if (!items.some((i) => i.itemId === itemId && i.status === 'completed')) {
+              undone(itemId, items);
+            }
           })
           // Couldn't check: left shown; the next progress read shows what the server has
           .catch(() => undefined)
@@ -149,10 +153,17 @@ const signedOut = () => !useAuthStore.getState().accessToken;
 
 /**
  * The kept finishes and passes shown as done, on a read that lands and on one that fails alike:
- * those of the lesson or checkpoint version this app teaches (the one rule, in one place)
+ * those of the lesson or checkpoint version this app teaches (the one rule, in one place: review round 32 found its two copies had already drifted)
  */
 function keptToShow(kept: PendingDone[]): PendingDone[] {
   return kept.filter(isCurrentVersion);
+}
+
+/** The welcome card answered on the server: dismissed, or the primer finished */
+function cardAnswered(items: LearnProgressItem[]): boolean {
+  return items.some(
+    (i) => i.itemId === 'welcome-card' || (i.itemId === 'primer' && i.status === 'completed')
+  );
 }
 
 /** The welcome card is hidden only by a Lesson 1 finish still to save (the last read worked it out) */
@@ -183,7 +194,10 @@ export function useTourProgress(): void {
     // Another account than the last read's (a session expired, then someone else signed in): the
     // previous one's progress never shows, even if this read fails
     const account = accountOf(accessToken);
-    if (readFor !== null && account !== readFor) asServerAnswer(resetLearningStores);
+    if (readFor !== null && account !== readFor) {
+      cardByKeptFinish = false;
+      asServerAnswer(resetLearningStores);
+    }
     readFor = account;
     // 🔐 An answer that lands after a sign-out or for another account (before this effect's cleanup
     // has run) is never put in the stores or the device's queue
@@ -214,8 +228,7 @@ export function useTourProgress(): void {
         ];
         // Lesson 1 (or its primer) finished means the offer is done with, dismissed or not
         const cardBySaved =
-          items.some((i) => i.itemId === 'welcome-card') ||
-          completed.includes('primer') ||
+          cardAnswered(items) ||
           items.some((i) => i.itemId === 'lesson-01' && i.status === 'completed');
         // Hidden only by a Lesson 1 finish still to save: undone() shows it again if that's refused
         cardByKeptFinish = !cardBySaved && lessons.includes('lesson-01');
@@ -263,6 +276,7 @@ export function useTourProgress(): void {
         // Can't read it. A read again (a session refresh) leaves everything shown as it is; a first
         // read shows no offer rather than one that may already have been answered
         if (!stale() && !useTourStore.getState().loaded) {
+          cardByKeptFinish = false; // the card stays hidden by the fallback itself
           // (finishes and passes this device still has to save stay shown, as on a read that lands;
           // nothing here is echoed back)
           const queued = keptToShow(account ? pendingDone(account) : []).map((q) => q.itemId);

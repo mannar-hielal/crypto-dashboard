@@ -45,7 +45,9 @@ function readHabits(
  */
 export function useHabits(
   accessToken: string | null,
-  refresh: unknown = null
+  refresh: unknown = null,
+  /** Opened because of a finish (the streak screen): its first read is fresh too */
+  afterFinish = false
 ): { habits: HabitsResponse | null; failed: boolean } {
   // Whose answer it is, by account (a session refresh changes the token, not the account): another
   // account's (a sign-out, then a sign-in) is never shown
@@ -76,7 +78,8 @@ export function useHabits(
     // review round 30: the wait that covered it cost a 4 s hold on every read and kept failing)
     const now = token.current;
     if (!now) return;
-    const fresh = lastRefresh.current !== null && lastRefresh.current.value !== refresh;
+    const fresh =
+      lastRefresh.current === null ? afterFinish : lastRefresh.current.value !== refresh;
     lastRefresh.current = { value: refresh };
     readHabits(account, now, fresh)
       .then((r) => {
@@ -94,7 +97,7 @@ export function useHabits(
     return () => {
       cancelled = true;
     };
-  }, [signedIn, account, refresh]);
+  }, [signedIn, account, refresh, afterFinish]);
 
   const mine = accessToken && read && read.account === account ? read : null;
   return { habits: mine?.habits ?? null, failed: mine?.failed ?? false };

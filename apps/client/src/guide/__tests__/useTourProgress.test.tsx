@@ -572,6 +572,18 @@ describe('useTourProgress', () => {
       expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined();
     });
 
+    it('should keep the welcome card hidden when the account answered it since the read', async () => {
+      queueDone('u1', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+      // The read had nothing; by the refusal's check the card was dismissed (another device)
+      getProgress
+        .mockResolvedValueOnce({ items: [] })
+        .mockResolvedValue({ items: [{ itemId: 'welcome-card', status: 'dismissed' }] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined());
+      expect(useTourStore.getState().cardDismissed).toBe(true);
+    });
+
     it('should drop a kept finish the server already has, without sending it again', async () => {
       localStorage.clear();
       queueDone('u1', { itemId: 'lesson-01', step: 81 });
