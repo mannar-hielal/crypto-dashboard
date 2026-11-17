@@ -315,7 +315,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    20 Apr 2024, "$58,299", "$71,437"); then **Your call**: the ETF chart stopping on 10 Jan 2024, answer → it plays on
    to 23 Jan, "−14.5%", and the Why names the halving.
    - Then **The power of hype** (Berwyn worried: a warning), **Thousands of deals, one candle**, **A market shock**
-     (FTX: "FTX in trouble" 8 Nov 2022, "$15,892"; Pulin's math, "22.8%"), **A plan beats panic**, **Up, then down**
+     (FTX: "FTX in trouble" 8 Nov 2022, "$15,892"; no math since 2026-11-17: the text gives the 23%), **A plan beats panic**, **Up, then down**
      ("$63,588" 13 Apr 2021, "$29,765" 20 Jul; Berwyn's math, "53.2%"), **Thin or deep** (Read more → `exchange-price#liquidity`), **The $8,200 moment**,
      **Bitcoin is deep**.
    - **Quick check** (Match boxes: four situations to what usually happens), **A rug pull** (worried, no named

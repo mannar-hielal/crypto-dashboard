@@ -309,9 +309,26 @@ describe('lessons', () => {
       'The catch',
       'Smaller coins swing harder',
       'Big swings, both ways',
-      'A market shock',
       'Up, then down',
     ]);
+  });
+
+  it('should keep Lesson 3’s math only where it teaches the card’s percent (owner review 2026-11-17)', () => {
+    const l = getLesson('lesson-02');
+    const card = (title: string) => l.cards.find((c) => c.title === title)!;
+    // Kept: the text never gives the percent; the sum gives "a third", the sizing rule's number
+    const swings = card('Big swings, both ways');
+    expect(swings.text).not.toMatch(/\d+%/);
+    expect(swings.text).toMatch(/drop by a third/);
+    expect(swings.math?.answer).toMatch(/33%.*a third/);
+    // Kept: the text says "more than half"; the sum proves it from the two closes
+    const peak = card('Up, then down');
+    expect(peak.text).toMatch(/more than half/);
+    expect(peak.math?.steps.at(-1)?.sum).toBe('0.532 × 100 = 53.2%');
+    // Removed: the text already states the 23%, and the card is about one company shaking the market
+    const shock = card('A market shock');
+    expect(shock.math).toBeUndefined();
+    expect(shock.text).toMatch(/down about 23%/);
   });
 
   it('should offer a practice trade from the Buy, long and short cards', () => {

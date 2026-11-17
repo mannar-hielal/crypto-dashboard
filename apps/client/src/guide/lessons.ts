@@ -1042,7 +1042,9 @@ const lesson02: Lesson = {
       presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
       chart: MAY_2021,
       text: 'Swings like these are [[volatility]] (Lesson 1). On 19 May 2021 bitcoin fell from about $42,900 to as low as $28,800, then closed near $36,700. It swings up just as hard, which is why no one can time it. So size for the fall: only put in what you could watch drop by a third.',
-      // The math (owner 2026-11-17), from MAY_2021: (42,903.5 − 28,801) ÷ 42,903.5 = 0.3287
+      // The math (owner 2026-11-17), from MAY_2021: (42,903.5 − 28,801) ÷ 42,903.5 = 0.3287. Kept
+      // (reviewed 2026-11-17): the text never states the percent, and the sum is where "a third", the
+      // sizing rule's number, comes from
       math: {
         who: 'tock',
         steps: [
@@ -1082,17 +1084,10 @@ const lesson02: Lesson = {
       title: 'A market shock',
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: FTX_2022,
+      // No math (owner 2026-11-17, reviewed): the text states the 23% itself (4,691 ÷ 20,582.5 =
+      // 0.2279), the sum would be the third identical fall-in-percent in a row, and the card's point is
+      // one company shaking the whole market, not the size of the fall
       text: 'In November 2022 FTX, then one of the biggest exchanges, ran into trouble and stopped paying people out. Bitcoin closed at $20,583 on 7 November and at $15,892 two days later, down about 23%. One company’s collapse shook the whole market.',
-      // The math (owner 2026-11-17), from FTX_2022: 4,691 ÷ 20,582.5 = 0.2279
-      math: {
-        who: 'tick',
-        steps: [
-          { label: 'Price fall', sum: '20,583 − 15,892 = 4,691' },
-          { label: 'Divide by the start', sum: '4,691 ÷ 20,583 = 0.228' },
-          { label: 'As a percent', sum: '0.228 × 100 = 22.8%' },
-        ],
-        answer: 'Bitcoin fell about **23%** in two days.',
-      },
     },
     {
       title: 'A plan beats panic',
@@ -1110,7 +1105,9 @@ const lesson02: Lesson = {
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: PEAK_2021,
       text: 'On 13 April 2021 bitcoin closed at $63,588, a record close at the time. Three months later, on 20 July, it closed at $29,765, down more than half. People who bought at the top waited about six months to get back to even.',
-      // The math (owner 2026-11-17), from PEAK_2021: 33,822.5 ÷ 63,587.5 = 0.5319
+      // The math (owner 2026-11-17), from PEAK_2021: 33,822.5 ÷ 63,587.5 = 0.5319. Kept (reviewed
+      // 2026-11-17): the text says only "more than half", and the sum turns two five-digit closes into
+      // the 53% that proves it
       math: {
         who: 'tock',
         steps: [
