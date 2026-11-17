@@ -23,7 +23,7 @@
   justify-content: center;
   gap: 6px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   padding: 12px 14px;
   color: var(--color-bg-page);
   font: inherit;

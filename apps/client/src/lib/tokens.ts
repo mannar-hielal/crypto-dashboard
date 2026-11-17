@@ -238,4 +238,5 @@ export const interaction = {
 
 export const radius = {
   button: '25px', // primary CTA / pill buttons
+  card: '10px', // cards, boxes and panels inside a sheet (the radius the lesson and learn screens use)
 } as const;
