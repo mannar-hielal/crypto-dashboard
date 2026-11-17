@@ -339,12 +339,11 @@ function DeepThin() {
     {
       cx: 148,
       name: 'deep',
-      note: 'barely moves',
+      note: 'small move',
       offers: [36, 46, 56, 66, 76, 86, 96],
       stop: 46,
-      tone: styles.up,
     },
-    { cx: 262, name: 'thin', note: 'price jumps', offers: [36, 98], stop: 102, tone: styles.down },
+    { cx: 262, name: 'thin', note: 'big jump', offers: [36, 98], stop: 102 },
   ];
   return (
     <>
