@@ -29,6 +29,11 @@ export interface Checkpoint {
   title: string;
   /** Right answers needed to pass */
   pass: number;
+  /**
+   * The question set's version, sent with a pass: the server ignores a pass from an earlier set (the
+   * SDK's `CHECKPOINT_VERSIONS`, which a test holds this to). Raise it when the questions change
+   */
+  version: number;
   questions: CheckpointQuestion[];
   access: Entitlement;
 }
@@ -38,6 +43,8 @@ const checkpointCh1: Checkpoint = {
   // Owner 2026-11-16: our own name (unit 1 is "Start here: crypto and trading basics")
   title: 'Chapter 1 checkpoint',
   pass: 4,
+  // 2: the Lessons 1–3 rewrite's questions (owner 2026-11-17: earlier passes no longer count)
+  version: 2,
   access: FREE,
   questions: [
     {

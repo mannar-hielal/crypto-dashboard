@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
-import { LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
-import { LESSON_FIRST_STEP } from '../constants.js';
+import { CHECKPOINT_VERSIONS, LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
+import { CHECKPOINT_VERSION, LESSON_FIRST_STEP } from '../constants.js';
 import type { FastifyInstance } from 'fastify';
 import {
   HABIT_BADGE_IDS as SDK_BADGES,
@@ -114,6 +114,8 @@ describe('/api/learn/progress', () => {
       { itemId: 'lesson-ownership', status: 'started', step: 24, updatedAt: AT },
       { itemId: 'lesson-02', status: 'completed', step: 81, updatedAt: AT },
       { itemId: 'primer', status: 'completed', step: null, updatedAt: AT },
+      // A pass of chapter 1's earlier questions, and one of today's
+      { itemId: 'checkpoint-ch1', status: 'completed', step: null, updatedAt: AT },
     ] as never);
     const res = await app.inject({ method: 'GET', url: '/api/learn/progress', headers: auth() });
     expect(res.json()).toEqual({
@@ -215,11 +217,33 @@ describe('/api/learn/progress', () => {
       method: 'PUT',
       url: '/api/learn/progress/checkpoint-ch1',
       headers: auth(),
-      payload: { status: 'completed' },
+      payload: { status: 'completed', step: 2 }, // its question set's version
     });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().item.itemId).toBe('checkpoint-ch1');
+    expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { status: 'completed', step: 2 } })
+    );
+  });
+
+  it('PUT: should refuse a checkpoint pass when it is from an earlier question set (owner 2026-11-17)', async () => {
+    const put = (payload: unknown) =>
+      app.inject({
+        method: 'PUT',
+        url: '/api/learn/progress/checkpoint-ch1',
+        headers: auth(),
+        payload: payload as never,
+      });
+    expect((await put({ status: 'completed' })).statusCode).toBe(409);
+    expect((await put({ status: 'completed', step: 1 })).json()).toEqual({
+      error: 'An earlier version of this checkpoint',
+    });
+    // Never begun or dismissed
+    expect((await put({ status: 'started', step: 2 })).statusCode).toBe(400);
+    expect((await put({ status: 'dismissed' })).statusCode).toBe(400);
+    expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
   });
 
   it('PUT dismissed: only creates, so it never overwrites a completion', async () => {
@@ -413,6 +437,8 @@ describe('/api/learn/progress', () => {
 
   it('should hold each lesson’s first step to the SDK’s, as the client’s lessons test does', () => {
     expect(LESSON_FIRST_STEP).toEqual(LESSON_FIRST_STEPS);
+    // And each checkpoint's question set version (the client's checkpoints test holds its own)
+    expect(CHECKPOINT_VERSION).toEqual(CHECKPOINT_VERSIONS);
   });
 
   it('PUT: should refuse a lesson’s start or finish when it is from an earlier version, before any write', async () => {

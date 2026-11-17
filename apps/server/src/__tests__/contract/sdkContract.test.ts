@@ -381,6 +381,12 @@ const CALLS: Call[] = [
     response: f.learnProgressStarted,
   },
   {
+    name: 'learnApi.setProgress (a checkpoint passed, with its question set version)',
+    run: () => learnApi.setProgress('checkpoint-ch1', 'completed', T, 2),
+    status: 200,
+    response: f.learnProgressCheckpointPassed,
+  },
+  {
     name: 'learnApi.setProgress (a lesson finished, with its last step)',
     run: () => learnApi.setProgress('lesson-02', 'completed', T, 81),
     status: 200,

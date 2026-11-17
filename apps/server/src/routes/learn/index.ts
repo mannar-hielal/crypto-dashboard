@@ -5,7 +5,9 @@ import {
   LEARN_EVENT_ITEM_IDS,
   LEARN_EVENT_NAMES,
   LEARN_ITEM_IDS,
+  LEARN_CHECKPOINT_IDS,
   LEARN_LESSON_IDS,
+  CHECKPOINT_VERSION,
   LESSON_FIRST_STEP,
 } from '../../constants.js';
 import { logger } from '../../logger.js';
@@ -58,14 +60,26 @@ const lessonOf = (itemId: string) =>
     : null;
 
 /**
- * 🔐 A lesson row from an earlier version of the lesson: no step, or one below the current
- * version's first. Written by an old client, or by an old API machine during a rolling deploy
- * (the reset migration runs before the old machines are gone), so it never counts.
+ * The lowest `step` of an item's current version: a lesson's first funnel step, a checkpoint's
+ * question set version. Null for an item with no versions (a tour, an offer)
  */
-const isStaleLessonRow = (r: { itemId: string; step?: number | null }) => {
-  const lesson = lessonOf(r.itemId);
+const versionFloorOf = (itemId: string): number | null => {
+  const lesson = lessonOf(itemId);
   // eslint-disable-next-line security/detect-object-injection -- lesson is from the fixed list
-  return lesson !== null && (typeof r.step !== 'number' || r.step < LESSON_FIRST_STEP[lesson]);
+  if (lesson) return LESSON_FIRST_STEP[lesson];
+  return (LEARN_CHECKPOINT_IDS as readonly string[]).includes(itemId)
+    ? CHECKPOINT_VERSION[itemId as (typeof LEARN_CHECKPOINT_IDS)[number]]
+    : null;
+};
+
+/**
+ * 🔐 A row from an earlier version of a lesson or a checkpoint: no step, or one below the current
+ * version's floor. Written by an old client, or by an old API machine during a rolling deploy
+ * (the reset migrations run before the old machines are gone), so it never counts.
+ */
+const isStaleRow = (r: { itemId: string; step?: number | null }) => {
+  const floor = versionFloorOf(r.itemId);
+  return floor !== null && (typeof r.step !== 'number' || r.step < floor);
 };
 
 const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const;
@@ -109,13 +123,13 @@ export async function learnRoutes(app: FastifyInstance) {
         where: { userId },
         select: ROW,
       });
-      const items = rows.filter((r) => !isStaleLessonRow(r)).map(toItem);
+      const items = rows.filter((r) => !isStaleRow(r)).map(toItem);
       // Lesson 1 finished in its earlier version but after the reset (an old API machine during the
       // rollout): the welcome card is dismissed and saved, as the reset migration does for earlier
       // finishes, so it stays shut once a start replaces that row. Once per account: the row then
       // exists (and a duplicate is skipped)
       const oldLesson1Done = rows.some(
-        (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleLessonRow(r)
+        (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleRow(r)
       );
       if (oldLesson1Done && !rows.some((r) => r.itemId === 'welcome-card')) {
         // A failed save never fails the read: the dismissal is answered anyway, and the next read
@@ -183,25 +197,33 @@ export async function learnRoutes(app: FastifyInstance) {
       const { itemId } = request.params as { itemId: LearnItemId };
       const { status, step } = request.body as { status: LearnStatus; step?: number };
       const lessonId = lessonOf(itemId);
+      const floor = versionFloorOf(itemId);
 
       // 🔐 One check of what each kind of item may send, before any write:
-      // - a dismissal (an offer, a tour skipped) carries no step, and a lesson is never dismissed
-      //   (such a row would have no version);
-      // - a tour or a checkpoint has no screens: no start, no step;
-      // - a lesson's start and finish say which screen, and one from an earlier version of the
-      //   lesson (no step, or below its first) is refused, so a stale client can't undo the reset
+      // - a dismissal (an offer, a tour skipped) carries no step, and a lesson or a checkpoint is
+      //   never dismissed (such a row would have no version);
+      // - a tour or an offer has no versions: no start, no step;
+      // - only a lesson is started; a lesson's start and finish say which screen, a checkpoint's
+      //   pass its question set; one from an earlier version (no step, or below its floor) is
+      //   refused, so a stale client can't undo the resets
       const bad = (error: string) => reply.status(400).send({ error });
-      const earlier = () => reply.status(409).send({ error: 'An earlier version of this lesson' });
+      const earlier = () =>
+        reply.status(409).send({
+          error: lessonId
+            ? 'An earlier version of this lesson'
+            : 'An earlier version of this checkpoint',
+        });
       if (status === 'dismissed') {
-        if (lessonId) return bad('A lesson can’t be dismissed');
-        if (step !== undefined) return bad('Only a lesson’s start or finish takes a step');
-      } else if (!lessonId) {
+        if (floor !== null) return bad('A lesson or a checkpoint can’t be dismissed');
+        if (step !== undefined) return bad('Only a lesson or a checkpoint takes a step');
+      } else if (floor === null) {
         if (status === 'started') return bad('A start needs a lesson and its step');
-        if (step !== undefined) return bad('Only a lesson’s start or finish takes a step');
+        if (step !== undefined) return bad('Only a lesson or a checkpoint takes a step');
+      } else if (status === 'started' && !lessonId) {
+        return bad('A start needs a lesson and its step');
       } else if (step === undefined) {
         return status === 'started' ? bad('A start needs a lesson and its step') : earlier();
-        // eslint-disable-next-line security/detect-object-injection -- lessonId is from the fixed list
-      } else if (step < LESSON_FIRST_STEP[lessonId]) {
+      } else if (step < floor) {
         return earlier();
       }
 

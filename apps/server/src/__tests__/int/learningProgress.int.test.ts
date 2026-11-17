@@ -128,4 +128,26 @@ describe('LearningProgress (Postgres)', () => {
       })
     ).toEqual([{ itemId: 'welcome-card', status: 'dismissed' }]);
   });
+
+  it('should clear every learner’s chapter 1 checkpoint pass, and nothing else (owner 2026-11-17)', async () => {
+    const userId = await createUser(db);
+    await db.learningProgress.createMany({
+      data: [
+        { userId, itemId: 'checkpoint-ch1', status: 'completed' },
+        { userId, itemId: 'primer', status: 'completed' },
+        { userId, itemId: 'lesson-01', status: 'started', step: 64 },
+      ],
+    });
+    const file = join(
+      SERVER_DIR,
+      'prisma/migrations/20261117090000_reset_checkpoint_ch1/migration.sql'
+    );
+    const res = prismaCli(['db', 'execute', '--file', file], process.env.DATABASE_URL as string);
+    expect(res.status, res.output).toBe(0);
+    const rows = await db.learningProgress.findMany({
+      where: { userId },
+      orderBy: { itemId: 'asc' },
+    });
+    expect(rows.map((r) => r.itemId)).toEqual(['lesson-01', 'primer']);
+  });
 });

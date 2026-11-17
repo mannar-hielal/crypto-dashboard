@@ -136,7 +136,8 @@ describe('useTourProgress', () => {
     act(() => {
       usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
     });
-    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok');
+    // With its question set's version (owner 2026-11-17: earlier passes no longer count)
+    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 2);
     expect(setProgress).toHaveBeenCalledTimes(2);
   });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
+import { CHECKPOINT_VERSIONS, LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
+import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   LESSON_IDS,
   LESSONS,
@@ -370,6 +371,11 @@ describe('lessons', () => {
     // The server refuses a start or finish below it (a client on an earlier version): the SDK's
     // LESSON_FIRST_STEPS is the shared number, and a server test holds its copy to it too
     for (const l of LESSONS) expect((l.stepBase ?? 0) + 1, l.id).toBe(LESSON_FIRST_STEPS[l.id]);
+  });
+
+  it('should version each checkpoint as the SDK does, which the server holds its copy to', () => {
+    // A pass carries it; the server ignores a pass from an earlier question set (owner 2026-11-17)
+    for (const c of CHECKPOINTS) expect(c.version, c.id).toBe(CHECKPOINT_VERSIONS[c.id]);
   });
 
   it('should give each drag-and-drop step and each match a text of its own (their keys)', () => {

@@ -7,7 +7,7 @@
 import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
-import { isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
+import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from './lessonStore';
@@ -174,7 +174,10 @@ export function useTourProgress(): void {
       }
       for (const id of Object.keys(state.checkpoints) as CheckpointId[]) {
         if (!prev.checkpoints[id]) {
-          learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
+          // With its question set's version: the server ignores a pass from an earlier set
+          learnApi
+            .setProgress(id, 'completed', accessToken, getCheckpoint(id).version)
+            .catch(() => undefined);
         }
       }
     });

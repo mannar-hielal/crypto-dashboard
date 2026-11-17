@@ -84,6 +84,17 @@ export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
  * which refuses a start or a finish from below it. One test on each side holds its copy to this one;
  * raise all three together with a lesson's `stepBase`
  */
+/**
+ * Each chapter checkpoint's question set version: a pass carries it as its `step`, and the server
+ * (`CHECKPOINT_VERSION`) refuses or ignores a pass from an earlier set. The client's `version` on
+ * each checkpoint (`apps/client/src/learn/checkpoints.ts`) and the server's copy are held to this one
+ * by a test on each side. Owner 2026-11-17: the Lessons 1–3 rewrite changed chapter 1's questions,
+ * so its earlier passes no longer count
+ */
+export const CHECKPOINT_VERSIONS = {
+  'checkpoint-ch1': 2,
+} as const;
+
 export const LESSON_FIRST_STEPS = {
   'lesson-01': 61,
   'lesson-ownership': 61,

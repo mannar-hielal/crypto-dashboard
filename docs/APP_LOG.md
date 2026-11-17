@@ -4706,7 +4706,11 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
   already runs the buy and sell tours, so the close just finishes and the path shows what's next. A lesson's way on
   is now only ever the next lesson (`next: LessonId`); the close's tour way on and `lesson.next-tour` are deleted.
 - **The Chapter 1 checkpoint** (was "Foundations checkpoint"): its recovery-phrase question went with keys and
-  custody to a later lesson; in its place, "your plan says sell below $50,000" (taught in Lesson 1).
+  custody to a later lesson; in its place, "your plan says sell below $50,000" (taught in Lesson 1). **Earlier passes
+  are cleared** (owner 2026-11-17, migration `20261117090000_reset_checkpoint_ch1`): every learner takes it again,
+  and a learner already in chapter 2 finds it closed until they pass. A pass carries its question set's version as
+  `step` (the client's `version`, the SDK's `CHECKPOINT_VERSIONS`, the server's `CHECKPOINT_VERSION`); the server
+  refuses one from an earlier set with 409 and ignores such a row on reads, as it does a lesson's.
 - **The admin funnel**: a tour's steps in the order it runs them, phone-only and desktop-only steps marked; a
   rewritten lesson's started / finished totals are labelled "(totals: all versions)", since those events carry no
   step (the old versions' events are kept, as they were for the pilot).

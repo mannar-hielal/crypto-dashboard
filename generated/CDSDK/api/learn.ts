@@ -37,7 +37,8 @@ export const learnApi = {
 
   /**
    * `step`: a lesson's funnel step number, with its start (the furthest screen) and its finish (the
-   * last screen); the server answers 409 to a step from an earlier version of the lesson
+   * last screen); a checkpoint pass's question set version (`CHECKPOINT_VERSIONS`). The server
+   * answers 409 to one from an earlier version
    */
   setProgress: (itemId: LearnItemId, status: LearnStatus, accessToken: string, step?: number) =>
     request<{ item: LearnProgressItem }>(`/api/learn/progress/${encodeURIComponent(itemId)}`, {

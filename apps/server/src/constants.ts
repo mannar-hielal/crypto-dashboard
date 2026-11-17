@@ -71,6 +71,15 @@ export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number
 /** The learning path's chapter checkpoints: progress only, never events */
 export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
 
+/**
+ * Each checkpoint's question set version: a pass carries it as its `step` (held to the SDK's
+ * `CHECKPOINT_VERSIONS` by a test). 🔐 A pass from an earlier set is refused or ignored, like a lesson's
+ * earlier version (owner 2026-11-17: chapter 1's questions changed with the Lessons 1–3 rewrite)
+ */
+export const CHECKPOINT_VERSION: Record<(typeof LEARN_CHECKPOINT_IDS)[number], number> = {
+  'checkpoint-ch1': 2,
+};
+
 /** Events are only accepted for these: a lesson reports its screens like a tour reports its steps */
 export const LEARN_EVENT_ITEM_IDS = [...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS] as const;
 
