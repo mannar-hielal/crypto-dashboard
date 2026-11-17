@@ -197,4 +197,11 @@ describe('tourStore', () => {
       (tour as { steps: typeof saved }).steps = saved;
     }
   });
+
+  it('should close a tour that needs a larger screen when the screen narrows to a phone', () => {
+    s().setWide(true);
+    s().start('primer'); // not phone-ready
+    s().setWide(false);
+    expect(s().activeId).toBeNull();
+  });
 });

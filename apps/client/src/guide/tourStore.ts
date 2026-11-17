@@ -9,6 +9,7 @@ import {
   getTour,
   isTourId,
   isWideScreen,
+  runsHere,
   tourSteps,
   type TourId,
   type PathTourId,
@@ -129,9 +130,10 @@ export const useTourStore = create<TourState>()((set, get) => ({
     // screen docks the form: nothing to catch up.) Otherwise the same step if both sizes show it,
     // or, on a step only the old size had, the first step after the last shared one
     const tour = getTour(activeId);
-    // No step of this tour for the new size (none today: every tour shares steps): it can't go on
-    // here, so it closes rather than show nothing with no way out
-    if (tourSteps(tour, next).length === 0) {
+    // A tour this size can't run (one that needs a larger screen, narrowed to a phone: its steps
+    // point at what the phone layout doesn't show, the way every launcher refuses to start it
+    // there), or with no step for it: it closes rather than ask for what can't be done
+    if (!runsHere(activeId, next) || tourSteps(tour, next).length === 0) {
       set({ wide: next, activeId: null, stepIndex: 0, quizAnswer: null });
       return;
     }
