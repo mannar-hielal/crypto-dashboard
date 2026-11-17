@@ -208,8 +208,8 @@ export interface CanDo {
  * under a chart and a stated plan (owner's visual Q&A, 2026-11-16). A buy-or-sell question's
  * options are exactly `['Buy', 'Sell']` and its answer follows from the plan, never a guess.
  * Drag and drop (`order`) puts `steps` into numbered slots; Match boxes (`match`) pairs each
- * `pairs` term with its meaning. Those two have no `options` and `correct: 0`: the stored answer is
- * 0 when every slot or pair was right, 1 otherwise.
+ * `pairs` term with its meaning. Those two have no `options` (their `correct` is 0): the stored
+ * answer is `correct` when every slot or pair was right, -1 otherwise.
  */
 export type QuestionFormat = 'choice' | 'buy-sell' | 'order' | 'match';
 

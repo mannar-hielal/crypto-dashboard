@@ -183,4 +183,18 @@ describe('tourStore', () => {
       delete window.matchMedia;
     }
   });
+
+  it('should close a tour that has no step for the screen size it is rotated to', () => {
+    s().start('practice-buy');
+    // A tour with desktop steps only (none today: every tour shares steps)
+    const tour = getTour('practice-buy');
+    const saved = tour.steps;
+    (tour as { steps: typeof saved }).steps = saved.filter((st) => st.screen === 'desktop');
+    try {
+      s().setWide(false);
+      expect(s().activeId).toBeNull();
+    } finally {
+      (tour as { steps: typeof saved }).steps = saved;
+    }
+  });
 });

@@ -129,6 +129,12 @@ export const useTourStore = create<TourState>()((set, get) => ({
     // screen docks the form: nothing to catch up.) Otherwise the same step if both sizes show it,
     // or, on a step only the old size had, the first step after the last shared one
     const tour = getTour(activeId);
+    // No step of this tour for the new size (none today: every tour shares steps): it can't go on
+    // here, so it closes rather than show nothing with no way out
+    if (tourSteps(tour, next).length === 0) {
+      set({ wide: next, activeId: null, stepIndex: 0, quizAnswer: null });
+      return;
+    }
     const all = tour.steps.map((s) => s.id);
     const current = all.indexOf(tourSteps(tour, wide)[stepIndex]?.id ?? '');
     // A step this size's list doesn't hold (a stale index): stay put, within the new list

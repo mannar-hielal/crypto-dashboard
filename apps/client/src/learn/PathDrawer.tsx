@@ -52,10 +52,14 @@ function Connector({ index }: { index: number }) {
  * lines; a lesson with no summary, its "You can now" lines)
  */
 function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
+  // Keyed by lesson and place: two lessons may share a line
   const learned = nodes.flatMap((v) => {
     if (v.node.kind !== 'lesson') return [];
     const lesson = getLesson(v.node.id);
-    return (lesson.recap?.points ?? lesson.canDo).map((c) => c.text);
+    return (lesson.recap?.points ?? lesson.canDo).map((c, i) => ({
+      key: `${lesson.id}:${i}`,
+      text: c.text,
+    }));
   });
   return (
     <div className={styles.overview} {...guide('path.chapter.overview')}>
@@ -71,8 +75,8 @@ function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
         <>
           <p className={styles.overviewHead}>What you’ll learn</p>
           <ul className={styles.overviewList}>
-            {learned.map((text) => (
-              <li key={text}>{text}</li>
+            {learned.map(({ key, text }) => (
+              <li key={key}>{text}</li>
             ))}
           </ul>
         </>
