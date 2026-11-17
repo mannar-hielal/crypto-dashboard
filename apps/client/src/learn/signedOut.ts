@@ -13,6 +13,14 @@ import { forgetAllDone } from './pendingDone';
  */
 export function forgetSignedOutAccount(): void {
   forgetAllDone();
+  resetLearningStores();
+}
+
+/**
+ * The learning stores back to nothing (the lessons, the tours, the map): the one list of what holds
+ * an account's progress in memory, for a sign-out and for another account's first read
+ */
+export function resetLearningStores(): void {
   useLessonStore.getState().reset();
   useTourStore.getState().reset();
   usePathStore.getState().reset();

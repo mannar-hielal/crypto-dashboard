@@ -202,6 +202,17 @@ describe('useTourProgress', () => {
     token = 'tok';
   });
 
+  it('should put nothing in the stores from a read that lands after a sign-out', async () => {
+    let answer: (v: { items: unknown[] }) => void = () => undefined;
+    getProgress.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    renderHook(() => useTourProgress());
+    // Signed out before the read answers (the hook's cleanup hasn't run yet)
+    token = null;
+    await act(async () => answer({ items: [item('checkpoint-ch1', 'completed')] }));
+    expect(usePathStore.getState().checkpoints).toEqual({});
+    token = 'tok';
+  });
+
   it('should save a finished tour and a dismissed card, once each', async () => {
     getProgress.mockResolvedValue({ items: [] });
     renderHook(() => useTourProgress());

@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
+import { resetLearningStores } from '@/learn/signedOut';
 import { noteFinishSent } from '@/learn/finishSync';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
@@ -129,6 +130,16 @@ const inFlight = new Map<string, symbol>();
  */
 const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([409, 422]);
 
+/** Put the server's own answer in the stores: the writers below never echo it back */
+function asServerAnswer(apply: () => void): void {
+  applyingServer = true;
+  try {
+    apply();
+  } finally {
+    applyingServer = false;
+  }
+}
+
 /** No one is signed in any more (a token rotation is still signed in) */
 const signedOut = () => !useAuthStore.getState().accessToken;
 
@@ -157,21 +168,16 @@ export function useTourProgress(): void {
     // Another account than the last read's (a session expired, then someone else signed in): the
     // previous one's progress never shows, even if this read fails
     const account = accountOf(accessToken);
-    if (readFor !== null && account !== readFor) {
-      applyingServer = true;
-      try {
-        useLessonStore.getState().reset();
-        useTourStore.getState().reset();
-        usePathStore.getState().reset();
-      } finally {
-        applyingServer = false;
-      }
-    }
+    if (readFor !== null && account !== readFor) asServerAnswer(resetLearningStores);
     readFor = account;
+    // 🔐 An answer that lands after a sign-out or for another account (before this effect's cleanup
+    // has run) is never put in the stores or the device's queue
+    const stale = () =>
+      cancelled || signedOut() || accountOf(useAuthStore.getState().accessToken) !== account;
     learnApi
       .getProgress(accessToken)
       .then(({ items }) => {
-        if (cancelled) return;
+        if (stale()) return;
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as PathTourId);
@@ -215,17 +221,10 @@ export function useTourProgress(): void {
             sendReached(id, screen, accessToken);
           }
         }
-        // The server's own answer: the writer below must not echo it back (review on #280)
-        applyingServer = true;
-        try {
+        // The server's own answer (never echoed back, review on #280): the furthest screens, and
+        // the learning map's skipped tours and passed checkpoints
+        asServerAnswer(() => {
           useLessonStore.getState().setReached(reached);
-        } finally {
-          applyingServer = false;
-        }
-        // The learning map: practice skipped on a phone, and checkpoints passed. The server's own
-        // answer: the writers below must not echo it back (applyingServer)
-        applyingServer = true;
-        try {
           usePathStore.getState().setProgress({
             skippedTours: items
               .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
@@ -241,22 +240,19 @@ export function useTourProgress(): void {
           });
           const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
           useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
-        } finally {
-          applyingServer = false;
-        }
+        });
         for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken, { kept: true });
       })
       .catch(() => {
         // Can't read it. A read again (a session refresh) leaves everything shown as it is; a first
         // read shows no offer rather than one that may already have been answered
-        if (!cancelled && !useTourStore.getState().loaded) {
+        if (!stale() && !useTourStore.getState().loaded) {
           // (finishes and passes this device still has to save stay shown, as on a read that lands;
           // nothing here is echoed back)
           const queued = (account ? pendingDone(account) : [])
             .filter(isCurrentVersion)
             .map((q) => q.itemId);
-          applyingServer = true;
-          try {
+          asServerAnswer(() => {
             useTourStore
               .getState()
               .setProgress({ completed: [], cardDismissed: true, fillOfferDismissed: true });
@@ -268,9 +264,7 @@ export function useTourProgress(): void {
             useLessonStore
               .getState()
               .setCompleted([...new Set([...done, ...queued.filter(isLessonId)])]);
-          } finally {
-            applyingServer = false;
-          }
+          });
         }
       });
     return () => {
