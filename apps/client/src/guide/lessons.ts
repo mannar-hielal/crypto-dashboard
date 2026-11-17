@@ -1314,11 +1314,6 @@ export function getLesson(id: LessonId): Lesson {
 }
 
 /**
- * Who stands beside a question: the guide who asks it, from the question through the answer. The
- * right answer gets their grin; "Not quite" gets them calm, never sad or worried (red is never the
- * villain).
- */
-/**
  * A fixed shuffle for Drag and drop and Match boxes: the same order on every visit (seeded by the
  * question's words), and never the right order itself, so nothing is answered before a move.
  */
@@ -1336,6 +1331,11 @@ export function shuffledOrder(n: number, seed: string): number[] {
   return order;
 }
 
+/**
+ * Who stands beside a question: the guide who asks it, from the question through the answer. The
+ * right answer gets their grin; "Not quite" gets them calm, never sad or worried (red is never the
+ * villain).
+ */
 export function questionGuide(q: LessonQuestion, answer: number | undefined): Presenter {
   const asker = q.presenter ?? { who: 'tock', mood: 'thinking' };
   if (answer === undefined) return asker;

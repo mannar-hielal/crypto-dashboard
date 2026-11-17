@@ -1,19 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
-/** `fallback`: the answer where the browser has no matchMedia (tests, very old browsers) */
+/**
+ * Whether a CSS media query matches, kept current. Read through useSyncExternalStore, so the answer
+ * is the browser's at every render and on subscribing: a width that crossed the query between the
+ * first render and the subscription is never missed. `fallback` where the runtime has no matchMedia
+ */
 export function useMediaQuery(query: string, fallback = false): boolean {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return fallback;
-    return window.matchMedia(query).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
-    const mql = window.matchMedia(query);
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, [query]);
-
-  return matches;
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return () => {};
+      }
+      const mql = window.matchMedia(query);
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    },
+    [query]
+  );
+  const read = () =>
+    typeof window === 'undefined' || typeof window.matchMedia !== 'function'
+      ? fallback
+      : window.matchMedia(query).matches;
+  return useSyncExternalStore(subscribe, read, () => fallback);
 }

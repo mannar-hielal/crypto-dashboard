@@ -546,6 +546,10 @@ export function LessonSheet() {
     if (!activeId || inTour || articleOpen || mapOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      // Esc inside the journal field (or closing an IME's candidates) belongs to the field, never
+      // to the sheet: it would close the lesson on a half-typed line
+      const target = e.target as HTMLElement | null;
+      if (e.isComposing || target?.tagName === 'TEXTAREA' || target?.tagName === 'INPUT') return;
       if (peekOpen) setPeek(null);
       else if (streakActive) leaveStreakFinishing(setStreakThen);
       else leaveSheet();

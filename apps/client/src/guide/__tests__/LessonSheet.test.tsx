@@ -184,6 +184,14 @@ describe('LessonSheet', () => {
     expect(getHabits).not.toHaveBeenCalled();
   });
 
+  it('should leave Esc pressed in the journal field to the field, never closing the lesson', () => {
+    at(lessonScreens(lesson).length - 1); // the close screen, with the journal line
+    renderSheet();
+    const note = document.querySelector<HTMLTextAreaElement>('[data-guide="lesson.note"]')!;
+    fireEvent.keyDown(note, { key: 'Escape' });
+    expect(useLessonStore.getState().activeId).toBe('lesson-02');
+  });
+
   it('should only close, never finish, when an earlier screen is left with ✕', async () => {
     at(2);
     renderSheet();
