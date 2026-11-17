@@ -241,7 +241,10 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    learn:" and three ✓ lines), then **Continue →**. On every card and question of Lessons 1–3 the main button
    says **Continue →** and the link under it **← Back**; the summary's button says **Finish lesson** (2026-11-17).
    No `**` or `*` shows anywhere: those words are bold or italic (**Buy**, **Sell**, **long** …).
-   - Screens 3–4: **Up or down, you can win**, then **Buy and Sell** with [lesson.practice `practice-buy`] **Try a
+   - Screens 3–4: **Up or down, you can win** (the picture on top, 2026-11-17: three panels, a green line that
+     climbs "▲ up wins", a red one that slides "▼ down wins", a grey one sideways "≈ flat"), then **Buy and Sell** (the
+     picture: a coin and a banknote, a green arrow "Buy: pay $, get coin" and a red one "Sell: hand coin, get $") with
+     [lesson.practice `practice-buy`] **Try a
      buy on the real chart** → Expect the sheet to step aside, `/dashboard/spot/BTC/USDT`, the tour ring on the
      form's Buy (a phone: on the bottom bar's **Buy / Long**), Market, USDT, 100, Place; after the order → Expect
      **What just happened** (2026-11-17): the ring on the account panel's [account.tab `assets`], then on Bitcoin's
@@ -259,14 +262,17 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      Pulin in round glasses says "Let's do the math.", six numbered steps ("1. Price rise 73,133 − 27,484 = 45,649"
      … "6. Keep 99.8% after fees $2,661 × 0.998 ≈ $2,656") and [lesson.math.answer] "➜ Bitcoin rose about 166%. After
      fees, your $1,000 became about **$2,656**: about **$1,656 profit**." (no hindsight line), **Close it to keep
-     it**, **Going short**: the text, then [lesson.analogy] Berwyn in glasses ("Think of it as borrowing. A friend
+     it** (the picture: "open: on paper" +$120? over a dashed wobble, **Close** →, "closed: real" +$120 framed in
+     green with a lock), **Going short** (the picture: a price falling from "1. sell the borrowed game: $60" to "2. buy
+     one back: $40, return it", the gap "you keep $20"): the text, then [lesson.analogy] Berwyn in glasses ("Think of it as borrowing. A friend
      lends you a game…"), no exchange between the guides, then practice-short on `/dashboard/usdt/ETHUSDT` (the
      form's Sell / Short, a phone's **Sell / Short**; then **What just happened** on [positions.row
      `linear:ETHUSDT`]), **A real short** (10 Nov 2021 → 18 Jun 2022), **The catch**: Berwyn in glasses works out
      the 0.01 BTC short in five steps ($648.94 → $189.65, $459.29, 70.8%), "➜ Bitcoin fell about 71%…", then
      Berwyn's line "Now the catch: …" (no ceiling, liquidation).
    - Screen 14: **Quick check** (long, short or stay out) → "Stay out for now" is right; screen 15: **Your call**.
-   - Screens 16–18: **The market never sleeps** (Berwyn's line: [lesson.term `slippage`] is a button that opens
+   - Screens 16–18: **The market never sleeps** (the picture: a moon, a week of day bars, the shop's filled only by
+     day and empty on Sunday, crypto's full every day, "crypto: open 24/7"; Berwyn's line: [lesson.term `slippage`] is a button that opens
      its peek; Read more → _Price swings_, always open), **Smaller coins swing harder** (the SOL chart above the
      text, "−29%"; then Pulin's math: "182.57 − 129.70 = 52.87" … "29.0%"), **Big swings, big risks**
      ([lesson.term `rug-pull`]).
@@ -285,7 +291,9 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    at its timeline), **One record, many copies** (the dotted world map; [lesson.term `ledger`] → a peek with no
    "From" line; [lesson.term `node`] → "A computer that keeps a full copy…", [lesson.peek.more] → the network
    article in the drawer, the lesson hidden), **Sending bitcoin**, **Two checks, then a block**, **Sealed by hard
-   work**, **The hash links the chain**.
+   work** (the picture, 2026-11-17: three blocks, Block 1's "pays 5 → 9" and its fingerprint changed, red, the links
+   after it crossed out ✕, "change one: redo every block after"), **The hash links the chain** (the picture: three
+   blocks, each one's "prev" the fingerprint of the block before, amber arrows, "# = a block's fingerprint").
    - Screen 10, **Quick check** (Drag and drop): numbered slots 1–5, the steps below. Tap a step → it's ringed
      ([lesson.step], aria-pressed); tap [lesson.slot `0`] → it lands there; tap a filled slot → it goes back. With a
      mouse, drag a step onto a slot. [lesson.check] stays off until all five are placed; then ✓ / ✕ per slot,

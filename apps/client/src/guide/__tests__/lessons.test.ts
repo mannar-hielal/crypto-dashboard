@@ -331,6 +331,34 @@ describe('lessons', () => {
     expect(shock.text).toMatch(/down about 23%/);
   });
 
+  it('should give the cards a picture that tells them where one helps (owner 2026-11-17)', () => {
+    const art = (id: 'lesson-01' | 'lesson-ownership' | 'lesson-02') =>
+      Object.fromEntries(getLesson(id).cards.flatMap((c) => (c.art ? [[c.title, c.art]] : [])));
+    expect(art('lesson-01')).toEqual({
+      'Up or down, you can win': 'threePaths',
+      'Buy and Sell': 'buySell',
+      'Close it to keep it': 'closeToKeep',
+      'Going short': 'shortGame',
+      'The market never sleeps': 'alwaysOpen',
+    });
+    expect(art('lesson-ownership')).toEqual({
+      'A headline in the first block': 'bitcoin',
+      'One record, many copies': 'ledger',
+      'Sealed by hard work': 'sealBroken',
+      'The hash links the chain': 'hashChain',
+    });
+    // Lesson 3 keeps its pictures as they were
+    expect(art('lesson-02')).toEqual({
+      'One bitcoin for $8,200': 'flashCrash',
+      'Thousands of deals, one candle': 'candleAnatomy',
+      'Thin or deep': 'staircase',
+      'Check before you trust': 'checkCoin',
+    });
+    // Going short's picture matches its analogy's numbers
+    const short = getLesson('lesson-01').cards.find((c) => c.title === 'Going short')!;
+    expect(short.analogy?.text).toMatch(/\$60.*\$40.*keep \$20/);
+  });
+
   it('should offer a practice trade from the Buy, long and short cards', () => {
     const l = getLesson('lesson-01');
     const practice = Object.fromEntries(

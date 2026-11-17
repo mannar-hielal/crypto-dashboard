@@ -233,3 +233,81 @@
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
+
+/* ─── Pictures that tell the card (owner 2026-11-17): Lessons 1–2 ───────────── */
+
+.muted {
+  color: var(--color-brand-muted); /* color.muted */
+}
+
+/* A drawn line or arrow in the colour of its group (.up, .down, .muted, .amber, .white) */
+.stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A result still on paper: dashed, not only grey */
+.dashed {
+  stroke-dasharray: 5 4;
+}
+
+.guideLine {
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.small {
+  fill: currentColor;
+  font-size: 11px;
+}
+
+.bigNumber {
+  fill: currentColor;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* A banknote: a plain panel with the muted line round it */
+.note {
+  fill: var(--color-bg-panel); /* bg.panel */
+  stroke: var(--color-brand-muted); /* color.muted */
+  stroke-width: 1.5;
+}
+
+/* A closed, kept result: the panel framed in green (with the lock, never colour alone) */
+.lockedPanel {
+  fill: var(--color-bg-surface); /* bg.surface */
+  stroke: var(--color-brand-green); /* color.green */
+  stroke-width: 2;
+}
+
+/* A block whose fingerprint changed or no longer matches (with ✕, never colour alone) */
+.brokenPanel {
+  fill: var(--color-bg-surface); /* bg.surface */
+  stroke: var(--color-brand-red); /* color.red */
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+/* A block's own fingerprint: amber, a thing of value */
+.hash {
+  fill: var(--color-brand-amber); /* color.amber */
+}
+
+.hashChanged {
+  fill: var(--color-brand-red); /* color.red */
+}
+
+.hashText {
+  fill: var(--color-bg-page); /* bg.page: dark text on a filled chip */
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Opening hours on a day's bar */
+.openFill {
+  fill: var(--color-brand-purple-dark); /* color.purpleDark */
+}

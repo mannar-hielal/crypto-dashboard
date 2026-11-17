@@ -3,7 +3,7 @@ import { cleanup, render } from '@testing-library/react';
 import { Guide, GuideFigure } from '@/guide/art/Guide';
 import { WORLD_DOTS, WORLD_DOTS_HEIGHT, WORLD_DOTS_WIDTH } from '@/guide/art/worldDots';
 import { GuideAvatar, LessonArt } from '@/guide/LessonArt';
-import { MOODS, type LessonArtId } from '@/guide/lessons';
+import { ART_LABELS, MOODS, type LessonArtId } from '@/guide/lessons';
 
 const ARTS: LessonArtId[] = [
   'ledger',
@@ -14,6 +14,24 @@ const ARTS: LessonArtId[] = [
   'candleAnatomy',
   'swings',
   'checkCoin',
+  'threePaths',
+  'buySell',
+  'closeToKeep',
+  'shortGame',
+  'alwaysOpen',
+  'hashChain',
+  'sealBroken',
+];
+
+/** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
+const TELLING: LessonArtId[] = [
+  'threePaths',
+  'buySell',
+  'closeToKeep',
+  'shortGame',
+  'alwaysOpen',
+  'hashChain',
+  'sealBroken',
 ];
 
 describe('the guides', () => {
@@ -91,11 +109,37 @@ describe('LessonArt', () => {
         <LessonArt id={id} presenter={{ who: 'tock', mood: 'wink' }} />
       );
       const svg = container.querySelector(`[data-lesson-art="${id}"]`)!;
-      expect(svg.getAttribute('aria-hidden'), id).toBe('true');
+      if (TELLING.includes(id)) {
+        expect(svg.getAttribute('role'), id).toBe('img');
+        expect(svg.getAttribute('aria-label'), id).toBe(ART_LABELS[id]);
+        expect(svg.getAttribute('aria-hidden'), id).toBeNull();
+      } else {
+        expect(svg.getAttribute('aria-hidden'), id).toBe('true');
+        expect(svg.getAttribute('aria-label'), id).toBeNull();
+      }
       // The presenter points by default
       expect(svg.querySelector('[data-mood="wink"]')?.getAttribute('data-pose'), id).toBe('point');
       unmount();
     }
+  });
+
+  it('should give every telling picture a label that says what it shows (owner 2026-11-17)', () => {
+    expect(Object.keys(ART_LABELS).sort()).toEqual([...ARTS].sort());
+    for (const id of TELLING) expect(ART_LABELS[id]?.length ?? 0, id).toBeGreaterThan(40);
+    // The pictures' own words, so the drawing alone carries the card
+    const words = (id: LessonArtId) => render(<LessonArt id={id} />).container.textContent ?? '';
+    expect(words('threePaths')).toMatch(/climbs.*up wins.*slides.*down wins.*sideways/);
+    expect(words('buySell')).toMatch(/Buy: pay \$, get coin.*Sell: hand coin, get \$/);
+    expect(words('closeToKeep')).toMatch(/on paper.*\+\$120\?.*Close.*\+\$120.*yours to keep/);
+    expect(words('shortGame')).toMatch(/\$60.*\$40.*keep \$20/);
+    expect(words('alwaysOpen')).toMatch(/Shop.*Crypto.*open 24\/7/);
+    // The chain: each block's prev is the fingerprint of the block before it
+    const chain = render(<LessonArt id="hashChain" />).container.textContent ?? '';
+    expect(chain).toMatch(/#k7q2.*#k7q2.*#m4x9.*#m4x9/);
+    // The broken seal: the edited block, and the links after it crossed out
+    const seal = render(<LessonArt id="sealBroken" />).container;
+    expect(seal.textContent).toMatch(/pays 5 → 9.*redo every block after/);
+    expect([...seal.querySelectorAll('text')].filter((t) => t.textContent === '✕')).toHaveLength(2);
   });
 
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {

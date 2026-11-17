@@ -39,7 +39,50 @@ export type LessonArtId =
   | 'staircase'
   | 'candleAnatomy'
   | 'swings'
-  | 'checkCoin';
+  | 'checkCoin'
+  // Pictures that tell most of their card (owner 2026-11-17), each with its `ART_LABELS` line
+  /** Lesson 1, Up or down: a price that climbs, one that slides, one that drifts sideways */
+  | 'threePaths'
+  /** Lesson 1, Buy and Sell: money for a coin, a coin for money */
+  | 'buySell'
+  /** Lesson 1, Close it to keep it: a result on paper, then locked in */
+  | 'closeToKeep'
+  /** Lesson 1, Going short: the borrowed game sold at $60, bought back at $40, $20 kept */
+  | 'shortGame'
+  /** Lesson 1, The market never sleeps: a shop's week of hours against crypto's */
+  | 'alwaysOpen'
+  /** Lesson 2, The hash links the chain: blocks carrying the one before's fingerprint */
+  | 'hashChain'
+  /** Lesson 2, Sealed by hard work: one old number changed, every later block broken */
+  | 'sealBroken';
+
+/**
+ * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
+ * The pictures drawn to tell most of their card (owner 2026-11-17) say what they show.
+ */
+export const ART_LABELS: Record<LessonArtId, string | null> = {
+  ledger: null,
+  bitcoin: null,
+  etf: null,
+  flashCrash: null,
+  staircase: null,
+  candleAnatomy: null,
+  swings: null,
+  checkCoin: null,
+  threePaths:
+    'Three price paths: one climbs, where betting up wins; one slides, where betting down wins; one drifts sideways.',
+  buySell: 'Buy: you pay money and get a coin. Sell: you hand over the coin and get money.',
+  closeToKeep:
+    'An open position shows +$120 on paper, which can still shrink. Closed, the +$120 is locked in and yours to keep.',
+  shortGame:
+    'A game’s price falls from $60 to $40: you sell a borrowed game at $60, buy one back at $40 to return, and keep $20.',
+  alwaysOpen:
+    'A week of opening hours: a shop opens only by day and closes on Sunday; crypto is open all day, every day.',
+  hashChain:
+    'Three blocks in a row: each carries the fingerprint, or hash, of the block before it, which links them into a chain.',
+  sealBroken:
+    'An old block’s number is changed from 5 to 9, so its fingerprint changes and the blocks after it no longer match: each must be redone.',
+};
 
 export type Speaker = 'tick' | 'tock';
 
@@ -453,6 +496,7 @@ const lesson01: Lesson = {
     },
     {
       title: 'Up or down, you can win',
+      art: 'threePaths',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
       text: 'Over time a price climbs, slides or drifts sideways. Most people think you only win when it climbs. Not quite. Traders can profit either way, as long as they picked the right side before the move.',
       lines: [
@@ -465,6 +509,7 @@ const lesson01: Lesson = {
     },
     {
       title: 'Buy and Sell',
+      art: 'buySell',
       presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       text: 'Think of it like a shop. **Buy** means you pay to own some coin, hoping it’s worth more later. **Sell** means you hand over coin for money: to cash in, to cut a loss, or (as you’ll see) to bet on a fall.',
       practice: { tour: 'practice-buy', label: 'Try a buy on the real chart' },
@@ -534,6 +579,7 @@ const lesson01: Lesson = {
     },
     {
       title: 'Close it to keep it',
+      art: 'closeToKeep',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
       text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the Close button on your position row. Until then, it can still shrink.',
     },
@@ -541,6 +587,7 @@ const lesson01: Lesson = {
       // Owner 2026-11-17: the borrowing analogy, by one guide in glasses, replaces the chit-chat; it
       // says where it stops matching (a perpetual borrows nothing)
       title: 'Going short',
+      art: 'shortGame',
       presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
       text: 'Going **short** is the mirror move: you win when the price falls. In our app you short on the USDT Perpetual market, with USDT as margin.',
       analogy: {
@@ -595,6 +642,7 @@ const lesson01: Lesson = {
     },
     {
       title: 'The market never sleeps',
+      art: 'alwaysOpen',
       presenter: { who: 'tick', mood: 'surprised', pose: 'stand' },
       text: 'Shops close at night. Crypto doesn’t. It trades **24 hours a day, 7 days a week**, holidays included. Big moves can happen while you sleep.',
       lines: [
@@ -774,12 +822,14 @@ const lessonOwnership: Lesson = {
     {
       // Proof of work (white paper §4, §11): costly to redo, not impossible (fact check 2026-11-16)
       title: 'Sealed by hard work',
+      art: 'sealBroken',
       presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
       text: 'Each block is sealed with a code that took huge computing work to find. Change one number in an old block and the code changes. To fake it, you’d have to redo that work for the block and every block after it, faster than all the other miners together. Practically, nobody can.',
       more: { article: 'bitcoin-story', section: 'mining' },
     },
     {
       title: 'The hash links the chain',
+      art: 'hashChain',
       presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       text: 'Every block carries the **hash** of the block before it: a short code that works like a fingerprint. Change anything in an earlier block and its fingerprint changes, so the next block no longer matches, and the next. That’s why it’s called a [[blockchain]].',
       more: { article: 'bitcoin-network', section: 'blocks' },
