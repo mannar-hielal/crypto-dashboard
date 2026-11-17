@@ -73,7 +73,10 @@ const versionFloorOf = (itemId: string): number | null => {
 /**
  * 🔐 The steps of an item's current version, `from` up to (not including) `to`: a lesson's span
  * from its first step, a checkpoint's one question set. Null for an item with no versions. The one
- * rule the write check, the reads and the takeover all use
+ * rule the write check, the reads and the takeover all use. (Weighed, review round 34: the whole
+ * span, not the lesson's screen count: the server holds no lesson content, and a lesson whose
+ * screens change raises its stepBase by the span (lessons.test, the lesson-authoring skill), so a
+ * step in the span that names no screen never comes from a released client)
  */
 const versionRange = (itemId: string): { from: number; to: number } | null => {
   const from = versionFloorOf(itemId);

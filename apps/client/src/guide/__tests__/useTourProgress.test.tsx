@@ -269,6 +269,19 @@ describe('useTourProgress', () => {
     expect(setProgress).toHaveBeenCalledTimes(2);
   });
 
+  it('should save a checkpoint passed before the first read lands, and keep it shown', async () => {
+    let land: (v: { items: never[] }) => void = () => {};
+    getProgress.mockReturnValueOnce(new Promise((r) => (land = r)));
+    setProgress.mockReturnValue(new Promise(() => {})); // on its way when the read lands
+    renderHook(() => useTourProgress());
+    act(() => {
+      usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
+    });
+    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 2);
+    await act(async () => land({ items: [] }));
+    expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
+  });
+
   it('should treat unreadable progress as nothing skipped or passed', async () => {
     getProgress.mockRejectedValue(new Error('network'));
     renderHook(() => useTourProgress());

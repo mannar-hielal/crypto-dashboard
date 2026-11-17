@@ -130,13 +130,15 @@ const SAVE_HOLD_MS = 20_000;
 const inFlight = new Map<string, symbol>();
 
 /**
- * Answers no retry changes: an earlier version (409), unprocessable. Never a 404 (an edge or a
- * proxy may answer one; the route never does for a known item) nor a 400: that is
- * what an older API answers a newer client (one from before 2026-11-16 refuses the step; a later
- * one refuses a step past its version), and that finish is kept until the API is back, at most 30
- * days (learn/pendingDone.ts)
+ * The one answer no retry changes: an earlier version (409), the only final refusal the route
+ * gives. Never a 404 or a 422 (an edge or a proxy may answer one; the route never does) nor a 400:
+ * that is what an older API answers a newer client (one from before 2026-11-16 refuses the step; a
+ * later one refuses a step past its version), and that finish is kept until the API is back, at
+ * most 30 days (learn/pendingDone.ts). (Weighed, review round 34: today's API answers its own 400
+ * only to a lesson grown past its version span without a stepBase raise, which lessons.test
+ * refuses before release, so telling the two 400s apart isn't worth a contract change)
  */
-const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([409, 422]);
+const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([409]);
 
 /** Put the server's own answer in the stores: the writers below never echo it back */
 function asServerAnswer(apply: () => void): void {
@@ -362,17 +364,19 @@ export function useTourProgress(): void {
       // 🔐 Signed out meanwhile (the stores reset before this unsubscribes): nothing is sent for
       // an account that has left
       if (signedOut()) return;
-      // The read above flips `loaded`: that change is the server's answer, not the learner's
-      if (!prev.loaded || applyingServer) return;
-      for (const id of Object.keys(state.skippedTours) as PathTourId[]) {
-        if (!prev.skippedTours[id]) {
-          learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);
-        }
-      }
+      if (applyingServer) return;
+      // A pass is saved even before the first read lands: queued first, so that read keeps it shown
       for (const id of Object.keys(state.checkpoints) as CheckpointId[]) {
         if (!prev.checkpoints[id]) {
           // With its question set's version: the server ignores a pass from an earlier set
           saveDone(id, getCheckpoint(id).version, accessToken);
+        }
+      }
+      // The read above flips `loaded`: that change is the server's answer, not the learner's
+      if (!prev.loaded) return;
+      for (const id of Object.keys(state.skippedTours) as PathTourId[]) {
+        if (!prev.skippedTours[id]) {
+          learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);
         }
       }
     });
