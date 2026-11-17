@@ -161,6 +161,15 @@ const initial = {
   starts: 0,
 } as const;
 
+/**
+ * This start of the lesson is already counted as finished (`markFinished` or `finish` ran for it):
+ * the one rule the finish count, the streak screen and the funnel's close all use. A look back and
+ * the way back from it never change `starts`
+ */
+export function isStartDone(s: Pick<LessonState, 'doneAt' | 'starts'>, id: LessonId): boolean {
+  return s.doneAt !== null && s.doneAt.id === id && s.doneAt.starts === s.starts;
+}
+
 export const useLessonStore = create<LessonState>()((set, get) => ({
   ...initial,
 
@@ -288,7 +297,7 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       return;
     }
     set((s) => {
-      const counted = s.doneAt?.id === activeId && s.doneAt.starts === s.starts;
+      const counted = isStartDone(s, activeId);
       return {
         ...freshRun(null),
         completed: { ...s.completed, [activeId]: true },
@@ -300,8 +309,8 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
   },
 
   markFinished: () => {
-    const { activeId, returnTo, starts, doneAt } = get();
-    if (!activeId || returnTo || (doneAt?.id === activeId && doneAt.starts === starts)) return;
+    const { activeId, returnTo, starts } = get();
+    if (!activeId || returnTo || isStartDone(get(), activeId)) return;
     set((s) => ({
       completed: { ...s.completed, [activeId]: true },
       finishes: s.finishes + 1,

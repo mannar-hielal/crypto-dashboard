@@ -283,6 +283,18 @@ describe('useTourProgress', () => {
     expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
   });
 
+  it('should close a tour another one replaces before it ended', async () => {
+    getProgress.mockResolvedValue({ items: [] });
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    act(() => useTourStore.getState().start('buy-first-coin'));
+    trackEvent.mockClear();
+    act(() => useTourStore.getState().start('sell-and-review'));
+    const sent = trackEvent.mock.calls.map((c) => c[0] as { name: string; itemId: string });
+    expect(sent[0]).toMatchObject({ name: 'tour_closed', itemId: 'buy-first-coin' });
+    expect(sent[1]).toMatchObject({ name: 'tour_started', itemId: 'sell-and-review' });
+  });
+
   it('should treat unreadable progress as nothing skipped or passed', async () => {
     getProgress.mockRejectedValue(new Error('network'));
     renderHook(() => useTourProgress());
@@ -581,6 +593,18 @@ describe('useTourProgress', () => {
       await waitFor(() =>
         expect(setProgress).toHaveBeenCalledWith('lesson-01', 'started', 'tok2', 61 + 4)
       );
+    });
+
+    it('should check the progress once for kept finishes refused together', async () => {
+      queueDone('u1', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
+      const ownershipLast = 60 + lessonScreens(getLesson('lesson-ownership')).length;
+      queueDone('u1', { itemId: 'lesson-ownership', step: ownershipLast });
+      setProgress.mockRejectedValue(Object.assign(new Error('x'), { status: 409 }));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(setProgress).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined());
+      expect(getProgress).toHaveBeenCalledTimes(2); // the read, then one check for both
     });
 
     it('should send no close for a finished lesson left from a look back', async () => {

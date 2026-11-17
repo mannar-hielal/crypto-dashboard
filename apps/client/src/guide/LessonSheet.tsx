@@ -43,7 +43,7 @@ import {
   setJournalWrite,
   startTour as startTourShared,
 } from './afterNote';
-import { useLessonStore } from './lessonStore';
+import { isStartDone, useLessonStore } from './lessonStore';
 import {
   getLesson,
   GUIDE_NAMES,
@@ -489,20 +489,12 @@ export function LessonSheet() {
    * waits here, on this run, and Continue then does it. Not a screen of its own, so the funnel's
    * step ids don't move.
    */
-  const [streakThen, setStreakThen] = useState<{
-    run: number;
-    screen: number;
-    go: () => void;
-  } | null>(null);
+  const [streakThen, setStreakThen] = useState<{ go: () => void } | null>(null);
   // This start's finish already counted (the store's `doneAt`, set by markFinished): its streak has
   // shown. A look back and the way back from it change the run, never the start, so the same finish
   // never shows its streak twice
-  const startFinished = useLessonStore(
-    (s) => s.doneAt !== null && s.doneAt.id === s.activeId && s.doneAt.starts === s.starts
-  );
-  // On the close it was opened from: the same run moved to another screen (the lesson opened again
-  // at a card from the map) leaves it, so ✕ and Esc there just close
-  // Leaving the close any other way (the lesson opened again at a card, Back) ends the streak's wait:
+  const startFinished = useLessonStore((s) => s.activeId !== null && isStartDone(s, s.activeId));
+  // Shown on the close it was opened from only: leaving the close any other way (the lesson opened again at a card, Back) ends the streak's wait:
   // coming back to the close shows the close, never the same finish's streak again
   useEffect(
     () =>
@@ -511,8 +503,7 @@ export function LessonSheet() {
       }),
     []
   );
-  const streakActive =
-    streakThen?.run === run && streakThen.screen === screenIndex && !!accessToken;
+  const streakActive = streakThen !== null && !!accessToken;
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
@@ -661,7 +652,7 @@ export function LessonSheet() {
       afterNote(
         () => {
           useLessonStore.getState().markFinished();
-          setStreakThen({ run, screen: screenIndex, go });
+          setStreakThen({ go });
         },
         { finishing: true }
       );

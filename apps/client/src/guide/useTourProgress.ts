@@ -16,7 +16,7 @@ import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
-import { useLessonStore } from './lessonStore';
+import { isStartDone, useLessonStore } from './lessonStore';
 import {
   getLesson,
   isLessonId,
@@ -107,8 +107,7 @@ function saveDone(
       if (accountOf(useAuthStore.getState().accessToken) !== account) return;
       // With the token signed in now (it may have rotated since this save left)
       return (
-        learnApi
-          .getProgress(useAuthStore.getState().accessToken ?? accessToken)
+        checkProgress(account, useAuthStore.getState().accessToken ?? accessToken)
           .then(({ items }) => {
             // 🔐 Still that account (a sign-out or a switch while this read was on its way): never
             // another's stores
@@ -125,6 +124,20 @@ function saveDone(
       clearTimeout(released);
       release();
     });
+}
+
+/**
+ * The progress check after a refusal: one read per account at a time, so several kept finishes
+ * refused together (a resend after a version mismatch) share it
+ */
+const checks = new Map<string, Promise<{ items: LearnProgressItem[] }>>();
+function checkProgress(account: string | null, token: string) {
+  const key = account ?? '';
+  const onTheWay = checks.get(key);
+  if (onTheWay) return onTheWay;
+  const check = learnApi.getProgress(token).finally(() => checks.delete(key));
+  checks.set(key, check);
+  return check;
 }
 
 /** How long one save holds back resends of its item at most (the SDK's own fetch has no timeout) */
@@ -346,6 +359,11 @@ export function useTourProgress(): void {
 
       const { activeId, stepIndex } = state;
       if (activeId !== null && activeId !== prev.activeId) {
+        // Started over another one left unfinished (from the map or an article): that run ends as
+        // a close, so every start ends once
+        if (prev.activeId !== null && !finished) {
+          send('tour_closed', prev.activeId, stepIdAt(prev.activeId, prev.stepIndex, prev.wide));
+        }
         send('tour_started', activeId);
         send('tour_step', activeId, stepIdAt(activeId, 0, state.wide));
       } else if (
@@ -442,8 +460,7 @@ export function useTourProgress(): void {
           : null;
       // (a run already counted as finished, its streak screen then left, is no close: also when it's
       // the lesson a look back came from, as a look back never changes `starts`)
-      const alreadyDone =
-        home !== null && prev.doneAt?.id === home.id && prev.doneAt.starts === prev.starts;
+      const alreadyDone = home !== null && isStartDone(prev, home.id);
       const closeHome = () => {
         if (home && !alreadyDone) {
           send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));
