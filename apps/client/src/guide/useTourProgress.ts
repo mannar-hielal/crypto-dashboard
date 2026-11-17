@@ -14,12 +14,7 @@ import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest, LearnProgressItem } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { onePerKey } from '@/lib/onePerKey';
-import {
-  lastReadAccount,
-  resetLearningStores,
-  setLastReadAccount,
-  toursFinishedHere,
-} from '@/learn/signedOut';
+import { lastReadAccount, resetLearningStores, setLastReadAccount } from '@/learn/signedOut';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
@@ -226,12 +221,8 @@ export function useTourProgress(): void {
     const readFor = lastReadAccount();
     if (readFor !== null && account !== readFor) {
       cardByKeptFinish = false;
-      toursFinishedHere.clear();
       asServerAnswer(resetLearningStores);
     }
-    // A read again for the same account (a session refresh): the tours it finished here stand,
-    // even if their save hasn't landed (a tour finish is sent once, with no queue)
-    const refreshRead = readFor !== null && readFor === account;
     setLastReadAccount(account);
     // 🔐 An answer that lands after a sign-out or for another account (before this effect's cleanup
     // has run) is never put in the stores or the device's queue
@@ -244,16 +235,10 @@ export function useTourProgress(): void {
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as PathTourId);
-        // This session's tour finishes the server doesn't have yet (a save lost or still on its
-        // way): kept on screen, so Sell doesn't lock again behind a Buy just done, and sent again
-        if (refreshRead) {
-          // (only the tours this session finished: never re-send old store contents, which could
-          // undo a server-side reset of tour progress)
-          for (const id of [...toursFinishedHere].filter((t) => !completed.includes(t))) {
-            completed.push(id);
-            learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
-          }
-        }
+        // (A tour finish, skip or dismissal is sent once, with no queue: a save that fails lives only
+        // until the next read, which shows what the server has, as before this branch. Keeping and
+        // re-sending them on a refresh read was tried and weighed, review after #311: it could undo
+        // a server-side reset and only covered one of the fields, so they stay fire-and-forget)
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)
@@ -361,7 +346,6 @@ export function useTourProgress(): void {
         if (!prev.loaded || applyingServer) return;
         for (const id of Object.keys(state.completed) as PathTourId[]) {
           if (!prev.completed[id]) {
-            toursFinishedHere.add(id);
             learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
           }
         }

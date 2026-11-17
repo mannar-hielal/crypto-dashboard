@@ -627,25 +627,6 @@ describe('useTourProgress', () => {
       expect(setProgress).toHaveBeenCalledTimes(1);
     });
 
-    it('should keep a tour finished this session when a refresh read lands before its save', async () => {
-      profile = { id: 'u2' };
-      forgetSignedOutAccount();
-      getProgress.mockResolvedValue({ items: [] });
-      const { rerender } = renderHook(() => useTourProgress());
-      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-      // Buy finished here; its save is lost
-      setProgress.mockRejectedValueOnce(new Error('offline'));
-      act(() => useTourStore.setState({ completed: { 'buy-first-coin': true } }));
-      setProgress.mockClear();
-      token = 'tok-refreshed'; // a session refresh: the same account, read again
-      rerender();
-      await waitFor(() => expect(getProgress).toHaveBeenCalledTimes(2));
-      await waitFor(() =>
-        expect(setProgress).toHaveBeenCalledWith('buy-first-coin', 'completed', 'tok-refreshed')
-      );
-      expect(useTourStore.getState().completed['buy-first-coin']).toBe(true);
-    });
-
     it('should send no close for a finished lesson left from a look back', async () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());

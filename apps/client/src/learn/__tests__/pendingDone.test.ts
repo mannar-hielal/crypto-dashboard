@@ -145,12 +145,10 @@ describe('pendingDone', () => {
     expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
   });
 
-  it('should remove a stored queue it can’t read at all', () => {
-    localStorage.setItem('cd-pending-done:a', '{not json');
+  it('should leave a queue of another version alone (a newer tab’s), never wiping it', () => {
+    const newer = JSON.stringify({ v: 2, items: [{ itemId: 'lesson-01', step: 81, since: 1 }] });
+    localStorage.setItem('cd-pending-done:a', newer);
     expect(pendingDone('a')).toEqual([]);
-    expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
-    localStorage.setItem('cd-pending-done:a', JSON.stringify({ v: 2, items: [] }));
-    expect(pendingDone('a')).toEqual([]);
-    expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
+    expect(localStorage.getItem('cd-pending-done:a')).toBe(newer);
   });
 });

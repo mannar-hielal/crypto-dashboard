@@ -49,14 +49,15 @@ interface MissedProps {
   q: CheckpointQuestion;
   wide: boolean;
   onReview: (t: TaughtIn) => void;
+  /** Where its Review goes (reviewTarget) */
+  target: TaughtIn;
+  /** The first missed question with this target: the only one with the button (no twin links) */
+  firstForTarget: boolean;
 }
 
-function Missed({ q, wide, onReview }: MissedProps) {
+function Missed({ q, wide, onReview, target, firstForTarget }: MissedProps) {
   // A tour that can't run here (a phone, unless it's phone-ready) gets its name without a button
-  // Subscribed: a Buy finish landing while the result is open moves the Review to Sell
-  const toursDone = useTourStore((st) => st.completed);
-  const target = reviewTarget(q.taughtIn, toursDone);
-  const canGo = target.kind === 'lesson' || runsHere(target.id, wide);
+  const canGo = firstForTarget && (target.kind === 'lesson' || runsHere(target.id, wide));
   return (
     <li>
       <p className={styles.text}>{q.question}</p>
@@ -70,7 +71,10 @@ function Missed({ q, wide, onReview }: MissedProps) {
           Review {taughtInLabel(target)} →
         </button>
       ) : (
-        <p className={styles.hint}>Taught in {taughtInLabel(target)} (on a larger screen)</p>
+        <p className={styles.hint}>
+          Taught in {taughtInLabel(q.taughtIn)}
+          {firstForTarget ? ' (on a larger screen)' : ''}
+        </p>
       )}
     </li>
   );
@@ -82,6 +86,8 @@ export function CheckpointSheet() {
   const checkpointId = usePathStore((s) => s.checkpointId);
   const index = usePathStore((s) => s.question);
   const answers = usePathStore((s) => s.answers);
+  // Subscribed: a Buy finish landing while the result is open moves a Review to Sell
+  const toursDone = useTourStore((st) => st.completed);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Esc closes, back to the map
@@ -125,6 +131,7 @@ export function CheckpointSheet() {
   const score = checkpointScore(checkpoint, answers);
   const passed = score >= checkpoint.pass;
   const missed = checkpoint.questions.filter((q, i) => answers[i] !== q.correct);
+  const targets = missed.map((q) => reviewTarget(q.taughtIn, toursDone));
 
   return createPortal(
     <div className={styles.overlay}>
@@ -205,8 +212,15 @@ export function CheckpointSheet() {
               </p>
               {missed.length > 0 && (
                 <ul className={styles.canDo}>
-                  {missed.map((q) => (
-                    <Missed key={q.question} q={q} wide={wide} onReview={review} />
+                  {missed.map((q, i) => (
+                    <Missed
+                      key={q.question}
+                      q={q}
+                      wide={wide}
+                      onReview={review}
+                      target={targets[i]}
+                      firstForTarget={targets.findIndex((t) => t.id === targets[i].id) === i}
+                    />
                   ))}
                 </ul>
               )}

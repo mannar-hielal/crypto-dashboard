@@ -142,6 +142,16 @@ describe('CheckpointSheet', () => {
     expect(review('sell-and-review')!.textContent).toContain('Sell it and read the result');
   });
 
+  it('should show one Review per place to go, never twin links', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch1');
+    renderSheet();
+    answerAll((i) => wrongFor(i));
+    // Buy not done: every missed tour question leads to Buy, and only one button says so
+    expect(
+      document.querySelectorAll(guideSelector('checkpoint.review', 'buy-first-coin')).length
+    ).toBe(1);
+  });
+
   it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {
     useTourStore.setState({ completed: { 'buy-first-coin': true } });
     usePathStore.getState().startCheckpoint('checkpoint-ch1');

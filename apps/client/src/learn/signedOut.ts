@@ -1,4 +1,3 @@
-import type { PathTourId } from '@/guide/tours';
 import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
 import { usePathStore } from './pathStore';
@@ -18,14 +17,7 @@ export function forgetSignedOutAccount(): void {
   // Already clean: the next account's first read keeps what was done here signed out (a lesson's
   // screens reached before signing in), as on a fresh page
   readFor = null;
-  toursFinishedHere.clear();
 }
-
-/**
- * The path tours finished in this session, kept through a refresh read until the server has them
- * (a tour finish is sent once, with no queue). Forgotten with the account
- */
-export const toursFinishedHere = new Set<PathTourId>();
 
 /** The account the progress was last read for: another one's read starts from clean stores */
 let readFor: string | null = null;

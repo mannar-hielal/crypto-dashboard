@@ -99,7 +99,7 @@ export const NEEDS_DONE: Partial<Record<PathTourId, PathTourId>> = {
  * checkpoint's Review both read */
 export function missingPrerequisite(
   id: PathTourId,
-  toursDone: Partial<Record<PathTourId, true | boolean>>
+  toursDone: Partial<Record<PathTourId, boolean>>
 ): PathTourId | null {
   const needs = NEEDS_DONE[id];
   return needs && toursDone[needs] !== true ? needs : null;
