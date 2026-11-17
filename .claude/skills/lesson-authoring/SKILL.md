@@ -417,6 +417,10 @@ with paper money, and then picks up where it left off.
 
 ## Linking terms to articles
 
+- Markup: `**bold**`, `*italic*` and `[[term]]` render through one renderer (`RichText`). Never put a
+  `[[term]]` inside `*…*` (its asterisks would show), and write sums with `×`, never `*` (the
+  run between two `*` would turn italic). The lesson tests check both.
+
 - A term in card text links with `[[label|concept-id]]` (or `[[concept-id]]`): it opens a peek, and
   the peek opens its article. Concept ids must exist in `apps/client/src/learn/graph.ts`
   (`conceptFor`); `terms.test` checks it. At most two terms a card.

@@ -52,6 +52,12 @@ const HYPE = [
 ];
 
 describe('lessons', () => {
+  it('should never use * as a times sign in lesson copy (× is; * marks emphasis)', () => {
+    for (const lesson of LESSONS) {
+      expect(JSON.stringify(lesson), lesson.id).not.toMatch(/\d\s*\*\s*\d/);
+    }
+  });
+
   it('should define every lesson id once, numbered in order', () => {
     expect(LESSONS.map((l) => l.id)).toEqual([...LESSON_IDS]);
     expect(LESSONS.map((l) => l.number)).toEqual(LESSONS.map((_, i) => i + 1));
