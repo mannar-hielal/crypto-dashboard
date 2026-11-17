@@ -244,12 +244,13 @@ export async function learnRoutes(app: FastifyInstance) {
       } else if (status === 'started' && (!lessonId || step === undefined)) {
         return bad('A start needs a lesson and its step');
       } else if (outsideVersion(range, step)) {
-        // A version conflict either way, 409: below the version (or none), an earlier one; 🔐 past
-        // it (a lesson's span, a checkpoint's own set), so no stored step can reach a later
-        // version's range. (The client keeps a finish refused with a 400, an older API's answer)
+        // Below the version (or none): an earlier one, 409, which the client drops for good. 🔐 Past
+        // it (a lesson's span, a checkpoint's own set): 400, refused so no stored step can reach a
+        // later version's range; the client keeps that one (it's what an older API answers a newer
+        // client: kept until the API is back, at most 30 days)
         return step === undefined || step < range.from
           ? earlier()
-          : reply.status(409).send({ error: 'A step past this version' });
+          : bad('A step past this version');
       }
 
       // (checked above: a start is a lesson's, with its step; this only narrows the types)
@@ -287,20 +288,20 @@ export async function learnRoutes(app: FastifyInstance) {
         // goes without the dismissal saved
         if (row && range && isStaleRow(row)) {
           const replaced = await app.prisma.$transaction(async (tx) => {
-            const taken = await tx.learningProgress.updateMany({
-              where: {
-                userId,
-                itemId,
-                // The same range as isStaleRow: below the version, or past its span
-                ...staleWhere(range),
-              },
+            // The same range as isStaleRow: below the version, or past its span. An old *finish*
+            // first, so whether it was one is decided by the row as the update finds it (not by
+            // the read above, which an old machine may have overtaken): only an old Lesson 1
+            // finish means the card is done with, as GET reads it
+            const stale = { userId, itemId, ...staleWhere(range) };
+            const finish = await tx.learningProgress.updateMany({
+              where: { ...stale, status: 'completed' },
               data: { status, step },
             });
-            // Only an old Lesson 1 *finish* means the card is done with (as GET reads it)
-            if (taken.count === 1 && itemId === 'lesson-01' && row.status === 'completed') {
-              await dismissWelcomeCard(tx, userId);
+            if (finish.count === 1) {
+              if (itemId === 'lesson-01') await dismissWelcomeCard(tx, userId);
+              return finish;
             }
-            return taken;
+            return tx.learningProgress.updateMany({ where: stale, data: { status, step } });
           });
           if (replaced.count === 1) {
             return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });

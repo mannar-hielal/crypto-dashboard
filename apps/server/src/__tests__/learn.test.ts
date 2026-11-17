@@ -220,20 +220,20 @@ describe('/api/learn/progress', () => {
     );
   });
 
-  it('PUT: should refuse a step past the current version as a version conflict (409), before any write', async () => {
+  it('PUT: should refuse a step past the current version (400: the client keeps it), before any write', async () => {
     const put = (url: string, payload: unknown) =>
       app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
-    // Lesson 1's version spans steps 61..100; a checkpoint's is its one set. A 409, so the client
-    // drops it; a 400 is an older API's answer, which it keeps
+    // Lesson 1's version spans steps 61..100; a checkpoint's is its one set. A 400 (what an older
+    // API answers a newer client): the client keeps it, unlike an earlier version's 409
     expect(
       (await put('/api/learn/progress/lesson-01', { status: 'started', step: 101 })).statusCode
-    ).toBe(409);
+    ).toBe(400);
     expect(
       (await put('/api/learn/progress/lesson-01', { status: 'completed', step: 999 })).statusCode
-    ).toBe(409);
+    ).toBe(400);
     expect(
       (await put('/api/learn/progress/checkpoint-ch1', { status: 'completed', step: 3 })).statusCode
-    ).toBe(409);
+    ).toBe(400);
     expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
     expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
   });
@@ -370,7 +370,7 @@ describe('/api/learn/progress', () => {
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany)
       .mockResolvedValueOnce({ count: 0 }) // not raised: the row is a finish
-      .mockResolvedValueOnce({ count: 1 }); // from an earlier version: taken over
+      .mockResolvedValueOnce({ count: 1 }); // an old finish: taken over
     vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
       itemId: 'lesson-01',
       status: 'completed',
@@ -384,11 +384,13 @@ describe('/api/learn/progress', () => {
       payload: { status: 'started', step: 64 },
     });
     expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 64 });
+    // The old finish is taken over by the update that only matches a finish
     expect(app.prisma.learningProgress.updateMany).toHaveBeenLastCalledWith({
       where: {
         userId: 'user-1',
         itemId: 'lesson-01',
         OR: [{ step: null }, { step: { lt: 61 } }, { step: { gte: 101 } }],
+        status: 'completed',
       },
       data: { status: 'started', step: 64 },
     });
@@ -405,7 +407,8 @@ describe('/api/learn/progress', () => {
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany)
       .mockResolvedValueOnce({ count: 0 }) // not raised: the row read is a finish
-      .mockResolvedValueOnce({ count: 0 }); // a second tab took it over meanwhile
+      .mockResolvedValueOnce({ count: 0 }) // no old finish any more: a second tab took it over
+      .mockResolvedValueOnce({ count: 0 }); // nor any other stale row
     vi.mocked(app.prisma.learningProgress.findUnique)
       .mockResolvedValueOnce({
         itemId: 'lesson-01',
@@ -433,8 +436,9 @@ describe('/api/learn/progress', () => {
     // Step 200 (an old API machine took it without the span check): never raised, so taken over
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany)
-      .mockResolvedValueOnce({ count: 0 })
-      .mockResolvedValueOnce({ count: 1 });
+      .mockResolvedValueOnce({ count: 0 }) // not raised
+      .mockResolvedValueOnce({ count: 0 }) // not a finish
+      .mockResolvedValueOnce({ count: 1 }); // the begun row past the span: taken over
     vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
       itemId: 'lesson-02',
       status: 'started',
@@ -453,8 +457,9 @@ describe('/api/learn/progress', () => {
   it('PUT started: should not dismiss the welcome card for a taken-over Lesson 1 that was never finished', async () => {
     vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
     vi.mocked(app.prisma.learningProgress.updateMany)
-      .mockResolvedValueOnce({ count: 0 })
-      .mockResolvedValueOnce({ count: 1 });
+      .mockResolvedValueOnce({ count: 0 }) // not raised
+      .mockResolvedValueOnce({ count: 0 }) // not a finish
+      .mockResolvedValueOnce({ count: 1 }); // the begun row: taken over, no dismissal
     vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
       itemId: 'lesson-01',
       status: 'started',
