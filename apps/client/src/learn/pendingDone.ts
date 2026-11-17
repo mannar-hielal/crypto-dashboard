@@ -74,10 +74,18 @@ export function pendingDone(account: string): PendingDone[] {
       .filter(isPending)
       .filter((p) => p.since >= oldest)
       .slice(0, MAX_PENDING);
-    // Ones given up on (too old, unreadable, dated far ahead) leave storage too, not only the screen
-    if (kept.length !== stored.length) write(account, kept);
+    // Ones given up on (too old, unreadable, dated far ahead) leave storage too, not only the screen;
+    // so does a stored value that isn't a list of ours at all (another version, a bare value)
+    if (kept.length !== stored.length || (raw !== null && stored.length === 0))
+      write(account, kept);
     return kept;
   } catch {
+    // Not even JSON: removed, best effort
+    try {
+      localStorage.removeItem(key(account));
+    } catch {
+      // Storage refuses: nothing more to do
+    }
     return [];
   }
 }

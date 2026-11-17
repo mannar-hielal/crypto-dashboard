@@ -183,8 +183,9 @@ export const useTourStore = create<TourState>()((set, get) => ({
     const shown = tourSteps(tour, next).map((s) => all.indexOf(s.id));
     const at = shown.findIndex((i) => i >= start);
     const stepIndexNow = at === -1 ? shown.length - 1 : at;
-    // (another step: an answer given on the last one never shows on this one)
-    set({ wide: next, stepIndex: stepIndexNow, quizAnswer: null });
+    // (another step: an answer given on the last one never shows on this one; the same step keeps it)
+    const sameStep = all[current] === tourSteps(tour, next)[stepIndexNow]?.id;
+    set({ wide: next, stepIndex: stepIndexNow, quizAnswer: sameStep ? get().quizAnswer : null });
   },
 
   back: () => {

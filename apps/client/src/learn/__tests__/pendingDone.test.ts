@@ -144,4 +144,13 @@ describe('pendingDone', () => {
     expect(pendingDone('a')).toEqual([]);
     expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
   });
+
+  it('should remove a stored queue it can’t read at all', () => {
+    localStorage.setItem('cd-pending-done:a', '{not json');
+    expect(pendingDone('a')).toEqual([]);
+    expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
+    localStorage.setItem('cd-pending-done:a', JSON.stringify({ v: 2, items: [] }));
+    expect(pendingDone('a')).toEqual([]);
+    expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
+  });
 });

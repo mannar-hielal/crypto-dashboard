@@ -14,7 +14,12 @@ import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest, LearnProgressItem } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { onePerKey } from '@/lib/onePerKey';
-import { lastReadAccount, resetLearningStores, setLastReadAccount } from '@/learn/signedOut';
+import {
+  lastReadAccount,
+  resetLearningStores,
+  setLastReadAccount,
+  toursFinishedHere,
+} from '@/learn/signedOut';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
@@ -221,6 +226,7 @@ export function useTourProgress(): void {
     const readFor = lastReadAccount();
     if (readFor !== null && account !== readFor) {
       cardByKeptFinish = false;
+      toursFinishedHere.clear();
       asServerAnswer(resetLearningStores);
     }
     // A read again for the same account (a session refresh): the tours it finished here stand,
@@ -241,8 +247,9 @@ export function useTourProgress(): void {
         // This session's tour finishes the server doesn't have yet (a save lost or still on its
         // way): kept on screen, so Sell doesn't lock again behind a Buy just done, and sent again
         if (refreshRead) {
-          const mine = Object.keys(useTourStore.getState().completed) as PathTourId[];
-          for (const id of mine.filter((t) => !completed.includes(t))) {
+          // (only the tours this session finished: never re-send old store contents, which could
+          // undo a server-side reset of tour progress)
+          for (const id of [...toursFinishedHere].filter((t) => !completed.includes(t))) {
             completed.push(id);
             learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
           }
@@ -315,6 +322,8 @@ export function useTourProgress(): void {
         for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken, { kept: true });
       })
       .catch(() => {
+        // (A lesson already in the store stays shown here, one done signed out included, until a read
+        // lands: the signed-out rule, recorded above. Weighed, review after #311)
         // Can't read it. A read again (a session refresh) leaves everything shown as it is; a first
         // read shows no offer rather than one that may already have been answered
         if (!stale() && !useTourStore.getState().loaded) {
@@ -351,6 +360,7 @@ export function useTourProgress(): void {
         if (!prev.loaded || applyingServer) return;
         for (const id of Object.keys(state.completed) as PathTourId[]) {
           if (!prev.completed[id]) {
+            toursFinishedHere.add(id);
             learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
           }
         }

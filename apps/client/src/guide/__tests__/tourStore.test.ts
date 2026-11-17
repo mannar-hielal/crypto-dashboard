@@ -270,4 +270,17 @@ describe('tourStore', () => {
     s().setWide(false);
     expect(s().quizAnswer).toBeNull();
   });
+
+  it('should keep a quiz answer when a rotation leaves the tour on the same step', () => {
+    s().setWide(true);
+    s().start('review-sell-result');
+    // The quiz is shared by both sizes: answered, then rotated
+    const quizAt = tourSteps(getTour('review-sell-result'), true).findIndex(
+      (st) => st.kind === 'quiz'
+    );
+    expect(quizAt).toBeGreaterThan(-1);
+    useTourStore.setState({ stepIndex: quizAt, quizAnswer: 1 });
+    s().setWide(false);
+    expect(s().quizAnswer).toBe(1);
+  });
 });

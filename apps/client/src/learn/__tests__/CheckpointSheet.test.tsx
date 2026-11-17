@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 
 let wide = true;
@@ -129,6 +129,17 @@ describe('CheckpointSheet', () => {
     const review = document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!;
     expect(review.textContent).toContain('Buy your first coin');
     expect(review.textContent).not.toContain('Sell it');
+  });
+
+  it('should move the Review to Sell once Buy is done, while the result is open', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch1');
+    renderSheet();
+    answerAll((i) => wrongFor(i));
+    const review = () =>
+      document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!;
+    expect(review().textContent).toContain('Buy your first coin');
+    act(() => useTourStore.setState({ completed: { 'buy-first-coin': true } }));
+    expect(review().textContent).toContain('Sell it and read the result');
   });
 
   it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {

@@ -13,14 +13,12 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { guide } from '@/lib/guideAnchors';
 import { startLesson, startTour } from '@/guide/afterNote';
-import { NEEDS_DONE } from './path';
-import { isTourId } from '@/guide/tours';
-import { runsHere } from '@/guide/tours';
+import { missingPrerequisite } from './path';
+import { getTour, isTourId, runsHere } from '@/guide/tours';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
 import { getLesson } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
-import { getTour } from '@/guide/tours';
 import {
   checkpointScore,
   getCheckpoint,
@@ -31,12 +29,12 @@ import { usePathStore } from './pathStore';
 
 /**
  * Where a Review goes: the place it was taught, unless that's a tour locked behind another (Sell
- * behind Buy, NEEDS_DONE) not done yet, which comes first. One rule for the label and the button
+ * behind Buy) not done yet, which comes first. One rule for the label, the hint and the button
  */
-function reviewTarget(t: TaughtIn): TaughtIn {
+function reviewTarget(t: TaughtIn, toursDone: Record<string, true | undefined>): TaughtIn {
   if (t.kind === 'lesson' || !isTourId(t.id)) return t;
-  const needs = NEEDS_DONE[t.id];
-  return needs && !useTourStore.getState().completed[needs] ? { kind: 'tour', id: needs } : t;
+  const needs = missingPrerequisite(t.id, toursDone);
+  return needs ? { kind: 'tour', id: needs } : t;
 }
 
 function taughtInLabel(t: TaughtIn): string {
@@ -55,7 +53,9 @@ interface MissedProps {
 
 function Missed({ q, wide, onReview }: MissedProps) {
   // A tour that can't run here (a phone, unless it's phone-ready) gets its name without a button
-  const target = reviewTarget(q.taughtIn);
+  // Subscribed: a Buy finish landing while the result is open moves the Review to Sell
+  const toursDone = useTourStore((st) => st.completed);
+  const target = reviewTarget(q.taughtIn, toursDone);
   const canGo = target.kind === 'lesson' || runsHere(target.id, wide);
   return (
     <li>
@@ -70,7 +70,7 @@ function Missed({ q, wide, onReview }: MissedProps) {
           Review {taughtInLabel(target)} →
         </button>
       ) : (
-        <p className={styles.hint}>Taught in {taughtInLabel(q.taughtIn)} (on a larger screen)</p>
+        <p className={styles.hint}>Taught in {taughtInLabel(target)} (on a larger screen)</p>
       )}
     </li>
   );
