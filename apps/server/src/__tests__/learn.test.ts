@@ -857,22 +857,27 @@ describe('GET /api/learn/habits', () => {
   });
 
   it('should count a day by any learning event but a rating, all read at once', async () => {
-    await app.inject({
+    // A day with a new screen reached only (a step): a learning day
+    vi.mocked(app.prisma.learningEvent.findMany).mockResolvedValueOnce([
+      { at: new Date() },
+    ] as never);
+    const res = await app.inject({
       method: 'GET',
       url: '/api/learn/habits',
       headers: { authorization: `Bearer ${token}` },
     });
-    // One read: a learner never holds more events than its limit
+    expect(res.statusCode).toBe(200);
+    expect(res.json().learningDays).toBe(1);
+    // One read of every event but a rating, within the read's own bound
     expect(app.prisma.learningEvent.findMany).toHaveBeenCalledTimes(1);
     expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          userId: 'user-1',
-          name: { in: ['tour_started', 'tour_completed', 'tour_closed', 'tour_step'] },
-        },
-        take: MAX_LEARN_EVENTS_PER_USER,
+        where: { userId: 'user-1', name: { not: 'lesson_rated' } },
+        take: 500,
       })
     );
+    // The bound covers every event a learner may hold
+    expect(MAX_LEARN_EVENTS_PER_USER).toBeLessThanOrEqual(500);
   });
 
   it('should take the learner’s time zone, count an unknown one in UTC, and refuse an overlong one', async () => {

@@ -7,13 +7,17 @@
 
 import type { FastifyInstance } from 'fastify';
 import type { HabitBadge, HabitBadgeId, HabitsResponse } from '@crypto-dashboard/sdk';
-import { LEARN_TOUR_IDS, MAX_LEARN_EVENTS_PER_USER } from '../constants.js';
+import { LEARN_TOUR_IDS } from '../constants.js';
 import { USER_ORDER_TYPES } from './RetentionMetrics.js';
 
 type Prisma = FastifyInstance['prisma'];
 
 const DAY_MS = 86_400_000;
-/** 🔐 Bounds on the rows read for one user (the journal is capped at 200 per user anyway) */
+/**
+ * 🔐 Bounds on the rows each read takes for one user (the journal is capped at 200 per user, the
+ * learning events at MAX_LEARN_EVENTS_PER_USER, 500, today): the read's own bound, so a larger
+ * storage cap never makes every habits read heavier (it then reads the most recent ones)
+ */
 const MAX_ROWS = 500;
 
 /**
@@ -238,15 +242,12 @@ export async function loadHabits(
     // rating deletes the earlier one of that lesson, and its day with it): starts, finishes and
     // closes (a few a run, each stored every time, so a run carried on past midnight still marks
     // its second day when it ends) and steps (each stored once ever, the days a new screen was
-    // reached). One read: a learner never holds more than MAX_LEARN_EVENTS_PER_USER (500) events,
-    // so the limit takes them all (review round 37: the two reads it replaced read the same rows)
+    // reached). One read: with today's cap (MAX_LEARN_EVENTS_PER_USER, 500) it takes them all (review
+    // round 37: the two reads it replaced read the same rows)
     prisma.learningEvent.findMany({
-      where: {
-        userId,
-        name: { in: ['tour_started', 'tour_completed', 'tour_closed', 'tour_step'] },
-      },
-      orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
-      take: MAX_LEARN_EVENTS_PER_USER,
+      where: { userId, name: { not: 'lesson_rated' } },
+      orderBy: { at: 'desc' }, // the most recent days, should the cap ever pass the read's bound
+      take: MAX_ROWS,
       select: { at: true },
     }),
     prisma.learningProgress.count({
