@@ -58,11 +58,15 @@ function undone(itemId: PendingDone['itemId'], items: LearnProgressItem[]): void
     }
     return;
   }
-  const { skippedTours, checkpoints, setProgress } = usePathStore.getState();
-  setProgress({
-    skippedTours: Object.keys(skippedTours) as PathTourId[],
-    checkpoints: (Object.keys(checkpoints) as CheckpointId[]).filter((id) => id !== itemId),
-  });
+  // Only the pass goes: the map's `loaded` stays as the progress read left it (it may not have
+  // landed yet), and nothing here is sent back as the learner's own change
+  asServerAnswer(() =>
+    usePathStore.setState((s) => {
+      const checkpoints = { ...s.checkpoints };
+      delete checkpoints[itemId as CheckpointId];
+      return { checkpoints };
+    })
+  );
 }
 
 /**
@@ -87,8 +91,6 @@ function saveDone(
   const key = `${account ?? ''}:${itemId}`;
   if (inFlight.has(key)) return;
   inFlight.add(key);
-  // A newer finish of the item kept while this one was refused: sent once this save lets go
-  let resend: number | null = null;
   learnApi
     .setProgress(itemId, 'completed', accessToken, step)
     .catch((err: unknown) => {
@@ -102,10 +104,7 @@ function saveDone(
       // next; it isn't taken off the screen for this one's refusal)
       if (account) dropDone(account, itemId, step);
       const newer = account ? pendingDone(account).find((p) => p.itemId === itemId) : undefined;
-      if (newer) {
-        resend = newer.step;
-        return;
-      }
+      if (newer) return; // sent once this save lets go (below)
       if (accountOf(useAuthStore.getState().accessToken) !== account) return;
       // With the token signed in now (it may have rotated since this save left)
       return (
@@ -127,10 +126,15 @@ function saveDone(
     .finally(() => {
       inFlight.delete(key);
       // 🔐 Only for the account still signed in, with its current token (a sign-out or a rotation
-      // may have landed meanwhile: the queue it was kept in is then gone, or the token stale)
+      // may have landed meanwhile: the queue it was kept in is then gone, or the token stale).
+      // A newer finish of the item kept while this save was on its way is sent now, however this
+      // one ended (saved, refused, failed): it was held back only by this one being in flight
       const now = useAuthStore.getState().accessToken;
-      if (resend !== null && now && accountOf(now) === account) {
-        saveDone(itemId, resend, now, { kept: true });
+      const newer = account
+        ? pendingDone(account).find((p) => p.itemId === itemId && p.step !== step)
+        : undefined;
+      if (newer && now && accountOf(now) === account) {
+        saveDone(itemId, newer.step, now, { kept: true });
       }
     });
 }
@@ -141,7 +145,8 @@ function saveDone(
  */
 const checks = new Map<string, Promise<{ items: LearnProgressItem[] }>>();
 function checkProgress(account: string | null, token: string) {
-  return onePerKey(checks, account ?? '', () => learnApi.getProgress(token));
+  // Keyed by the token too: a check never joins one sent with an older, perhaps expired token
+  return onePerKey(checks, `${account ?? ''}|${token}`, () => learnApi.getProgress(token));
 }
 
 /** Saves on their way, by account and item */

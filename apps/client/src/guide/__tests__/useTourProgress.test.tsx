@@ -643,6 +643,26 @@ describe('useTourProgress', () => {
       expect(setProgress).toHaveBeenCalledTimes(1);
     });
 
+    it('should send a newer finish once the save before it fails for a passing reason', async () => {
+      profile = { id: 'u7' };
+      queueDone('u7', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP - 1 });
+      let fail: (e: unknown) => void = () => {};
+      setProgress.mockReturnValueOnce(new Promise((_, reject) => (fail = reject)));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(setProgress).toHaveBeenCalledTimes(1));
+      queueDone('u7', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP }); // finished again
+      await act(async () => fail(Object.assign(new Error('x'), { status: 503 })));
+      await waitFor(() =>
+        expect(setProgress).toHaveBeenLastCalledWith(
+          'lesson-01',
+          'completed',
+          'tok',
+          LESSON_01_LAST_STEP
+        )
+      );
+    });
+
     it('should send no close for a finished lesson left from a look back', async () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
@@ -890,5 +910,23 @@ describe('useTourProgress', () => {
         { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.65' },
       ]);
     });
+  });
+
+  it('should take a refused pass off the map without marking its progress read', async () => {
+    profile = { id: 'u6' };
+    let land: (v: { items: never[] }) => void = () => {};
+    getProgress
+      .mockReturnValueOnce(new Promise((r) => (land = r))) // the first read, still on its way
+      .mockResolvedValue({ items: [] }); // the refusal's check
+    setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+    renderHook(() => useTourProgress());
+    act(() => {
+      usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
+    });
+    await waitFor(() =>
+      expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBeUndefined()
+    );
+    expect(usePathStore.getState().loaded).toBe(false);
+    await act(async () => land({ items: [] }));
   });
 });
