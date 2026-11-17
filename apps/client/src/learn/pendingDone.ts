@@ -23,7 +23,9 @@ const MAX_AGE_MS = 30 * 86_400_000;
 /** 🔐 Never more than this many kept (there are only a handful of lessons and checkpoints) */
 const MAX_PENDING = 20;
 
-const key = (account: string) => `cd-pending-done:${account}`;
+/** The one storage prefix: written by key(), wiped by forgetAllDone() at sign-out */
+const PREFIX = 'cd-pending-done:';
+const key = (account: string) => `${PREFIX}${account}`;
 
 /**
  * 🔐 The stored shape's version (security.md: persisted client state is versioned): `{ v, items }`.
@@ -66,14 +68,23 @@ export function pendingDone(account: string): PendingDone[] {
   const oldest = Date.now() - MAX_AGE_MS;
   // The list a failed storage write left in memory, for this session
   const held = unstored.get(account);
+  // (write() is its only writer and keeps it capped and checked: no second pass here. Weighed,
+  // review after #311)
   if (held) return held.filter((p) => p.since >= oldest);
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
-    return migrate(raw)
+    const stored = migrate(raw);
+    const kept = stored
       .filter(isPending)
       .filter((p) => p.since >= oldest)
       .slice(0, MAX_PENDING);
+    // Ones given up on (too old, unreadable, dated far ahead) leave storage too, not only the screen.
+    // A value of another version is left alone: a newer tab's queue, which an older one never wipes
+    // (weighed, review after #311)
+    if (kept.length !== stored.length) write(account, kept);
+    return kept;
   } catch {
+    // Not even JSON: nothing readable kept (left alone, as another version's value would be)
     return [];
   }
 }
@@ -148,7 +159,7 @@ export function forgetAllDone(): void {
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
-      if (k?.startsWith('cd-pending-done:')) localStorage.removeItem(k);
+      if (k?.startsWith(PREFIX)) localStorage.removeItem(k);
     }
   } catch {
     // No storage: nothing kept
