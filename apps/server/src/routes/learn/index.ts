@@ -75,13 +75,38 @@ const versionFloorOf = (itemId: string): number | null => {
  * version's floor. Written by an old client, or by an old API machine during a rolling deploy
  * (the reset migrations run before the old machines are gone), so it never counts.
  */
-const isStaleRow = (r: { itemId: string; step?: number | null }) => {
-  const floor = versionFloorOf(r.itemId);
-  if (floor === null) return false;
-  if (typeof r.step !== 'number' || r.step < floor) return true;
-  // Past the version's span (never written since the span is checked): not today's either
-  return r.step >= floor + (lessonOf(r.itemId) ? LESSON_VERSION_SPAN : 1);
+/**
+ * 🔐 The steps of an item's current version, `from` up to (not including) `to`: a lesson's span
+ * from its first step, a checkpoint's one question set. Null for an item with no versions. The one
+ * rule the write check, the reads and the takeover all use
+ */
+const versionRange = (itemId: string): { from: number; to: number } | null => {
+  const from = versionFloorOf(itemId);
+  if (from === null) return null;
+  return { from, to: from + (lessonOf(itemId) ? LESSON_VERSION_SPAN : 1) };
 };
+
+/** A step outside the item's current version (none counts as outside) */
+const outsideVersion = (range: { from: number; to: number }, step: number | null | undefined) =>
+  typeof step !== 'number' || step < range.from || step >= range.to;
+
+const isStaleRow = (r: { itemId: string; step?: number | null }) => {
+  const range = versionRange(r.itemId);
+  return range !== null && outsideVersion(range, r.step);
+};
+
+/**
+ * A finished Lesson 1 means the welcome card is done with (the reset migration's rule too): saved
+ * as its dismissal, inside the caller's transaction, never twice
+ */
+const dismissWelcomeCard = (
+  tx: Pick<FastifyInstance['prisma'], 'learningProgress'>,
+  userId: string
+) =>
+  tx.learningProgress.createMany({
+    data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
+    skipDuplicates: true,
+  });
 
 const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const;
 
@@ -189,7 +214,8 @@ export async function learnRoutes(app: FastifyInstance) {
       const { itemId } = request.params as { itemId: LearnItemId };
       const { status, step } = request.body as { status: LearnStatus; step?: number };
       const lessonId = lessonOf(itemId);
-      const floor = versionFloorOf(itemId);
+      const range = versionRange(itemId);
+      const floor = range?.from ?? null;
 
       // 🔐 One check of what each kind of item may send, before any write:
       // - a dismissal (an offer, a tour skipped) carries no step, and a lesson or a checkpoint is
@@ -217,7 +243,7 @@ export async function learnRoutes(app: FastifyInstance) {
         return status === 'started' ? bad('A start needs a lesson and its step') : earlier();
       } else if (step < floor) {
         return earlier();
-      } else if (step >= floor + (lessonId ? LESSON_VERSION_SPAN : 1)) {
+      } else if (range && outsideVersion(range, step)) {
         // 🔐 Past the current version (a lesson's span, a checkpoint's own set): no stored step may
         // reach a later version's range
         return bad('A step past this version');
@@ -256,21 +282,19 @@ export async function learnRoutes(app: FastifyInstance) {
         // read is one, so the start that changes nothing costs no more. One transaction with Lesson
         // 1's welcome card: that old finish is the only sign the card was done with, so it never
         // goes without the dismissal saved
-        if (row && isStaleRow(row) && floor !== null) {
+        if (row && isStaleRow(row) && range) {
           const replaced = await app.prisma.$transaction(async (tx) => {
             const taken = await tx.learningProgress.updateMany({
               where: {
                 userId,
                 itemId,
-                OR: [{ step: null }, { step: { lt: floor } }],
+                // The same range as isStaleRow: below the version, or past its span
+                OR: [{ step: null }, { step: { lt: range.from } }, { step: { gte: range.to } }],
               },
               data: { status, step },
             });
             if (taken.count === 1 && itemId === 'lesson-01') {
-              await tx.learningProgress.createMany({
-                data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
-                skipDuplicates: true,
-              });
+              await dismissWelcomeCard(tx, userId);
             }
             return taken;
           });
@@ -304,10 +328,7 @@ export async function learnRoutes(app: FastifyInstance) {
             select: ROW,
           });
           if (itemId === 'lesson-01') {
-            await tx.learningProgress.createMany({
-              data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
-              skipDuplicates: true,
-            });
+            await dismissWelcomeCard(tx, userId);
           }
           return done;
         });

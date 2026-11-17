@@ -383,7 +383,11 @@ describe('/api/learn/progress', () => {
     });
     expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 64 });
     expect(app.prisma.learningProgress.updateMany).toHaveBeenLastCalledWith({
-      where: { userId: 'user-1', itemId: 'lesson-01', OR: [{ step: null }, { step: { lt: 61 } }] },
+      where: {
+        userId: 'user-1',
+        itemId: 'lesson-01',
+        OR: [{ step: null }, { step: { lt: 61 } }, { step: { gte: 101 } }],
+      },
       data: { status: 'started', step: 64 },
     });
     // It was Lesson 1's earlier finish: the welcome card stays shut
@@ -421,6 +425,27 @@ describe('/api/learn/progress', () => {
     });
     // Not the old finish it read: the start the other tab stored
     expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 61 });
+  });
+
+  it('PUT started: should take over a begun row stuck past the version’s span', async () => {
+    // Step 200 (an old API machine took it without the span check): never raised, so taken over
+    vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
+    vi.mocked(app.prisma.learningProgress.updateMany)
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
+      itemId: 'lesson-02',
+      status: 'started',
+      step: 200,
+      updatedAt: AT,
+    } as never);
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-02',
+      headers: auth(),
+      payload: { status: 'started', step: 64 },
+    });
+    expect(res.json().item).toMatchObject({ itemId: 'lesson-02', status: 'started', step: 64 });
   });
 
   it('PUT started: a finished lesson stays finished', async () => {

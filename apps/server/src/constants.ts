@@ -56,6 +56,12 @@ export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as
 export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
 
 /**
+ * 🔐 Steps one version of a lesson may use, from its first (held to the SDK's `LESSON_VERSION_SPAN`):
+ * a step past it is refused, so no stored step can reach a later version's range
+ */
+export const LESSON_VERSION_SPAN = 40;
+
+/**
  * Each lesson's first funnel step in its current version: the client's `stepBase` + 1 (`lessons.ts`).
  * Both are held to the SDK's `LESSON_FIRST_STEPS` by a test on each side. 🔐 A start or a finish from below it comes from a client still
  * on an earlier version (an open tab, a cached PWA), and is refused, so the reset of 2026-11-16
@@ -65,12 +71,6 @@ export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] a
  * them, a start still takes them over, and an old Lesson 1 finish still keeps the welcome card shut.
  * The step already marks the version, so no schema change is needed.)
  */
-/**
- * 🔐 Steps one version of a lesson may use, from its first (held to the SDK's `LESSON_VERSION_SPAN`):
- * a step past it is refused, so no stored step can reach a later version's range
- */
-export const LESSON_VERSION_SPAN = 40;
-
 export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number> = {
   'lesson-01': 61,
   'lesson-ownership': 61,
