@@ -416,15 +416,16 @@ export async function learnRoutes(app: FastifyInstance) {
         description:
           'Counted from rows the account already has. Badges are careful habits (a stop-loss, a ' +
           'journal, a tour) — never profit or how often someone trades. Days are the learner’s ' +
-          'own (`tz`: their IANA time zone, such as Europe/Zurich; UTC when absent or unknown).',
+          'own (the `X-Time-Zone` header: their IANA time zone, such as Europe/Zurich; UTC when ' +
+          'absent or unknown). A header, never the URL: a URL lands in logs, and the zone is a ' +
+          'rough location the privacy policy says is never logged.',
         security: [{ bearerAuth: [] }],
-        querystring: {
+        headers: {
           type: 'object',
-          additionalProperties: false,
           properties: {
             // 🔐 Bounded (IANA names are under 40 characters). Any other text is never refused: an
             // unknown zone counts in UTC (`dayCounter`), so an odd device zone keeps the streak
-            tz: { type: 'string', maxLength: 64 },
+            'x-time-zone': { type: 'string', maxLength: 64 },
           },
         },
         response: {
@@ -465,8 +466,10 @@ export async function learnRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
-      const { tz } = request.query as { tz?: string };
-      return reply.send(await loadHabits(app.prisma, userId, new Date(), tz));
+      const tz = request.headers['x-time-zone'];
+      return reply.send(
+        await loadHabits(app.prisma, userId, new Date(), typeof tz === 'string' ? tz : undefined)
+      );
     }
   );
 }

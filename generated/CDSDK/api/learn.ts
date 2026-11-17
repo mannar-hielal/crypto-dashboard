@@ -54,11 +54,15 @@ export const learnApi = {
 
   /**
    * The account's habit badges and learning streak, counted from what is already stored. `zone`:
-   * the learner's time zone (IANA; this device's by default), so the days are their own
+   * the learner's time zone (IANA; this device's by default), so the days are their own. 🔐 Sent
+   * as a header, never in the URL: a URL lands in logs, and the zone is a rough location
    */
   getHabits: (accessToken: string, zone: string | undefined = deviceTimeZone()) =>
-    request<HabitsResponse>(`/api/learn/habits${zone ? `?tz=${encodeURIComponent(zone)}` : ''}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    request<HabitsResponse>('/api/learn/habits', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(zone ? { 'X-Time-Zone': zone } : {}),
+      },
     }),
 
   /** Fire-and-forget: report a tour event (accepted with 204) */

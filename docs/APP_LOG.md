@@ -4664,13 +4664,14 @@ The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan a
 - **The streak screen** (visual Q&A, owner): after a signed-in learner presses the close's button: a flame, the
   streak counting up, this week's days (`GET /api/learn/habits` adds `thisWeek`), then Continue. Not a screen of its
   own (the funnel's steps don't move). Once per lesson run; ✕ or Esc on it only finish. The days are the learner's
-  own: the client sends its IANA time zone (`?tz=Europe/Zurich`, the SDK's default), so the dots, the streak and
+  own: the client sends its IANA time zone (an `X-Time-Zone: Europe/Zurich` header, the SDK's default), so the dots, the streak and
   the learning days follow the learner's calendar, each day with its own date's offset (a daylight-saving change
   moves nothing). A day counts with any learning event on it but a rating (a start, a step, a close, a finish; steps read with
   their own limit). The streak screen reads the habits at once: the lesson's own start already counted today (only a run
   carried past midnight shows its new day on the next read). UTC when absent or unknown (an odd device zone never fails
-  the request), and the zone is never logged (`loggableUrl` drops `tz` from logged URLs; privacy policy 1.6 says
-  so). Formatters are kept for zone names Intl returns (capped at 1,000; other text is worked out once into a
+  the request), and the zone is never logged: a header, never the URL, which the request log records (privacy
+  policy 1.6 says so; every authenticated read already makes a CORS preflight, so the header costs
+  no extra request). Formatters are kept for zone names Intl returns (capped at 1,000; other text is worked out once into a
   capped map and never kept as a zone), and each quarter hour is
   formatted once per request (every zone's offset is a whole number of quarter hours). `thisWeek` is optional
   in the SDK: an API rolled back on its own doesn't send it, and the dots then show no days.

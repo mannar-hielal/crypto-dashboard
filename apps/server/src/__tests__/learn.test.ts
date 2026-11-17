@@ -1,3 +1,4 @@
+import { config } from '../config.js';
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
   CHECKPOINT_VERSIONS,
@@ -878,8 +879,8 @@ describe('GET /api/learn/habits', () => {
     const get = (tz: string) =>
       app.inject({
         method: 'GET',
-        url: `/api/learn/habits?tz=${encodeURIComponent(tz)}`,
-        headers: { authorization: `Bearer ${token}` },
+        url: '/api/learn/habits',
+        headers: { authorization: `Bearer ${token}`, 'x-time-zone': tz },
       });
     expect((await get('Europe/Zurich')).statusCode).toBe(200);
     expect((await get('Etc/GMT+5')).statusCode).toBe(200);
@@ -889,5 +890,19 @@ describe('GET /api/learn/habits', () => {
     expect((await get('+05:30')).statusCode).toBe(200);
     expect((await get('<script>')).statusCode).toBe(200);
     expect((await get('x'.repeat(65))).statusCode).toBe(400);
+  });
+
+  it('should let the web app send the time zone header across origins (the CORS preflight)', async () => {
+    const res = await app.inject({
+      method: 'OPTIONS',
+      url: '/api/learn/habits',
+      headers: {
+        origin: config.corsOrigin,
+        'access-control-request-method': 'GET',
+        'access-control-request-headers': 'authorization,x-time-zone',
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(String(res.headers['access-control-allow-headers'])).toContain('x-time-zone');
   });
 });
