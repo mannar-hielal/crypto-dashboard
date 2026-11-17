@@ -8,6 +8,7 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 
 import { useHabits } from '@/learn/useHabits';
 import { noteFinishSent } from '@/learn/finishSync';
+import { useAuthStore } from '@/store/authStore';
 
 const habits = { badges: [], learningDays: 1, streakDays: 1, thisWeek: [] };
 
@@ -42,5 +43,21 @@ describe('useHabits', () => {
     expect(getHabits).not.toHaveBeenCalled();
     await act(async () => land());
     await waitFor(() => expect(result.current.habits).toEqual(habits));
+  });
+
+  it('should show no other account’s habits, but keep its own through a session refresh', async () => {
+    useAuthStore.setState({ user: { id: 'a', email: 'a@x', username: 'a' } as never });
+    getHabits.mockResolvedValue(habits);
+    const { result, rerender } = renderHook(({ t }) => useHabits(t), { initialProps: { t: 't1' } });
+    await waitFor(() => expect(result.current.habits).toEqual(habits));
+    // The token rotates, same account: still shown while it reads again
+    getHabits.mockReturnValueOnce(new Promise(() => undefined));
+    rerender({ t: 't2' });
+    expect(result.current.habits).toEqual(habits);
+    // Another account signs in: nothing shown until its own answer
+    act(() => useAuthStore.setState({ user: { id: 'b', email: 'b@x', username: 'b' } as never }));
+    getHabits.mockReturnValueOnce(new Promise(() => undefined));
+    rerender({ t: 't3' });
+    expect(result.current.habits).toBeNull();
   });
 });

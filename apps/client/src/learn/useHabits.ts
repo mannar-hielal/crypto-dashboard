@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
+import { useAuthStore } from '@/store/authStore';
 import { finishSaved } from './finishSync';
 
 /**
@@ -11,8 +12,14 @@ export function useHabits(
   accessToken: string | null,
   refresh: unknown = null
 ): { habits: HabitsResponse | null; failed: boolean } {
-  const [habits, setHabits] = useState<HabitsResponse | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Whose answer it is, by account (a session refresh changes the token, not the account): another
+  // account's (a sign-out, then a sign-in) is never shown
+  const account = useAuthStore((s) => s.user?.id ?? null);
+  const [read, setRead] = useState<{
+    account: string | null;
+    habits: HabitsResponse | null;
+    failed: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -21,17 +28,22 @@ export function useHabits(
     finishSaved()
       .then(() => learnApi.getHabits(accessToken))
       .then((r) => {
-        if (cancelled) return;
-        setHabits(r);
-        setFailed(false);
+        if (!cancelled) setRead({ account, habits: r, failed: false });
       })
       .catch(() => {
-        if (!cancelled) setFailed(true);
+        if (cancelled) return;
+        // The last answer stays shown, for this account only
+        setRead((prev) => ({
+          account,
+          habits: prev?.account === account ? prev.habits : null,
+          failed: true,
+        }));
       });
     return () => {
       cancelled = true;
     };
-  }, [accessToken, refresh]);
+  }, [accessToken, account, refresh]);
 
-  return { habits, failed };
+  const mine = accessToken && read && read.account === account ? read : null;
+  return { habits: mine?.habits ?? null, failed: mine?.failed ?? false };
 }
