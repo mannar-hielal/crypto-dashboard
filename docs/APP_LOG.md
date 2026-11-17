@@ -4771,6 +4771,21 @@ drop):
 - **`technical-analyst`** reads a pasted chart directly (it routed images through an opencode plugin and a Grok
   sub-agent). **`session-bootstrap`** names Claude Code's tools and points at `CLAUDE.md` for the quick commands.
 
+### 2026-11-17 — A picomatch advisory accepted (no fixed version)
+
+On 2026-11-17 `pnpm audit --audit-level=high` began to fail on GHSA-fc5q-39xc-vjpf: a ReDoS in `picomatch` with
+every version up to 4.0.7 (the latest) vulnerable and no fixed one. Every commit hook and CI run in the repo stopped.
+
+- **Reached only through tooling:** its consumers in the lockfile are `vite`, `vitest`, `lint-staged`, `tinyglobby`,
+  `fdir` and `@rollup/pluginutils` (via `vite-plugin-pwa` → `workbox-build`), all dev or build tooling, with
+  patterns from config. `pnpm why picomatch -r --prod` finds no production path. The latest releases still depend
+  on it, so no upgrade or override could clear it.
+- **Kept honest:** the ignore is by advisory id, so `security.md` asks for `pnpm why picomatch -r --prod` to be
+  re-checked whenever a production dependency changes.
+- **Owner's decision:** accept this one advisory. It is listed in `package.json`, `pnpm.auditConfig.ignoreGhsas`,
+  and `.claude/rules/security.md` (Supply-chain) records the exception and its terms.
+- **To undo:** once a fixed `picomatch` exists, delete the entry and add an override floor.
+
 ### 2026-11-17 — The Playwright jobs pinned to Ubuntu 24.04
 
 `ubuntu-latest` moved from Ubuntu 24.04 to 26.04 on 2026-11-17. On release #302 (Lessons 1–3), the "E2E full set"
