@@ -94,6 +94,12 @@ owner accepted a narrower rule so that phones on flaky links (the PWA) don't sig
   `preinstall`, in the pre-commit hook, and in CI (`ci.yml`) — high/critical findings fail the
   build. Low/moderate findings are visible but non-blocking. Never bypass this with
   `--no-verify`/skipping the CI step to unblock a merge; fix or override the specific package.
+- **Accepted advisories (`pnpm.auditConfig.ignoreGhsas`)**: the one exception to "fix or override",
+  for an advisory with no fixed version on a path that never ships. Each needs the owner's decision,
+  and comes out as soon as a fix exists (then the override floor, as above). Today:
+  - `GHSA-fc5q-39xc-vjpf` (picomatch ReDoS, every version up to 4.0.7, no fixed one): reached only
+    through `lint-staged` and `vite-plugin-pwa` → `workbox-build` (dev and build tooling; the latest
+    releases of both still depend on it). Accepted by the owner, 2026-11-17.
 - **Lockfile discipline**: CI and both Docker build stages install with `--frozen-lockfile` —
   a lockfile drift between what's committed and what's installed is treated as a build failure,
   not silently resolved.
