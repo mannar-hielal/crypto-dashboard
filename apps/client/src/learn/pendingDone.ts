@@ -37,6 +37,7 @@ function isPending(v: unknown): v is PendingDone {
   return (
     typeof since === 'number' &&
     Number.isFinite(since) &&
+    since <= Date.now() && // 🔐 never from the future (a wrong clock, an edit): the 30 days hold
     typeof itemId === 'string' &&
     (isLessonId(itemId) || isCheckpointId(itemId)) &&
     typeof step === 'number' &&

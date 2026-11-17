@@ -97,9 +97,10 @@ function saveDone(
       // (only this finish: a newer one of the item, kept meanwhile, stays)
       if (account) dropDone(account, itemId, step);
       if (accountOf(useAuthStore.getState().accessToken) !== account) return;
+      // With the token signed in now (it may have rotated since this save left)
       return (
         learnApi
-          .getProgress(accessToken)
+          .getProgress(useAuthStore.getState().accessToken ?? accessToken)
           .then(({ items }) => {
             if (!items.some((i) => i.itemId === itemId && i.status === 'completed')) undone(itemId);
           })
@@ -176,7 +177,6 @@ export function useTourProgress(): void {
           .map((i) => i.itemId as PathTourId);
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
-        const account = accountOf(accessToken);
         // (the stored list read once, worked out in memory, and written once)
         const kept = account ? pendingDone(account) : [];
         const stillQueued = kept.filter(
@@ -252,7 +252,6 @@ export function useTourProgress(): void {
         if (!cancelled && !useTourStore.getState().loaded) {
           // (finishes and passes this device still has to save stay shown, as on a read that lands;
           // nothing here is echoed back)
-          const account = accountOf(accessToken);
           const queued = (account ? pendingDone(account) : [])
             .filter(isCurrentVersion)
             .map((q) => q.itemId);

@@ -72,4 +72,15 @@ describe('pendingDone', () => {
     dropDone('a', 'lesson-01', 82);
     expect(pendingDone('a')).toEqual([]);
   });
+
+  it('should never keep one dated in the future (a wrong clock, an edit)', () => {
+    localStorage.setItem(
+      'cd-pending-done:a',
+      JSON.stringify({
+        v: 1,
+        items: [{ itemId: 'lesson-01', step: 81, since: Date.now() + 86_400_000 }],
+      })
+    );
+    expect(pendingDone('a')).toEqual([]);
+  });
 });
