@@ -9,6 +9,7 @@ import {
   LEARN_LESSON_IDS,
   CHECKPOINT_VERSION,
   LESSON_FIRST_STEP,
+  LESSON_VERSION_SPAN,
 } from '../../constants.js';
 import { loadHabits } from '../../services/Habits.js';
 import { recordLearningEvent } from '../../services/LearningEvents.js';
@@ -76,7 +77,10 @@ const versionFloorOf = (itemId: string): number | null => {
  */
 const isStaleRow = (r: { itemId: string; step?: number | null }) => {
   const floor = versionFloorOf(r.itemId);
-  return floor !== null && (typeof r.step !== 'number' || r.step < floor);
+  if (floor === null) return false;
+  if (typeof r.step !== 'number' || r.step < floor) return true;
+  // Past the version's span (never written since the span is checked): not today's either
+  return r.step >= floor + (lessonOf(r.itemId) ? LESSON_VERSION_SPAN : 1);
 };
 
 const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const;
@@ -213,6 +217,10 @@ export async function learnRoutes(app: FastifyInstance) {
         return status === 'started' ? bad('A start needs a lesson and its step') : earlier();
       } else if (step < floor) {
         return earlier();
+      } else if (step >= floor + (lessonId ? LESSON_VERSION_SPAN : 1)) {
+        // 🔐 Past the current version (a lesson's span, a checkpoint's own set): no stored step may
+        // reach a later version's range
+        return bad('A step past this version');
       }
 
       // (checked above: a start is a lesson's, with its step; this only narrows the types)
@@ -248,14 +256,13 @@ export async function learnRoutes(app: FastifyInstance) {
         // read is one, so the start that changes nothing costs no more. One transaction with Lesson
         // 1's welcome card: that old finish is the only sign the card was done with, so it never
         // goes without the dismissal saved
-        if (row && isStaleRow(row)) {
+        if (row && isStaleRow(row) && floor !== null) {
           const replaced = await app.prisma.$transaction(async (tx) => {
             const taken = await tx.learningProgress.updateMany({
               where: {
                 userId,
                 itemId,
-                // eslint-disable-next-line security/detect-object-injection -- lessonId: the fixed list
-                OR: [{ step: null }, { step: { lt: LESSON_FIRST_STEP[lessonId] } }],
+                OR: [{ step: null }, { step: { lt: floor } }],
               },
               data: { status, step },
             });
@@ -285,14 +292,24 @@ export async function learnRoutes(app: FastifyInstance) {
       }
 
       if (status === 'completed') {
-        const row = await app.prisma.learningProgress.upsert({
-          where: { userId_itemId: { userId, itemId } },
-          // A lesson's finish keeps its step: the version it was finished in (a tour's: none). Any
-          // step of the current version counts: progress is the learner's own, so a client claiming
-          // a finish it didn't reach only changes its own path
-          create: { userId, itemId, status, step: step ?? null },
-          update: { status, step: step ?? null },
-          select: ROW,
+        // A lesson's finish keeps its step: the version it was finished in (a tour's: none). Any
+        // step of the current version counts: progress is the learner's own, so a client claiming
+        // a finish it didn't reach only changes its own path. A Lesson 1 finish also means the
+        // welcome card is done with (the migration's and the takeover's rule): saved with it
+        const row = await app.prisma.$transaction(async (tx) => {
+          const done = await tx.learningProgress.upsert({
+            where: { userId_itemId: { userId, itemId } },
+            create: { userId, itemId, status, step: step ?? null },
+            update: { status, step: step ?? null },
+            select: ROW,
+          });
+          if (itemId === 'lesson-01') {
+            await tx.learningProgress.createMany({
+              data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
+              skipDuplicates: true,
+            });
+          }
+          return done;
         });
         return reply.send({ item: toItem(row) });
       }

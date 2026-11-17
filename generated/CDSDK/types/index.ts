@@ -90,6 +90,14 @@ export const CHECKPOINT_VERSIONS = {
 } as const;
 
 /**
+ * How many steps one version of a lesson may use, from its first: its screens must fit (the
+ * client's lessons test), and the next version starts at least this far on. The server
+ * (`LESSON_VERSION_SPAN`) refuses a step outside the current version's span, so no stored step can
+ * ever reach a later version's range
+ */
+export const LESSON_VERSION_SPAN = 40;
+
+/**
  * Each lesson's first funnel step in its current version: the client's `stepBase` + 1
  * (`apps/client/src/guide/lessons.ts`), the server's `LESSON_FIRST_STEP` (`apps/server/src/constants.ts`),
  * which refuses a start or a finish from below it. One test on each side holds its copy to this one;

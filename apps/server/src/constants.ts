@@ -65,6 +65,12 @@ export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] a
  * them, a start still takes them over, and an old Lesson 1 finish still keeps the welcome card shut.
  * The step already marks the version, so no schema change is needed.)
  */
+/**
+ * 🔐 Steps one version of a lesson may use, from its first (held to the SDK's `LESSON_VERSION_SPAN`):
+ * a step past it is refused, so no stored step can reach a later version's range
+ */
+export const LESSON_VERSION_SPAN = 40;
+
 export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number> = {
   'lesson-01': 61,
   'lesson-ownership': 61,

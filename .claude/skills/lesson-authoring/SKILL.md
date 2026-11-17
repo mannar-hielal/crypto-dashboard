@@ -384,8 +384,9 @@ with paper money, and then picks up where it left off.
 - `apps/client/src/guide/__tests__/lessons.test.ts` — the lesson rules (caps, structure, the
   lesson's own expectations); `LessonSheet.test.tsx` for new screen kinds.
 - `apps/client/src/learn/__tests__/terms.test.ts`, `articleMinutes.test.ts` if articles change.
-- `stepBase`: when a lesson's screens change, raise it past every step the replaced version used
-  (that version's `stepBase` + its screens), so stored steps and rows are never read as today's.
+- `stepBase`: when a lesson's screens change, raise it by at least the SDK's `LESSON_VERSION_SPAN`
+  (40: one version's steps, which the server refuses past; a lesson's screens must fit in it), so
+  stored steps and rows are never read as today's.
   Record the replaced version's last step in `lessons.test`'s `EARLIER_LAST_STEPS`, and raise the
   SDK's `LESSON_FIRST_STEPS` and the server's `LESSON_FIRST_STEP` with it (a test on each side holds
   them together; the server refuses and ignores anything below). **Mind the ceiling:** the server

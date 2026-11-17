@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_VERSIONS, LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
+import {
+  CHECKPOINT_VERSIONS,
+  LESSON_FIRST_STEPS,
+  LESSON_VERSION_SPAN,
+} from '@crypto-dashboard/sdk';
 import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   LESSON_IDS,
@@ -371,6 +375,11 @@ describe('lessons', () => {
     // The server refuses a start or finish below it (a client on an earlier version): the SDK's
     // LESSON_FIRST_STEPS is the shared number, and a server test holds its copy to it too
     for (const l of LESSONS) expect((l.stepBase ?? 0) + 1, l.id).toBe(LESSON_FIRST_STEPS[l.id]);
+  });
+
+  it('should fit each lesson’s screens in one version’s span, which the server refuses past', () => {
+    for (const l of LESSONS)
+      expect(lessonScreens(l).length, l.id).toBeLessThanOrEqual(LESSON_VERSION_SPAN);
   });
 
   it('should start each lesson’s steps above every step its earlier versions used', () => {

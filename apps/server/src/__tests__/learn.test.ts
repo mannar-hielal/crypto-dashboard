@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
-import { CHECKPOINT_VERSIONS, LESSON_FIRST_STEPS } from '@crypto-dashboard/sdk';
-import { CHECKPOINT_VERSION, LESSON_FIRST_STEP } from '../constants.js';
+import {
+  CHECKPOINT_VERSIONS,
+  LESSON_FIRST_STEPS,
+  LESSON_VERSION_SPAN as SDK_LESSON_VERSION_SPAN,
+} from '@crypto-dashboard/sdk';
+import { CHECKPOINT_VERSION, LESSON_FIRST_STEP, LESSON_VERSION_SPAN } from '../constants.js';
 import type { FastifyInstance } from 'fastify';
 import {
   HABIT_BADGE_IDS as SDK_BADGES,
@@ -210,6 +214,43 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ update: { status: 'completed', step: 2 } })
     );
+  });
+
+  it('PUT: should refuse a step past the current version, before any write', async () => {
+    const put = (url: string, payload: unknown) =>
+      app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
+    // Lesson 1's version spans steps 61..100; a checkpoint's is its one set
+    expect(
+      (await put('/api/learn/progress/lesson-01', { status: 'started', step: 101 })).statusCode
+    ).toBe(400);
+    expect(
+      (await put('/api/learn/progress/lesson-01', { status: 'completed', step: 999 })).statusCode
+    ).toBe(400);
+    expect(
+      (await put('/api/learn/progress/checkpoint-ch1', { status: 'completed', step: 3 })).statusCode
+    ).toBe(400);
+    expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
+  });
+
+  it('PUT completed: should save the welcome card’s dismissal with every Lesson 1 finish', async () => {
+    vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
+      itemId: 'lesson-01',
+      status: 'completed',
+      step: 81,
+      updatedAt: AT,
+    } as never);
+    await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-01',
+      headers: auth(),
+      payload: { status: 'completed', step: 81 },
+    });
+    expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(app.prisma.learningProgress.createMany).toHaveBeenCalledWith({
+      data: [{ userId: 'user-1', itemId: 'welcome-card', status: 'dismissed' }],
+      skipDuplicates: true,
+    });
   });
 
   it('PUT: should refuse a checkpoint pass when it is from an earlier question set (owner 2026-11-17)', async () => {
@@ -459,6 +500,7 @@ describe('/api/learn/progress', () => {
     expect(LESSON_FIRST_STEP).toEqual(LESSON_FIRST_STEPS);
     // And each checkpoint's question set version (the client's checkpoints test holds its own)
     expect(CHECKPOINT_VERSION).toEqual(CHECKPOINT_VERSIONS);
+    expect(LESSON_VERSION_SPAN).toBe(SDK_LESSON_VERSION_SPAN);
   });
 
   it('PUT: should refuse a lesson’s start or finish when it is from an earlier version, before any write', async () => {
