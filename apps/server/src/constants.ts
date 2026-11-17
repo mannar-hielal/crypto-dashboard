@@ -60,7 +60,10 @@ export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] a
  * Both are held to the SDK's `LESSON_FIRST_STEPS` by a test on each side. 🔐 A start or a finish from below it comes from a client still
  * on an earlier version (an open tab, a cached PWA), and is refused, so the reset of 2026-11-16
  * (`20261116200000_reset_lessons_1_3`) holds. Raise it with the lesson's `stepBase`. (A `version`
- * column on the progress row would replace this step-number scheme: a follow-up for the owner.)
+ * column was weighed, review rounds 8-13: it would rename the step floor, not remove the special
+ * cases. An old API machine during a rollout writes rows without it too, so the reads still skip
+ * them, a start still takes them over, and an old Lesson 1 finish still keeps the welcome card shut.
+ * The step already marks the version, so no schema change is needed.)
  */
 export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number> = {
   'lesson-01': 61,
