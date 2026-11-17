@@ -4643,6 +4643,40 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-17 — Lessons 1–3 after release: one label set, Try again, the math, the glasses, what just happened
+
+The owner's ten tasks after the Lessons 1–3 release (screenshots; the new rules are in
+`.claude/skills/lesson-authoring` and hold for every future lesson). **No screen added or removed:** `stepBase` and
+`LESSON_FIRST_STEP` stay, nobody's progress resets. Ships with the other fixes on `fix/lessons-after-release`.
+
+- **Bold and italic render** (`learn/RichText.tsx` over `parseInline` in `learn/terms.ts`): `**word**` and `*word*`
+  showed their asterisks on 80+ lesson lines; a `[[term]]` in a guide's line showed its brackets. One renderer now
+  serves the articles, card text, the guides' lines (their terms open the peek; `cardTermIds` counts them for the
+  two-terms rule and the graph), points, recaps, quiz context, plans and Whys, and the cold open's facts. Never HTML.
+- **One label set** (`LESSON_LABELS`): Continue, ← Back, and Finish lesson on the summary, in every lesson. The 51
+  per-card labels and `LessonCard.nextLabel` are gone. The close keeps its way on (the next lesson, Finish for now)
+  and the Try screen its Show me / Skip this part.
+- **Lesson 2's summary** shows its three points plainly; the staged birth of Bitcoin is dropped (2008 and Lehman
+  stay on the lesson's own card). `GenesisReveal`, `BirthStory`, `BITCOIN_BIRTH` and `lesson.genesis` are deleted.
+- **Try again until right**, on every lesson question: after "Not quite." and the Why, Try again
+  (`lesson.retry`) clears the answer and empties the board; Continue waits for a right answer; Back off a wrong
+  answer clears it. Checkpoints are unchanged (scored, one go).
+- **The math** (`LessonCard.math`, `MathBreakdownView`): a guide in glasses says "Let's do the math", then numbered
+  steps, one operation each with its result, then the answer set apart. On Lesson 1's The result (rewritten around
+  it; the hindsight line dropped: 166%, $2,656 after two 0.1% fees, $1,656 profit), The catch (the 0.01 BTC short:
+  $648.94 → $189.65, $459.29, 70.8%) and Smaller coins (SOL −29.0%), and Lesson 3's Big swings (−32.9%), A market
+  shock (−22.8%) and Up, then down (−53.2%). Every figure recomputed from the cards' candles (noted beside each).
+- **The glasses** (`Guide` / `GuideFigure` `glasses`): thin round frames in the face's line colour, on either
+  guide, per card. **The analogy** (`LessonCard.analogy`): Lesson 1's Going short now explains shorting as
+  borrowing a game, selling it, buying one back cheaper, returning it and keeping the difference, told by Berwyn in
+  glasses in place of the guides' exchange; it says a perpetual borrows nothing.
+- **What just happened** after every practice trade: `practice-buy` → `review-buy` (Assets, Bitcoin's row, its
+  Unrealized PnL), `practice-long` → `review-long` and `practice-short` → `review-short` (Positions, the position's
+  row), each ending "Back to the lesson"; the lesson resumes one screen on. Chained chapters (each ≤ 5 steps),
+  existing anchors, phone-ready, not saved or reported.
+- **Pictures on top, text below**, already the sheet's layout: a test now checks every card. New illustrations are
+  candidates for the owner, not drawn.
+
 ### 2026-11-16 — Lessons 1–3 rewrite: new quiz formats, practice trades, the streak screen, and Lesson 1
 
 The owner's makeover of Lessons 1–3 (`.claude/skills/lesson-authoring`; plan and drafts in the git-ignored
