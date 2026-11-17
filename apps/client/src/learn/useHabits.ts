@@ -33,3 +33,19 @@ export function useHabits(
 
   return { habits, failed };
 }
+
+/**
+ * The habits with today counted as a learning day (it ends a finish): today's dot lit, and a streak
+ * that didn't count today yet one day longer. Monday first, in the learner's time zone, as the
+ * server counts them; an API with no week (rolled back) is left as it is
+ */
+export function withTodayLearned(habits: HabitsResponse, now: Date): HabitsResponse {
+  const today = (now.getDay() + 6) % 7;
+  if (!habits.thisWeek || habits.thisWeek[today]) return habits;
+  return {
+    ...habits,
+    learningDays: habits.learningDays + 1,
+    streakDays: habits.streakDays + 1,
+    thisWeek: habits.thisWeek.map((d, i) => d || i === today),
+  };
+}
