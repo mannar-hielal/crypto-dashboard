@@ -42,8 +42,10 @@ const LESSON_01_LAST_STEP = 60 + lessonScreens(getLesson('lesson-01')).length;
 describe('useTourProgress', () => {
   beforeEach(() => {
     profile = { id: 'u1' };
-    // The finish queue outlives a save (a read drops it): each test starts with none
+    // The finish queue outlives a save (a read drops it): each test starts with none, and with no
+    // account read yet (the last-read account and the lists held in memory are module state)
     localStorage.clear();
+    forgetSignedOutAccount();
     token = 'tok';
     useTourStore.getState().reset();
     useLessonStore.getState().reset();
@@ -619,59 +621,6 @@ describe('useTourProgress', () => {
       token = null; // signed out before the refusal lands
       await act(async () => refuse(Object.assign(new Error('x'), { status: 409 })));
       expect(setProgress).toHaveBeenCalledTimes(1);
-    });
-
-    it('should keep a lesson finished while signed out for the account that signs in', async () => {
-      profile = { id: 'u5' };
-      forgetSignedOutAccount(); // a fresh start: no account read on this page yet
-      // Finished on this device before signing in: in the store, never sent
-      useLessonStore.getState().setCompleted(['lesson-ownership']);
-      getProgress.mockResolvedValue({ items: [] });
-      renderHook(() => useTourProgress());
-      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-      expect(useLessonStore.getState().completed['lesson-ownership']).toBe(true);
-      expect(setProgress).toHaveBeenCalledWith(
-        'lesson-ownership',
-        'completed',
-        'tok',
-        60 + lessonScreens(getLesson('lesson-ownership')).length
-      );
-    });
-
-    it('should keep a checkpoint and a tour done signed out, on the first read only', async () => {
-      profile = { id: 'u4' };
-      forgetSignedOutAccount();
-      usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
-      useTourStore.setState({ completed: { 'buy-first-coin': true } });
-      getProgress.mockResolvedValue({ items: [] });
-      renderHook(() => useTourProgress());
-      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-      expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 2);
-      expect(setProgress).toHaveBeenCalledWith('buy-first-coin', 'completed', 'tok');
-      expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
-      expect(useTourStore.getState().completed['buy-first-coin']).toBe(true);
-    });
-
-    it('should never queue a lesson the store holds on a later read (it is the server’s answer)', async () => {
-      profile = { id: 'u3' };
-      forgetSignedOutAccount();
-      getProgress.mockResolvedValueOnce({ items: [item('lesson-01', 'completed')] });
-      const { rerender } = renderHook(() => useTourProgress());
-      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBe(true));
-      // The next read (a session refresh) no longer lists it (a stale row filtered out)
-      getProgress.mockResolvedValue({ items: [] });
-      setProgress.mockClear();
-      token = 'tok2';
-      rerender();
-      await waitFor(() => expect(getProgress).toHaveBeenCalledTimes(2));
-      await act(async () => {});
-      expect(setProgress).not.toHaveBeenCalledWith(
-        'lesson-01',
-        'completed',
-        'tok2',
-        expect.anything()
-      );
-      expect(pendingDone('u3')).toEqual([]);
     });
 
     it('should send no close for a finished lesson left from a look back', async () => {

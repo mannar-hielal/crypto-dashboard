@@ -3,8 +3,10 @@
  * finish / dismissal as it happens, and report the tour's events (the funnel). A lesson finish or a
  * checkpoint pass is kept on the device until its save lands and sent again on each progress read
  * (learn/pendingDone.ts), shown as done meanwhile; one the server refuses for good (an earlier
- * version: a 409, REFUSED_FOR_GOOD) is taken back. A 400 is kept: an older API's answer. Any other failed write is dropped: that progress then lives only in this session,
- * the worst case, never a broken tour.
+ * version: a 409, REFUSED_FOR_GOOD) is taken back. Every other failure of those (offline, a 5xx,
+ * an expired session, an older API's 400) stays kept and is sent again, for up to 30 days. Other
+ * writes (a tour skipped, a card dismissed, a screen reached) aren't kept: a failed one lives only
+ * in this session, the worst case, never a broken tour.
  */
 
 import { useEffect } from 'react';
@@ -48,7 +50,10 @@ function isCurrentVersion(q: PendingDone): boolean {
 function undone(itemId: PendingDone['itemId'], items: LearnProgressItem[]): void {
   if (isLessonId(itemId)) {
     const { completed, setCompleted } = useLessonStore.getState();
-    setCompleted((Object.keys(completed) as LessonId[]).filter((id) => id !== itemId));
+    // (the server's answer, never sent back as the learner's own change, like the pass below)
+    asServerAnswer(() =>
+      setCompleted((Object.keys(completed) as LessonId[]).filter((id) => id !== itemId))
+    );
     // The welcome card, if only this kept Lesson 1 finish was hiding it
     // (never one the account has answered since, here or on another device: the server's items say)
     if (itemId === 'lesson-01' && cardByKeptFinish) {
@@ -218,18 +223,6 @@ export function useTourProgress(): void {
       cardByKeptFinish = false;
       asServerAnswer(resetLearningStores);
     }
-    // The page's first read for an account (none read before, or an explicit sign-out since): what
-    // the stores hold now was done here signed out (never sent: the writes need a token), and
-    // belongs to the account signing in, as the screens reached then do. Only then: on any later
-    // read the stores hold the server's own answers (learn/signedOut.ts)
-    const signedOutWork =
-      readFor === null
-        ? {
-            lessons: Object.keys(useLessonStore.getState().completed) as LessonId[],
-            checkpoints: Object.keys(usePathStore.getState().checkpoints) as CheckpointId[],
-            tours: Object.keys(useTourStore.getState().completed) as PathTourId[],
-          }
-        : null;
     setLastReadAccount(account);
     // 🔐 An answer that lands after a sign-out or for another account (before this effect's cleanup
     // has run) is never put in the stores or the device's queue
@@ -245,36 +238,14 @@ export function useTourProgress(): void {
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)
+        // (Progress done here signed out isn't kept, but for the screens reached: the stores can't
+        // tell it from the server's answers, and each guess at it lost or resent progress. A queue
+        // filled at the finish itself would be its own feature. Weighed, review after release #302)
         const onServer = (id: string) =>
           items.some((i) => i.itemId === id && i.status === 'completed');
-        const stored = account ? pendingDone(account) : [];
-        // Signed-out finishes and passes join the kept ones, in memory (one read, one write)
-        const signedOutKept: PendingDone[] =
-          account && signedOutWork
-            ? [
-                ...signedOutWork.lessons.map((id) => ({
-                  itemId: id,
-                  step: lessonFinishStep(getLesson(id)),
-                })),
-                ...signedOutWork.checkpoints.map((id) => ({
-                  itemId: id,
-                  step: getCheckpoint(id).version,
-                })),
-              ]
-                .filter((p) => !onServer(p.itemId) && !stored.some((k) => k.itemId === p.itemId))
-                .map((p) => ({ ...p, since: Date.now() }))
-            : [];
-        const kept = [...stored, ...signedOutKept];
+        const kept = account ? pendingDone(account) : [];
         const stillQueued = keptToShow(kept).filter((q) => !onServer(q.itemId));
-        if (account && (stillQueued.length !== stored.length || signedOutKept.length > 0)) {
-          keepOnly(account, stillQueued);
-        }
-        // Tours finished signed out: saved now (a tour finish is one write, nothing to keep)
-        const signedOutTours = (signedOutWork?.tours ?? []).filter((id) => !onServer(id));
-        for (const id of signedOutTours) {
-          learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
-        }
-        completed.push(...signedOutTours.filter((id) => !completed.includes(id)));
+        if (account && stillQueued.length !== kept.length) keepOnly(account, stillQueued);
         const lessons = [
           ...new Set([
             ...items
