@@ -109,4 +109,18 @@ describe('useHabits', () => {
     act(() => useTourStore.setState({ loaded: true }));
     await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(1));
   });
+
+  it('should read again with the new token after a failed read, but not after a good one', async () => {
+    useAuthStore.setState({ user: { id: 'a', email: 'a@x', username: 'a' } as never });
+    getHabits.mockRejectedValueOnce(Object.assign(new Error('401'), { status: 401 }));
+    getHabits.mockResolvedValue(habits);
+    const { result, rerender } = renderHook(({ t }) => useHabits(t), { initialProps: { t: 't1' } });
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    rerender({ t: 't2' }); // the session refreshed for the same account
+    await waitFor(() => expect(result.current.habits).toEqual(habits));
+    expect(getHabits).toHaveBeenCalledTimes(2);
+    rerender({ t: 't3' }); // another refresh after a good read: nothing read again
+    await act(async () => {});
+    expect(getHabits).toHaveBeenCalledTimes(2);
+  });
 });

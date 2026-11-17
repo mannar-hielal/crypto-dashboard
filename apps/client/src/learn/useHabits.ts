@@ -58,8 +58,20 @@ export function useHabits(accessToken: string | null): {
   }, [accessToken]);
   const signedIn = !!accessToken;
   const done = useDoneCount();
+  // A session refresh reads nothing again, unless the last read failed (an expired token's 401):
+  // then the new token reads at once. Moved only by a new token, never by the read's own answer
+  const [retry, setRetry] = useState(0);
+  const lastFailed = useRef(false);
+  useEffect(() => {
+    lastFailed.current = read !== null && read.account === account && read.failed;
+  }, [read, account]);
+  useEffect(() => {
+    if (accessToken && lastFailed.current) setRetry((n) => n + 1);
+  }, [accessToken]);
 
   useEffect(() => {
+    // (an account always has a name here: every token the server signs carries its userId, so
+    // the '' fallback below never joins two sessions; weighed, review after release #302)
     if (!signedIn || done === null) return;
     let cancelled = false;
     // Read at once, never waiting for a finish to land: a lesson's own start already counted today
@@ -84,7 +96,7 @@ export function useHabits(accessToken: string | null): {
     return () => {
       cancelled = true;
     };
-  }, [signedIn, account, done]);
+  }, [signedIn, account, done, retry]);
 
   const mine = accessToken && read && read.account === account ? read : null;
   return { habits: mine?.habits ?? null, failed: mine?.failed ?? false };
