@@ -133,6 +133,11 @@ function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
 }
 
 /** The tours' desktop layout applies now (outside React: the tour store) */
+/**
+ * The wide layout right now. Its own query (`WIDE_LAYOUT_QUERY`, the narrow one's exact negation),
+ * not `!isNarrowNow()`: the same answer in a browser, but the tests stub matchMedia per query, and
+ * the tours' tests stub this one (weighed, review after release #302)
+ */
 export function isWideScreen(): boolean {
   // No matchMedia (tests, old browsers): the desktop layout
   return typeof window.matchMedia !== 'function' || window.matchMedia(WIDE_LAYOUT_QUERY).matches;

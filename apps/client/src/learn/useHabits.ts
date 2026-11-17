@@ -51,13 +51,12 @@ export function useHabits(accessToken: string | null): {
     failed: boolean;
   } | null>(null);
 
-  const signedIn = !!accessToken;
   const done = useDoneCount();
 
   useEffect(() => {
     // (an account always has a name here: every token the server signs carries its userId, so
     // the '' fallback below never joins two sessions; weighed, review after release #302)
-    if (!signedIn || done === null) return;
+    if (!accessToken || done === null) return;
     let cancelled = false;
     // Read at once, never waiting for a finish to land: a lesson's own start already counted today
     // (Habits counts starts), so the streak screen right after a finish shows today. Only a run
@@ -68,7 +67,6 @@ export function useHabits(accessToken: string | null): {
     // minutes, only while the map or the streak screen is open): a read never joins one sent with an
     // older token, and an expired token's failure always recovers with the next (review after
     // release #302: a retry kept only for failures raced the refresh, twice)
-    if (!accessToken) return;
     readHabits(`${account ?? ''}|${done}|${accessToken}`, accessToken)
       .then((r) => {
         if (!cancelled) setRead({ account, habits: r, failed: false });
@@ -85,7 +83,7 @@ export function useHabits(accessToken: string | null): {
     return () => {
       cancelled = true;
     };
-  }, [signedIn, account, done, accessToken]);
+  }, [account, done, accessToken]);
 
   const mine = accessToken && read && read.account === account ? read : null;
   return { habits: mine?.habits ?? null, failed: mine?.failed ?? false };
