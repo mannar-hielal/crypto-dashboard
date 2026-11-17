@@ -84,6 +84,16 @@ export const CHAPTERS: readonly Chapter[] = [
   },
 ];
 
+/**
+ * A practical lesson that needs another one done first, whatever else opened the path (owner
+ * 2026-11-17): Sell sells the Bitcoin Buy bought, so it stays locked until Buy is done, even with
+ * Buy skipped or the chapter tested out. (Its first steps still say to buy first, for a learner who
+ * reaches it some other way with nothing to sell.)
+ */
+export const NEEDS_DONE: Partial<Record<PathTourId, PathTourId>> = {
+  'sell-and-review': 'buy-first-coin',
+};
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 /**
@@ -255,6 +265,9 @@ export function pathState(
         return { ...view, state: 'done' };
       }
       if (locked) return { ...view, state: 'locked' };
+      // Its prerequisite not done: locked, without holding up the stops after it
+      const needs = node.kind === 'tour' ? NEEDS_DONE[node.id] : undefined;
+      if (needs && progress.tours[needs] !== true) return { ...view, state: 'locked' };
       if (node.kind === 'tour' && progress.skippedTours[node.id]) {
         return { ...view, state: 'skipped' };
       }

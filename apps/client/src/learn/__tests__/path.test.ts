@@ -5,6 +5,7 @@ import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   CHAPTERS,
   lessonFraction,
+  NEEDS_DONE,
   onChart,
   nodeOffset,
   openKeys,
@@ -54,15 +55,32 @@ describe('pathState', () => {
       lessons: { 'lesson-01': true, 'lesson-ownership': true, 'lesson-02': true },
       skippedTours: { 'buy-first-coin': true },
     });
+    // Sell needs Buy done (owner 2026-11-17): it stays locked, and the checkpoint is next
     expect(view.chapters[0].nodes.map((n) => n.state)).toEqual([
       'done',
       'done',
       'done',
       'skipped',
+      'locked',
       'current',
-      'open',
     ]);
     expect(view.percent).toBe(50);
+  });
+
+  it('should keep Sell locked until Buy is done, then make it the next step (owner 2026-11-17)', () => {
+    expect(NEEDS_DONE).toEqual({ 'sell-and-review': 'buy-first-coin' });
+    const lessons = { 'lesson-01': true, 'lesson-ownership': true, 'lesson-02': true } as const;
+    const sell = (p: PathProgress) =>
+      pathState(p).chapters[0].nodes.find((n) => n.key === 'tour:sell-and-review')!.state;
+    // Not reached, reached with Buy still to do, tested out, skipped itself: locked every time
+    expect(sell({ ...empty(), lessons })).toBe('locked');
+    expect(sell({ ...empty(), checkpoints: { 'checkpoint-ch1': true } })).toBe('locked');
+    expect(sell({ ...empty(), lessons, skippedTours: { 'sell-and-review': true } })).toBe('locked');
+    // Buy done: open, and the next step
+    const view = pathState({ ...empty(), lessons, tours: { 'buy-first-coin': true } });
+    expect(view.current).toBe('tour:sell-and-review');
+    // Buy done before the lessons around it (Lesson 1's Try): Sell still waits its turn on the path
+    expect(sell({ ...empty(), tours: { 'buy-first-coin': true } })).toBe('locked');
   });
 
   it('should keep a finished tour done even if it was skipped earlier', () => {
@@ -85,12 +103,13 @@ describe('pathState', () => {
 
   it('should open the rest of the chapter when tested out, never ticking what was skipped', () => {
     const view = pathState({ ...empty(), checkpoints: { 'checkpoint-ch1': true } });
+    // But for Sell, which needs Buy done first (owner 2026-11-17)
     expect(view.chapters[0].nodes.map((n) => n.state)).toEqual([
       'open',
       'open',
       'open',
       'open',
-      'open',
+      'locked',
       'done',
     ]);
     expect(view.chapters[0].done).toBe(1);
