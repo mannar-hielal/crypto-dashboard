@@ -7,6 +7,7 @@
  * material and are never locked — and the habit badges.
  */
 
+import { RichText } from './RichText';
 import { useHabits } from './useHabits';
 import { useTourWide } from '@/guide/useTourWide';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -76,7 +77,9 @@ function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
           <p className={styles.overviewHead}>What you’ll learn</p>
           <ul className={styles.overviewList}>
             {learned.map(({ key, text }) => (
-              <li key={key}>{text}</li>
+              <li key={key}>
+                <RichText text={text} />
+              </li>
             ))}
           </ul>
         </>
