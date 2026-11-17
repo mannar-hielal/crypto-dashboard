@@ -191,8 +191,11 @@ describe('LessonSheet', () => {
     await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
     expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
 
-    at(lessonScreens(lesson).length - 1);
+    // The real way there: on the summary, "Finish lesson" (Continue), then Esc on the close screen
     act(() => useLessonStore.setState({ completed: {} }));
+    at(lessonScreens(lesson).length - 2); // the summary
+    fireEvent.click(nextBtn()!);
+    expect(useLessonStore.getState().screen).toBe(lessonScreens(lesson).length - 1);
     fireEvent.keyDown(window, { key: 'Escape' });
     await waitFor(() => expect(useLessonStore.getState().completed['lesson-02']).toBe(true));
   });

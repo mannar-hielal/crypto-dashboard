@@ -536,9 +536,13 @@ export function LessonSheet() {
   // (an open term peek closes first: Esc then dismisses just the peek; the map, if open over the
   // sheet, has its own Esc)
   // ✕ or Esc: on the close screen (past the summary's "Finish lesson") the lesson is done, so leaving
-  // finishes it; anywhere earlier it only closes (review after release #308)
+  // finishes it; anywhere earlier it only closes (review after release #308). The screen is read
+  // from the store at the press: the Esc listener outlives the render it was made in. (Leaving the
+  // close screen by a reload or a closed tab saves no finish, as before this branch; counting the
+  // finish on arrival would rework the streak screen's trigger. Weighed, review after #308)
   const leaveSheet = () => {
-    const onClose = !!lesson && lessonScreens(lesson)[screenIndex]?.kind === 'close';
+    const { activeId: id, screen: at } = useLessonStore.getState();
+    const onClose = !!id && lessonScreens(getLesson(id))[at]?.kind === 'close';
     if (onClose) finishLesson();
     else afterNote(() => useLessonStore.getState().close());
   };
