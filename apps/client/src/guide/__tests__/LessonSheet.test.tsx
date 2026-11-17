@@ -778,11 +778,16 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
   });
 
-  it('should sum Lesson 2 up in three plain points, with no birth story (owner 2026-11-17)', () => {
+  it('should sum Lesson 2 up in plain points, the why first, with no birth story (owner 2026-11-17)', () => {
     at(19, 'lesson-ownership');
     renderSheet();
     expect(document.querySelector('#lesson-heading')!.textContent).toBe('Why Bitcoin exists');
-    expect(sheet()!.querySelectorAll('ol li')).toHaveLength(3);
+    // Fact check 2026-11-17: the actual why leads, a fourth point on the same screen
+    const points = sheet()!.querySelectorAll('ol li');
+    expect(points).toHaveLength(4);
+    expect(points[0].textContent).toContain(
+      'Bitcoin was made so people can pay each other online without trusting a bank in the middle.'
+    );
     expect(sheet()!.textContent).not.toMatch(/Satoshi|Lehman|birth/);
     // Shown at once, nothing staged: the button is ready
     expect(nextBtn()!.dataset.ready).toBe('true');

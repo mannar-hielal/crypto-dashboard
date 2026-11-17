@@ -943,10 +943,17 @@ const lessonOwnership: Lesson = {
   notePrompt: 'In your own words: why does Bitcoin need thousands of copies?',
   teaser: 'Next: why prices swing so hard, and how to spot a trap.',
   canDo: [],
-  // Three plain lines (owner 2026-11-17: the staged birth of Bitcoin dropped after the makeover)
+  // Plain lines (owner 2026-11-17: the staged birth of Bitcoin dropped after the makeover); the
+  // fact check (2026-11-17) put the actual why first, and points "no one is in charge" at the
+  // network article's answer to the one-Nora problem
   recap: {
     title: 'Why Bitcoin exists',
     points: [
+      {
+        text: 'Bitcoin was made so people can pay each other online without trusting a bank in the middle.',
+        article: 'bitcoin-story',
+        section: 'plan',
+      },
       {
         text: 'Bitcoin keeps one ledger, copied on thousands of computers.',
         article: 'bitcoin-network',
@@ -959,8 +966,8 @@ const lessonOwnership: Lesson = {
       },
       {
         text: 'No one is in charge: the network agrees.',
-        article: 'bitcoin-story',
-        section: 'timeline',
+        article: 'bitcoin-network',
+        section: 'answered',
       },
     ],
   },

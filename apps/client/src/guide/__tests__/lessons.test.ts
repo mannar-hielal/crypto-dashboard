@@ -450,9 +450,27 @@ describe('lessons', () => {
     const charge = l.cards.find((c) => c.title === 'No one in charge')!;
     expect(charge.text).toMatch(/never be more than 21 million/);
     expect(charge.text).toMatch(/anyone can read the whole ledger/);
-    // The summary: three plain points, no staged birth story (owner 2026-11-17)
+    // The summary: plain points, no staged birth story (owner 2026-11-17); the actual why first,
+    // and no one in charge opens the network article's answer (fact check 2026-11-17)
     expect(l.recap?.title).toBe('Why Bitcoin exists');
-    expect(l.recap?.points).toHaveLength(3);
+    expect(l.recap?.points.map((p) => [p.text, p.article, p.section])).toEqual([
+      [
+        'Bitcoin was made so people can pay each other online without trusting a bank in the middle.',
+        'bitcoin-story',
+        'plan',
+      ],
+      [
+        'Bitcoin keeps one ledger, copied on thousands of computers.',
+        'bitcoin-network',
+        'three-jobs',
+      ],
+      [
+        'Nodes check every payment, and blocks are linked by their hash.',
+        'bitcoin-network',
+        'blocks',
+      ],
+      ['No one is in charge: the network agrees.', 'bitcoin-network', 'answered'],
+    ]);
     expect(Object.keys(l.recap ?? {})).toEqual(['title', 'points']);
   });
 
