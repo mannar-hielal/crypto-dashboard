@@ -4,7 +4,15 @@
  */
 
 import { create } from 'zustand';
-import { getTour, isTourId, isWideScreen, tourSteps, type TourId, type PathTourId } from './tours';
+import {
+  backIndex,
+  getTour,
+  isTourId,
+  isWideScreen,
+  tourSteps,
+  type TourId,
+  type PathTourId,
+} from './tours';
 
 interface TourState {
   activeId: TourId | null;
@@ -148,8 +156,10 @@ export const useTourStore = create<TourState>()((set, get) => ({
   },
 
   back: () => {
-    const { stepIndex } = get();
-    if (stepIndex > 0) set({ stepIndex: stepIndex - 1, quizAnswer: null });
+    const { activeId, stepIndex, wide, seen } = get();
+    if (!activeId) return;
+    const to = backIndex(tourSteps(getTour(activeId), wide), stepIndex, seen);
+    if (to !== null) set({ stepIndex: to, quizAnswer: null });
   },
 
   close: () => set({ activeId: null, stepIndex: 0, quizAnswer: null }),

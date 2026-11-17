@@ -131,6 +131,20 @@ export function isWideScreen(): boolean {
   return typeof window.matchMedia !== 'function' || window.matchMedia(WIDE_LAYOUT_QUERY).matches;
 }
 
+/**
+ * Where Back goes from `stepIndex`, or null when nowhere: never onto a phone-only step this run
+ * already showed (tapping Buy / Long), since the form it opened may still be open and its bar hidden
+ */
+export function backIndex(
+  steps: readonly TourStep[],
+  stepIndex: number,
+  seen: readonly string[]
+): number | null {
+  let to = stepIndex - 1;
+  while (to >= 0 && steps[to].screen === 'phone' && seen.includes(steps[to].id)) to--;
+  return to >= 0 ? to : null;
+}
+
 /** A tour can run here: a larger screen, or a phone when the tour is phone-ready */
 export function runsHere(id: TourId, wide: boolean): boolean {
   return wide || !!getTour(id).phoneReady;

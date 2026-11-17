@@ -8,6 +8,7 @@ import {
   PRACTICE_TOURS,
   PRACTICE_TOUR_IDS,
   tourSteps,
+  backIndex,
 } from '@/guide/tours';
 
 describe('tours', () => {
@@ -112,5 +113,14 @@ describe('tours', () => {
     expect(getTour('practice-long').startUrl).toBe('/dashboard/usdt/BTCUSDT');
     expect(getTour('practice-short').startUrl).toBe('/dashboard/usdt/ETHUSDT');
     expect(tourSteps(getTour('practice-short'), false)[0].anchor).toBe('trade.mobile.sell');
+  });
+
+  it('should go back past a phone step already done, and nowhere when only it is behind', () => {
+    const phone = tourSteps(getTour('practice-buy'), false);
+    const tap = phone[0].id; // Tap Buy / Long
+    expect(backIndex(phone, 1, [tap])).toBeNull();
+    expect(backIndex(phone, 1, [])).toBe(0); // not done in this run: it may be shown again
+    expect(backIndex(phone, 2, [tap])).toBe(1);
+    expect(backIndex(phone, 0, [])).toBeNull();
   });
 });

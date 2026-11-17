@@ -164,4 +164,23 @@ describe('tourStore', () => {
       delete window.matchMedia;
     }
   });
+
+  it('should not go back onto the phone’s form step once it was done', () => {
+    window.matchMedia = ((q: string) => ({ matches: false, media: q })) as never;
+    try {
+      s().start('practice-buy'); // a phone: Tap Buy / Long
+      s().next(); // the form open: Market
+      s().back(); // nothing earlier to go back to but the form step: stays
+      expect(tourSteps(getTour('practice-buy'), false)[s().stepIndex].anchor).not.toBe(
+        'trade.mobile.buy'
+      );
+      s().next();
+      const third = s().stepIndex;
+      s().back(); // an ordinary step back still works
+      expect(s().stepIndex).toBe(third - 1);
+    } finally {
+      // @ts-expect-error -- jsdom has no matchMedia: back to that
+      delete window.matchMedia;
+    }
+  });
 });

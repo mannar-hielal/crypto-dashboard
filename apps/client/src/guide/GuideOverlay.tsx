@@ -14,7 +14,7 @@ import { guide, guideSelector } from '@/lib/guideAnchors';
 import { placeBubble, type Box } from './bubblePlacement';
 import { matchesHover, newestCandleBox, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
-import { getTour, type TourStep, tourSteps } from './tours';
+import { backIndex, getTour, type TourStep, tourSteps } from './tours';
 import styles from './GuideOverlay.module.css';
 
 const RING_PAD = 3;
@@ -140,9 +140,12 @@ function StepView({ stepIndex }: { stepIndex: number }) {
   const quizAnswer = useTourStore((s) => s.quizAnswer);
   const { next, back, close, answerQuiz } = useTourStore.getState();
   const wide = useTourStore((s) => s.wide);
+  const seen = useTourStore((s) => s.seen);
   const tour = activeId ? getTour(activeId) : null;
   const steps = tour ? tourSteps(tour, wide) : [];
   const step = steps[stepIndex];
+  // Back only where it goes somewhere (never onto a phone step already done)
+  const canGoBack = backIndex(steps, stepIndex, seen) !== null;
 
   if (!tour || !step) return null;
   return (
@@ -155,6 +158,7 @@ function StepView({ stepIndex }: { stepIndex: number }) {
       quizAnswer={quizAnswer}
       onNext={next}
       onBack={back}
+      canGoBack={canGoBack}
       onClose={close}
       onAnswer={answerQuiz}
     />
@@ -169,6 +173,8 @@ interface BubbleProps {
   quizAnswer: number | null;
   onNext: () => void;
   onBack: () => void;
+  /** Back goes somewhere from this step */
+  canGoBack: boolean;
   onClose: () => void;
   onAnswer: (index: number) => void;
 }
@@ -181,6 +187,7 @@ function TourBubble({
   quizAnswer,
   onNext,
   onBack,
+  canGoBack,
   onClose,
   onAnswer,
 }: BubbleProps) {
@@ -418,7 +425,7 @@ function TourBubble({
         )}
 
         <div className={styles.foot}>
-          {index > 0 && (
+          {canGoBack && (
             <button type="button" className={styles.link} onClick={onBack} {...guide('tour.back')}>
               ← Back
             </button>
