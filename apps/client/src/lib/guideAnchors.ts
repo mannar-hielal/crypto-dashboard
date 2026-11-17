@@ -146,6 +146,7 @@ export const GUIDE_ANCHORS = [
   'account.summary.balance',
   'account.summary.equity',
   'account.summary.upnl',
+  'account.summary.realized-pnl',
   'account.summary.mm-rate',
   'account.sound',
   'account.settings',

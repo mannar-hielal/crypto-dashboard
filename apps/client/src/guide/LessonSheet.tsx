@@ -511,9 +511,9 @@ export function LessonSheet() {
 
   // While a tour handed over from the lesson runs (its Try tour, a card's practice trade), the tour
   // store has the screen; when no tour runs any more — finished, skipped or closed, after a chain
-  // like buy → sell too — the lesson carries on. A tour that took its place some other way (not
-  // its next chapter, not handed over by the lesson) didn't come from the lesson: its end brings
-  // the learner back to the same screen
+  // like the buy and its look at the coin too — the lesson carries on. A tour that took its place
+  // some other way (not its next chapter, not handed over by the lesson) didn't come from the
+  // lesson: its end brings the learner back to the same screen
   useEffect(() => {
     if (!inTour) return;
     return useTourStore.subscribe((s, prev) => {

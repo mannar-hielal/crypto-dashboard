@@ -33,6 +33,7 @@ import { useArticleStore } from '@/learn/articleStore';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
+import { getTour, tourSteps } from '@/guide/tours';
 import { useAuthStore } from '@/store/authStore';
 
 const lesson = getLesson('lesson-02');
@@ -223,7 +224,7 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: tryAt });
   });
 
-  it('should move on past Try after the tour’s own next chapter ends (buy → sell)', () => {
+  it('should move on past Try after the tour’s own next chapter ends (the buy, then its look at the coin)', () => {
     const tryAt = lessonScreens(getLesson('lesson-01')).findIndex((x) => x.kind === 'try');
     at(tryAt, 'lesson-01');
     renderSheet();
@@ -231,7 +232,7 @@ describe('LessonSheet', () => {
       useLessonStore.getState().enterTour('buy-first-coin');
       useTourStore.getState().start('buy-first-coin');
     });
-    act(() => useTourStore.getState().start('sell-and-review'));
+    act(() => useTourStore.getState().start('review-first-coin'));
     act(() => useTourStore.getState().close());
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: tryAt + 1 });
   });
@@ -736,17 +737,31 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 4 });
   });
 
-  it('should offer Lesson 1’s “Try it” on a phone too, and wait for the whole buy → sell chain', () => {
+  it('should offer Lesson 1’s “Try it” on a phone too, wait through the buy and its look, never the Sell lesson', () => {
     desktop = false;
     at(18, 'lesson-01');
     renderSheet();
     expect(sheet()!.textContent).not.toContain('needs a larger screen');
     fireEvent.click(document.querySelector('[data-guide="lesson.try"]')!);
     expect(useTourStore.getState().activeId).toBe('buy-first-coin');
-    // The buy tour hands over to the sell tour: the lesson keeps waiting
-    act(() => useTourStore.setState({ activeId: 'sell-and-review', stepIndex: 0 }));
+    // The order placed: the buy hands over to its look at the coin (owner 2026-11-17: never to the
+    // Sell lesson, a map stop of its own); the lesson keeps waiting
+    act(() =>
+      useTourStore.setState({
+        stepIndex: tourSteps(getTour('buy-first-coin'), useTourStore.getState().wide).length - 1,
+      })
+    );
+    act(() => useTourStore.getState().next());
+    expect(useTourStore.getState().activeId).toBe('review-first-coin');
     expect(useLessonStore.getState()).toMatchObject({ inTour: true, screen: 18 });
-    act(() => useTourStore.getState().close());
+    // Its last step: the chain ends, the lesson carries on
+    act(() =>
+      useTourStore.setState({
+        stepIndex: tourSteps(getTour('review-first-coin'), useTourStore.getState().wide).length - 1,
+      })
+    );
+    act(() => useTourStore.getState().next());
+    expect(useTourStore.getState().activeId).toBeNull();
     expect(useLessonStore.getState()).toMatchObject({ inTour: false, screen: 19 });
   });
 

@@ -26,8 +26,19 @@ describe('tourStore', () => {
     const last = tourSteps(getTour('buy-first-coin'), true).length;
     for (let i = 0; i < last; i++) s().next();
     expect(s().completed['buy-first-coin']).toBe(true);
-    expect(s().activeId).toBe('sell-and-review');
+    // Its look at the coin bought, never the Sell lesson (owner 2026-11-17)
+    expect(s().activeId).toBe('review-first-coin');
     expect(s().stepIndex).toBe(0);
+  });
+
+  it('should end the Buy lesson after its look at the coin, with only Buy completed', () => {
+    s().start('buy-first-coin');
+    for (let i = 0; i < tourSteps(getTour('buy-first-coin'), true).length; i++) s().next();
+    for (let i = 0; i < tourSteps(getTour('review-first-coin'), true).length; i++) s().next();
+    expect(s().activeId).toBeNull();
+    expect(s().completed).toEqual({ 'buy-first-coin': true });
+    // The look itself is never saved or counted: one finish, the Buy lesson's
+    expect(s().finishes).toBe(1);
   });
 
   it('should end the primer without handing over (Lesson 1 offers the next step)', () => {
@@ -40,9 +51,13 @@ describe('tourStore', () => {
 
   it('should end after the last chapter', () => {
     s().start('sell-and-review');
-    const last = getTour('sell-and-review').steps.length;
-    for (let i = 0; i < last; i++) s().next();
+    // The sell, then its two chapters on what it changed
+    for (const id of ['sell-and-review', 'review-sell', 'review-sell-result'] as const) {
+      expect(s().activeId).toBe(id);
+      for (let i = 0; i < tourSteps(getTour(id), true).length; i++) s().next();
+    }
     expect(s().completed['sell-and-review']).toBe(true);
+    expect(s().finishes).toBe(1);
     expect(s().activeId).toBeNull();
   });
 

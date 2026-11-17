@@ -5,6 +5,8 @@ import {
   TOURS,
   getTour,
   isTourId,
+  PATH_REVIEW_IDS,
+  PATH_REVIEWS,
   PRACTICE_REVIEW_IDS,
   PRACTICE_REVIEWS,
   PRACTICE_TOURS,
@@ -20,7 +22,7 @@ describe('tours', () => {
     expect(isTourId('nope')).toBe(false);
   });
 
-  for (const tour of [...TOURS, ...PRACTICE_TOURS, ...PRACTICE_REVIEWS]) {
+  for (const tour of [...TOURS, ...PRACTICE_TOURS, ...PRACTICE_REVIEWS, ...PATH_REVIEWS]) {
     describe(tour.id, () => {
       it('should have at most five steps on each screen size (completion falls fast past five)', () => {
         for (const wide of [true, false]) {
@@ -58,25 +60,103 @@ describe('tours', () => {
 
       it('should start on a dashboard path and chain only to a known tour', () => {
         expect(tour.startUrl).toMatch(/^\/dashboard\//);
-        // A path tour chains to a path tour; a practice trade to its review (2026-11-17)
+        // A path tour or a practice trade chains only to its own look at what it changed (owner
+        // 2026-11-17: one job per practical lesson, never on to another lesson)
         if (tour.next) {
+          expect(isTourId(tour.next), tour.id).toBe(false);
           expect(
-            isTourId(tour.next) || (PRACTICE_REVIEW_IDS as readonly string[]).includes(tour.next)
-          ).toBe(true);
+            [...PRACTICE_REVIEW_IDS, ...PATH_REVIEW_IDS] as readonly string[],
+            tour.id
+          ).toContain(tour.next);
         }
       });
     });
   }
 
-  it('should end the primer alone, and chain buy-first-coin → sell-and-review', () => {
+  it('should end the primer alone, and never hand one practical lesson over to another (owner 2026-11-17)', () => {
     expect(getTour('primer').next).toBeUndefined();
-    expect(getTour('buy-first-coin').next).toBe('sell-and-review');
-    expect(getTour('sell-and-review').next).toBeUndefined();
+    // Buy buys, then a look at the coin; Sell sells, then two chapters on what it changed
+    expect(getTour('buy-first-coin').next).toBe('review-first-coin');
+    expect(getTour('review-first-coin').next).toBeUndefined();
+    expect(getTour('sell-and-review').next).toBe('review-sell');
+    expect(getTour('review-sell').next).toBe('review-sell-result');
+    expect(getTour('review-sell-result').next).toBeUndefined();
+    // No Buy text sends the learner to a next tour
+    for (const st of getTour('buy-first-coin').steps)
+      expect(st.text, st.id).not.toMatch(/next tour/);
+  });
+
+  it('should keep the lessons’ looks out of the saved, reported tours, on the lesson’s own page, on phones too', () => {
+    expect(PATH_REVIEWS.map((t) => t.id)).toEqual([...PATH_REVIEW_IDS]);
+    for (const t of PATH_REVIEWS) {
+      expect(isTourId(t.id), t.id).toBe(false);
+      expect(t.phoneReady, t.id).toBe(true);
+      expect(t.startUrl, t.id).toBe('/dashboard/spot/BTC/USDT');
+      // A lesson of the map ends with Finish (the default), never "Back to the lesson"
+      expect(t.steps.at(-1)!.nextLabel, t.id).not.toBe('Back to the lesson');
+    }
+    // The middle chapter's last button carries on
+    expect(getTour('review-sell').steps.at(-1)!.nextLabel).toBe('Next →');
+  });
+
+  it('should walk the Buy lesson through the coin bought in the words of a card’s practice buy (one source)', () => {
+    const look = (id: 'review-buy' | 'review-first-coin') =>
+      getTour(id).steps.map((st) => [st.kind, st.anchor, st.key, st.text, st.missingHint]);
+    expect(look('review-first-coin')).toEqual(look('review-buy'));
+    expect(getTour('review-buy').steps.at(-1)!.nextLabel).toBe('Back to the lesson');
+    expect(getTour('review-first-coin').steps.at(-1)!.nextLabel).toBeUndefined();
+    // The order's step says a look comes next
+    expect(getTour('buy-first-coin').steps.at(-1)!.text).toMatch(/Next, a quick look/);
+  });
+
+  it('should walk the Sell lesson through Assets, Order History, Realized P&L and Balance History (owner 2026-11-17)', () => {
+    const where = (id: 'sell-and-review' | 'review-sell' | 'review-sell-result') =>
+      getTour(id).steps.map((st) => [st.kind, st.anchor, st.key]);
+    expect(where('sell-and-review')).toEqual([
+      ['click', 'account.tab', 'assets'],
+      ['click', 'assets.row.sell', 'BTC'],
+      ['click', 'trade.submit', undefined],
+    ]);
+    expect(where('review-sell')).toEqual([
+      ['observe', 'assets.row', 'USDT'],
+      ['click', 'account.tab', 'orderhistory'],
+      // No key: the newest row, the sell (orders are listed newest first)
+      ['observe', 'order-history.row', undefined],
+      ['observe', 'order-history.row.commission', undefined],
+    ]);
+    expect(where('review-sell-result')).toEqual([
+      ['observe', 'account.summary.realized-pnl', undefined],
+      ['click', 'account.tab', 'balancehistory'],
+      ['observe', 'balance-history.row', undefined],
+      ['observe', undefined, undefined],
+      ['quiz', undefined, undefined],
+    ]);
+    // The columns named as the panel labels them
+    const text = (id: 'review-sell' | 'review-sell-result') =>
+      getTour(id)
+        .steps.map((st) => st.text)
+        .join(' ');
+    for (const label of ['Side', 'Type', 'Qty', 'Fill Price', 'Status', 'Commission'])
+      expect(text('review-sell')).toContain(label);
+    for (const label of ['Realized P&L', 'Balance Before', 'Balance After', 'Action'])
+      expect(text('review-sell-result')).toContain(label);
+    expect(text('review-sell')).toMatch(/Your Bitcoin row is gone/);
+    // The fees' lesson and the check stay at the end
+    expect(getTour('review-sell-result').steps.at(-1)!.text).toBe('Check yourself');
+  });
+
+  it('should tell a learner with no Bitcoin to buy some first, naming the Buy lesson (owner 2026-11-17)', () => {
+    const sell = getTour('sell-and-review').steps.find((st) => st.anchor === 'assets.row.sell')!;
+    expect(sell.missingHint).toContain(`“${getTour('buy-first-coin').title}” on the learning map`);
+    expect(sell.missingHint).toMatch(/You need some to sell/);
   });
 
   it('should teach going long, a position, closing it and taking a profit (the benchmark gaps)', () => {
     const buy = tourSteps(getTour('buy-first-coin'), true);
-    const sell = tourSteps(getTour('sell-and-review'), true);
+    // The Sell lesson with its look at the result (chained chapters)
+    const sell = (['sell-and-review', 'review-sell', 'review-sell-result'] as const).flatMap((id) =>
+      tourSteps(getTour(id), true)
+    );
     expect(buy[0].text).toMatch(/Buy if you expect the price to rise, Sell to get out/);
     expect(buy[0].text).toMatch(/going long/);
     expect(buy.at(-1)!.text).toMatch(/You now hold a position: \$100 of Bitcoin, long/);
@@ -87,8 +167,8 @@ describe('tours', () => {
 
   it('should not assume the sell tour sells exactly $100 (a practice buy may come first)', () => {
     // Lesson 1's practice buy and its Try both buy $100 of Bitcoin (review 2026-11-16)
-    const text = getTour('sell-and-review')
-      .steps.map((st) => st.text)
+    const text = (['sell-and-review', 'review-sell', 'review-sell-result'] as const)
+      .flatMap((id) => getTour(id).steps.map((st) => st.text))
       .join(' ');
     expect(text).not.toMatch(/\$100/);
     expect(text).toMatch(/Selling all of your Bitcoin closes your position/);

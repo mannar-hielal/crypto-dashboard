@@ -371,18 +371,22 @@ describe('useTourProgress', () => {
       ]);
     });
 
-    it('should report a finish, then the next chapter starting, but no close', async () => {
+    it('should report a finish, but neither a start nor a close of the look that follows it', async () => {
       await loaded();
       act(() => useTourStore.getState().start('buy-first-coin'));
       trackEvent.mockClear();
       act(() => {
         for (let i = 0; i < 5; i++) useTourStore.getState().next();
       });
+      // On to the look at the coin bought (owner 2026-11-17), never the Sell lesson
+      expect(useTourStore.getState().activeId).toBe('review-first-coin');
+      act(() => useTourStore.getState().close());
 
       const sent = names().map((n: { name: string; itemId: string }) => `${n.name}:${n.itemId}`);
-      expect(sent).toContain('tour_completed:buy-first-coin');
-      expect(sent).toContain('tour_started:sell-and-review');
-      expect(sent.some((s: string) => s.startsWith('tour_closed'))).toBe(false);
+      // The buy's own steps, its finish, and nothing from the look
+      expect(sent.filter((x: string) => !x.startsWith('tour_step:buy-first-coin'))).toEqual([
+        'tour_completed:buy-first-coin',
+      ]);
     });
 
     it('should report a replay of a finished tour as a finish, never as a close', async () => {
