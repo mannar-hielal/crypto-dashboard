@@ -22,8 +22,8 @@ import {
   screenTour,
 } from '@/guide/lessons';
 import { daySeconds } from '@/guide/lessonChartData';
-import { isTourId } from '@/guide/tours';
-import { ARTICLE_IDS, getArticle } from '@/learn/articles';
+import { getTour, isTourId, PRACTICE_REVIEW_IDS, PRACTICE_TOUR_IDS, TOUR_IDS } from '@/guide/tours';
+import { ARTICLE_IDS, ARTICLES, getArticle } from '@/learn/articles';
 import { FREE } from '@/learn/access';
 import { termIds } from '@/learn/terms';
 
@@ -57,6 +57,17 @@ describe('lessons', () => {
     // "price * 2") or flush between digits ("5*3") is a times sign
     for (const lesson of LESSONS) {
       expect(JSON.stringify(lesson), lesson.id).not.toMatch(/\s\*\s|\d\*\d/);
+    }
+  });
+
+  it('should never use * as a times sign in articles, checkpoints or tours either (one renderer)', () => {
+    const tours = [...TOUR_IDS, ...PRACTICE_TOUR_IDS, ...PRACTICE_REVIEW_IDS].map(getTour);
+    for (const [name, data] of [
+      ['articles', ARTICLES],
+      ['checkpoints', CHECKPOINTS],
+      ['tours', tours],
+    ] as const) {
+      expect(JSON.stringify(data), name).not.toMatch(/\s\*\s|\d\*\d/);
     }
   });
 
