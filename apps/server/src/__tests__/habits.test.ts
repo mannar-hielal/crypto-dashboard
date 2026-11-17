@@ -228,6 +228,11 @@ describe('streakEndingAt', () => {
     expect(dayCounter('+03:00')(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);
   });
 
+  it('should keep no more zone formatters than its cap, whatever names are sent', () => {
+    for (const zone of Intl.supportedValuesOf('timeZone')) dayCounter(zone);
+    expect(zoneFormatsKept()).toBeLessThanOrEqual(1000);
+  });
+
   it('should count in UTC for no time zone or an unknown one', () => {
     const late = new Date('2026-10-23T22:30:00Z');
     expect(dayCounter()(late)).toBe(Date.UTC(2026, 9, 23) / 86_400_000);

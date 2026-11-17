@@ -49,8 +49,9 @@ export function dayCounter(zone = 'UTC'): (d: Date) => number {
 const QUARTER_HOUR_MS = 15 * 60_000;
 
 /**
- * 🔐 The zones this runtime knows (418 on Node 24), as Intl names them. A formatter is kept only for
- * one of these, so that cache never holds more than the list, whatever is sent
+ * 🔐 The zones this runtime knows (418 on Node 24), as Intl names them, plus the fixed whole-hour
+ * ones. Formatters are kept for zone names Intl itself returns (its own database: these and its
+ * aliases), and that cache is capped too (MAX_ZONE_FORMATS), whatever is sent
  */
 const KNOWN_ZONES: ReadonlySet<string> = new Set([
   ...Intl.supportedValuesOf('timeZone'),
@@ -62,6 +63,8 @@ const KNOWN_ZONES: ReadonlySet<string> = new Set([
   'Etc/UTC',
 ]);
 const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
+/** 🔐 Above every name Intl's database holds (about 600 with its aliases): a bound, never reached */
+const MAX_ZONE_FORMATS = 1000;
 /**
  * 🔐 A zone name as Intl's own database writes them, never an offset: Asia/Kolkata,
  * America/Argentina/Salta, and the one-part aliases (Japan, GB, EST5EDT). It starts with a letter
@@ -125,6 +128,11 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
       month: 'numeric',
       day: 'numeric',
     });
+    // (never more than the cap: a runtime that echoed any name back would still be bounded)
+    if (ZONE_FORMATS.size >= MAX_ZONE_FORMATS) {
+      const oldest = ZONE_FORMATS.keys().next().value;
+      if (oldest !== undefined) ZONE_FORMATS.delete(oldest);
+    }
     ZONE_FORMATS.set(name, format);
   }
   return format;
