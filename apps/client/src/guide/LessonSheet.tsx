@@ -998,7 +998,8 @@ export function LessonSheet() {
               onClick={viaStreak(offerNext ? startNext : finish)}
               {...guide(offerNext ? 'lesson.next-lesson' : 'lesson.finish')}
             >
-              {offerNext ? nextLabel : 'Finish'}
+              {/* No way on: the one button says Finish lesson (owner 2026-11-17) */}
+              {offerNext ? nextLabel : LESSON_LABELS.finish}
             </button>
             {offerNext && !returnTo && (
               <button

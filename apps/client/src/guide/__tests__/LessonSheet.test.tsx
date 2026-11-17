@@ -381,8 +381,9 @@ describe('LessonSheet', () => {
     renderSheet();
     expect(document.querySelector('[data-guide="lesson.finish-line"]')).not.toBeNull();
     expect(document.querySelector('[data-guide="lesson.note"]')).not.toBeNull();
-    // Lesson 3 offers no way on: one Finish, and the path shows what comes next
-    expect(finishBtn().textContent).toBe('Finish');
+    // Lesson 3 offers no way on: one Finish lesson (the one label set, owner 2026-11-17), and the
+    // path shows what comes next
+    expect(finishBtn().textContent).toBe('Finish lesson');
     expect(document.querySelector('[data-guide="lesson.next-lesson"]')).toBeNull();
     expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
 
@@ -730,6 +731,8 @@ describe('LessonSheet', () => {
     renderSheet();
     const nextLesson = document.querySelector('[data-guide="lesson.next-lesson"]')!;
     expect(nextLesson.textContent).toBe('Lesson 2: Money nobody controls');
+    // With a way on, finishing stays the link under it (only a close with no way on says Finish lesson)
+    expect(finishBtn().textContent).toBe('Finish for now');
     fireEvent.click(nextLesson);
     expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
     expect(useLessonStore.getState()).toMatchObject({ activeId: 'lesson-ownership', screen: 0 });
