@@ -1344,6 +1344,11 @@ export function lessonStepNumber(lesson: Lesson, screen: number): number {
   return (lesson.stepBase ?? 0) + screen + 1;
 }
 
+/** A finish's step: the lesson's last screen, the one rule every finish sends */
+export function lessonFinishStep(lesson: Lesson): number {
+  return lessonStepNumber(lesson, lessonScreens(lesson).length - 1);
+}
+
 /** The screen (0-based) a step number stands for today, or null for an earlier version's step */
 export function lessonScreenOfStep(lesson: Lesson, step: number): number | null {
   const screen = step - (lesson.stepBase ?? 0) - 1;

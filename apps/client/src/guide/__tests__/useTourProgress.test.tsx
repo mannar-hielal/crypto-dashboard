@@ -638,6 +638,42 @@ describe('useTourProgress', () => {
       );
     });
 
+    it('should keep a checkpoint and a tour done signed out, on the first read only', async () => {
+      profile = { id: 'u4' };
+      forgetSignedOutAccount();
+      usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
+      useTourStore.setState({ completed: { 'buy-first-coin': true } });
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 2);
+      expect(setProgress).toHaveBeenCalledWith('buy-first-coin', 'completed', 'tok');
+      expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
+      expect(useTourStore.getState().completed['buy-first-coin']).toBe(true);
+    });
+
+    it('should never queue a lesson the store holds on a later read (it is the server’s answer)', async () => {
+      profile = { id: 'u3' };
+      forgetSignedOutAccount();
+      getProgress.mockResolvedValueOnce({ items: [item('lesson-01', 'completed')] });
+      const { rerender } = renderHook(() => useTourProgress());
+      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBe(true));
+      // The next read (a session refresh) no longer lists it (a stale row filtered out)
+      getProgress.mockResolvedValue({ items: [] });
+      setProgress.mockClear();
+      token = 'tok2';
+      rerender();
+      await waitFor(() => expect(getProgress).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(setProgress).not.toHaveBeenCalledWith(
+        'lesson-01',
+        'completed',
+        'tok2',
+        expect.anything()
+      );
+      expect(pendingDone('u3')).toEqual([]);
+    });
+
     it('should send no close for a finished lesson left from a look back', async () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
