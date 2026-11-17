@@ -95,6 +95,16 @@ export const NEEDS_DONE: Partial<Record<PathTourId, PathTourId>> = {
   'sell-and-review': 'buy-first-coin',
 };
 
+/** The tour a stop still needs done first (NEEDS_DONE), or null: the one rule the map and a
+ * checkpoint's Review both read */
+export function missingPrerequisite(
+  id: PathTourId,
+  toursDone: Partial<Record<PathTourId, boolean>>
+): PathTourId | null {
+  const needs = NEEDS_DONE[id];
+  return needs && toursDone[needs] !== true ? needs : null;
+}
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 /**
@@ -267,8 +277,9 @@ export function pathState(
       }
       if (locked) return { ...view, state: 'locked' };
       // Its prerequisite not done: locked, without holding up the stops after it
-      const needs = node.kind === 'tour' ? NEEDS_DONE[node.id] : undefined;
-      if (needs && progress.tours[needs] !== true) return { ...view, state: 'locked' };
+      if (node.kind === 'tour' && missingPrerequisite(node.id, progress.tours)) {
+        return { ...view, state: 'locked' };
+      }
       if (node.kind === 'tour' && progress.skippedTours[node.id]) {
         return { ...view, state: 'skipped' };
       }

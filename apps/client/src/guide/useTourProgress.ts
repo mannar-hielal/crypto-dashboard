@@ -235,6 +235,10 @@ export function useTourProgress(): void {
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as PathTourId);
+        // (A tour finish, skip or dismissal is sent once, with no queue: a save that fails lives only
+        // until the next read, which shows what the server has, as before this branch. Keeping and
+        // re-sending them on a refresh read was tried and weighed, review after #311: it could undo
+        // a server-side reset and only covered one of the fields, so they stay fire-and-forget)
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)
@@ -261,7 +265,8 @@ export function useTourProgress(): void {
         // Hidden only by a Lesson 1 finish still to save: undone() shows it again if that's refused
         cardByKeptFinish = !cardBySaved && lessons.includes('lesson-01');
         const cardDismissed = cardBySaved || cardByKeptFinish;
-        useLessonStore.getState().setCompleted(lessons);
+        // (the server's answer: never sent back as the learner's own finish)
+        asServerAnswer(() => useLessonStore.getState().setCompleted(lessons));
         // How far each begun lesson got (the map's ring). A step from an earlier version of the
         // lesson names no screen today: that lesson's ring starts again
         const reached: Partial<Record<LessonId, number>> = {};
@@ -303,6 +308,8 @@ export function useTourProgress(): void {
         for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken, { kept: true });
       })
       .catch(() => {
+        // (A lesson already in the store stays shown here, one done signed out included, until a read
+        // lands: the signed-out rule, recorded above. Weighed, review after #311)
         // Can't read it. A read again (a session refresh) leaves everything shown as it is; a first
         // read shows no offer rather than one that may already have been answered
         if (!stale() && !useTourStore.getState().loaded) {

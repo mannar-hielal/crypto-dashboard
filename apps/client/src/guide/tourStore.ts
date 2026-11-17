@@ -153,7 +153,11 @@ export const useTourStore = create<TourState>()((set, get) => ({
     const current = all.indexOf(tourSteps(tour, wide)[stepIndex]?.id ?? '');
     // A step this size's list doesn't hold (a stale index): stay put, within the new list
     if (current === -1) {
-      set({ wide: next, stepIndex: Math.min(stepIndex, tourSteps(tour, next).length - 1) });
+      set({
+        wide: next,
+        stepIndex: Math.min(stepIndex, tourSteps(tour, next).length - 1),
+        quizAnswer: null,
+      });
       return;
     }
     const { passed } = get();
@@ -179,7 +183,9 @@ export const useTourStore = create<TourState>()((set, get) => ({
     const shown = tourSteps(tour, next).map((s) => all.indexOf(s.id));
     const at = shown.findIndex((i) => i >= start);
     const stepIndexNow = at === -1 ? shown.length - 1 : at;
-    set({ wide: next, stepIndex: stepIndexNow });
+    // (another step: an answer given on the last one never shows on this one; the same step keeps it)
+    const sameStep = all[current] === tourSteps(tour, next)[stepIndexNow]?.id;
+    set({ wide: next, stepIndex: stepIndexNow, quizAnswer: sameStep ? get().quizAnswer : null });
   },
 
   back: () => {

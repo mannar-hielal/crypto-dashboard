@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 
 let wide = true;
@@ -117,9 +117,39 @@ describe('CheckpointSheet', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
     answerAll((i) => wrongFor(i));
-    fireEvent.click(document.querySelector(guideSelector('checkpoint.review', 'sell-and-review'))!);
+    // The anchor names where it goes: the Buy lesson, while Sell is locked behind it
+    fireEvent.click(document.querySelector(guideSelector('checkpoint.review', 'buy-first-coin'))!);
     // Sell sells what Buy bought: locked until Buy is done (NEEDS_DONE), here as on the map
     expect(useTourStore.getState().activeId).toBe('buy-first-coin');
+  });
+
+  it('should name the Buy lesson on the Review button while Sell is locked behind it', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch1');
+    renderSheet();
+    answerAll((i) => wrongFor(i));
+    const review = document.querySelector(guideSelector('checkpoint.review', 'buy-first-coin'))!;
+    expect(review.textContent).toContain('Buy your first coin');
+    expect(review.textContent).not.toContain('Sell it');
+  });
+
+  it('should move the Review to Sell once Buy is done, while the result is open', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch1');
+    renderSheet();
+    answerAll((i) => wrongFor(i));
+    const review = (id: string) => document.querySelector(guideSelector('checkpoint.review', id));
+    expect(review('buy-first-coin')!.textContent).toContain('Buy your first coin');
+    act(() => useTourStore.setState({ completed: { 'buy-first-coin': true } }));
+    expect(review('sell-and-review')!.textContent).toContain('Sell it and read the result');
+  });
+
+  it('should show one Review per place to go, never twin links', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch1');
+    renderSheet();
+    answerAll((i) => wrongFor(i));
+    // Buy not done: every missed tour question leads to Buy, and only one button says so
+    expect(
+      document.querySelectorAll(guideSelector('checkpoint.review', 'buy-first-coin')).length
+    ).toBe(1);
   });
 
   it('should send a missed tour question to the tour, on a phone too when the tour is phone-ready', () => {

@@ -519,6 +519,8 @@ export function LessonSheet() {
     return useTourStore.subscribe((s, prev) => {
       if (prev.activeId === null || s.activeId === prev.activeId) return;
       const lessons = useLessonStore.getState();
+      // (A follow-up chapter closed for size keeps the lesson on its screen too: every follow-up
+      // today is phone-ready, so none is closed that way. Weighed, review after #311)
       if (s.activeId === null) lessons.leaveTour(!s.closedForSize);
       else if (s.activeId !== getTour(prev.activeId).next && s.activeId !== lessons.tourFrom) {
         lessons.forgetTour();
@@ -743,6 +745,8 @@ export function LessonSheet() {
             <div className={styles.chartRow}>
               {card.presenter && <GuideFigure {...card.presenter} className={styles.chartGuide} />}
               <LessonChart
+                // A fresh chart per card: a failed load or another scene's candles never carry over
+                key={`${run}:${screenIndex}`}
                 scene={card.chart}
                 revealed={false}
                 fallback={<LessonArt id={card.chart.fallback} />}

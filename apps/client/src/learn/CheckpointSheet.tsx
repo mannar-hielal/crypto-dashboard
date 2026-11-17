@@ -13,14 +13,12 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { guide } from '@/lib/guideAnchors';
 import { startLesson, startTour } from '@/guide/afterNote';
-import { NEEDS_DONE } from './path';
-import { isTourId } from '@/guide/tours';
-import { runsHere } from '@/guide/tours';
+import { missingPrerequisite } from './path';
+import { getTour, isTourId, runsHere } from '@/guide/tours';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
 import { getLesson } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
-import { getTour } from '@/guide/tours';
 import {
   checkpointScore,
   getCheckpoint,
@@ -28,6 +26,16 @@ import {
   type TaughtIn,
 } from './checkpoints';
 import { usePathStore } from './pathStore';
+
+/**
+ * Where a Review goes: the place it was taught, unless that's a tour locked behind another (Sell
+ * behind Buy) not done yet, which comes first. One rule for the label, the hint and the button
+ */
+function reviewTarget(t: TaughtIn, toursDone: Record<string, true | undefined>): TaughtIn {
+  if (t.kind === 'lesson' || !isTourId(t.id)) return t;
+  const needs = missingPrerequisite(t.id, toursDone);
+  return needs ? { kind: 'tour', id: needs } : t;
+}
 
 function taughtInLabel(t: TaughtIn): string {
   if (t.kind === 'lesson') {
@@ -41,11 +49,15 @@ interface MissedProps {
   q: CheckpointQuestion;
   wide: boolean;
   onReview: (t: TaughtIn) => void;
+  /** Where its Review goes (reviewTarget) */
+  target: TaughtIn;
+  /** The first missed question with this target: the only one with the button (no twin links) */
+  firstForTarget: boolean;
 }
 
-function Missed({ q, wide, onReview }: MissedProps) {
+function Missed({ q, wide, onReview, target, firstForTarget }: MissedProps) {
   // A tour that can't run here (a phone, unless it's phone-ready) gets its name without a button
-  const canGo = q.taughtIn.kind === 'lesson' || runsHere(q.taughtIn.id, wide);
+  const canGo = firstForTarget && (target.kind === 'lesson' || runsHere(target.id, wide));
   return (
     <li>
       <p className={styles.text}>{q.question}</p>
@@ -53,13 +65,16 @@ function Missed({ q, wide, onReview }: MissedProps) {
         <button
           type="button"
           className={styles.link}
-          onClick={() => onReview(q.taughtIn)}
-          {...guide('checkpoint.review', q.taughtIn.id)}
+          onClick={() => onReview(target)}
+          {...guide('checkpoint.review', target.id)}
         >
-          Review {taughtInLabel(q.taughtIn)} →
+          Review {taughtInLabel(target)} →
         </button>
       ) : (
-        <p className={styles.hint}>Taught in {taughtInLabel(q.taughtIn)} (on a larger screen)</p>
+        <p className={styles.hint}>
+          Taught in {taughtInLabel(q.taughtIn)}
+          {firstForTarget ? ' (on a larger screen)' : ''}
+        </p>
       )}
     </li>
   );
@@ -71,6 +86,8 @@ export function CheckpointSheet() {
   const checkpointId = usePathStore((s) => s.checkpointId);
   const index = usePathStore((s) => s.question);
   const answers = usePathStore((s) => s.answers);
+  // Subscribed: a Buy finish landing while the result is open moves a Review to Sell
+  const toursDone = useTourStore((st) => st.completed);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Esc closes, back to the map
@@ -106,18 +123,15 @@ export function CheckpointSheet() {
   const review = (t: TaughtIn) => {
     closeCheckpoint();
     // As the map's and the articles' links (`afterNote.ts`): one lesson or tour on screen
+    // (t is already reviewTarget's: a locked tour's prerequisite comes first)
     if (t.kind === 'lesson') startLesson(t.id);
-    else {
-      // A tour locked behind another (Sell behind Buy, NEEDS_DONE): the one it needs comes first
-      const needs = isTourId(t.id) ? NEEDS_DONE[t.id] : undefined;
-      const ready = !needs || !!useTourStore.getState().completed[needs];
-      startTour(ready ? t.id : needs!, navigate);
-    }
+    else startTour(t.id, navigate);
   };
 
   const score = checkpointScore(checkpoint, answers);
   const passed = score >= checkpoint.pass;
   const missed = checkpoint.questions.filter((q, i) => answers[i] !== q.correct);
+  const targets = missed.map((q) => reviewTarget(q.taughtIn, toursDone));
 
   return createPortal(
     <div className={styles.overlay}>
@@ -198,8 +212,15 @@ export function CheckpointSheet() {
               </p>
               {missed.length > 0 && (
                 <ul className={styles.canDo}>
-                  {missed.map((q) => (
-                    <Missed key={q.question} q={q} wide={wide} onReview={review} />
+                  {missed.map((q, i) => (
+                    <Missed
+                      key={q.question}
+                      q={q}
+                      wide={wide}
+                      onReview={review}
+                      target={targets[i]}
+                      firstForTarget={targets.findIndex((t) => t.id === targets[i].id) === i}
+                    />
                   ))}
                 </ul>
               )}

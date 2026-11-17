@@ -105,6 +105,9 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
   // ── The chart itself, once there is data ───────────────────────────────────
   const ready = bars !== null;
   // Decimals by the coin's price level, not its name (pricePrecision), once per data load
+  // (From all the scene's candles, so the revealed ones read right too. Weighed, review after #311:
+  // a format taken from the frozen part alone misprinted an outcome crossing a band; no lesson's
+  // scene crosses $1 or $1,000 between its freeze and its end, so the axis gives nothing away)
   const precision = useMemo(() => {
     const top = bars ? bars.reduce((t, b) => Math.max(t, b.high), 0) : 0;
     return pricePrecision(top);
