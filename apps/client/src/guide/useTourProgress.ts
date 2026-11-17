@@ -126,7 +126,12 @@ function saveDone(
     // (Not onePerKey: a second save of the item is dropped, not handed this one's outcome)
     .finally(() => {
       inFlight.delete(key);
-      if (resend !== null) saveDone(itemId, resend, accessToken, { kept: true });
+      // 🔐 Only for the account still signed in, with its current token (a sign-out or a rotation
+      // may have landed meanwhile: the queue it was kept in is then gone, or the token stale)
+      const now = useAuthStore.getState().accessToken;
+      if (resend !== null && now && accountOf(now) === account) {
+        saveDone(itemId, resend, now, { kept: true });
+      }
     });
 }
 

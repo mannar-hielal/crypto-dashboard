@@ -629,6 +629,20 @@ describe('useTourProgress', () => {
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
     });
 
+    it('should not resend the newer finish for an account that signed out meanwhile', async () => {
+      profile = { id: 'u8' };
+      queueDone('u8', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP - 1 });
+      let refuse: (e: unknown) => void = () => {};
+      setProgress.mockReturnValueOnce(new Promise((_, reject) => (refuse = reject)));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(setProgress).toHaveBeenCalledTimes(1));
+      queueDone('u8', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
+      token = null; // signed out before the refusal lands
+      await act(async () => refuse(Object.assign(new Error('x'), { status: 409 })));
+      expect(setProgress).toHaveBeenCalledTimes(1);
+    });
+
     it('should send no close for a finished lesson left from a look back', async () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
