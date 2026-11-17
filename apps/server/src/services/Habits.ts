@@ -62,8 +62,20 @@ const KNOWN_ZONES: ReadonlySet<string> = new Set([
   'Etc/UTC',
 ]);
 const ZONE_FORMATS = new Map<string, Intl.DateTimeFormat>();
-/** A region/city zone name as Intl's own database writes them (Asia/Kolkata, America/Argentina/Salta) */
-const IANA_NAME = /^[A-Z][A-Za-z_]+(?:\/[A-Za-z0-9_+-]+)+$/;
+/**
+ * 🔐 A region/city zone name as Intl's own database writes them (Asia/Kolkata,
+ * America/Argentina/Salta): split on '/', each part checked with a plain pattern (no nested
+ * repetition, so no regex backtracking on what a client sends)
+ */
+function isRegionName(name: string): boolean {
+  const parts = name.split('/');
+  return (
+    parts.length >= 2 &&
+    parts.length <= 4 &&
+    /^[A-Z][A-Za-z_]*$/.test(parts[0]) &&
+    parts.slice(1).every((p) => /^[A-Za-z0-9_+-]+$/.test(p))
+  );
+}
 
 /**
  * 🔐 Any other text sent as a zone → the known zone Intl reads it as (`asia/kolkata`, `US/Eastern`),
@@ -88,7 +100,7 @@ function knownZone(zone: string): string | null {
     // A listed zone, or any region/city name Intl itself returns (its own database, so a finite
     // set): a runtime that names Asia/Kolkata as itself, not as the listed Asia/Calcutta, still
     // counts it. Never an offset ('+05:07'), which isn't on a quarter hour
-    canonical = KNOWN_ZONES.has(named) || IANA_NAME.test(named) ? named : null;
+    canonical = KNOWN_ZONES.has(named) || isRegionName(named) ? named : null;
   } catch {
     canonical = null;
   }
