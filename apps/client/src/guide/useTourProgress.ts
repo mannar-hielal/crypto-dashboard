@@ -12,7 +12,14 @@ import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { noteFinishSent } from '@/learn/finishSync';
-import { dropDone, dropMany, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
+import {
+  dropDone,
+  dropMany,
+  forgetAllDone,
+  pendingDone,
+  queueDone,
+  type PendingDone,
+} from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
@@ -79,9 +86,14 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
   // One save of an item at a time: a read meanwhile doesn't send it again
   const key = `${account ?? ''}:${itemId}`;
   if (inFlight.has(key)) return;
-  inFlight.add(key);
+  // Each save holds its own token: a stalled one released by the timer never frees a later one
+  const mine = Symbol(key);
+  inFlight.set(key, mine);
+  const release = () => {
+    if (inFlight.get(key) === mine) inFlight.delete(key);
+  };
   // A save that never answers (a hung link) stops holding later resends back after a while
-  const released = setTimeout(() => inFlight.delete(key), SAVE_HOLD_MS);
+  const released = setTimeout(release, SAVE_HOLD_MS);
   learnApi
     .setProgress(itemId, 'completed', accessToken, step)
     .catch((err: unknown) => {
@@ -93,16 +105,19 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
       if (typeof status !== 'number' || !REFUSED_FOR_GOOD.has(status)) return;
       if (account) dropDone(account, itemId);
       if (accountOf(useAuthStore.getState().accessToken) !== account) return;
-      return learnApi
-        .getProgress(accessToken)
-        .then(({ items }) => {
-          if (!items.some((i) => i.itemId === itemId && i.status === 'completed')) undone(itemId);
-        })
-        .catch(() => undone(itemId));
+      return (
+        learnApi
+          .getProgress(accessToken)
+          .then(({ items }) => {
+            if (!items.some((i) => i.itemId === itemId && i.status === 'completed')) undone(itemId);
+          })
+          // Couldn't check: left shown; the next progress read shows what the server has
+          .catch(() => undefined)
+      );
     })
     .finally(() => {
       clearTimeout(released);
-      inFlight.delete(key);
+      release();
     });
 }
 
@@ -110,7 +125,7 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
 const SAVE_HOLD_MS = 20_000;
 
 /** Saves on their way, by account and item */
-const inFlight = new Set<string>();
+const inFlight = new Map<string, symbol>();
 
 /**
  * Answers no retry changes: not found, an earlier version (409), unprocessable. Never 400: that is
@@ -129,9 +144,12 @@ function sendReached(id: LessonId, screen: number, accessToken: string): void {
 export function useTourProgress(): void {
   const accessToken = useAuthStore((s) => s.accessToken);
 
-  // Signed out: the furthest screens belong to the account that made them, never the next one
+  // Signed out: the furthest screens belong to the account that made them, never the next one; the
+  // device keeps no account's unsaved finishes either (forgetAllDone)
   useEffect(() => {
-    if (!accessToken) useLessonStore.getState().clearReached();
+    if (accessToken) return;
+    useLessonStore.getState().clearReached();
+    forgetAllDone();
   }, [accessToken]);
 
   // Read

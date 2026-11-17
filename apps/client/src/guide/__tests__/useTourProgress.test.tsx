@@ -174,6 +174,17 @@ describe('useTourProgress', () => {
     expect(pendingDone('u1')).toEqual([]);
   });
 
+  it('should forget the device’s kept finishes when the learner signs out', async () => {
+    queueDone('u1', { itemId: 'lesson-02', step: 81 });
+    getProgress.mockResolvedValue({ items: [] });
+    const { rerender } = renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    token = null;
+    rerender();
+    expect(pendingDone('u1')).toEqual([]);
+    token = 'tok';
+  });
+
   it('should save a finished tour and a dismissed card, once each', async () => {
     getProgress.mockResolvedValue({ items: [] });
     renderHook(() => useTourProgress());
@@ -497,6 +508,19 @@ describe('useTourProgress', () => {
       await act(async () => {});
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
       expect(pendingDone('u1')).toEqual([]);
+    });
+
+    it('should leave a refused finish shown when the server can’t be asked whether it has one', async () => {
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      getProgress.mockRejectedValue(new Error('offline'));
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+      act(() => useLessonStore.getState().finish());
+      await waitFor(() => expect(getProgress).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      // Not taken back on a guess: the next read shows what the server has
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      getProgress.mockResolvedValue({ items: [] });
     });
 
     it('should drop a kept finish the server already has, without sending it again', async () => {

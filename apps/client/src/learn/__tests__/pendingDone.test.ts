@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { dropDone, pendingDone, queueDone } from '@/learn/pendingDone';
+import { dropDone, forgetAllDone, pendingDone, queueDone } from '@/learn/pendingDone';
 
 describe('pendingDone', () => {
   beforeEach(() => localStorage.clear());
@@ -21,7 +21,7 @@ describe('pendingDone', () => {
     localStorage.setItem(
       'cd-pending-done:a',
       JSON.stringify({
-        v: 2,
+        v: 1,
         items: [
           { itemId: 'lesson-02', step: 70, since: Date.now() },
           { itemId: 'primer', step: 1 }, // a tour: never kept
@@ -44,17 +44,22 @@ describe('pendingDone', () => {
     expect(pendingDone('a')).toEqual([]);
   });
 
-  it('should read a version 1 list as kept from now, and give up one kept over 30 days', () => {
-    localStorage.setItem(
-      'cd-pending-done:a',
-      JSON.stringify({ v: 1, items: [{ itemId: 'lesson-01', step: 81 }] })
-    );
-    expect(pendingDone('a')).toEqual([expect.objectContaining({ itemId: 'lesson-01', step: 81 })]);
+  it('should give up one kept over 30 days', () => {
     const old = Date.now() - 31 * 86_400_000;
     localStorage.setItem(
       'cd-pending-done:a',
-      JSON.stringify({ v: 2, items: [{ itemId: 'lesson-01', step: 81, since: old }] })
+      JSON.stringify({ v: 1, items: [{ itemId: 'lesson-01', step: 81, since: old }] })
     );
     expect(pendingDone('a')).toEqual([]);
+  });
+
+  it('should forget every account’s kept finishes at sign-out, and nothing else', () => {
+    queueDone('a', { itemId: 'lesson-01', step: 81 });
+    queueDone('b', { itemId: 'checkpoint-ch1', step: 2 });
+    localStorage.setItem('cd-layout', 'x');
+    forgetAllDone();
+    expect(pendingDone('a')).toEqual([]);
+    expect(pendingDone('b')).toEqual([]);
+    expect(localStorage.getItem('cd-layout')).toBe('x');
   });
 });

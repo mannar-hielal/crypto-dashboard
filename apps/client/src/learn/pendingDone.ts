@@ -29,7 +29,7 @@ const key = (account: string) => `cd-pending-done:${account}`;
  * 🔐 The stored shape's version (security.md: persisted client state is versioned): `{ v, items }`.
  * Another version, or anything else, reads as nothing kept; a new shape bumps it and migrates here
  */
-const VERSION = 2;
+const VERSION = 1;
 
 function isPending(v: unknown): v is PendingDone {
   if (typeof v !== 'object' || v === null) return false;
@@ -47,7 +47,7 @@ function isPending(v: unknown): v is PendingDone {
 }
 
 /**
- * The stored list in today's shape, from any version this module ever wrote (1 and today's 2; a new
+ * The stored list in today's shape, from any version this module ever wrote (only 1 so far, today's; a new
  * shape adds its step here). Anything else reads as nothing kept: it's validated item by item after
  */
 function migrate(raw: unknown): unknown[] {
@@ -55,11 +55,6 @@ function migrate(raw: unknown): unknown[] {
   const { v, items } = raw as Record<string, unknown>;
   if (!Array.isArray(items)) return [];
   if (v === VERSION) return items;
-  // 1 → 2: `since` added; an item kept under 1 counts from now
-  if (v === 1) {
-    const now = Date.now();
-    return items.map((i) => (typeof i === 'object' && i !== null ? { ...i, since: now } : i));
-  }
   return [];
 }
 
@@ -108,4 +103,19 @@ export function dropMany(account: string, itemIds: readonly PendingDone['itemId'
     account,
     pendingDone(account).filter((p) => !itemIds.includes(p.itemId))
   );
+}
+
+/**
+ * 🔐 Forget every account's kept finishes on this device: at sign-out, so a shared device keeps no
+ * other account's id or progress (what wasn't saved yet is redone, the worst case)
+ */
+export function forgetAllDone(): void {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('cd-pending-done:')) localStorage.removeItem(k);
+    }
+  } catch {
+    // No storage: nothing kept
+  }
 }

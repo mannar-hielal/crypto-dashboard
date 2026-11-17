@@ -15,9 +15,10 @@ export function useHabits(
 ): { habits: HabitsResponse | null; failed: boolean } {
   // Whose answer it is, by account (a session refresh changes the token, not the account): another
   // account's (a sign-out, then a sign-in) is never shown
-  // The profile's id, or the token's own user while the profile loads: one read, not two
-  const profileId = useAuthStore((s) => s.user?.id ?? null);
-  const account = profileId ?? accountOf(accessToken);
+  // The account (accountOf: the profile's id, or the token's own user while the profile loads); the
+  // profile's id is watched only so a profile that loads re-renders
+  useAuthStore((s) => s.user?.id);
+  const account = accountOf(accessToken);
   const [read, setRead] = useState<{
     account: string | null;
     habits: HabitsResponse | null;
