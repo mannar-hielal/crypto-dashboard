@@ -377,7 +377,7 @@ describe('lessons', () => {
     });
     // Lesson 3 keeps its pictures as they were
     expect(art('lesson-02')).toEqual({
-      'One bitcoin for $8,200': 'flashCrash',
+      'One Bitcoin for $8,200': 'flashCrash',
       'Thousands of deals, one candle': 'candleAnatomy',
       'Thin or deep': 'staircase',
       'Check before you trust': 'checkCoin',
@@ -691,7 +691,7 @@ describe('lessons', () => {
     // No way on from the close: Lesson 1's Try already ran the buy and sell tours (review 2026-11-16)
     expect(l.next).toBeUndefined();
     expect(l.cards.map((c) => c.title)).toEqual([
-      'One bitcoin for $8,200',
+      'One Bitcoin for $8,200',
       'Why so much?',
       'Big swings, both ways',
       'News moves it, fast',
@@ -710,6 +710,15 @@ describe('lessons', () => {
       'Quick check',
     ]);
     expect(lessonScreens(l)).toHaveLength(21);
+    // Fact check 2026-11-17: Bitcoin with a capital B throughout, the low's source named, and no
+    // promise that a swing up is any easier to time
+    const prose = JSON.stringify(l, (key: string, v: unknown) =>
+      key === 'article' || key === 'art' || key === 'fallback' ? undefined : v
+    );
+    expect(prose).not.toMatch(/\bbitcoin\b/);
+    expect(l.cards.find((c) => c.title === 'Big swings, both ways')?.text).toContain(
+      'On 19 May 2021 Bitcoin fell from about $42,900 to as low as $28,800 on Bybit’s perpetual chart, then closed near $36,700. It can swing up just as hard, often without warning, so no one can reliably time it.'
+    );
     expect(l.cards[0].art).toBe('flashCrash');
     expect(l.cards[0].beats?.at(-1)?.text).toContain(`${l.minutes} minutes`);
     // The benchmark's company and token are gone; the examples are ours

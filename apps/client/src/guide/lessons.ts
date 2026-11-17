@@ -1070,13 +1070,13 @@ const lesson02: Lesson = {
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
   cards: [
     {
-      title: 'One bitcoin for $8,200',
+      title: 'One Bitcoin for $8,200',
       art: 'flashCrash',
       beats: [
         { kind: 'kicker', text: '21 October 2021 · Binance.US' },
         {
           kind: 'headline',
-          text: 'For a moment, one bitcoin sold for $8,200.',
+          text: 'For a moment, one Bitcoin sold for $8,200.',
           emphasis: '$8,200',
         },
         {
@@ -1108,7 +1108,7 @@ const lesson02: Lesson = {
       title: 'Big swings, both ways',
       presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
       chart: MAY_2021,
-      text: 'Swings like these are [[volatility]] (Lesson 1). On 19 May 2021 bitcoin fell from about $42,900 to as low as $28,800, then closed near $36,700. It swings up just as hard, which is why no one can time it. So size for the fall: only put in what you could watch drop by a third.',
+      text: 'Swings like these are [[volatility]] (Lesson 1). On 19 May 2021 Bitcoin fell from about $42,900 to as low as $28,800 on Bybit’s perpetual chart, then closed near $36,700. It can swing up just as hard, often without warning, so no one can reliably time it. So size for the fall: only put in what you could watch drop by a third.',
       // The math (owner 2026-11-17), from MAY_2021: (42,903.5 − 28,801) ÷ 42,903.5 = 0.3287. Kept
       // (reviewed 2026-11-17): the text never states the percent, and the sum is where "a third", the
       // sizing rule's number, comes from
@@ -1119,7 +1119,7 @@ const lesson02: Lesson = {
           { label: 'Divide by the start', sum: '14,100 ÷ 42,900 = 0.329' },
           { label: 'As a percent', sum: '0.329 × 100 = 32.9%' },
         ],
-        answer: 'At its low that day, bitcoin was down about **33%**: a third.',
+        answer: 'At its low that day, Bitcoin was down about **33%**: a third.',
       },
       more: { article: 'price-swings', section: 'size' },
     },
@@ -1171,7 +1171,7 @@ const lesson02: Lesson = {
       title: 'Up, then down',
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: PEAK_2021,
-      text: 'On 13 April 2021 bitcoin closed at $63,588, a record close at the time. Three months later, on 20 July, it closed at $29,765, down more than half. People who bought at the top waited about six months to get back to even.',
+      text: 'On 13 April 2021 Bitcoin closed at $63,588, a record close at the time. Three months later, on 20 July, it closed at $29,765, down more than half. People who bought at the top waited about six months to get back to even.',
       // The math (owner 2026-11-17), from PEAK_2021: 33,822.5 ÷ 63,587.5 = 0.5319. Kept (reviewed
       // 2026-11-17): the text says only "more than half", and the sum turns two five-digit closes into
       // the 53% that proves it

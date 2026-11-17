@@ -219,7 +219,7 @@ describe('LessonSheet', () => {
   it('should open Lesson 3 on the flash crash drawn from our own candles, and step through the cards', () => {
     at(0);
     renderSheet();
-    expect(sheet()!.textContent).toContain('One bitcoin for $8,200');
+    expect(sheet()!.textContent).toContain('One Bitcoin for $8,200');
     // No photo (owner 2026-11-12): Bybit's minute candles, with Binance.US's wick drawn
     expect(sheet()!.querySelector('[data-lesson-art="flashCrash"]')).not.toBeNull();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('1');
