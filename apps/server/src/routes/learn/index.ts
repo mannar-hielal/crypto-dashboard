@@ -325,6 +325,9 @@ export async function learnRoutes(app: FastifyInstance) {
       }
 
       if (status === 'completed') {
+        // (Accepted, review round 24: during a rollout an old API machine may still overwrite a
+        // current finish with an old one (no step), which then reads as stale; it needs a second,
+        // cached tab finishing the same lesson in those minutes, and old machines can't be changed)
         // A lesson's finish keeps its step: the version it was finished in (a tour's: none). Any
         // step of the current version counts: progress is the learner's own, so a client claiming
         // a finish it didn't reach only changes its own path. (No welcome-card row: the client
