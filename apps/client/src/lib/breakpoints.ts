@@ -11,3 +11,12 @@ export const NARROW_LAYOUT_QUERY = '(max-width: 1023px)';
  * the narrow query doesn't match: a zoomed 1023.5 px viewport is one or the other, never neither
  */
 export const WIDE_LAYOUT_QUERY = `not all and ${NARROW_LAYOUT_QUERY}`;
+
+/** The narrow layout right now; false where the runtime has no matchMedia (tests, old browsers) */
+export function isNarrowNow(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(NARROW_LAYOUT_QUERY).matches
+  );
+}

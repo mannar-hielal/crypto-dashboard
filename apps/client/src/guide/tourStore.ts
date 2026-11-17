@@ -25,7 +25,10 @@ interface TourState {
    * Buy / Long): a rotation never replays one they already did. A step only shown isn't one
    */
   passed: readonly string[];
-  /** The last tour was closed by the app, not the learner: the screen became a size it can't run at */
+  /**
+   * The last tour was closed by the app, not the learner: the screen became a size it can't run at.
+   * Cleared by `start()`, which begins every run (`next()` only hands over within one)
+   */
   closedForSize: boolean;
   /** The option chosen on a quiz step, or null */
   quizAnswer: number | null;

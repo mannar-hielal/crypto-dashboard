@@ -14,9 +14,11 @@ const BASE_URL =
 async function request<T>(path: string, init: RequestInit): Promise<T> {
   // 🔐 Bounded like every SDK call (auth.ts): a stalled request fails instead of hanging, so a
   // progress read, a save or a habits read always settles
+  const timeout = AbortSignal.timeout(SDK_REQUEST_TIMEOUT_MS);
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
-    signal: AbortSignal.timeout(SDK_REQUEST_TIMEOUT_MS),
+    // A caller's own signal is kept beside the bound (as auth.ts does)
+    signal: init.signal ? AbortSignal.any([init.signal, timeout]) : timeout,
   });
   // 204: nothing to read (an accepted event)
   if (res.status === 204) return undefined as T;

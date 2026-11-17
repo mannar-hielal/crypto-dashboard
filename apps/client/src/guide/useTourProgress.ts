@@ -372,7 +372,9 @@ export function useTourProgress(): void {
         // A new step, also when only the screen size changed it (a rotation mid-tour)
         send('tour_step', activeId, stepIdAt(activeId, stepIndex, state.wide));
       } else if (activeId === null && prev.activeId !== null && !finished) {
-        // Closed (Skip, ✕, Esc) on the step it was showing
+        // Closed (Skip, ✕, Esc) on the step it was showing. A close by the app (closedForSize: a rotation
+        // to a size the tour can't run at) is one too: the learner couldn't go on there, a real drop
+        // at that step, and every start still ends once (weighed, review after release #302)
         send('tour_closed', prev.activeId, stepIdAt(prev.activeId, prev.stepIndex, prev.wide));
       }
     });
