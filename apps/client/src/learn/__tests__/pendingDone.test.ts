@@ -134,4 +134,14 @@ describe('pendingDone', () => {
         .sort()
     ).toEqual(['checkpoint-ch1', 'lesson-01']);
   });
+
+  it('should take one given up on (over 30 days) out of storage, not only off the list', () => {
+    const old = Date.now() - 31 * 86_400_000;
+    localStorage.setItem(
+      'cd-pending-done:a',
+      JSON.stringify({ v: 1, items: [{ itemId: 'lesson-01', step: 81, since: old }] })
+    );
+    expect(pendingDone('a')).toEqual([]);
+    expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
+  });
 });

@@ -105,10 +105,12 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
   // ── The chart itself, once there is data ───────────────────────────────────
   const ready = bars !== null;
   // Decimals by the coin's price level, not its name (pricePrecision), once per data load
+  // (from the candles shown before the answer only: the hidden ones mustn't set the axis's format)
   const precision = useMemo(() => {
-    const top = bars ? bars.reduce((t, b) => Math.max(t, b.high), 0) : 0;
+    const seen = bars && scene.freezeAt ? bars.slice(0, frozenCount(bars, scene)) : bars;
+    const top = seen ? seen.reduce((t, b) => Math.max(t, b.high), 0) : 0;
     return pricePrecision(top);
-  }, [bars]);
+  }, [bars, scene]);
   useEffect(() => {
     const el = containerRef.current;
     if (!ready || !el) return;

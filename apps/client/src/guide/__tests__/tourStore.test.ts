@@ -262,4 +262,12 @@ describe('tourStore', () => {
       delete window.matchMedia;
     }
   });
+
+  it('should clear a quiz answer when a rotation moves the tour to another step', () => {
+    s().setWide(true);
+    s().start('buy-first-coin');
+    useTourStore.setState({ stepIndex: 2, quizAnswer: 1 });
+    s().setWide(false);
+    expect(s().quizAnswer).toBeNull();
+  });
 });

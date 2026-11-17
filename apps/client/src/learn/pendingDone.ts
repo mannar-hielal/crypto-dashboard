@@ -69,10 +69,14 @@ export function pendingDone(account: string): PendingDone[] {
   if (held) return held.filter((p) => p.since >= oldest);
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
-    return migrate(raw)
+    const stored = migrate(raw);
+    const kept = stored
       .filter(isPending)
       .filter((p) => p.since >= oldest)
       .slice(0, MAX_PENDING);
+    // Ones given up on (too old, unreadable, dated far ahead) leave storage too, not only the screen
+    if (kept.length !== stored.length) write(account, kept);
+    return kept;
   } catch {
     return [];
   }
