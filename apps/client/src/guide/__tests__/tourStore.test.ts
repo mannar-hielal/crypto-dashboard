@@ -204,4 +204,23 @@ describe('tourStore', () => {
     s().setWide(false);
     expect(s().activeId).toBeNull();
   });
+
+  it('should never hand over to a next chapter that needs a larger screen on a phone', () => {
+    window.matchMedia = ((q: string) => ({ matches: false, media: q })) as never;
+    const tour = getTour('buy-first-coin');
+    const saved = tour.next;
+    (tour as { next?: typeof saved }).next = 'primer' as never; // a chain to a desktop-only tour
+    try {
+      s().setWide(false);
+      s().start('buy-first-coin');
+      useTourStore.setState({ stepIndex: tourSteps(tour, false).length - 1 });
+      s().next();
+      expect(s().activeId).toBeNull();
+      expect(s().completed['buy-first-coin']).toBe(true);
+    } finally {
+      (tour as { next?: typeof saved }).next = saved;
+      // @ts-expect-error -- jsdom has no matchMedia: back to that
+      delete window.matchMedia;
+    }
+  });
 });

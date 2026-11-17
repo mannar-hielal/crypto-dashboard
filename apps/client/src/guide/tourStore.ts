@@ -106,14 +106,16 @@ export const useTourStore = create<TourState>()((set, get) => ({
     // the screen as it is now). A practice trade from a lesson card is no tour of the path: it's
     // never marked finished or counted (the lesson's own screens are)
     const counted = isTourId(activeId);
+    // The next chapter only if it runs at this size (none chains to one that doesn't today)
+    const following = tour.next && runsHere(tour.next, isWideScreen()) ? tour.next : null;
     set((s) => ({
       completed: counted ? { ...s.completed, [activeId]: true } : s.completed,
       finishes: counted ? s.finishes + 1 : s.finishes,
-      activeId: tour.next ?? null,
+      activeId: following,
       stepIndex: 0,
       quizAnswer: null,
-      wide: tour.next ? isWideScreen() : s.wide,
-      seen: tour.next ? [tourSteps(getTour(tour.next), isWideScreen())[0]?.id ?? ''] : [],
+      wide: following ? isWideScreen() : s.wide,
+      seen: following ? [tourSteps(getTour(following), isWideScreen())[0]?.id ?? ''] : [],
     }));
   },
 
