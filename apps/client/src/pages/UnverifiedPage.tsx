@@ -1,4 +1,4 @@
-import { forgetSignedOutAccount } from '@/learn/signedOut';
+import { signOutLocally } from '@/lib/signOutLocally';
 import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
@@ -12,7 +12,6 @@ import { useNavigate } from 'react-router';
 
 export function UnverifiedPage() {
   const user = useAuthStore((s) => s.user);
-  const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -33,8 +32,8 @@ export function UnverifiedPage() {
   const handleSignOut = async () => {
     // 🔐 Never throws; an unreachable server is remembered and finished on the next load
     await signOutOnServer();
-    clearAuth();
-    forgetSignedOutAccount();
+    // (the paper store's clear too, which this flow missed before)
+    signOutLocally();
     void navigate('/login');
   };
 

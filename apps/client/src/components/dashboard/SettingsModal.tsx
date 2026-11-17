@@ -1,4 +1,4 @@
-import { forgetSignedOutAccount } from '@/learn/signedOut';
+import { signOutLocally } from '@/lib/signOutLocally';
 import { guide } from '@/lib/guideAnchors';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -61,7 +61,6 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const clearAuth = useAuthStore((s) => s.clearAuth);
 
   // Opt-in "e-mail me when an order fills" (null = not read yet)
   const [fillEmail, setFillEmail] = useState<boolean | null>(null);
@@ -242,9 +241,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       timersRef.current.push(
         setTimeout(() => {
           // Password change forces logout server-side
-          clearAuth();
-          usePaperStore.getState().clear();
-          forgetSignedOutAccount();
+          signOutLocally();
           window.location.href = '/login';
         }, 2000)
       );
@@ -272,9 +269,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     try {
       await authApi.requestDeletion({ password: deletePassword }, accessToken);
       // Success: requestDeletion forces logout server-side
-      clearAuth();
-      usePaperStore.getState().clear();
-      forgetSignedOutAccount();
+      signOutLocally();
       // Wipe localStorage as per plan (trading state is server-side since BP-1)
       localStorage.removeItem('cd-layout');
       localStorage.removeItem('cd-paper-col-prefs');

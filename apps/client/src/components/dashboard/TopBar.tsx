@@ -1,4 +1,4 @@
-import { forgetSignedOutAccount } from '@/learn/signedOut';
+import { signOutLocally } from '@/lib/signOutLocally';
 import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useEffect, useState } from 'react';
@@ -7,7 +7,6 @@ import { LogOut, ChevronDown, Settings, ShieldCheck, BarChart3, Route } from 'lu
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useSignInToTrade } from '@/hooks/useSignIn';
-import { usePaperStore } from '@/store/paperStore';
 import { useTourStore } from '@/guide/tourStore';
 import { openKeys } from '@/learn/path';
 import { usePathSeen } from '@/learn/pathSeen';
@@ -245,10 +244,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
                           } finally {
                             // 🔐 Local session must clear even if the server call
                             // fails — otherwise the user appears signed-in forever.
-                            useAuthStore.getState().clearAuth();
-                            // 🔐 Never leave the account on screen for the next user
-                            usePaperStore.getState().clear();
-                            forgetSignedOutAccount();
+                            // 🔐 …and never leave the account on screen for the next user
+                            signOutLocally();
                           }
                         })();
                       }}
