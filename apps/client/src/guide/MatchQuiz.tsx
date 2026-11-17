@@ -68,7 +68,8 @@ export function MatchQuiz({
     });
     setSelected(null);
   };
-  const check = () => onAnswer(pairs.every((_, t) => links[t] === t) ? 0 : 1);
+  // Right: the question's own correct answer; not quite: -1 (no option), judged like any question
+  const check = () => onAnswer(pairs.every((_, t) => links[t] === t) ? q.correct : -1);
 
   return (
     <>

@@ -56,7 +56,7 @@ describe('OrderQuiz (Drag and drop)', () => {
     expect(el('lesson.step', 2)).toBeTruthy();
   });
 
-  it('should answer 0 when every step is in its slot and 1 otherwise', () => {
+  it('should answer the question’s correct answer when every step is in its slot, and -1 otherwise', () => {
     const right = vi.fn();
     render(<OrderQuiz q={order} answer={undefined} onAnswer={right} />);
     for (const i of [0, 1, 2]) {
@@ -78,7 +78,7 @@ describe('OrderQuiz (Drag and drop)', () => {
       fireEvent.click(el('lesson.slot', slot));
     }
     fireEvent.click(checkButton());
-    expect(wrong).toHaveBeenCalledWith(1);
+    expect(wrong).toHaveBeenCalledWith(-1);
   });
 
   it('should take a dropped step into the slot it is dropped on', () => {
@@ -143,7 +143,7 @@ describe('MatchQuiz (Match boxes)', () => {
     expect(checkButton().disabled).toBe(true);
   });
 
-  it('should answer 0 when every pair is right and 1 otherwise', () => {
+  it('should answer the question’s correct answer when every pair is right, and -1 otherwise', () => {
     const right = vi.fn();
     render(<MatchQuiz q={match} answer={undefined} onAnswer={right} />);
     for (const i of [0, 1, 2]) {
@@ -165,7 +165,7 @@ describe('MatchQuiz (Match boxes)', () => {
       fireEvent.click(el('lesson.match-meaning', m));
     }
     fireEvent.click(checkButton());
-    expect(wrong).toHaveBeenCalledWith(1);
+    expect(wrong).toHaveBeenCalledWith(-1);
   });
 
   it('should keep the term being picked when a paired term is tapped to undo it', () => {

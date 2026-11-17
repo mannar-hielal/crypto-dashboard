@@ -52,7 +52,8 @@ export function OrderQuiz({
       place(slot, step);
     }
   };
-  const check = () => onAnswer(slots.every((x, i) => x === i) ? 0 : 1);
+  // Right: the question's own correct answer; not quite: -1 (no option), judged like any question
+  const check = () => onAnswer(slots.every((x, i) => x === i) ? q.correct : -1);
 
   return (
     <>
