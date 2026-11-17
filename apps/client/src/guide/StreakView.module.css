@@ -15,7 +15,7 @@
 
 .count {
   margin: 0;
-  font-size: 1.75rem; /* the streak number: no token this size yet (owner's visual Q&A) */
+  font-size: var(--text-display);
   font-weight: 700;
   color: var(--color-brand-white);
   font-variant-numeric: tabular-nums;
