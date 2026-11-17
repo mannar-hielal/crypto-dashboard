@@ -21,12 +21,17 @@ function readHabits(key: string, token: string): Promise<HabitsResponse> {
   return read;
 }
 
-/** How much this account has done: what the habits count from, so a new finish reads again */
-function useDoneCount(): number {
+/**
+ * How much this account has done: what the habits count from, so a new finish reads again. Null
+ * until the account's progress is in: its arrival moves the count without a finish, so no reader
+ * reads before it (and again right after)
+ */
+function useDoneCount(): number | null {
   const lessons = useLessonStore((st) => Object.keys(st.completed).length);
   const tours = useTourStore((st) => Object.keys(st.completed).length);
   const checkpoints = usePathStore((st) => Object.keys(st.checkpoints).length);
-  return lessons + tours + checkpoints;
+  const progressIn = useTourStore((st) => st.loaded);
+  return progressIn ? lessons + tours + checkpoints : null;
 }
 
 /**
@@ -58,7 +63,7 @@ export function useHabits(accessToken: string | null): {
   const done = useDoneCount();
 
   useEffect(() => {
-    if (!signedIn) return;
+    if (!signedIn || done === null) return;
     let cancelled = false;
     // Read at once, never waiting for a finish to land: a lesson's own start already counted today
     // (Habits counts starts), so the streak screen right after a finish shows today. Only a run

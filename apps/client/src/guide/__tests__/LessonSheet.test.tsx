@@ -68,6 +68,7 @@ describe('LessonSheet', () => {
     clearLessonChartCache();
     useLessonStore.getState().reset();
     useTourStore.getState().reset();
+    useTourStore.setState({ loaded: true }); // the account's progress is in
     useArticleStore.getState().reset();
     useAuthStore.setState({ accessToken: null });
     getHabits.mockReset();

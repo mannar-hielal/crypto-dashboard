@@ -9,6 +9,7 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 import { useHabits } from '@/learn/useHabits';
 import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from '@/guide/lessonStore';
+import { useTourStore } from '@/guide/tourStore';
 
 const habits = { badges: [], learningDays: 1, streakDays: 1, thisWeek: [] };
 
@@ -19,6 +20,8 @@ describe('useHabits', () => {
   beforeEach(() => {
     getHabits.mockReset();
     useLessonStore.getState().reset();
+    useTourStore.getState().reset();
+    useTourStore.setState({ loaded: true }); // the account's progress is in
     // No profile from an earlier test: each names its own account
     useAuthStore.getState().clearAuth();
   });
@@ -86,12 +89,24 @@ describe('useHabits', () => {
   });
 
   it('should never let a read after a finish join one sent before it', async () => {
-    getHabits.mockReturnValueOnce(new Promise(() => {})).mockResolvedValue(habits);
+    let answer: (h: typeof habits) => void = () => {};
+    getHabits.mockReturnValueOnce(new Promise((r) => (answer = r))).mockResolvedValue(habits);
     renderHook(() => useHabits('t')); // the map, its read on its way
     act(() => useLessonStore.getState().setCompleted(['lesson-01'])); // a finish
     // The streak screen opens after it
     const streak = renderHook(() => useHabits('t'));
     await waitFor(() => expect(streak.result.current.habits).toEqual(habits));
     expect(getHabits).toHaveBeenCalledTimes(2);
+    await act(async () => answer(habits)); // no read left on its way for the next test
+  });
+
+  it('should read once the account’s progress is in, not before and again after', async () => {
+    getHabits.mockResolvedValue(habits);
+    useTourStore.setState({ loaded: false });
+    renderHook(() => useHabits('t'));
+    await act(async () => {});
+    expect(getHabits).not.toHaveBeenCalled();
+    act(() => useTourStore.setState({ loaded: true }));
+    await waitFor(() => expect(getHabits).toHaveBeenCalledTimes(1));
   });
 });
