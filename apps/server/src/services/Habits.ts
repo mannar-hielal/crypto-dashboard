@@ -94,15 +94,30 @@ function isZoneName(name: string): boolean {
 const ZONE_SPELLINGS = new Map<string, string | null>();
 const MAX_ZONE_SPELLINGS = 200;
 
+/** 🔐 Both zone caches' rule: least recently used out first, never past the cap */
+function lruGet<V>(cache: Map<string, V>, key: string): V | undefined {
+  const hit = cache.get(key);
+  if (hit !== undefined) {
+    cache.delete(key);
+    cache.set(key, hit);
+  }
+  return hit;
+}
+function lruSet<V>(cache: Map<string, V>, key: string, value: V, cap: number): void {
+  // An overwrite takes the key's own place (moved to the end), never another's
+  if (cache.has(key)) cache.delete(key);
+  else if (cache.size >= cap) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(key, value);
+}
+
 /** A zone's name as the known list has it, or null: UTC for anything else */
 function knownZone(zone: string): string | null {
   if (KNOWN_ZONES.has(zone)) return zone;
-  const seen = ZONE_SPELLINGS.get(zone);
-  if (seen !== undefined) {
-    ZONE_SPELLINGS.delete(zone);
-    ZONE_SPELLINGS.set(zone, seen);
-    return seen;
-  }
+  const seen = lruGet(ZONE_SPELLINGS, zone);
+  if (seen !== undefined) return seen;
   let canonical: string | null;
   try {
     const named = new Intl.DateTimeFormat('en-US', { timeZone: zone }).resolvedOptions().timeZone;
@@ -113,11 +128,7 @@ function knownZone(zone: string): string | null {
   } catch {
     canonical = null;
   }
-  if (ZONE_SPELLINGS.size >= MAX_ZONE_SPELLINGS) {
-    const oldest = ZONE_SPELLINGS.keys().next().value;
-    if (oldest !== undefined) ZONE_SPELLINGS.delete(oldest);
-  }
-  ZONE_SPELLINGS.set(zone, canonical);
+  lruSet(ZONE_SPELLINGS, zone, canonical, MAX_ZONE_SPELLINGS);
   return canonical;
 }
 
@@ -126,7 +137,7 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
   if (zone === 'UTC') return null;
   const name = knownZone(zone);
   if (!name) return null;
-  let format = ZONE_FORMATS.get(name);
+  let format = lruGet(ZONE_FORMATS, name);
   if (!format) {
     format = new Intl.DateTimeFormat('en-US', {
       timeZone: name,
@@ -135,11 +146,7 @@ function zoneFormat(zone: string): Intl.DateTimeFormat | null {
       day: 'numeric',
     });
     // (never more than the cap: a runtime that echoed any name back would still be bounded)
-    if (ZONE_FORMATS.size >= MAX_ZONE_FORMATS) {
-      const oldest = ZONE_FORMATS.keys().next().value;
-      if (oldest !== undefined) ZONE_FORMATS.delete(oldest);
-    }
-    ZONE_FORMATS.set(name, format);
+    lruSet(ZONE_FORMATS, name, format, MAX_ZONE_FORMATS);
   }
   return format;
 }
