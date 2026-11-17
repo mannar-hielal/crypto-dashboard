@@ -107,8 +107,11 @@ guided-learning-topics/
 1. **Read Table 2 for the lesson.** Build a coverage checklist: every concept the owner marked
    _take_ (from either column), every concept marked _drop_ (and why, if given). Ask about rows
    with no instruction before writing anything.
-2. **Plan the screens** and show the owner a short outline before drafting text:
-   - the screen list: cards, the "Your call" moment, Try it, the quizzes, the summary, the close;
+2. **Plan the screens** and get the owner's OK on a short outline before drafting any text. **Outline
+   first** (owner 2026-11-16): save it as a numbered file in the git-ignored
+   `guided-learning-topics/notes/` (e.g. `12-lesson-1-outline.md`) with:
+   - the screen list: cards, the "Your call" moment, Try it, the quizzes (they can sit between
+     cards, not only at the end), the summary, the close;
    - for each quiz, its format (see below) and what it checks;
    - the screen count next to the benchmark's for that lesson;
    - which concepts each screen covers (every _take_ concept appears at least once).
@@ -129,6 +132,7 @@ guided-learning-topics/
      (`generated/CDSDK/types/index.ts`), the assertions in `apps/server/src/__tests__/learn.test.ts`
      and the SDK contract fixtures. A lesson id the server doesn't know gets a 400 on every event and
      progress write, so its rings never sync and it's missing from the funnel.
+   - the pictures each screen uses (see "Illustrations").
 3. **Draft the text** in the outline's order, in our voice (rules below).
 4. **Fact check by a technical-writer agent** (owner 2026-11-14), on every freshly written screen,
    before the owner sees the draft. See "Fact check" below. Apply its corrections, then show the
@@ -138,6 +142,8 @@ guided-learning-topics/
    illustration, a new card layout): run it per `.claude/rules/design.md` before building
    (`session-bootstrap` non-negotiable #2).
 6. **Implement** in `lessons.ts` (and new widgets), then tests and docs (below).
+   **Progress on a rewritten lesson** (owner 2026-11-16): every learner's progress on it is reset,
+   part-way through and completed alike; its `stepBase` moves; the lesson id stays.
 7. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
    with the screen that teaches it. Report any gap.
 
@@ -198,7 +204,9 @@ trust), and list in the report to the owner which were applied and which decline
   without naming the benchmark course or saying how closely it's followed.
 - **Titles are ours:** write each unit and lesson title fresh from what our lesson actually teaches,
   in our voice. Don't take the benchmark's title and rephrase it: a reworded title is still their
-  title. The same goes for unit descriptions and any path labels.
+  title. The same goes for unit descriptions and any path labels. Example (owner 2026-11-16): unit 1
+  is "Start here: crypto and trading basics" (it replaced "Foundations of crypto", too close to the
+  benchmark's unit name); Lesson 1 is "Up, down and your first trade".
 - **Look stays ours:** the zig-zag path, the progress rings, the dumbbell and our colours (the
   owner's earlier decision: our own design identity). Matching the order doesn't mean matching their
   visuals.
@@ -240,18 +248,34 @@ rewritten, and to quizzes, Whys, summaries and titles.
 
 ## Quiz formats
 
-| Format             | Use for                                                     | Status                                        |
-| ------------------ | ----------------------------------------------------------- | --------------------------------------------- |
-| Multiple choice    | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`) |
-| Choose buy or sell | read a situation or a chart, pick Buy or Sell, then the Why | new widget                                    |
-| Drag and drop      | put steps in order, or items into the right slot            | new widget                                    |
-| Match boxes        | connect terms to meanings, two columns                      | new widget                                    |
+| Format             | Use for                                                     | Status                                             |
+| ------------------ | ----------------------------------------------------------- | -------------------------------------------------- |
+| Multiple choice    | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)      |
+| Choose buy or sell | read a situation or a chart, pick Buy or Sell, then the Why | designed 2026-11-16 (visual Q&A done); being built |
+| Drag and drop      | put steps in order, or items into the right slot            | new widget                                         |
+| Match boxes        | connect terms to meanings, two columns                      | new widget                                         |
 
 - Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
   2026-11-13); the chosen option is already marked.
 - Every quiz has a Why that teaches, not only "correct".
 - A buy-or-sell quiz never rewards guessing a price direction: the right answer follows from a stated
   plan or rule in the situation (the same honesty rule as "Your call").
+- **Quizzes can sit between cards** (owner 2026-11-16), not only at the end: the Lesson 1 outline
+  puts them mid-lesson.
+- **Decided designs, reused without a new visual Q&A (owner 2026-11-16):**
+  - **Drag and drop:** numbered empty slots on top, cards below. Drag a card into a slot, or tap a
+    card then tap a slot (keyboard: Tab to a card, Enter to pick, Tab to a slot, Enter to place).
+    "Check" grades: each slot turns green with ✓ or red with ✕, then "Right." / "Not quite." and the
+    Why. No retry (as with the other quizzes).
+  - **Match boxes:** two columns, terms on the left, meanings on the right (shuffled). Tap a term, then
+    its meaning: the pair gets the same numbered chip (①②③), so colour is never the only cue; tap a
+    paired box to undo. "Check" marks each pair ✓ / ✕, then "Right." / "Not quite." and the Why.
+    Phones keep the two columns.
+  - **Streak screen** (after the close): a flame with today's streak counting up ("3-day streak"), this
+    week's 7 days as dots (done days filled amber), one line ("Come back tomorrow to keep it going"),
+    and Continue. The Learn panel's counter updates at the same time. Reduced motion: no count-up.
+  - **Practice trades on phones and tablets:** guided too. The arrow points at the phone's Buy / Long
+    and Sell / Short bar, then the order sheet; after the trade the lesson reopens on the next screen.
 - **Building a new format** (owner: build it, after the visual Q&A):
   1. Visual Q&A first: layout on phone and laptop, how a drop or a match is shown, keyboard and
      screen-reader use (drag and drop needs a non-drag path: tap to pick, tap to place).
@@ -260,6 +284,22 @@ rewritten, and to quizzes, Whys, summaries and titles.
   3. A component under `apps/client/src/guide/` with a CSS Module, tokens from `lib/tokens.ts`, guide
      anchors via `guide()` registered in `lib/guideAnchors.ts`.
   4. Tests: the component (right, not quite, keyboard path, reduced motion) and the lesson rules.
+
+### Choose buy or sell: the decided design (visual Q&A, owner 2026-11-16)
+
+Later lessons reuse this design as it is; no new visual Q&A unless it changes.
+
+- **Layout** (phone first; the laptop sheet is the same, wider): the real chart on top with the
+  plan's price line; the plan in a short line under it ("Your plan: … Today it closed at …"); then
+  Buy and Sell side by side.
+- **Buttons** filled like the phone trade bar (`MobileTradeBar`): Buy green (`color.green`, dark
+  `bg.page` text), Sell red (`color.red`), each with an arrow and the word (never colour alone).
+- **After the answer:** a tick or cross on the picked button, "Right." / "Not quite." and the Why,
+  which points at the plan, never at the price. Then the chart reveals the next days (a scene with
+  `freezeAt`), captioned "What happened next (the plan doesn't depend on it)".
+- **Access:** two real buttons in tab order with the focus ring; arrow keys move between them;
+  screen readers hear the chart's label, the plan, then Buy / Sell; the result is announced
+  (`role="status"`); reduced motion skips the reveal animation.
 
 ## Practise it for real: a paper trade from the lesson (owner 2026-11-16)
 
@@ -285,75 +325,48 @@ with paper money, and then picks up where it left off.
    **resumes the lesson on the screen after the card**, not at the start, with the answers and
    progress kept (`lessonStore` in memory, the furthest screen synced to the account).
 
-### How to build it with what exists
+### How it works (built 2026-11-16)
 
-- **Tour engine:** tours live in `apps/client/src/guide/tours.ts` (`TOUR_IDS`, `Tour`, `TourStep`),
-  drawn by `GuideOverlay.tsx` (the ring and bubble, placed by `bubblePlacement.ts`) on anchors set
-  with `guide()` and listed in `lib/guideAnchors.ts`. Reuse the shared step builders in `steps.ts`
-  (`chooseType`, `openTab`, `submit`), so a control is described in one wording everywhere.
-- **Base tours:** `buy-first-coin` (Spot market buy of $100) and `sell-and-review` (sell it back,
-  read the fees). For long/short, base a new perp tour on the `perp-market-long` scenario
-  (`apps/client/src/guide/scenarios/perpMarketLong.ts`, `/dashboard/usdt/BTCUSDT`). A practice tour has **no `next`**:
-  the chain must end back in the lesson, not in another tour.
-- **Per-card tour (proposed shape, doesn't exist yet):** a card field in `lessons.ts` such as
-  `practice?: TourId`, typed against `TOUR_IDS`. A card field keeps `lessonScreens` the same, so
-  the funnel's step ids and `stepBase` don't move; a new screen kind would shift them.
-- **Starting and resuming, today's mechanism:** `LessonSheet.tsx` starts the lesson's tour with
-  `startTour` ("Show me" / "Skip this part" on the `try` screen), `lessonStore.enterTour()` hides
-  the sheet, and a subscription to `tourStore` calls `leaveTour()` when that tour stops (finished,
-  skipped or closed). Three changes are needed for a card's practice:
-  - `startTour` in `apps/client/src/guide/afterNote.ts` hands a tour over to a lesson through its
-    `own()` helper, on two branches: the open lesson (`activeId`), and a lesson the learner looked
-    back from (`returnTo.lesson`, which runs `returnBack()` then `enterTour()`). Any other tour
-    closes the lesson. Teach `own()` itself that the card's `practice` tour belongs to the lesson,
-    so both branches resume, not just the first;
-  - the `LessonSheet` subscription watches only `lesson.tour`; it must watch the practice tour that
-    was started;
-  - `leaveTour()` advances only when the current screen is the `try` screen; it must also advance
-    from a card that carries `practice`, so the lesson resumes on the next screen.
-- **Phone (below `lg`, 1024 px):** today a lesson's tour is desktop only (`desktop` =
-  `TOUR_MIN_WIDTH`, defined in `apps/client/src/guide/LearnCard.tsx` and imported by `LessonSheet`;
-  phones see "This part needs a larger screen"). The expected
-  phone path: the first step points at `MobileTradeBar` (`trade.mobile.buy` / `trade.mobile.sell`,
-  "Buy / Long", "Sell / Short") to open the order form, then the arrow on the form's controls as on
-  desktop. This changes what a screen looks like, so it needs the visual Q&A
-  (`.claude/rules/design.md`) before it's built. Until then, a phone offers Skip only, or hides the
-  offer, and says the practice is on a larger screen.
+- **A card offers one** with `practice: { tour, label }` (`lessons.ts`, a `PracticeTourId`): the
+  sheet shows the label as a button under the card's text. A card field, so `lessonScreens`, the
+  funnel's step ids and `stepBase` don't move.
+- **The practice tours** are in `apps/client/src/guide/tours.ts` (`PRACTICE_TOURS`,
+  `PRACTICE_TOUR_IDS`): `practice-buy` (spot, `/dashboard/spot/BTC/USDT`), `practice-long` and
+  `practice-short` (USDT Perpetual, `/dashboard/usdt/BTCUSDT`). Each opens the form, picks Market,
+  USDT and $100, and places the order. **No `next`**: the chain ends back in the lesson. A new
+  practice tour gets its entry there, built with the `practice()` helper and the shared step builders
+  (`steps.ts`).
+- **Handing over and resuming:** `startTour` (`afterNote.ts`) treats a card's practice tour as the
+  lesson's own (`own()`), so the lesson waits. `LessonSheet` resumes when **no tour runs any
+  more** (a chain such as `buy-first-coin → sell-and-review` included), and `lessonStore.leaveTour()`
+  moves on from the Try screen or from the card that offered the practice.
+- **Phones (owner 2026-11-16):** a step may be `screen: 'phone'` or `'desktop'`; `tourStore` reads the
+  width (`WIDE_LAYOUT_QUERY` in `lib/breakpoints.ts`, lg; `useTourWide` in components) when a tour starts and runs only those steps (`tourSteps`). A
+  phone-ready tour (`phoneReady: true`) opens the form from `MobileTradeBar` (`trade.mobile.buy` /
+  `trade.mobile.sell`); a lesson's Try and the close's way on are then offered on phones too. The
+  primer's hover steps need a pointer, so it isn't phone-ready.
 
 ### Rules
 
 - Optional, never required: Skip is always there, and a skipped practice never blocks finishing.
 - Paper money only, and the offer says so ("practice money, nothing real").
 - No profit promises, no price predictions: the tour teaches the steps, not a winning trade.
-- Small: a fixed small amount (like the $100 of the buy tour), and the tour shows how to close it.
-- A step whose anchor can't be found fails gracefully: the bubble's `missingHint` says what to
-  open, and closing the tour returns to the lesson on the next screen, never a dead end.
-- It counts as a learning day for the streak, through its `tour_step` events, and its finish or
-  skip is saved, but **only once the server accepts the tour id on both learn routes**
-  (`apps/server/src/constants.ts`):
-  - **events** (`tour_started`, `tour_step`) are checked against `LEARN_EVENT_ITEM_IDS` (today
-    `LEARN_TOUR_IDS` + `LEARN_LESSON_IDS`); an unknown id gets a 400 and the day isn't counted;
-  - **progress** (`useTourProgress` saves `completed` or `dismissed` for every finished or skipped
-    tour) is checked against `LEARN_ITEM_IDS`, mirrored in the SDK; an unknown id gets a 400 that the
-    client swallows, so the completion is silently lost on reload or another device.
-  - So add the practice id to both, via a separate `LEARN_PRACTICE_TOUR_IDS` that feeds
-    `LEARN_EVENT_ITEM_IDS` and `LEARN_ITEM_IDS` (server and SDK), and **keep it out of the
-    `all-tours` badge** in `services/Habits.ts` (its target is `LEARN_TOUR_IDS.length`), so an
-    optional practice never becomes required for that badge.
+- Small: a fixed small amount ($100).
+- A step whose anchor can't be found fails gracefully: its `missingHint` says what to open (on a phone,
+  to close the panel hiding the bottom bar), and closing the tour returns to the lesson on the next
+  screen, never a dead end.
+- **Not saved or reported on its own** (`useTourProgress` skips ids that aren't `isTourId`): the
+  lesson's own screens report the funnel and count the learning day, and practice tours stay out of
+  the server's tour lists and the `all-tours` badge.
 
-### Tests and docs when building it
+### Tests when adding one
 
-- The tour in `tours.test.ts` and its scenario in `scenarios.test.ts` (every anchor exists).
-- `LessonSheet.test.tsx` / `lessonStore.test.ts`: the offer shows on the card; Skip goes to the
-  next screen; finishing or closing the tour resumes on the screen after the card, answers kept.
-- `lessons.test.ts`: `practice` only on a trade-action card, and only a known `TourId`.
-- Server: the learn route accepts the practice tour's events (route test), and `Habits` counts its
-  day for the streak but not toward `all-tours` (`apps/server/src/__tests__/habits.test.ts` and `__tests__/int/habits.int.test.ts`).
-- The id lists are pinned: `apps/server/src/__tests__/learn.test.ts` asserts that
-  `LEARN_EVENT_ITEM_IDS` is exactly tours + lessons, and that `LEARN_ITEM_IDS` matches the SDK's
-  (`generated/CDSDK/types/index.ts`, `LEARN_ITEM_IDS` / `LearnItemId`). Adding practice ids means
-  updating those assertions, the SDK list and the SDK contract fixtures in the same change.
-- An e2e scenario for the practice path and its steps in `docs/UI_REPRODUCTIONS.md`.
+- `tours.test.ts`: at most five steps on each screen size, registered anchors, phone and desktop
+  first steps, no `next`.
+- `LessonSheet.test.tsx`: the practice button hands over and the lesson resumes one screen on; a
+  chain keeps the lesson waiting.
+- `lessons.test.ts`: the cards that offer a practice, and which tour.
+- The steps in `docs/UI_REPRODUCTIONS.md`.
 
 ## Linking terms to articles
 
@@ -371,13 +384,15 @@ with paper money, and then picks up where it left off.
 - `apps/client/src/guide/__tests__/lessons.test.ts` — the lesson rules (caps, structure, the
   lesson's own expectations); `LessonSheet.test.tsx` for new screen kinds.
 - `apps/client/src/learn/__tests__/terms.test.ts`, `articleMinutes.test.ts` if articles change.
-- `stepBase`: when a lesson's screens change, bump it above the old highest step, so stored funnel
-  steps aren't misread (`lessons.test` checks the ids). **Mind the ceiling:** the server accepts a
-  step id's number with one or two digits only (`stepId` pattern `^[a-z0-9-]+\.[0-9]{1,2}$`,
-  `apps/server/src/routes/learn/index.ts`), so `stepBase` + the lesson's screens must stay at 99 or
-  below. If a rewrite doesn't fit, widen the pattern (e.g. `{1,3}`) in the same change, with a route
-  test and the SDK contract, before bumping. Otherwise every event past 99 gets a 400 and is lost
-  without a failing test.
+- `stepBase`: when a lesson's screens change, raise it by at least the SDK's `LESSON_VERSION_SPAN`
+  (40: one version's steps, which the server refuses past; a lesson's screens must fit in it), so
+  stored steps and rows are never read as today's.
+  Record the replaced version's last step in `lessons.test`'s `EARLIER_LAST_STEPS`, and raise the
+  SDK's `LESSON_FIRST_STEPS` and the server's `LESSON_FIRST_STEP` with it (a test on each side holds
+  them together; the server refuses and ignores anything below). **Mind the ceiling:** the server
+  accepts a step number of up to three digits (`stepId` pattern `{1,3}`, `MAX_STEP` 999 in
+  `apps/server/src/routes/learn/index.ts`), so `stepBase` + the lesson's screens must stay at 999 or
+  below.
 - `minutes` (e.g. `LESSON_01_MINUTES`) to the new length.
 - Docs: a dated `docs/APP_LOG.md` entry; `docs/UI_REPRODUCTIONS.md` steps for the lesson;
   `docs/TRADING_TEST_PLAN.md` rows if a scenario changes (memory: keep test docs in step on release).

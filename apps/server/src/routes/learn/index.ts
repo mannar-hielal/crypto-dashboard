@@ -5,7 +5,11 @@ import {
   LEARN_EVENT_ITEM_IDS,
   LEARN_EVENT_NAMES,
   LEARN_ITEM_IDS,
+  LEARN_CHECKPOINT_IDS,
   LEARN_LESSON_IDS,
+  CHECKPOINT_VERSION,
+  LESSON_FIRST_STEP,
+  LESSON_VERSION_SPAN,
 } from '../../constants.js';
 import { loadHabits } from '../../services/Habits.js';
 import { recordLearningEvent } from '../../services/LearningEvents.js';
@@ -38,18 +42,87 @@ interface ItemRow {
   updatedAt: Date;
 }
 
+// A finished lesson keeps its finish's step in the row (its version), but answers without one: it
+// no longer has a "furthest screen"
 const toItem = (r: ItemRow) => ({
   itemId: r.itemId as LearnItemId,
   status: r.status as LearnStatus,
-  ...(typeof r.step === 'number' ? { step: r.step } : {}),
+  ...(r.status === 'started' && typeof r.step === 'number' ? { step: r.step } : {}),
   updatedAt: r.updatedAt.toISOString(),
 });
+
+/** The lesson an item id names, or null for a tour, an offer or a checkpoint */
+const lessonOf = (itemId: string) =>
+  (LEARN_LESSON_IDS as readonly string[]).includes(itemId)
+    ? (itemId as (typeof LEARN_LESSON_IDS)[number])
+    : null;
+
+/**
+ * The lowest `step` of an item's current version: a lesson's first funnel step, a checkpoint's
+ * question set version. Null for an item with no versions (a tour, an offer)
+ */
+const versionFloorOf = (itemId: string): number | null => {
+  const lesson = lessonOf(itemId);
+  // eslint-disable-next-line security/detect-object-injection -- lesson is from the fixed list
+  if (lesson) return LESSON_FIRST_STEP[lesson];
+  return (LEARN_CHECKPOINT_IDS as readonly string[]).includes(itemId)
+    ? CHECKPOINT_VERSION[itemId as (typeof LEARN_CHECKPOINT_IDS)[number]]
+    : null;
+};
+
+/**
+ * 🔐 The steps of an item's current version, `from` up to (not including) `to`: a lesson's span
+ * from its first step, a checkpoint's one question set. Null for an item with no versions. The one
+ * rule the write check, the reads and the takeover all use. (Weighed, review round 34: the whole
+ * span, not the lesson's screen count: the server holds no lesson content, and a lesson whose
+ * screens change raises its stepBase by the span (lessons.test, the lesson-authoring skill), so a
+ * step in the span that names no screen never comes from a released client)
+ */
+const versionRange = (itemId: string): { from: number; to: number } | null => {
+  const from = versionFloorOf(itemId);
+  if (from === null) return null;
+  return { from, to: from + (lessonOf(itemId) ? LESSON_VERSION_SPAN : 1) };
+};
+
+/** The same rule as a Prisma filter: a row outside the range (no step, below it, past it) */
+const staleWhere = (range: { from: number; to: number }) => ({
+  OR: [{ step: null }, { step: { lt: range.from } }, { step: { gte: range.to } }],
+});
+
+/** A step outside the item's current version (none counts as outside) */
+const outsideVersion = (range: { from: number; to: number }, step: number | null | undefined) =>
+  typeof step !== 'number' || step < range.from || step >= range.to;
+
+/**
+ * 🔐 A row from another version of a lesson or a checkpoint: no step, or one outside the current
+ * version's range. Written by an old client, or by an old API machine during a rolling deploy (the
+ * reset migrations run before the old machines are gone), so it never counts.
+ */
+const isStaleRow = (r: { itemId: string; step?: number | null }) => {
+  const range = versionRange(r.itemId);
+  return range !== null && outsideVersion(range, r.step);
+};
+
+/**
+ * A finished Lesson 1 means the welcome card is done with (the reset migration's rule too): saved
+ * as its dismissal, inside the caller's transaction, never twice
+ */
+const dismissWelcomeCard = (
+  tx: Pick<FastifyInstance['prisma'], 'learningProgress'>,
+  userId: string
+) =>
+  tx.learningProgress.createMany({
+    data: [{ userId, itemId: 'welcome-card', status: 'dismissed' }],
+    skipDuplicates: true,
+  });
 
 const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const;
 
 /**
  * A lesson's furthest screen is stored as its funnel step number, which includes the lesson's
- * `stepBase` (raised by 20 at each rebuild, never lowered). Room for many rebuilds; a SmallInt column
+ * `stepBase`. A rebuild raises it past every step the lesson used before (its last version's
+ * `stepBase` + screens; the client's lessons test records them), never lowers it. Room for many
+ * rebuilds; a SmallInt column
  */
 const MAX_STEP = 999;
 
@@ -86,7 +159,23 @@ export async function learnRoutes(app: FastifyInstance) {
         where: { userId },
         select: ROW,
       });
-      return reply.send({ items: rows.map(toItem) });
+      const items = rows.filter((r) => !isStaleRow(r)).map(toItem);
+      // Lesson 1 finished in its earlier version after the reset (an old API machine during the
+      // rollout): the welcome card is answered as dismissed, as the migration did for earlier
+      // finishes. Saved by the start that takes that row over (PUT), never by this read.
+      // (Weighed, review round 23: running the reset after the rollout instead would drop this and
+      // the takeover, but it needs a post-deploy step in deploy.yml (Fly runs migrations before the
+      // swap) and a rollback would let old machines write again; these cases cost a few lines and
+      // hold either way)
+      const oldLesson1Done = rows.some(
+        (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleRow(r)
+      );
+      if (oldLesson1Done && !rows.some((r) => r.itemId === 'welcome-card')) {
+        items.push(
+          toItem({ itemId: 'welcome-card', status: 'dismissed', step: null, updatedAt: new Date() })
+        );
+      }
+      return reply.send({ items });
     }
   );
 
@@ -99,7 +188,10 @@ export async function learnRoutes(app: FastifyInstance) {
         summary: 'Mark a tour finished, an offer dismissed, or how far a lesson has got',
         description:
           'Idempotent. `completed` is never downgraded: a dismissal or a start after a completion is a no-op. ' +
-          '`started` takes a lesson and its furthest screen as `step` (the funnel step number); the stored step only rises.',
+          '`started` takes a lesson and its furthest screen as `step` (the funnel step number); the stored step only rises. ' +
+          "A lesson's `completed` takes its last screen's `step` too; a checkpoint's `completed` takes its " +
+          'question set version as `step`. One from an earlier version (no step, or below its first) gets 409; ' +
+          'a step past the current version gets 400. A lesson or a checkpoint is never dismissed (400).',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
@@ -124,6 +216,7 @@ export async function learnRoutes(app: FastifyInstance) {
           },
           400: errorResponse,
           401: errorResponse,
+          409: errorResponse,
         },
       },
       config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
@@ -133,17 +226,45 @@ export async function learnRoutes(app: FastifyInstance) {
       const { userId } = request.user as { userId: string };
       const { itemId } = request.params as { itemId: LearnItemId };
       const { status, step } = request.body as { status: LearnStatus; step?: number };
+      const lessonId = lessonOf(itemId);
+      const range = versionRange(itemId);
 
-      // 🔐 A step belongs to a start only: a finish or a dismissal carrying one is a bad request
-      if (status !== 'started' && step !== undefined) {
-        return reply.status(400).send({ error: 'Only a start takes a step' });
+      // 🔐 One check of what each kind of item may send, before any write:
+      // - a dismissal (an offer, a tour skipped) carries no step, and a lesson or a checkpoint is
+      //   never dismissed (such a row would have no version);
+      // - a tour or an offer has no versions: no start, no step;
+      // - only a lesson is started; a lesson's start and finish say which screen, a checkpoint's
+      //   pass its question set; one from an earlier version (no step, or below its floor) is
+      //   refused, so a stale client can't undo the resets
+      const bad = (error: string) => reply.status(400).send({ error });
+      const earlier = () =>
+        reply.status(409).send({
+          error: lessonId
+            ? 'An earlier version of this lesson'
+            : 'An earlier version of this checkpoint',
+        });
+      if (status === 'dismissed') {
+        if (range) return bad('A lesson or a checkpoint can’t be dismissed');
+        if (step !== undefined) return bad('Only a lesson or a checkpoint takes a step');
+      } else if (!range) {
+        if (status === 'started') return bad('A start needs a lesson and its step');
+        if (step !== undefined) return bad('Only a lesson or a checkpoint takes a step');
+      } else if (status === 'started' && (!lessonId || step === undefined)) {
+        return bad('A start needs a lesson and its step');
+      } else if (outsideVersion(range, step)) {
+        // Below the version (or none): an earlier one, 409, which the client drops for good. 🔐 Past
+        // it (a lesson's span, a checkpoint's own set): 400, refused so no stored step can reach a
+        // later version's range; the client keeps that one (it's what an older API answers a newer
+        // client: kept until the API is back, at most 30 days)
+        return step === undefined || step < range.from
+          ? earlier()
+          : bad('A step past this version');
       }
 
       if (status === 'started') {
-        // 🔐 Only a lesson has screens, and a start always says how far
-        if (!(LEARN_LESSON_IDS as readonly string[]).includes(itemId) || step === undefined) {
-          return reply.status(400).send({ error: 'A start needs a lesson and its step' });
-        }
+        // (checked above; repeated so the types narrow, and so a start never falls through to the
+        // finish below whatever changes up there)
+        if (!lessonId || step === undefined) return bad('A start needs a lesson and its step');
         // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
         // lesson is unfinished (a completed row is left as it is)
         const created = await app.prisma.learningProgress.createMany({
@@ -170,17 +291,59 @@ export async function learnRoutes(app: FastifyInstance) {
           where: { userId_itemId: { userId, itemId } },
           select: ROW,
         });
+        // Not raised: finished, or a step no higher. A finish from an earlier version of the lesson
+        // (an old API machine during the rollout) is today's start, taken over only when the row
+        // read is one, so the start that changes nothing costs no more. One transaction with Lesson
+        // 1's welcome card: that old finish is the only sign the card was done with, so it never
+        // goes without the dismissal saved
+        if (row && range && isStaleRow(row)) {
+          const replaced = await app.prisma.$transaction(async (tx) => {
+            // The same range as isStaleRow: below the version, or past its span. An old *finish*
+            // first, so whether it was one is decided by the row as the update finds it (not by
+            // the read above, which an old machine may have overtaken): only an old Lesson 1
+            // finish means the card is done with, as GET reads it
+            const stale = { userId, itemId, ...staleWhere(range) };
+            const finish = await tx.learningProgress.updateMany({
+              where: { ...stale, status: 'completed' },
+              data: { status, step },
+            });
+            if (finish.count === 1) {
+              if (itemId === 'lesson-01') await dismissWelcomeCard(tx, userId);
+              return finish;
+            }
+            return tx.learningProgress.updateMany({ where: stale, data: { status, step } });
+          });
+          if (replaced.count === 1) {
+            return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
+          }
+          // Another request (a second tab) took it over first: answer what is stored now
+          const now = await app.prisma.learningProgress.findUnique({
+            where: { userId_itemId: { userId, itemId } },
+            select: ROW,
+          });
+          return reply.send({
+            item: toItem(now ?? { itemId, status, step, updatedAt: new Date() }),
+          });
+        }
         return reply.send({
           item: toItem(row ?? { itemId, status, step, updatedAt: new Date() }),
         });
       }
 
       if (status === 'completed') {
+        // (Accepted, review round 24: during a rollout an old API machine may still overwrite a
+        // current finish with an old one (no step), which then reads as stale; it needs a second,
+        // cached tab finishing the same lesson in those minutes, and old machines can't be changed)
+        // A lesson's finish keeps its step: the version it was finished in (a tour's: none). Any
+        // step of the current version counts: progress is the learner's own, so a client claiming
+        // a finish it didn't reach only changes its own path. (No welcome-card row: the client
+        // reads a finished Lesson 1 as the card done with. One is saved only where an old finish is
+        // about to be hidden or replaced: the reset migration and the takeover; GET answers one for
+        // an old finish in between)
         const row = await app.prisma.learningProgress.upsert({
           where: { userId_itemId: { userId, itemId } },
-          create: { userId, itemId, status },
-          // A finished lesson no longer has a "furthest screen"
-          update: { status, step: null },
+          create: { userId, itemId, status, step: step ?? null },
+          update: { status, step: step ?? null },
           select: ROW,
         });
         return reply.send({ item: toItem(row) });
@@ -220,7 +383,7 @@ export async function learnRoutes(app: FastifyInstance) {
           properties: {
             name: { type: 'string', enum: [...LEARN_EVENT_NAMES] },
             itemId: { type: 'string', enum: [...LEARN_EVENT_ITEM_IDS], maxLength: 40 },
-            stepId: { type: 'string', pattern: '^[a-z0-9-]+\\.[0-9]{1,2}$', maxLength: 40 },
+            stepId: { type: 'string', pattern: '^[a-z0-9-]+\\.[0-9]{1,3}$', maxLength: 40 },
           },
         },
         response: { 204: { type: 'null' }, 400: errorResponse, 401: errorResponse },
@@ -237,7 +400,7 @@ export async function learnRoutes(app: FastifyInstance) {
       }
       // 🔐 A rating is a lesson's, and a whole number 1–5 — nothing else rides on this event
       if (body.name === 'lesson_rated') {
-        const isLesson = (LEARN_LESSON_IDS as readonly string[]).includes(body.itemId);
+        const isLesson = lessonOf(body.itemId) !== null;
         const rating = body.stepId ? Number(body.stepId.slice(body.itemId.length + 1)) : NaN;
         if (!isLesson || !Number.isInteger(rating) || rating < 1 || rating > 5) {
           return reply.status(400).send({ error: 'a rating is a lesson and 1–5' });
@@ -257,12 +420,23 @@ export async function learnRoutes(app: FastifyInstance) {
         summary: 'Habit badges and the learning streak',
         description:
           'Counted from rows the account already has. Badges are careful habits (a stop-loss, a ' +
-          'journal, a tour) — never profit or how often someone trades.',
+          'journal, a tour) — never profit or how often someone trades. Days are the learner’s ' +
+          'own (the `X-Time-Zone` header: their IANA time zone, such as Europe/Zurich; UTC when ' +
+          'absent or unknown). A header, never the URL: a URL lands in logs, and the zone is a ' +
+          'rough location the privacy policy says is never logged.',
         security: [{ bearerAuth: [] }],
+        headers: {
+          type: 'object',
+          properties: {
+            // 🔐 Bounded (IANA names are under 40 characters). Any other text is never refused: an
+            // unknown zone counts in UTC (`dayCounter`), so an odd device zone keeps the streak
+            'x-time-zone': { type: 'string', maxLength: 64 },
+          },
+        },
         response: {
           200: {
             type: 'object',
-            required: ['badges', 'learningDays', 'streakDays'],
+            required: ['badges', 'learningDays', 'streakDays', 'thisWeek'],
             properties: {
               badges: {
                 type: 'array',
@@ -279,8 +453,16 @@ export async function learnRoutes(app: FastifyInstance) {
               },
               learningDays: { type: 'integer' },
               streakDays: { type: 'integer' },
+              thisWeek: {
+                type: 'array',
+                items: { type: 'boolean' },
+                minItems: 7,
+                maxItems: 7,
+                description: 'This week (the learner’s days), Monday first: a learning day or not',
+              },
             },
           },
+          400: errorResponse,
           401: errorResponse,
         },
       },
@@ -289,7 +471,10 @@ export async function learnRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
-      return reply.send(await loadHabits(app.prisma, userId));
+      const tz = request.headers['x-time-zone'];
+      return reply.send(
+        await loadHabits(app.prisma, userId, new Date(), typeof tz === 'string' ? tz : undefined)
+      );
     }
   );
 }

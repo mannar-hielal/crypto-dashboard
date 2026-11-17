@@ -8,25 +8,7 @@
  */
 
 import type { JSX } from 'react';
-import {
-  ArrowsLeftRight,
-  Bank,
-  Clock,
-  Coffee,
-  Coins,
-  DeviceMobile,
-  Eraser,
-  GameController,
-  HardDrives,
-  MagnifyingGlass,
-  ListNumbers,
-  Mailbox as MailboxIcon,
-  Notebook as NotebookIcon,
-  Scales,
-  Tag,
-  User,
-} from '@phosphor-icons/react';
-import { StampShape } from '@/learn/StampShape';
+import { Clock, HardDrives, MagnifyingGlass } from '@phosphor-icons/react';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { Guide, GuideFigure } from './art/Guide';
 import { WORLD_DOTS } from './art/worldDots';
@@ -99,8 +81,6 @@ function fromCloses(closes: number[]): CandleShape[] {
   });
 }
 
-const RISE = fromCloses([10, 11, 10.5, 13, 12.6, 14.5, 15, 14.4, 16.5, 18]);
-const FALL = fromCloses([18, 17.6, 18.2, 15, 15.6, 14.1, 14.6, 13]);
 const SLIDE = fromCloses([16, 16.4, 15.2, 15.5, 14.1, 14.4, 13.4, 13.6, 12.6, 12.2]);
 
 function Label({ x, y, children }: { x: number; y: number; children: string }) {
@@ -139,94 +119,6 @@ function BtcMark({
   );
 }
 
-/** Lesson 1's cold open: the pizzas and the coin, no words (the beats carry them), slowly zooming */
-/** The three keepers of money, each tile dropping in from above after the one before */
-function Money() {
-  const tile = (x: number, label: string, icon: JSX.Element) => (
-    <g key={label} className={styles.drop} data-drop={(x - 80) / 80}>
-      <rect x={x} y="12" width="68" height="68" rx="14" className={styles.panel} />
-      {icon}
-      <Coins weight={DUO} x={x + 44} y={54} size={30} className={styles.amber} />
-      <text x={x + 34} y="100" textAnchor="middle" className={styles.label}>
-        {label}
-      </text>
-    </g>
-  );
-  return (
-    <>
-      {tile(
-        80,
-        'a bank',
-        <Bank key="i" weight={DUO} x={92} y={22} size={44} className={styles.system} />
-      )}
-      {tile(
-        160,
-        'a state',
-        <Scales key="i" weight={DUO} x={172} y={22} size={44} className={styles.system} />
-      )}
-      {tile(
-        240,
-        'a game maker',
-        <GameController key="i" weight={DUO} x={252} y={22} size={44} className={styles.system} />
-      )}
-      <Label x={200} y={136}>
-        each one needs someone in charge
-      </Label>
-    </>
-  );
-}
-
-function Notebook() {
-  const lines = ['Start → Emi  6', 'Start → Leo  4', 'Start → Sofia  5', 'Leo → Emi  3'];
-  return (
-    <>
-      <rect x="96" y="8" width="206" height="116" rx="10" className={styles.panel} />
-      <NotebookIcon weight={DUO} x={108} y={16} size={30} className={styles.amber} />
-      <text x="146" y="37" className={styles.notebookTitle}>
-        Nora’s notebook
-      </text>
-      {lines.map((text, i) => (
-        <text key={text} x="112" y={60 + i * 19} className={styles.notebookLine}>
-          {i + 1}. {text}
-        </text>
-      ))}
-      <Label x={200} y={146}>
-        a list of payments, no balances
-      </Label>
-    </>
-  );
-}
-
-/** What one keeper could do with one pen: four tiles dropping in, one after another */
-function OneNora() {
-  const risks = [
-    ['print', Coins, styles.amber],
-    ['move', ArrowsLeftRight, styles.system],
-    ['rewrite', Eraser, styles.system],
-    ['lose', Coffee, styles.system],
-  ] as const;
-  return (
-    <>
-      {risks.map(([label, Icon, tone], i) => {
-        const x = 84 + i * 58;
-        return (
-          <g key={label} className={styles.drop} data-drop={i}>
-            <rect x={x} y="16" width="50" height="50" rx="12" className={styles.panel} />
-            <Icon weight={DUO} x={x + 10} y={26} size={30} className={tone} />
-            <text x={x + 25} y="84" textAnchor="middle" className={styles.label}>
-              {label}
-            </text>
-          </g>
-        );
-      })}
-      <Label x={200} y={124}>
-        one pen, one notebook, one Nora
-      </Label>
-    </>
-  );
-}
-
-// The dotted world map: 67 × 34 map units, scaled into the scene beside the presenter
 const MAP_X = 52;
 const MAP_Y = 4;
 const MAP_SCALE = 3.95;
@@ -285,155 +177,6 @@ function WorldLedgers() {
           />
         </g>
       ))}
-    </>
-  );
-}
-
-/** The address and the key drop in one after the other, as the Nora card's tiles (owner 2026-11-08) */
-function Mailbox() {
-  const tiles = [
-    ['address', MailboxIcon, styles.system, 112],
-    ['private key', null, styles.amber, 222],
-  ] as const;
-  return (
-    <>
-      {tiles.map(([label, Icon, tone, x], i) => (
-        <g key={label} className={styles.drop} data-drop={i}>
-          <rect x={x} y="14" width="66" height="66" rx="14" className={styles.panel} />
-          {Icon ? (
-            <Icon weight={DUO} x={x + 11} y={25} size={44} className={tone} />
-          ) : (
-            // The private key is the stamp from the articles, seated in its checker
-            <StampShape x={x + 8} y={37} width={50} outline className={tone} />
-          )}
-          <text x={x + 33} y="98" textAnchor="middle" className={styles.label}>
-            {label}
-          </text>
-        </g>
-      ))}
-      <Label x={200} y={124}>
-        anyone can pay in; only the key opens it
-      </Label>
-    </>
-  );
-}
-
-/** The private key as a stamp, under its checker (the public key): the articles' picture */
-function Stamp() {
-  return (
-    <>
-      <StampShape x={96} y={14} width={120} outline filled={false} className={styles.amber} />
-      <text x={224} y="34" className={styles.label}>
-        checker
-      </text>
-      <text x={224} y="48" className={styles.chipText}>
-        public key
-      </text>
-      <StampShape x={96} y={74} width={120} className={styles.amber} />
-      <text x={224} y="94" className={styles.label}>
-        stamp
-      </text>
-      <text x={224} y="108" className={styles.chipText}>
-        private key
-      </text>
-      <Label x={200} y={140}>
-        anyone can check it; nobody can copy it
-      </Label>
-    </>
-  );
-}
-
-/**
- * What the phone holds, what backs it up, and where the bitcoin really is (the ledger: no coins, a
- * balance is its entries added up; owner 2026-11-12), dropping in one by one
- */
-function KeyHolders() {
-  const tiles = [
-    ['your phone', DeviceMobile, styles.system, 86],
-    ['recovery words', ListNumbers, styles.amber, 166],
-    ['the ledger', NotebookIcon, styles.amber, 246],
-  ] as const;
-  return (
-    <>
-      {tiles.map(([label, Icon, tone, x], i) => (
-        <g key={label} className={styles.drop} data-drop={i}>
-          <rect x={x} y="14" width="62" height="62" rx="14" className={styles.panel} />
-          <Icon weight={DUO} x={x + 11} y={25} size={40} className={tone} />
-          <text x={x + 31} y="94" textAnchor="middle" className={styles.label}>
-            {label}
-          </text>
-        </g>
-      ))}
-      <Label x={200} y={124}>
-        your balance = the ledger, added up
-      </Label>
-    </>
-  );
-}
-
-/** Who holds the key: an exchange for you, or you yourself */
-function Custody() {
-  const tiles = [
-    ['an exchange', Bank, styles.system, 104],
-    ['you', User, styles.system, 216],
-  ] as const;
-  return (
-    <>
-      {tiles.map(([label, Icon, tone, x], i) => (
-        <g key={label} className={styles.drop} data-drop={i}>
-          <rect x={x} y="10" width="72" height="72" rx="14" className={styles.panel} />
-          <Icon weight={DUO} x={x + 10} y={16} size={40} className={tone} />
-          <StampShape x={x + 16} y={58} width={40} className={styles.amber} />
-          <text x={x + 36} y="100" textAnchor="middle" className={styles.label}>
-            {label}
-          </text>
-        </g>
-      ))}
-      <text x={196} y="52" textAnchor="middle" className={styles.chipText}>
-        or
-      </text>
-      <Label x={200} y={126}>
-        the key holder can spend the bitcoin
-      </Label>
-    </>
-  );
-}
-
-function Queues() {
-  const column = (x: number, cls: string, label: string) => (
-    <g key={label} className={cls}>
-      {[0, 1, 2].map((i) => (
-        <User key={i} weight={DUO} x={x} y={14 + i * 30} size={28} />
-      ))}
-      <text x={x + 14} y="120" textAnchor="middle" className={styles.chipText}>
-        {label}
-      </text>
-    </g>
-  );
-  return (
-    <>
-      {column(92, styles.up, 'Buy')}
-      {column(262, styles.down, 'Sell')}
-      <path d="M126 58 L150 58 M256 58 L232 58" className={styles.link} />
-      <Tag weight={DUO} x={166} y={28} size={56} className={styles.amber} />
-      <text x="194" y="104" textAnchor="middle" className={styles.price}>
-        last deal
-      </text>
-    </>
-  );
-}
-
-function Tesla() {
-  return (
-    <>
-      <Candles bars={RISE} x={76} y={14} width={110} height={96} />
-      <Candles bars={FALL} x={200} y={14} width={110} height={96} />
-      <Label x={131} y={140}>
-        Feb 2021: up
-      </Label>
-      <Label x={255} y={140}>
-        May 2021: down
-      </Label>
     </>
   );
 }
@@ -664,17 +407,8 @@ function CheckCoin() {
 }
 
 const ART: Record<LessonArtId, () => JSX.Element> = {
-  money: Money,
-  notebook: Notebook,
-  oneNora: OneNora,
   ledger: WorldLedgers,
   bitcoin: BitcoinBirth,
-  mailbox: Mailbox,
-  stamp: Stamp,
-  keyHolders: KeyHolders,
-  custody: Custody,
-  queues: Queues,
-  tesla: Tesla,
   etf: Etf,
   flashCrash: FlashCrash,
   staircase: Staircase,

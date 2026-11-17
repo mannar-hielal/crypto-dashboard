@@ -10,15 +10,17 @@
  * history cards show a real mini chart; the close lists what the learner can now do.
  */
 
+import { AnswerResult } from './AnswerResult';
+import { useTourWide } from './useTourWide';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Star, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { trapFocus } from '@/lib/trapFocus';
 import { getArticle } from '@/learn/articles';
 import { useArticleStore } from '@/learn/articleStore';
+import { useAuthStore } from '@/store/authStore';
 import { ArticleWidget } from '@/learn/ArticleWidgets';
 import type { Concept } from '@/learn/concepts';
 import { conceptFor, lessonPlaceLabel, lessonPlacesOf } from '@/learn/graph';
@@ -31,14 +33,17 @@ import { GenesisReveal } from './GenesisReveal';
 import { GuidesMeet } from './GuidesMeet';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
-import { TOUR_MIN_WIDTH } from './LearnCard';
+import { BuySellView } from './BuySellView';
+import { StreakView } from './StreakView';
+import { MatchQuiz } from './MatchQuiz';
+import { OrderQuiz } from './OrderQuiz';
 import {
   afterNote,
   saveJournalLine,
   setJournalWrite,
   startTour as startTourShared,
 } from './afterNote';
-import { useLessonStore } from './lessonStore';
+import { isStartDone, useLessonStore } from './lessonStore';
 import {
   getLesson,
   GUIDE_NAMES,
@@ -51,7 +56,7 @@ import {
 } from './lessons';
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
-import { getTour } from './tours';
+import { getTour, runsHere } from './tours';
 
 const NOTE_MAX = 500;
 
@@ -147,7 +152,56 @@ function TermPeek({
   );
 }
 
+/**
+ * ✕ or Esc on the streak screen: back to the close, then the finish the learner asked for (never the
+ * next lesson or tour the main button would have opened). A failed journal save shows on the close.
+ */
+function leaveStreakFinishing(clear: (v: null) => void) {
+  clear(null);
+  finishLesson();
+}
+
+/** The lesson's finish, after the journal line (if one is typed) is saved: the one sequence */
+function finishLesson() {
+  afterNote(() => useLessonStore.getState().finish(), { finishing: true });
+}
+
 // ─── Screens ─────────────────────────────────────────────────────────────────
+
+/**
+ * A question screen's body: its chart (a frozen one plays on once answered), then the multiple
+ * choice, Buy and Sell under the plan, Drag and drop or Match boxes (owner's visual Q&A 2026-11-16)
+ */
+function QuestionBody({
+  q,
+  answer,
+  onAnswer,
+}: {
+  q: LessonQuestion;
+  answer: number | undefined;
+  onAnswer: (i: number) => void;
+}) {
+  return (
+    <>
+      {q.chart && (
+        <LessonChart
+          scene={q.chart}
+          revealed={answer !== undefined}
+          fallback={<LessonArt id={q.chart.fallback} />}
+        />
+      )}
+      {q.format === 'buy-sell' ? (
+        <BuySellView q={q} answer={answer} onAnswer={onAnswer} />
+      ) : q.format === 'order' ? (
+        <OrderQuiz q={q} answer={answer} onAnswer={onAnswer} />
+      ) : q.format === 'match' ? (
+        <MatchQuiz q={q} answer={answer} onAnswer={onAnswer} />
+      ) : (
+        <QuestionView q={q} answer={answer} onAnswer={onAnswer} />
+      )}
+    </>
+  );
+}
 
 export function QuestionView({
   q,
@@ -190,14 +244,7 @@ export function QuestionView({
           );
         })}
       </div>
-      {answered && (
-        <p className={styles.explain} role="status">
-          {/* Right or not, then why: no "You picked …" (owner 2026-11-13; the chosen option is
-              already marked above) */}
-          <strong>{answer === q.correct ? 'Right. ' : 'Not quite. '}</strong>
-          {q.explain}
-        </p>
-      )}
+      {answered && <AnswerResult right={answer === q.correct} explain={q.explain} />}
     </>
   );
 }
@@ -280,17 +327,20 @@ function ReadMore({
   screen: number;
   anchor?: 'lesson.recap' | 'lesson.can-do' | 'lesson.more';
 }) {
+  // A line with no article yet is plain text (owner 2026-11-16)
+  const article = item.article;
+  if (!article) return null;
   return (
     <button
       type="button"
       className={styles.link}
       onClick={() =>
-        useArticleStore.getState().open(item.article, {
+        useArticleStore.getState().open(article, {
           section: item.section,
           from: { lesson: lesson.id, screen },
         })
       }
-      {...guide(anchor, item.section ?? item.article)}
+      {...guide(anchor, item.section ?? article)}
     >
       Read more →
     </button>
@@ -415,7 +465,7 @@ function CloseView({ lesson }: { lesson: Lesson }) {
 
 export function LessonSheet() {
   const navigate = useNavigate();
-  const desktop = useMediaQuery(TOUR_MIN_WIDTH);
+  const desktop = useTourWide();
   const activeId = useLessonStore((s) => s.activeId);
   const screenIndex = useLessonStore((s) => s.screen);
   const answers = useLessonStore((s) => s.answers);
@@ -433,20 +483,49 @@ export function LessonSheet() {
   const run = useLessonStore((s) => s.run);
   /** Cold-open cards whose lines are all in (`lesson:screen`): Back to one doesn't replay it */
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
+  const accessToken = useAuthStore((s) => s.accessToken);
+  /**
+   * The streak screen after the close (owner's visual Q&A, 2026-11-16): the close's button pressed
+   * waits here, on this run, and Continue then does it. Not a screen of its own, so the funnel's
+   * step ids don't move.
+   */
+  const [streakThen, setStreakThen] = useState<{ go: () => void } | null>(null);
+  // This start's finish already counted (the store's `doneAt`, set by markFinished): its streak has
+  // shown. A look back and the way back from it change the run, never the start, so the same finish
+  // never shows its streak twice
+  const startFinished = useLessonStore((s) => s.activeId !== null && isStartDone(s, s.activeId));
+  // Shown on the close it was opened from only: leaving the close any other way (the lesson opened again at a card, Back) ends the streak's wait:
+  // coming back to the close shows the close, never the same finish's streak again
+  useEffect(
+    () =>
+      useLessonStore.subscribe((state, prev) => {
+        if (state.screen !== prev.screen || state.run !== prev.run) setStreakThen(null);
+      }),
+    []
+  );
+  const streakActive = streakThen !== null && !!accessToken;
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
+  // A tour that works on phones too (owner 2026-11-16): its Try is offered on every screen
+  const lessonTourPhone = !!lessonTour && runsHere(lessonTour, false);
 
-  // While the lesson's tour runs, the tour store has the screen; when the tour stops — finished,
-  // skipped or closed — the lesson carries on with its questions
+  // While a tour handed over from the lesson runs (its Try tour, a card's practice trade), the tour
+  // store has the screen; when no tour runs any more — finished, skipped or closed, after a chain
+  // like buy → sell too — the lesson carries on. A tour that took its place some other way (not
+  // its next chapter, not handed over by the lesson) didn't come from the lesson: its end brings
+  // the learner back to the same screen
   useEffect(() => {
-    if (!inTour || !lessonTour) return;
+    if (!inTour) return;
     return useTourStore.subscribe((s, prev) => {
-      if (prev.activeId === lessonTour && s.activeId !== lessonTour) {
-        useLessonStore.getState().leaveTour();
+      if (prev.activeId === null || s.activeId === prev.activeId) return;
+      const lessons = useLessonStore.getState();
+      if (s.activeId === null) lessons.leaveTour();
+      else if (s.activeId !== getTour(prev.activeId).next && s.activeId !== lessons.tourFrom) {
+        lessons.forgetTour();
       }
     });
-  }, [inTour, lessonTour]);
+  }, [inTour]);
 
   // The journal line is typed here, so here is where `afterNote` gets its writer
   useEffect(() => {
@@ -463,16 +542,18 @@ export function LessonSheet() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (peekOpen) setPeek(null);
+      else if (streakActive) leaveStreakFinishing(setStreakThen);
       else afterNote(() => useLessonStore.getState().close());
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeId, inTour, articleOpen, mapOpen, peekOpen]);
+  }, [activeId, inTour, articleOpen, mapOpen, peekOpen, streakActive]);
 
-  // Each new screen takes the focus, so a screen reader reads it from the top
+  // Each new screen takes the focus, so a screen reader reads it from the top (the streak screen
+  // too: the button pressed to reach it is gone)
   useEffect(() => {
     dialogRef.current?.focus();
-  }, [screenIndex, activeId, inTour, articleOpen]);
+  }, [screenIndex, activeId, inTour, articleOpen, streakActive]);
 
   // When the map closes over the sheet, the sheet takes the focus back (so Tab stays trapped in
   // it), unless what the map opened has taken it (a checkpoint's sheet)
@@ -526,21 +607,26 @@ export function LessonSheet() {
 
   if (!screen) return null;
   const { next, back, answer } = useLessonStore.getState();
-  const close = () => afterNote(() => useLessonStore.getState().close());
+  const close = () =>
+    streakActive
+      ? leaveStreakFinishing(setStreakThen)
+      : afterNote(() => useLessonStore.getState().close());
   const goBack = () => {
     setPeek(null);
     back();
   };
   // The last screen's buttons save a journal line typed but not saved first, and wait for it: on a
   // failure the learner stays, reads why, and the next press goes on without it
-  const finish = () => afterNote(() => useLessonStore.getState().finish(), { finishing: true });
-  const isQuestion = screen.kind === 'moment' || screen.kind === 'check';
+  const finish = finishLesson;
+  // A card can be a quick check between cards (owner 2026-11-16)
+  const cardQuiz = screen.kind === 'card' ? (lesson.cards[screen.index].quiz ?? null) : null;
+  const isQuestion = screen.kind === 'moment' || screen.kind === 'check' || !!cardQuiz;
   const question =
     screen.kind === 'moment'
       ? lesson.moment
       : screen.kind === 'check'
         ? lesson.checks[screen.index]
-        : null;
+        : cardQuiz;
   const answered = answers[screenIndex] !== undefined;
 
   // The lesson's own tour: handed over, the lesson waiting on this Try screen (`afterNote.ts`)
@@ -548,17 +634,30 @@ export function LessonSheet() {
     if (lesson.tour) startTourShared(lesson.tour, navigate);
   };
 
-  // The close's next step: the next lesson (any screen), or a tour (a larger screen only)
-  const nextStep = lesson.next;
-  // During a look back, the way on is back to the lesson the learner came from
-  const offerNext = !!returnTo || (!!nextStep && (nextStep.kind === 'lesson' || desktop));
-  const nextLabel = returnTo
-    ? `Back to Lesson ${getLesson(returnTo.lesson).number}: ${getLesson(returnTo.lesson).title}`
-    : !nextStep
-      ? ''
-      : nextStep.kind === 'lesson'
-        ? `Lesson ${getLesson(nextStep.id).number}: ${getLesson(nextStep.id).title}`
-        : getTour(nextStep.id).title;
+  // The close's way on: the next lesson; during a look back, the lesson the learner came from
+  const nextLesson = lesson.next;
+  const offerNext = !!returnTo || !!nextLesson;
+  const wayOn = returnTo?.lesson ?? nextLesson;
+  const nextLabel = !wayOn
+    ? ''
+    : `${returnTo ? 'Back to ' : ''}Lesson ${getLesson(wayOn).number}: ${getLesson(wayOn).title}`;
+  // The close's buttons show the streak first: a signed-in finish only, not from a look back, and
+  // once per run
+  // The finish and the journal line are saved at the press, before the streak shows: leaving from
+  // the streak screen (a closed tab) loses neither. Continue, ✕ or Esc then only leave
+  const viaStreak = (go: () => void) => () => {
+    if (accessToken && !returnTo && !startFinished) {
+      // Seen once the finish goes through (a journal line that fails to save keeps the learner on
+      // the close: the next press still shows the streak)
+      afterNote(
+        () => {
+          useLessonStore.getState().markFinished();
+          setStreakThen({ go });
+        },
+        { finishing: true }
+      );
+    } else go();
+  };
   const startNext = () =>
     afterNote(
       () => {
@@ -567,13 +666,9 @@ export function LessonSheet() {
           useLessonStore.getState().finish();
           return;
         }
-        if (!nextStep) return;
+        if (!nextLesson) return;
         useLessonStore.getState().finish();
-        if (nextStep.kind === 'lesson') {
-          useLessonStore.getState().start(nextStep.id);
-          return;
-        }
-        startTourShared(nextStep.id, navigate);
+        useLessonStore.getState().start(nextLesson);
       },
       { finishing: true }
     );
@@ -596,6 +691,18 @@ export function LessonSheet() {
     case 'card': {
       const card = lesson.cards[screen.index];
       heading = card.title;
+      if (card.quiz) {
+        // A fresh chart per screen: back-to-back quizzes never share one's candles
+        body = (
+          <QuestionBody
+            key={`${run}:${screenIndex}`}
+            q={card.quiz}
+            answer={answers[screenIndex]}
+            onAnswer={answer}
+          />
+        );
+        break;
+      }
       body = card.meet ? (
         <GuidesMeet meet={card.meet} done={ready} onDone={reveal} />
       ) : card.beats ? (
@@ -625,6 +732,19 @@ export function LessonSheet() {
             card.art && <LessonArt id={card.art} presenter={card.presenter} />
           )}
           {card.text && <CardText text={card.text} openTerm={openTerm} onTerm={toggleTerm} />}
+          {card.practice && (
+            // A practice trade on the real chart (owner 2026-11-16): the lesson waits, then goes on
+            <button
+              type="button"
+              className={styles.practice}
+              onClick={() => {
+                if (card.practice) startTourShared(card.practice.tour, navigate);
+              }}
+              {...guide('lesson.practice', card.practice.tour)}
+            >
+              {card.practice.label}
+            </button>
+          )}
           {peekConcept && (
             <TermPeek
               concept={peekConcept}
@@ -673,16 +793,12 @@ export function LessonSheet() {
     case 'check':
       heading = screen.kind === 'moment' ? 'Your call' : 'Check yourself';
       body = question && (
-        <>
-          {question.chart && (
-            <LessonChart
-              scene={question.chart}
-              revealed={answered}
-              fallback={<LessonArt id={question.chart.fallback} />}
-            />
-          )}
-          <QuestionView q={question} answer={answers[screenIndex]} onAnswer={answer} />
-        </>
+        <QuestionBody
+          key={`${run}:${screenIndex}`}
+          q={question}
+          answer={answers[screenIndex]}
+          onAnswer={answer}
+        />
       );
       break;
     case 'try':
@@ -701,7 +817,7 @@ export function LessonSheet() {
       body = (
         <>
           <p className={styles.text}>{lesson.tryIntro}</p>
-          {!desktop && (
+          {!desktop && !lessonTourPhone && (
             <p className={styles.hint}>
               This part needs a larger screen (a laptop or tablet). You can skip it for now and come
               back to it from the learning path.
@@ -715,6 +831,20 @@ export function LessonSheet() {
       body = <SummaryView lesson={lesson} screen={screenIndex} done={ready} onDone={reveal} />;
       break;
     case 'close':
+      if (streakActive && streakThen && accessToken) {
+        heading = 'Your streak';
+        const { go } = streakThen;
+        body = (
+          <StreakView
+            accessToken={accessToken}
+            onContinue={() => {
+              setStreakThen(null);
+              go();
+            }}
+          />
+        );
+        break;
+      }
       heading = `Lesson ${lesson.number} done`;
       body = <CloseView lesson={lesson} />;
       break;
@@ -724,7 +854,7 @@ export function LessonSheet() {
   const showNext = screen.kind === 'card' || screen.kind === 'summary' || isQuestion;
   // "Try it": its own main action in the same full-width footer as every screen's Next, with Skip
   // and Back under it (owner 2026-11-13)
-  const tourTry = screen.kind === 'try' && !lesson.tryWidget && desktop;
+  const tourTry = screen.kind === 'try' && !lesson.tryWidget && (desktop || lessonTourPhone);
   const nextWords = (screenCard?.nextLabel ?? 'Continue') + ' →';
 
   return createPortal(
@@ -848,21 +978,15 @@ export function LessonSheet() {
               </button>
             )}
           </div>
-        ) : screen.kind === 'close' ? (
+        ) : screen.kind === 'close' && streakActive ? null : screen.kind === 'close' ? (
           // The way on first, as big as the cards' Next; finishing for now under it (2026-11-08)
           <div className={styles.footStack}>
             <button
               type="button"
               className={`${styles.primary} ${styles.nextButton}`}
               data-ready="true"
-              onClick={offerNext ? startNext : finish}
-              {...guide(
-                !offerNext
-                  ? 'lesson.finish'
-                  : returnTo || nextStep?.kind === 'lesson'
-                    ? 'lesson.next-lesson'
-                    : 'lesson.next-tour'
-              )}
+              onClick={viaStreak(offerNext ? startNext : finish)}
+              {...guide(offerNext ? 'lesson.next-lesson' : 'lesson.finish')}
             >
               {offerNext ? nextLabel : 'Finish'}
             </button>
@@ -870,7 +994,7 @@ export function LessonSheet() {
               <button
                 type="button"
                 className={styles.link}
-                onClick={finish}
+                onClick={viaStreak(finish)}
                 {...guide('lesson.finish')}
               >
                 Finish for now

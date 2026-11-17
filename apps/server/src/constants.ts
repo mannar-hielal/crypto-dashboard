@@ -55,8 +55,42 @@ export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as
 /** The lessons (cards → a tour → questions → a journal line); mirrors `LESSON_IDS` in the client */
 export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
 
+/**
+ * 🔐 Steps one version of a lesson may use, from its first (held to the SDK's `LESSON_VERSION_SPAN`):
+ * a step past it is refused, so no stored step can reach a later version's range
+ */
+export const LESSON_VERSION_SPAN = 40;
+
+/**
+ * Each lesson's first funnel step in its current version: the client's `stepBase` + 1 (`lessons.ts`).
+ * Both are held to the SDK's `LESSON_FIRST_STEPS` by a test on each side. 🔐 A start or a finish from below it comes from a client still
+ * on an earlier version (an open tab, a cached PWA), and is refused, so the reset of 2026-11-16
+ * (`20261116200000_reset_lessons_1_3`) holds. Raise it with the lesson's `stepBase`. (A `version`
+ * column was weighed, review rounds 8-13: it would rename the step floor, not remove the special
+ * cases. An old API machine during a rollout writes rows without it too, so the reads still skip
+ * them, a start still takes them over, and an old Lesson 1 finish still keeps the welcome card shut.
+ * The step already marks the version, so no schema change is needed. A
+ * new item id per version, `lesson-01@v3`, was weighed too, review round 25: old rows would go
+ * inert, but every place that names a lesson (the path, checkpoints' taughtIn, the funnel, the
+ * admin page, URLs) would have to carry the version, and an old machine still writes the old id.)
+ */
+export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number> = {
+  'lesson-01': 61,
+  'lesson-ownership': 61,
+  'lesson-02': 61,
+};
+
 /** The learning path's chapter checkpoints: progress only, never events */
 export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
+
+/**
+ * Each checkpoint's question set version: a pass carries it as its `step` (held to the SDK's
+ * `CHECKPOINT_VERSIONS` by a test). 🔐 A pass from an earlier set is refused or ignored, like a lesson's
+ * earlier version (owner 2026-11-17: chapter 1's questions changed with the Lessons 1–3 rewrite)
+ */
+export const CHECKPOINT_VERSION: Record<(typeof LEARN_CHECKPOINT_IDS)[number], number> = {
+  'checkpoint-ch1': 2,
+};
 
 /** Events are only accepted for these: a lesson reports its screens like a tour reports its steps */
 export const LEARN_EVENT_ITEM_IDS = [...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS] as const;

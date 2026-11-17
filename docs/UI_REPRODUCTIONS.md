@@ -231,88 +231,85 @@ Preconditions: signed out (a private window).
 charts need the real Bybit feed, the fake feed draws its own candles) or production. The content is
 `apps/client/src/guide/lessons.ts` and `apps/client/src/learn/articles.ts`; the unit tests hold their rules.
 
-1. [learn.card.start] → Expect **Lesson 1 · What is the problem?**, card 1 of 12: a dark stage, the real photo of Laszlo Hanyecz with the two pizzas ([lesson.photo], credited "Photo: Laszlo Hanyecz", no guide), and the lines coming in one by one ("22 May 2010 · Florida" … "Back then, they cost him $41." …
-   "Nobody in that room knew those pizzas would one day be worth over $1 billion!"). [lesson.next] stays hidden until the last line is in, then shows
-   full width as **Unlock the story of Bitcoin →** with one shine across it. Pressing it sinks it onto
-   its ledge. Open it again and press Enter (or tap [lesson.beats]) during the reveal → Expect every line at once,
-   still on card 1. With the OS's reduced motion on → Expect every line at once, no shine (M).
-   Then → or Enter → Expect **Meet your guides**: Pulin slides in from the left ("Hi, I'm Pulin. I ask the questions you're too polite to
-   ask."), Berwyn from the right ("And I'm Berwyn. I answer them. Usually."), they meet in the middle with a small lean, then "In the next 5 minutes you'll learn:" and
-   three ✓ lines fade in one by one; [lesson.next] shows only after the last, as **Start with money itself →**, with
-   ← Back under it. Enter (or a tap on [lesson.meet]) during the scene shows it all at once. ← Back → Expect card 1
-   complete, not replayed. Every card has Pulin or Berwyn in its picture.
-   Next → Expect **Money runs on trust**: the three tiles (a bank, a state, a game maker) drop in one after another,
-   Berwyn looking straight out, the question "why is a banknote worth anything?", then Pulin and Berwyn's four-line
-   double act, and no Satoshi in the text. Next → Expect **A notebook, not coins**: four lines in Nora's
-   notebook (Emi, Leo, Sofia, then Leo → Emi 3) and no "Bitcoin" in the text. [lesson.next] **What if Nora cheats? →**
-   → Expect **What can go wrong with one Nora?**: four tiles (print, move, rewrite, lose) dropping in one after another,
-   four bold points, and **Could money work with no Nora? →** (Lesson 1 ends on the problem; owner 2026-11-08).
-   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect "Not quite." and the Why, with no "You picked" line, and Berwyn
-   calm (never worried), the same guide who asked: Berwyn stays through the answer. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to
-   15"; tick "Many notebooks" → Expect "4 of 5 copies still say Leo paid 3". The questions, then the summary → Expect **The problem** staged as [lesson.genesis] (about 24 s, each line held by its length;
-   Continue hidden until it ends; Enter, a tap, Back to it later and reduced motion all show the problems, the
-   story and the end at once, still, one under another; only a run played to its end rests on the mark alone): the two numbered lines (what a government or central bank can do with money, each with
-   [lesson.recap] Read more) come in, then fade away as the stage goes dark; then one line at a time, each fading in
-   and out in the middle: "However, for most people there was no other choice." → "In 2008, that trust broke: Lehman Brothers, a 158-year-old bank, collapsed." →
-   "Banks failed, and governments rushed to rescue them with newly printed money." → "Then someone called Satoshi
-   Nakamoto proposed money that no one holds or controls." (the name in amber); then the Bitcoin mark rises in the
-   middle with a glow and an amber ring bursts, and [lesson.highlight] "That was the birth of Bitcoin." lands under
-   it, with no Read more (Lesson 2 goes on); no rule, no stars. Continue → Expect **Lesson 1
-   done**: [lesson.finish-line] (Pulin and Berwyn break the ribbon, the halves swing down, confetti; a tap shows the
-   end, reduced motion shows it at once), "One line for your journal" ([lesson.note.save] → "✓ Saved to your
-   journal", the screen stays), the optional rating, [lesson.teaser] "You've seen the problem. Next, the answer: …", and the full-width [lesson.next-lesson] **Lesson 2: What is
-   Bitcoin?** with "Finish for now" under it → Expect Lesson 1 ticked done and **Lesson 2 · What is
-   Bitcoin?** at card 1 of 14.
-2. Lesson 2's cold open → Expect the dark stage with the real photo of the Newport landfill and James Howells
-   ([lesson.photo], no credit line, no guide), and the lines one by one ("2013 ·
-   Newport, Wales" … "8,000 bitcoin" … "Not even him." … "In the next 8 minutes: what Bitcoin is…"), then **Unlock what Bitcoin really is →**. Card 2 **Money that no
-   one controls** → Expect Pulin beside the Bitcoin mark rising with its amber burst (still with reduced motion),
-   "Bitcoin is decentralized digital money…" ([lesson.term `decentralized`]), four bold points (No one in charge, A fixed
-   supply, Open to check, Yours, with a key), [lesson.more] Read more → (opens _Bitcoin's story_), and **So who
-   keeps the ledger? →**. Card 3 **One ledger, thousands of copies** → Expect the dotted world map, "In Lesson 1 we saw the risk of one record keeper…" (no
-   Nora anywhere in Lesson 2) and **How do I receive bitcoin? →**. [lesson.term `ledger`] → Expect the
-   peek with [lesson.peek.from] **From Lesson 1: A notebook, not coins →**; tap it → Expect Lesson 1's notebook card
-   and [lesson.return] **← Back to Lesson 2** under the kicker; tap it → Expect Lesson 2's card 3 again, no return
-   link, and any answers already given in Lesson 2 still there. During the look back, Esc, and Lesson 1's last
-   screen's [lesson.next-lesson] **Back to Lesson 2: What is Bitcoin?** (no "Finish for now"), also return to
-   Lesson 2's card 2. [lesson.term `node`] → Expect a peek ("A computer that keeps a full copy…") with no "From" line;
-   [lesson.peek.more] → Expect the _Many notebooks, no Nora_ article (its title stays) in the drawer (full
-   screen on a phone, 3 min read) and the lesson hidden. In it: [article.gossip.send] → Expect the dots lighting
-   ring by ring (1, 8, 64), all at once with reduced motion; [article.balance.try] → Expect "✗ Rejected by every
-   node: 9 is more than 6."; [article.stamp.try `sofia`] → Expect the amber stamp rising into the checker's outline and ✓;
-   [`sam`] → Sam's grey stamp jams against it, ✗; [`edit`] → "Send 20 to Sam" and Sofia's stamp out of line, ✗; [article.chain.change] → Expect blocks 3 and 4 dashed amber and block 2 "Sofia → Leo 20",
-   [article.chain.reset] mends them; [article.answer.tile `lose`] → Expect its answer shown and pressed. Then
-   [article.back] → Expect card 2 again.
-   Next → Expect **A mailbox and a key** ("Say Sofia wants to pay Leo 2 bitcoin…"; the stamp card follows "Sofia → Leo, 2" through the nodes' check): the address and private-key tiles dropping in one after the other, and two
-   bold points (Address, Private key), then **How do I send it? →**. [lesson.term `address`] → [lesson.peek.more] → Expect _Mailboxes and keys_
-   (3 min read): two tiles (✓ share it, ✗ never share it); [article.mailbox.step `2`] → Expect the stamp seated in
-   its checker, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…", [`all`] → three dashed tiles and
-   "✗ locked forever", [`scam`] → "✗ A scam…"; [article.ledger.link] → Expect " Leo" beside bc1q…7f9a on all three
-   lines.
-3. Lesson 2's next cards → Expect **A stamp only you hold** (the stamp under its outline checker; "Now Sofia sends. Her
-   wallet stamps “Sofia → Leo, 2”…"; **So where is my bitcoin? →**), **Your bitcoin isn't in your phone** (phone,
-   recovery words and the ledger notebook dropping in, "your balance = the ledger, added up", no coin picture;
-   **Can someone hold my key for me? →**) and **Who holds your key?** (an exchange or you, each
-   with a stamp; "Here, nothing is real bitcoin: your balance is virtual practice money…"). The moment (the phone in the sea) → "Restore it on a new phone" ✓.
-4. Try it → Expect "Now be Sneaky Sam"; [article.stamp.try `sam`] → "✗ Not Sofia's mark". [lesson.try] Continue
-   (the footer's full-width button, with ← Back under it, since 2026-11-13; Skip this part shows only on a
-   tour Try it, as in Lesson 3).
-5. The questions (the "support" scam with Berwyn worried, Mt. Gox, the address), the note (Skip), the close → Expect
-   [lesson.teaser] "Next: who decides what one bitcoin costs, on the real chart." and [lesson.next-lesson] → Expect Lesson 2 ticked done and **Lesson 3 · Who
-   sets the price?** at card 1.
-6. Lesson 3 (rebuilt 2026-11-12) → Expect the cold open **One bitcoin for $8,200**: Bybit's minute candles with a
-   dashed red wick to "Binance.US: $8,200", the beats, and **Unlock who sets the price**. Then **Two queues meet**,
-   **When the queue runs thin** (the staircase, Read more → `exchange-price#liquidity`), **Thousands of deals, one
-   candle** and **Same company, opposite moves** (Tesla 2021, three markers, live data only).
-   Then the moment: the ETF chart ending on 10 Jan 2024; answer → Expect it to play on to 23 Jan with "−14.5%".
-   After it → Expect **Big swings, both ways** (May 2021: "Low $28,801" below, "+12.0%" above; Read more →
-   `price-swings#size`) and **Check before you trust** (Read more → `spot-a-scam#checklist`).
-7. Desktop: Try it → [lesson.try] Show me (the footer's full-width button) → tap [symbolbar.price] → Expect step 2's ring on the newest
-   candle with the arrow above it, pointing down; rest on it, hover a red one → Expect "Done ✓" after each, then the questions. A phone gets Continue instead.
-   The three questions (thin queue, size for the fall, the 2%-a-day coin), then the summary **Who sets the price?**
-   with four lines and "The price is people, trading every second.", then the close with [lesson.teaser] "Next: spend
-   $100 of practice money on Bitcoin…" and **Buy your first coin**.
-8. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of nine articles;
+1. [learn.card.start] → Expect **Lesson 1 · Up, down and your first trade**, screen 1 of 21 (rewritten 2026-11-16): the
+   dark stage, the real photo of Laszlo Hanyecz with the two pizzas ([lesson.photo], credited "Photo: Laszlo
+   Hanyecz", no guide), and the lines one by one ("22 May 2010 · Florida" … "Back then, those coins were worth about
+   $41." … "Those same coins later passed $1 billion. Prices move. A lot."). [lesson.next] stays hidden until the
+   last line is in, then shows full width as **Unlock how trading works →** with one shine. Enter (or a tap on
+   [lesson.beats]) during the reveal → every line at once, still on screen 1; reduced motion → every line at once,
+   no shine (M). → **Meet your guides** (Pulin from the left, Berwyn from the right; "In the next 9 minutes you'll
+   learn:" and three ✓ lines), then **Show me the up-or-down trick →**.
+   - Screens 3–4: **Up or down, you can win**, then **Buy and Sell** with [lesson.practice `practice-buy`] **Try a
+     buy on the real chart** → Expect the sheet to step aside, `/dashboard/spot/BTC/USDT`, the tour ring on the
+     form's Buy (a phone: on the bottom bar's **Buy / Long**), Market, USDT, 100, Place; after the order (or ✕ /
+     Skip) → Expect the lesson back on screen 5.
+   - Screens 5–6: **Quick check** (Choose buy or sell): the BTC chart frozen on 23 Oct 2023 under a dashed
+     "Your plan" line at $31,000, the plan line under it, then Buy (green) and Sell (red) side by side. ← / → move
+     between them. Pick Buy → Expect ✓ on Buy, "Right." and the Why (the plan, not the price), then the candles
+     play on to 9 Nov with "What happened next (the plan doesn't depend on it)". Screen 6: the 5 Aug 2024 exit at
+     $58,000 ("Your exit line") → Sell.
+   - Screens 7–13: **Going long** (practice-long on `/dashboard/usdt/BTCUSDT`), **A real long** (markers "Buy
+     $27,484" 2 Oct 2023, "Sell $73,133" 13 Mar 2024), **The result** ([lesson.term `hindsight`]), **Close it to
+     keep it**, **Going short** (practice-short on `/dashboard/usdt/ETHUSDT`: the form's Sell / Short, a phone's **Sell / Short**), **A real
+     short** (10 Nov 2021 → 18 Jun 2022), **The catch** (Berwyn worried: no ceiling, liquidation).
+   - Screen 14: **Quick check** (long, short or stay out) → "Stay out for now" is right; screen 15: **Your call**.
+   - Screens 16–18: **The market never sleeps** ([lesson.term `slippage`], Read more → _Price swings_, always
+     open), **Smaller coins swing harder** (the SOL chart, "−29%"; BTC −19% in the text), **Big swings, big
+     risks** ([lesson.term `rug-pull`]).
+   - Screen 19: **Try it on the real screen** (on a phone too) → [lesson.try] → the buy tour, then the sell tour,
+     the lesson waiting through both → back on screen 20.
+   - Screen 20: **What you learned**: five lines, only the last with [lesson.recap] Read more, and the highlight
+     "Decide when and why before you click." with no Read more. Continue → screen 21, **Lesson 1 done**: the
+     ribbon, the journal line, the rating, [lesson.teaser] "Next: where Bitcoin came from…", and
+     [lesson.next-lesson] **Lesson 2: Money nobody controls** with "Finish for now". Signed in, either button → Expect
+     the streak screen first ([lesson.streak]: the flame, "N-day streak" counting up, this week's dots, "Come back
+     tomorrow to keep it going"), then [lesson.streak.continue] does what was pressed (M). A guest goes straight on.
+2. Lesson 2 · **Money nobody controls** (rewritten 2026-11-16), 21 screens → Expect the cold open drawn, no photo
+   and no guide: the Bitcoin mark and the beats ("3 January 2009 · The first block" … the Times headline … "In the
+   next 9 minutes: why Bitcoin exists…"), then **Unlock why Bitcoin exists →**. Then **From the price to the
+   thing** (Pulin and Berwyn), **2008: trust broke**, **A paper, then a block** ([lesson.more] → _Bitcoin's story_
+   at its timeline), **One record, many copies** (the dotted world map; [lesson.term `ledger`] → a peek with no
+   "From" line; [lesson.term `node`] → "A computer that keeps a full copy…", [lesson.peek.more] → the network
+   article in the drawer, the lesson hidden), **Sending bitcoin**, **Two checks, then a block**, **Sealed by hard
+   work**, **The hash links the chain**.
+   - Screen 10, **Quick check** (Drag and drop): numbered slots 1–5, the steps below. Tap a step → it's ringed
+     ([lesson.step], aria-pressed); tap [lesson.slot `0`] → it lands there; tap a filled slot → it goes back. With a
+     mouse, drag a step onto a slot. [lesson.check] stays off until all five are placed; then ✓ / ✕ per slot,
+     "Right." / "Not quite." and the Why (sign, check, bundle, seal, share).
+   - Screen 12, **Quick check** (Match boxes): two columns; tap [lesson.match-term `0`] then a meaning → both show
+     ①; tap a paired box → the pair undone. [lesson.check] → ✓ / ✕ per pair and the Why.
+   - **No borders**, **Liquidity, briefly**, **Money that runs code**, **NFTs, briefly**, then **Your call** (one
+     copy disagrees with thousands) → "The thousands of copies that agree" is right; then the features **Quick
+     check** (Match boxes: Decentralized, Fixed supply, Open to check, Borderless).
+   - Screen 19, **Try it** (any screen size): the blockchain piece in the sheet; [article.chain.change] → the later
+     blocks break, [article.chain.reset] mends them; [lesson.try] Continue.
+   - Screen 20, **Why Bitcoin exists**: three lines with Read more, then the staged story ([lesson.genesis]: "However…"
+     → 2008, Lehman → banks failed → Satoshi, the Bitcoin mark, "That was the birth of Bitcoin."; Continue hidden
+     until it ends; Enter, a tap, Back to it later and reduced motion show it all at once). Screen 21: the close,
+     [lesson.teaser] "Next: why prices swing so hard…", [lesson.next-lesson] **Lesson 3: News, swings and traps**.
+3. The knowledge base from Lesson 2 (unchanged articles): in _Many notebooks, no Nora_, [article.gossip.send] → the
+   dots light ring by ring (1, 8, 64), all at once with reduced motion; [article.balance.try] → "✗ Rejected by every
+   node: 9 is more than 6."; [article.stamp.try `sofia`] → the amber stamp rises into the checker's outline, ✓;
+   [`sam`] → ✗; [article.chain.change] → the later blocks break; [article.answer.tile `lose`] → its answer shown. In
+   _Mailboxes and keys_ (now "practised in a later lesson on keys and custody"): [article.mailbox.step `2`] → the
+   stamp seated, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…".
+4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16), 21 screens → Expect the cold open **One bitcoin for
+   $8,200** (kept) and **Unlock why prices swing**; **Why so much?**; **Big swings, both ways** (May 2021,
+   Read more → `price-swings#size`); **News moves it, fast**; **Same news, either way** (the halving chart: "Halving"
+   20 Apr 2024, "$58,299", "$71,437"); then **Your call**: the ETF chart stopping on 10 Jan 2024, answer → it plays on
+   to 23 Jan, "−14.5%", and the Why names the halving.
+   - Then **The power of hype** (Berwyn worried: a warning), **Thousands of deals, one candle**, **A market shock**
+     (FTX: "FTX in trouble" 8 Nov 2022, "$15,892"), **A plan beats panic**, **Up, then down** ("$63,588" 13 Apr 2021,
+     "$29,765" 20 Jul), **Thin or deep** (Read more → `exchange-price#liquidity`), **The $8,200 moment**,
+     **Bitcoin is deep**.
+   - **Quick check** (Match boxes: four situations to what usually happens), **A rug pull** (worried, no named
+     token), **Check before you trust** (Read more → `spot-a-scam#checklist`), **Quick check** (Drag and drop: a rug
+     pull's five steps in order).
+   - Desktop: **Try it** → [lesson.try] Show me → the primer's three tasks, then the summary. A phone gets Continue
+     and "needs a larger screen" (the primer's hover steps).
+   - **What moves a price**: four lines with Read more and "Your plan decides, not the headline."; the close with no
+     teaser and one button, [lesson.finish] **Finish** (Lesson 1's Try already ran the buy and sell tours).
+5. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of nine articles;
    [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
    In **When the queue runs thin**, [article.queue.size] to 10 → Expect the thin queue down to 90; [article.queue.limit]
    → Expect "6 wait unsold". In _Candles, news and big swings_, [article.candle.next] ×5 → Expect "▲ Closed higher…
@@ -330,14 +327,14 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
    Sign out but no Learn.
 2. [nav.learn] → Expect **Crypto trading path** at 0 %, the legend (book = Lesson, dumbbell = Practice on the real
-   chart), chapter 1 "Foundations of crypto" in purple with "0 of 6 done", the zig-zag with
+   chart), chapter 1 "Start here: crypto and trading basics" in purple with "0 of 6 done", the zig-zag with
    **Start** and Pulin over Lesson 1, padlocks on the next four stops, a dumbbell on Lesson 3, "Buy your first coin" and
    "Sell it and read the result", no "Hands-on" tag or badge anywhere, the crown open, and chapter 2 "Trade with a plan" greyed with "Coming soon" and dashed stops
    nobody can tab to. Close and reopen → Expect no dot.
    Open Lesson 1 to its sixth screen, close it, reload → Expect a ring about half round Lesson 1 (read back from the
    server) and **Continue**.
-3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “What is the problem?” first." and no lesson.
-   [path.chapter.info `ch1`] → Expect the six stops with minutes and "After this chapter you can".
+3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “Up, down and your first trade” first." and no lesson.
+   [path.chapter.info `ch1`] → Expect the six stops with minutes and "What you’ll learn" (each lesson's summary lines).
 4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 17 %, **Continue** on Lesson 2,
    and the dot back on the Route icon before reopening.
 5. [path.test-out] → answer one wrong, four right → Expect "Checkpoint passed · 4 of 5 right";

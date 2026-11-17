@@ -1,0 +1,55 @@
+/* Choose buy or sell (owner's visual Q&A, 2026-11-16): colours from tokens.ts via index.css */
+
+.plan {
+  margin: 0;
+  color: var(--color-brand-white);
+}
+
+.question {
+  margin: 0;
+  color: var(--color-brand-muted);
+}
+
+.sides {
+  display: flex;
+  gap: 8px;
+}
+
+/* Filled like the phone trade bar: dark text on green (9.8:1) and on red */
+.side {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  color: var(--color-bg-page);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.buy {
+  background: var(--color-brand-green);
+}
+
+.sell {
+  background: var(--color-brand-red);
+}
+
+.side:disabled {
+  cursor: default;
+}
+
+/* After the answer the side not picked steps back, so the tick or cross reads first */
+.unpicked {
+  opacity: 0.45;
+}
+
+.after {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: var(--text-xs);
+}

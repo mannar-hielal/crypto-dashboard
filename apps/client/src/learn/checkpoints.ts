@@ -29,14 +29,22 @@ export interface Checkpoint {
   title: string;
   /** Right answers needed to pass */
   pass: number;
+  /**
+   * The question set's version, sent with a pass: the server ignores a pass from an earlier set (the
+   * SDK's `CHECKPOINT_VERSIONS`, which a test holds this to). Raise it when the questions change
+   */
+  version: number;
   questions: CheckpointQuestion[];
   access: Entitlement;
 }
 
 const checkpointCh1: Checkpoint = {
   id: 'checkpoint-ch1',
-  title: 'Foundations checkpoint',
+  // Owner 2026-11-16: our own name (unit 1 is "Start here: crypto and trading basics")
+  title: 'Chapter 1 checkpoint',
   pass: 4,
+  // 2: the Lessons 1–3 rewrite's questions (owner 2026-11-17: earlier passes no longer count)
+  version: 2,
   access: FREE,
   questions: [
     {
@@ -52,14 +60,20 @@ const checkpointCh1: Checkpoint = {
       taughtIn: { kind: 'lesson', id: 'lesson-ownership' },
     },
     {
+      // Lesson 1 since the rewrite (2026-11-16): the recovery-phrase question moved with keys and
+      // custody to a later lesson
       context:
-        '“Hi, I’m from exchange support. Send me your recovery phrase so I can fix your account.”',
-      question: 'What do you do?',
-      options: ['Send it: they say they’re support', 'Send only the first half', 'Never share it'],
-      correct: 2,
+        'You hold Bitcoin. Your plan: sell if a day closes below $50,000. Today it closed at $48,700.',
+      question: 'What does your plan say to do?',
+      options: [
+        'Sell, as the plan says',
+        'Wait: it might bounce back',
+        'Buy more while it’s cheap',
+      ],
+      correct: 0,
       explain:
-        'Your recovery phrase is your key. Whoever has it can move your bitcoin, and real support never asks for it.',
-      taughtIn: { kind: 'lesson', id: 'lesson-ownership' },
+        'The plan set the rule before the move, so the close below $50,000 decides it. Waiting or buying more is the gut talking, not the plan.',
+      taughtIn: { kind: 'lesson', id: 'lesson-01' },
     },
     {
       question: 'What sets Bitcoin’s price on an exchange right now?',

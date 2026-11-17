@@ -94,18 +94,23 @@
   --color-brand-amber: #e7ab33;
   --color-brand-muted: #cac5d4;
   --color-brand-white: #fcfcfd;
+  /* border.input (tokens.ts): a control's outline */
+  --color-border-input: rgba(255, 255, 255, 0.1);
 
   /* Brand gradient stops — use with bg-gradient-to-r from-brand-grad-from to-brand-grad-to */
   --color-brand-grad-from: #fe4bd1; /* pink-magenta — gradient start */
   --color-brand-grad-to: #3f5ff5; /* blue-purple  — gradient end   */
 
   /* ── Font-size overrides — mirrors fontSize tokens in tokens.ts (×1.5 then ×0.75 = ×1.125 of originals) */
+  --text-xs11: 0.8125rem; /* 13px — fontSize.xs11, panel / table body text */
   --text-xs: 0.875rem; /* 14px — 18px × 0.75 */
   --text-sm: 1rem; /* 16px — 21px × 0.75 */
   --text-base: 1.125rem; /* 18px — 24px × 0.75 */
+  --text-display: 1.75rem; /* 28px — fontSize.display, a big number on its own */
 
   /* Border radii */
   --radius-btn: 25px; /* primary CTA / pill buttons — generates rounded-btn */
+  --radius-card: 10px; /* radius.card — cards, boxes and panels inside a sheet */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

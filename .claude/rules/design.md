@@ -47,7 +47,7 @@ noted in `.claude/skills/figma-theme-source` (e.g. `93:5177` = Sign in / auth fl
 | `bg.panel`                        | `#25234e`                                          | Panel / header / card background     |
 | `bg.surface` / `bg.input`         | `#3e3c73`                                          | Elevated surface / input field       |
 | `color.green`                     | `#2ccd78`                                          | Profit / buy / positive              |
-| `color.red`                       | `#d5455c`                                          | Loss / sell / negative               |
+| `color.red`                       | `#ff6b7c`                                          | Loss / sell / negative (≥4.7:1)      |
 | `color.purple`                    | `#a555e2`                                          | Primary accent (vibrant)             |
 | `color.purpleDark`                | `#695bec`                                          | Accent — hover states, borders       |
 | `color.muted`                     | `#cac5d4`                                          | Secondary / muted text               |

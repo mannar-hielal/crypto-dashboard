@@ -55,36 +55,10 @@
   stroke-width: 1;
 }
 
-.rule {
-  stroke: var(--color-brand-muted);
-  stroke-width: 2;
-  stroke-linecap: round;
-  opacity: 0.6;
-}
-
-.link {
-  fill: none;
-  stroke: var(--color-brand-muted);
-  stroke-width: 2;
-  stroke-dasharray: 4 4;
-}
-
-.chip {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-
 .chipText {
   fill: currentColor;
   font-size: 12px;
   font-weight: 600;
-}
-
-.price {
-  fill: var(--color-brand-white);
-  font-size: 14px;
-  font-weight: 700;
 }
 
 .headline {
@@ -109,51 +83,6 @@
   fill: var(--color-bg-page);
   font-size: 26px;
   font-weight: 800;
-}
-
-.crust {
-  fill: var(--color-brand-amber); /* color.amber */
-  opacity: 0.6;
-}
-
-.cheese {
-  fill: var(--color-bg-surface); /* bg.surface */
-  stroke: var(--color-brand-amber);
-  stroke-width: 1.5;
-}
-
-.topping {
-  fill: var(--color-brand-purple-dark); /* color.purpleDark: decoration, not a buy/sell red */
-}
-
-.notebookLine {
-  fill: var(--color-brand-white);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-}
-
-.slot {
-  fill: var(--color-bg-page); /* bg.page */
-}
-
-.key {
-  fill: none;
-  stroke: var(--color-brand-amber); /* color.amber */
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-
-.hand {
-  stroke: var(--color-brand-white);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-/* A banknote's outline */
-.note {
-  fill: none;
-  stroke: var(--color-brand-muted); /* green stays for buy and profit (design.md) */
-  stroke-width: 2;
 }
 
 /* ─── The guides' faces and arms (2026-10-24) ─────────────────────────────── */
@@ -200,22 +129,8 @@
   color: var(--color-brand-amber); /* color.amber: coins, keys, the things of value */
 }
 
-.system {
-  color: var(--color-brand-purple); /* color.purple: institutions, the system */
-}
-
-.muted {
-  color: var(--color-brand-muted);
-}
-
 .white {
   color: var(--color-brand-white);
-}
-
-.notebookTitle {
-  fill: var(--color-brand-white);
-  font-size: 14px;
-  font-weight: 700;
 }
 
 /* The dotted world map and the ledger network on it */
@@ -232,46 +147,6 @@
 
 .nodeHalo {
   fill: var(--color-brand-purple-dark); /* color.purpleDark */
-}
-
-/* ─── Lesson 1's "Money runs on trust" (owner 2026-10-25) ───────────────── */
-
-/* Each tile drops in from above and settles, one after another; still for reduced motion */
-.drop {
-  transform-box: fill-box;
-  animation: drop 650ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
-}
-
-.drop[data-drop='1'] {
-  animation-delay: 250ms;
-}
-
-.drop[data-drop='2'] {
-  animation-delay: 500ms;
-}
-
-.drop[data-drop='3'] {
-  animation-delay: 750ms;
-}
-
-@keyframes drop {
-  from {
-    transform: translateY(-110px);
-    opacity: 0;
-  }
-  60% {
-    opacity: 1;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .drop {
-    animation: none;
-  }
 }
 
 /* ─── Lesson 2's Bitcoin card (owner 2026-11-12): the mark from Lesson 1's end ── */

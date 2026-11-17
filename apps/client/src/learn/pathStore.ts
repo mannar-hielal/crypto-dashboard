@@ -5,11 +5,11 @@
  */
 
 import { create } from 'zustand';
-import type { TourId } from '@/guide/tours';
+import type { PathTourId } from '@/guide/tours';
 import { checkpointScore, getCheckpoint, type CheckpointId } from './checkpoints';
 
 interface PathStoreState {
-  skippedTours: Partial<Record<TourId, true>>;
+  skippedTours: Partial<Record<PathTourId, true>>;
   checkpoints: Partial<Record<CheckpointId, true>>;
   /** The account's progress has been read (a write before it would echo the server's answer) */
   loaded: boolean;
@@ -17,9 +17,9 @@ interface PathStoreState {
   checkpointId: CheckpointId | null;
   question: number;
   answers: number[];
-  setProgress: (progress: { skippedTours: TourId[]; checkpoints: CheckpointId[] }) => void;
+  setProgress: (progress: { skippedTours: PathTourId[]; checkpoints: CheckpointId[] }) => void;
   /** A phone can't run a tour: skip it for now, so it doesn't block the path */
-  skipTour: (id: TourId) => void;
+  skipTour: (id: PathTourId) => void;
   startCheckpoint: (id: CheckpointId) => void;
   answer: (option: number) => void;
   /** To the next question, or past the last one to the result (a pass is recorded there) */

@@ -7,16 +7,14 @@
  * material and are never locked — and the habit badges.
  */
 
+import { useHabits } from './useHabits';
+import { useTourWide } from '@/guide/useTourWide';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { BookText, Flame, X } from 'lucide-react';
-import { learnApi } from '@crypto-dashboard/sdk';
-import type { HabitsResponse } from '@crypto-dashboard/sdk';
 import { useNavigate } from 'react-router';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { bg, color } from '@/lib/tokens';
-import { TOUR_MIN_WIDTH } from '@/guide/LearnCard';
 import { getLesson } from '@/guide/lessons';
 import { startLesson, startTour } from '@/guide/afterNote';
 import { useTourStore } from '@/guide/tourStore';
@@ -49,11 +47,20 @@ function Connector({ index }: { index: number }) {
   );
 }
 
-/** What a chapter teaches: its stops with their minutes, and what each lesson lets you do */
+/**
+ * What a chapter teaches: its stops with their minutes, and what each lesson teaches (its summary's
+ * lines; a lesson with no summary, its "You can now" lines)
+ */
 function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
-  const canDo = nodes.flatMap((v) =>
-    v.node.kind === 'lesson' ? getLesson(v.node.id).canDo.map((c) => c.text) : []
-  );
+  // Keyed by lesson and line: two lessons may share a line
+  const learned = nodes.flatMap((v) => {
+    if (v.node.kind !== 'lesson') return [];
+    const lesson = getLesson(v.node.id);
+    return (lesson.recap?.points ?? lesson.canDo).map((c) => ({
+      key: `${lesson.id}:${c.text}`, // a lesson's lines are its own and unique
+      text: c.text,
+    }));
+  });
   return (
     <div className={styles.overview} {...guide('path.chapter.overview')}>
       <ul className={styles.overviewList}>
@@ -64,12 +71,12 @@ function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
           </li>
         ))}
       </ul>
-      {canDo.length > 0 && (
+      {learned.length > 0 && (
         <>
-          <p className={styles.overviewHead}>After this chapter you can</p>
+          <p className={styles.overviewHead}>What you’ll learn</p>
           <ul className={styles.overviewList}>
-            {canDo.map((text) => (
-              <li key={text}>{text}</li>
+            {learned.map(({ key, text }) => (
+              <li key={key}>{text}</li>
             ))}
           </ul>
         </>
@@ -255,33 +262,15 @@ function ChapterStop({
 export function PathDrawer() {
   const navigate = useNavigate();
   const open = useTourStore((s) => s.panelOpen);
-  const wide = useMediaQuery(TOUR_MIN_WIDTH);
+  const wide = useTourWide();
   const accessToken = useAuthStore((s) => s.accessToken);
   const view = usePathView();
   const [tab, setTab] = useState<Tab>('path');
-  const [habits, setHabits] = useState<HabitsResponse | null>(null);
-  const [habitsError, setHabitsError] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
 
   // Habits are counted on the server: read whenever the map opens, and again after a new finish
   const finished = view.chapters.reduce((n, c) => n + c.done, 0);
-  useEffect(() => {
-    if (!open || !accessToken) return;
-    let cancelled = false;
-    learnApi
-      .getHabits(accessToken)
-      .then((r) => {
-        if (cancelled) return;
-        setHabits(r);
-        setHabitsError(false);
-      })
-      .catch(() => {
-        if (!cancelled) setHabitsError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, accessToken, finished]);
+  const { habits, failed: habitsError } = useHabits(open ? accessToken : null);
 
   // Esc closes
   useEffect(() => {

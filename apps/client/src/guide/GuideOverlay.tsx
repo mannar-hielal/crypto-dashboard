@@ -6,6 +6,8 @@
  * what to open.
  */
 
+import { AnswerResult } from './AnswerResult';
+import { useTourWide } from './useTourWide';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, X } from 'lucide-react';
@@ -13,7 +15,7 @@ import { guide, guideSelector } from '@/lib/guideAnchors';
 import { placeBubble, type Box } from './bubblePlacement';
 import { matchesHover, newestCandleBox, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
-import { getTour, type TourStep } from './tours';
+import { backIndex, getTour, type TourStep, tourSteps } from './tours';
 import styles from './GuideOverlay.module.css';
 
 const RING_PAD = 3;
@@ -138,8 +140,13 @@ function StepView({ stepIndex }: { stepIndex: number }) {
   const activeId = useTourStore((s) => s.activeId);
   const quizAnswer = useTourStore((s) => s.quizAnswer);
   const { next, back, close, answerQuiz } = useTourStore.getState();
+  const wide = useTourStore((s) => s.wide);
+  const passed = useTourStore((s) => s.passed);
   const tour = activeId ? getTour(activeId) : null;
-  const step = tour?.steps[stepIndex];
+  const steps = tour ? tourSteps(tour, wide) : [];
+  const step = steps[stepIndex];
+  // Back only where it goes somewhere (never onto a phone step already done)
+  const canGoBack = backIndex(steps, stepIndex, passed) !== null;
 
   if (!tour || !step) return null;
   return (
@@ -148,10 +155,11 @@ function StepView({ stepIndex }: { stepIndex: number }) {
       title={tour.title}
       step={step}
       index={stepIndex}
-      total={tour.steps.length}
+      total={steps.length}
       quizAnswer={quizAnswer}
       onNext={next}
       onBack={back}
+      canGoBack={canGoBack}
       onClose={close}
       onAnswer={answerQuiz}
     />
@@ -166,6 +174,8 @@ interface BubbleProps {
   quizAnswer: number | null;
   onNext: () => void;
   onBack: () => void;
+  /** Back goes somewhere from this step */
+  canGoBack: boolean;
   onClose: () => void;
   onAnswer: (index: number) => void;
 }
@@ -178,6 +188,7 @@ function TourBubble({
   quizAnswer,
   onNext,
   onBack,
+  canGoBack,
   onClose,
   onAnswer,
 }: BubbleProps) {
@@ -385,10 +396,11 @@ function TourBubble({
               })}
             </div>
             {quizAnswer !== null && (
-              <p className={styles.explain}>
-                {quizAnswer === step.quiz.correct ? 'Right. ' : 'Not quite. '}
-                {step.quiz.explain}
-              </p>
+              <AnswerResult
+                right={quizAnswer === step.quiz.correct}
+                explain={step.quiz.explain}
+                className={styles.explain}
+              />
             )}
           </>
         ) : (
@@ -415,7 +427,7 @@ function TourBubble({
         )}
 
         <div className={styles.foot}>
-          {index > 0 && (
+          {canGoBack && (
             <button type="button" className={styles.link} onClick={onBack} {...guide('tour.back')}>
               ← Back
             </button>
@@ -456,6 +468,11 @@ function TourBubble({
 export function GuideOverlay() {
   const activeId = useTourStore((s) => s.activeId);
   const stepIndex = useTourStore((s) => s.stepIndex);
+  // A rotation or resize across the tours' width mid-tour: that layout's steps, from this one on
+  const wide = useTourWide();
+  useEffect(() => {
+    if (activeId) useTourStore.getState().setWide(wide);
+  }, [activeId, wide]);
   if (!activeId) return null;
   return <StepView key={activeId} stepIndex={stepIndex} />;
 }

@@ -44,14 +44,26 @@ describe('lessonStore', () => {
 
   it('should hide for the tour and carry on with the next screen when the tour ends', () => {
     s().start('lesson-01');
-    useLessonStore.setState({ screen: 6 }); // try it
-    s().enterTour();
+    useLessonStore.setState({ screen: 18 }); // try it
+    s().enterTour('buy-first-coin');
     expect(s().inTour).toBe(true);
     s().leaveTour();
     expect(s().inTour).toBe(false);
-    expect(s().screen).toBe(7);
+    expect(s().screen).toBe(19);
     s().leaveTour(); // not in a tour: nothing moves
-    expect(s().screen).toBe(7);
+    expect(s().screen).toBe(19);
+  });
+
+  it('should move on from a card only when its own practice trade ends (owner 2026-11-16)', () => {
+    s().start('lesson-01', 3); // Buy and Sell: practice-buy
+    s().enterTour('practice-buy');
+    s().leaveTour();
+    expect(s().screen).toBe(4);
+    // Another tour handed over from the same card (an article's practice link): back on the card
+    s().start('lesson-01', 3);
+    s().enterTour('buy-first-coin');
+    s().leaveTour();
+    expect(s()).toMatchObject({ screen: 3, inTour: false, tourFrom: null });
   });
 
   it('should mark the lesson completed on finish, and not on close', () => {
@@ -157,6 +169,7 @@ describe('lessonStore', () => {
   });
 
   it('should go home from a look back when its lesson is started, carry on in its own, and start any other afresh', () => {
+    const starts0 = s().starts; // keeps counting through a reset: measured from here
     s().start('lesson-ownership', 3);
     s().answer(0);
     s().visit('lesson-01', 1);
@@ -178,7 +191,7 @@ describe('lessonStore', () => {
 
     s().start('lesson-02'); // any other: a fresh run, the look back over
     expect(s()).toMatchObject({ activeId: 'lesson-02', screen: 0, returnTo: null });
-    expect(s().starts).toBe(2);
+    expect(s().starts).toBe(starts0 + 2);
   });
 
   it('should leave no rating behind once a lesson is finished', () => {
@@ -189,6 +202,7 @@ describe('lessonStore', () => {
   });
 
   it('should keep the lesson already on screen: its screen with none given, a card if asked, its tour', () => {
+    const starts0 = s().starts;
     s().start('lesson-02', 3);
     s().answer(1);
     const run = s().run;
@@ -196,9 +210,9 @@ describe('lessonStore', () => {
     expect(s()).toMatchObject({ activeId: 'lesson-02', screen: 3, answers: { 3: 1 }, run });
     s().start('lesson-02', 6);
     expect(s()).toMatchObject({ screen: 6, answers: { 3: 1 }, run });
-    expect(s().starts).toBe(1);
+    expect(s().starts).toBe(starts0 + 1);
 
-    s().enterTour();
+    s().enterTour('primer');
     s().start('lesson-02', 2);
     expect(s()).toMatchObject({ screen: 6, inTour: true });
   });
@@ -220,5 +234,16 @@ describe('lessonStore', () => {
     expect(st().reached).toEqual({ 'lesson-02': 4, 'lesson-ownership': 5 });
     st().reset();
     expect(st().reached).toEqual({});
+  });
+
+  it('should count a finish once when a look back comes between the streak and the close', () => {
+    s().start('lesson-01');
+    s().markFinished();
+    expect(s().finishes).toBe(1);
+    s().visit('lesson-ownership', 2); // a look back from the streak screen's lesson
+    s().returnBack();
+    s().markFinished(); // pressed again: still the same finish
+    s().finish();
+    expect(s()).toMatchObject({ finishes: 1, activeId: null, completed: { 'lesson-01': true } });
   });
 });

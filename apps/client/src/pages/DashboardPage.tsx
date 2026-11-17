@@ -1,3 +1,4 @@
+import { NARROW_LAYOUT_QUERY } from '@/lib/breakpoints';
 import { guide } from '@/lib/guideAnchors';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
@@ -186,24 +187,24 @@ export function DashboardInner() {
   useSessionRefresh();
   usePaperFeed();
 
-  const isMobile = useMediaQuery('(max-width: 1023px)');
+  const isMobile = useMediaQuery(NARROW_LAYOUT_QUERY);
 
   const [panelSize, setPanelSize] = useState<PanelSize>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+    if (typeof window !== 'undefined' && window.matchMedia(NARROW_LAYOUT_QUERY).matches) {
       return 'collapsed';
     }
     return 'open';
   });
 
   const [tradingPanelOpen, setTradingPanelOpen] = useState(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+    if (typeof window !== 'undefined' && window.matchMedia(NARROW_LAYOUT_QUERY).matches) {
       return false;
     }
     return true;
   });
 
   const [leftToolbarOpen, setLeftToolbarOpen] = useState(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+    if (typeof window !== 'undefined' && window.matchMedia(NARROW_LAYOUT_QUERY).matches) {
       return false;
     }
     return true;

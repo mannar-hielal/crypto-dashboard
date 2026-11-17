@@ -51,3 +51,14 @@ export function markersUpTo(markers: ChartMarker[], lastShown: number | undefine
   if (lastShown === undefined) return [];
   return markers.filter((m) => daySeconds(m.date) <= lastShown);
 }
+
+/**
+ * Decimals for a chart's prices, by their level: whole dollars from $1,000 (Bitcoin's "$57,459"),
+ * cents from $1 (Solana's "$182.57"), and below $1 enough places for the price's first digits to
+ * show (a coin at $0.00002 never reads $0.00); at most 8
+ */
+export function pricePrecision(top: number): number {
+  if (top >= 1000) return 0;
+  if (top >= 1 || top <= 0) return 2;
+  return Math.min(8, Math.ceil(-Math.log10(top)) + 3);
+}

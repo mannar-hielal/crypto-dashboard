@@ -79,6 +79,37 @@ export const LEARN_ITEM_IDS = [
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
 /**
+ * Each chapter checkpoint's question set version: a pass carries it as its `step`, and the server
+ * (`CHECKPOINT_VERSION`) refuses or ignores a pass from an earlier set. The client's `version` on
+ * each checkpoint (`apps/client/src/learn/checkpoints.ts`) and the server's copy are held to this one
+ * by a test on each side. Owner 2026-11-17: the Lessons 1–3 rewrite changed chapter 1's questions,
+ * so its earlier passes no longer count
+ */
+export const CHECKPOINT_VERSIONS = {
+  'checkpoint-ch1': 2,
+} as const;
+
+/**
+ * How many steps one version of a lesson may use, from its first: its screens must fit (the
+ * client's lessons test), and the next version starts at least this far on. The server
+ * (`LESSON_VERSION_SPAN`) refuses a step outside the current version's span, so no stored step can
+ * ever reach a later version's range
+ */
+export const LESSON_VERSION_SPAN = 40;
+
+/**
+ * Each lesson's first funnel step in its current version: the client's `stepBase` + 1
+ * (`apps/client/src/guide/lessons.ts`), the server's `LESSON_FIRST_STEP` (`apps/server/src/constants.ts`),
+ * which refuses a start or a finish from below it. One test on each side holds its copy to this one;
+ * raise all three together with a lesson's `stepBase`
+ */
+export const LESSON_FIRST_STEPS = {
+  'lesson-01': 61,
+  'lesson-ownership': 61,
+  'lesson-02': 61,
+} as const;
+
+/**
  * How many times the client retries a session refresh after reconnecting (apps/client
  * `lib/session.ts`). The server serves a just-rotated token again at most `REFRESH_REUSE_CAP` times,
  * which must stay above this, or the last retry is refused and the learner signed out (review on
@@ -174,6 +205,9 @@ export interface HabitsResponse {
   learningDays: number;
   /** Consecutive learning days up to today (or yesterday, so a streak survives until midnight) */
   streakDays: number;
+  /** This week's days (the learner's, in their time zone), Monday first: a learning day or not (the streak screen's dots) */
+  // Optional: an API from before 2026-11-16 (a rollback of the API alone) doesn't send it
+  thisWeek?: boolean[];
 }
 
 // ─── Notifications ───────────────────────────────────────────────────────────
