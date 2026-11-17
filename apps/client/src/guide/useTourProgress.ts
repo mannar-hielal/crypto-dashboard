@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest, LearnProgressItem } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
+import { onePerKey } from '@/lib/onePerKey';
 import { lastReadAccount, resetLearningStores, setLastReadAccount } from '@/learn/signedOut';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
@@ -132,15 +133,13 @@ function saveDone(
  */
 const checks = new Map<string, Promise<{ items: LearnProgressItem[] }>>();
 function checkProgress(account: string | null, token: string) {
-  const key = account ?? '';
-  const onTheWay = checks.get(key);
-  if (onTheWay) return onTheWay;
-  const check = learnApi.getProgress(token).finally(() => checks.delete(key));
-  checks.set(key, check);
-  return check;
+  return onePerKey(checks, account ?? '', () => learnApi.getProgress(token));
 }
 
-/** How long one save holds back resends of its item at most (the SDK's own fetch has no timeout) */
+/**
+ * How long one save holds back resends of its item at most: a backstop, as every learn request
+ * times out at SDK_REQUEST_TIMEOUT_MS (10 s) since 2026-11-17
+ */
 const SAVE_HOLD_MS = 20_000;
 
 /** Saves on their way, by account and item */

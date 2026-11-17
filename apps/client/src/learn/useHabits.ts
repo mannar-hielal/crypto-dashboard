@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { accountFor } from './account';
+import { onePerKey } from '@/lib/onePerKey';
 import { usePathStore } from './pathStore';
 import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
@@ -14,11 +15,7 @@ import { useTourStore } from '@/guide/tourStore';
  */
 const reading = new Map<string, Promise<HabitsResponse>>();
 function readHabits(key: string, token: string): Promise<HabitsResponse> {
-  const onTheWay = reading.get(key);
-  if (onTheWay) return onTheWay;
-  const read = learnApi.getHabits(token).finally(() => reading.delete(key));
-  reading.set(key, read);
-  return read;
+  return onePerKey(reading, key, () => learnApi.getHabits(token));
 }
 
 /**
