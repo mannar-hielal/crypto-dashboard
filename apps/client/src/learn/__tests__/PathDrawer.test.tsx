@@ -18,6 +18,17 @@ let wide = true;
 vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => wide }));
 
 const navigate = vi.fn();
+/** Tours to treat as not phone-ready (the path's two are today; a later tour may not be) */
+const notOnPhones = new Set<string>();
+vi.mock('@/guide/tours', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/guide/tours')>();
+  return {
+    ...mod,
+    runsHere: (id: Parameters<typeof mod.runsHere>[0], wide: boolean) =>
+      notOnPhones.has(id) ? wide : mod.runsHere(id, wide),
+  };
+});
+
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
   useNavigate: () => navigate,
@@ -159,6 +170,28 @@ describe('PathDrawer', () => {
     fireEvent.click(nodeButton('tour:buy-first-coin'));
     expect(useTourStore.getState().activeId).toBe('buy-first-coin');
     expect(screen.queryByText(/needs a laptop or tablet/)).toBeNull();
+  });
+
+  it('should let a phone skip a tour that needs a larger screen, which opens the next stop', () => {
+    // Every tour on the path is phone-ready today: the flow is kept for a later one that isn't
+    notOnPhones.add('buy-first-coin');
+    wide = false;
+    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-ownership', 'lesson-02']);
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+
+    fireEvent.click(nodeButton('tour:buy-first-coin'));
+    expect(useTourStore.getState().activeId).toBeNull();
+    expect(screen.getByText(/needs a laptop or tablet/)).toBeTruthy();
+
+    fireEvent.click(document.querySelector(guideSelector('path.tour.skip', 'buy-first-coin'))!);
+    expect(usePathStore.getState().skippedTours).toEqual({ 'buy-first-coin': true });
+    expect(
+      document
+        .querySelector(guideSelector('path.node', 'tour:sell-and-review'))!
+        .getAttribute('data-state')
+    ).toBe('current');
+    notOnPhones.clear();
   });
 
   it('should show what a chapter covers from its book button', () => {
