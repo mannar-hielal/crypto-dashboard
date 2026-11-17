@@ -4776,9 +4776,12 @@ drop):
 On 2026-11-17 `pnpm audit --audit-level=high` began to fail on GHSA-fc5q-39xc-vjpf: a ReDoS in `picomatch` with
 every version up to 4.0.7 (the latest) vulnerable and no fixed one. Every commit hook and CI run in the repo stopped.
 
-- **Reached only through tooling:** `lint-staged` (the pre-commit hook) and `vite-plugin-pwa` → `workbox-build` →
-  `@rollup/pluginutils` (the PWA build). Nothing that ships uses it. The latest releases of both still depend on it,
-  so no upgrade or override could clear it.
+- **Reached only through tooling:** its consumers in the lockfile are `vite`, `vitest`, `lint-staged`, `tinyglobby`,
+  `fdir` and `@rollup/pluginutils` (via `vite-plugin-pwa` → `workbox-build`), all dev or build tooling, with
+  patterns from config. `pnpm why picomatch -r --prod` finds no production path. The latest releases still depend
+  on it, so no upgrade or override could clear it.
+- **Kept honest:** the ignore is by advisory id, so `security.md` asks for `pnpm why picomatch -r --prod` to be
+  re-checked whenever a production dependency changes.
 - **Owner's decision:** accept this one advisory. It is listed in `package.json`, `pnpm.auditConfig.ignoreGhsas`,
   and `.claude/rules/security.md` (Supply-chain) records the exception and its terms.
 - **To undo:** once a fixed `picomatch` exists, delete the entry and add an override floor.
