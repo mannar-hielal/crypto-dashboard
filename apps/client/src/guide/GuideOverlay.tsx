@@ -106,7 +106,8 @@ function useTracked(step: TourStep): Tracked {
           rect = { top: r.top, left: r.left, width: r.width, height: r.height };
           if (!scrolled) {
             scrolled = true;
-            if (r.top < 0 || r.bottom > window.innerHeight) el.scrollIntoView({ block: 'nearest' });
+            // (sideways too: a figure in a row that scrolls across, the account summary on a phone)
+            el.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
           }
         }
         if (el instanceof HTMLInputElement) value = el.value;

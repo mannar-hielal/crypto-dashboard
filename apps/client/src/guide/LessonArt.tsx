@@ -369,7 +369,7 @@ function DeepThin() {
               className={styles.offer}
             />
           ))}
-          <path d={`M${b.cx + 26} 29 L${b.cx + 26} ${b.stop}`} className={styles.crashWick} />
+          <path d={`M${b.cx + 26} 29 L${b.cx + 26} ${b.stop}`} className={styles.moveLine} />
           {/* Neutral colours: green and red mean profit/loss and buy/sell (design.md) */}
           <text x={b.cx} y="132" textAnchor="middle" className={styles.chipText}>
             {b.name}: {b.note}

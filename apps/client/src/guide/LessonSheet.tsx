@@ -550,6 +550,11 @@ export function LessonSheet() {
       // to the sheet only while a line is being typed: the first Esc leaves the field (the line
       // stays), the next one closes. An empty or saved (read-only) field lets Esc close at once
       if (e.isComposing) return;
+      // An open term peek closes first, whatever has the focus
+      if (peekOpen) {
+        setPeek(null);
+        return;
+      }
       const field = e.target as HTMLTextAreaElement | HTMLInputElement | null;
       const typing =
         (field?.tagName === 'TEXTAREA' || field?.tagName === 'INPUT') &&
@@ -559,8 +564,7 @@ export function LessonSheet() {
         field.blur();
         return;
       }
-      if (peekOpen) setPeek(null);
-      else if (streakActive) leaveStreakFinishing(setStreakThen);
+      if (streakActive) leaveStreakFinishing(setStreakThen);
       else leaveSheet();
     };
     window.addEventListener('keydown', onKey);

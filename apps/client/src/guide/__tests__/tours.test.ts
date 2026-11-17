@@ -104,7 +104,8 @@ describe('tours', () => {
       getTour(id).steps.map((st) => [st.kind, st.anchor, st.key, st.text, st.missingHint]);
     expect(look('review-first-coin')).toEqual(look('review-buy'));
     expect(getTour('review-buy').steps.at(-1)!.nextLabel).toBe('Back to the lesson');
-    expect(getTour('review-first-coin').steps.at(-1)!.nextLabel).toBeUndefined();
+    // "Done": the map's lesson ends there, and from Lesson 1's Try it hands back to the lesson
+    expect(getTour('review-first-coin').steps.at(-1)!.nextLabel).toBe('Done');
     // The order's step says a look comes next
     expect(getTour('buy-first-coin').steps.at(-1)!.text).toMatch(/Next, a quick look/);
   });
@@ -121,8 +122,8 @@ describe('tours', () => {
       ['observe', 'assets.row', 'USDT'],
       ['click', 'account.tab', 'orderhistory'],
       // No key: the newest row, the sell (orders are listed newest first)
+      // (Commission is named in the row's step: that column can be hidden, so no step of its own)
       ['observe', 'order-history.row', undefined],
-      ['observe', 'order-history.row.commission', undefined],
     ]);
     expect(where('review-sell-result')).toEqual([
       ['observe', 'account.summary.realized-pnl', undefined],

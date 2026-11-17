@@ -117,6 +117,16 @@ describe('lessonStore', () => {
     expect(s().answers[5]).toBeUndefined();
   });
 
+  it('should clear a wrong answer when a look back returns home at another screen', () => {
+    s().start('lesson-01');
+    useLessonStore.setState({ screen: 5 }); // Your call: a question
+    s().answer(-1); // wrong
+    s().visit('lesson-ownership', 0); // a look back
+    s().start('lesson-01', 3); // home again, at another card
+    expect(s().answers[5]).toBeUndefined();
+    expect(s().screen).toBe(3);
+  });
+
   it('should mark the lesson completed on finish, and not on close', () => {
     s().start('lesson-01');
     s().close();

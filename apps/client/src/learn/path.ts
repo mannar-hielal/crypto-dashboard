@@ -55,11 +55,10 @@ export const CHAPTERS: readonly Chapter[] = [
       { kind: 'lesson', id: 'lesson-01', access: FREE },
       { kind: 'lesson', id: 'lesson-ownership', access: FREE },
       { kind: 'lesson', id: 'lesson-02', access: FREE },
-      // Deliberately kept here (open question for the owner, 2026-11-16): Lesson 1's Try now runs
-      // these two tours, so a learner who did it finds them already done. Where the practical stops
-      // sit is the owner's call (lesson-authoring skill: the path keeps its order until the owner
-      // places them); a finished stop is no blocker, and a learner who skipped Lesson 1's Try
-      // still meets them here
+      // The practical stops, one job each (owner 2026-11-17): Lesson 1's Try runs the Buy lesson
+      // (and its look), so a learner who did it finds Buy done; Sell is its own stop, locked until
+      // Buy is done (NEEDS_DONE). Where the practical stops sit is still the owner's call
+      // (lesson-authoring skill: the path keeps its order until the owner places them)
       { kind: 'tour', id: 'buy-first-coin', access: FREE },
       { kind: 'tour', id: 'sell-and-review', access: FREE },
       { kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE },
@@ -90,6 +89,8 @@ export const CHAPTERS: readonly Chapter[] = [
  * Buy skipped or the chapter tested out. (Its first steps still say to buy first, for a learner who
  * reaches it some other way with nothing to sell.)
  */
+// (The map's lock only: the Learn panel and an article's link still start Sell, where its step's
+// hint says to buy first. Weighed, review after #308: every learner meets Sell on the map first)
 export const NEEDS_DONE: Partial<Record<PathTourId, PathTourId>> = {
   'sell-and-review': 'buy-first-coin',
 };

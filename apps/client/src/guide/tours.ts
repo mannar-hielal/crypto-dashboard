@@ -534,7 +534,8 @@ const reviewFirstCoin: Tour = {
   minutes: 1,
   startUrl: '/dashboard/spot/BTC/USDT',
   phoneReady: true,
-  steps: boughtSteps('review-first-coin'),
+  // "Done": the map's lesson ends here, and from Lesson 1's Try it hands back to the lesson
+  steps: boughtSteps('review-first-coin', 'Done'),
 };
 
 /** The Sell lesson's look, chapter 1: the coin gone from Assets, the sell in Order History */
@@ -563,13 +564,8 @@ const reviewSell: Tour = {
     {
       kind: 'observe',
       anchor: 'order-history.row',
-      text: 'The top row is your sell. Side says Sell, Type says Market (it filled at once), Qty is how much Bitcoin you sold, Fill Price is the price you got, and Status says Filled.',
-      missingHint: 'Open the Order History tab to find your sell.',
-    },
-    {
-      kind: 'observe',
-      anchor: 'order-history.row.commission',
-      text: 'Commission is the fee for this order: 0.1% of what you sold, paid in USDT. Your buy paid its 0.1% in Bitcoin instead.',
+      // (one step for the row, Commission included: that column can be hidden, so no step of its own)
+      text: 'The top row is your sell. Side says Sell, Type says Market (it filled at once), Qty is how much Bitcoin you sold, Fill Price is the price you got, and Status says Filled. Commission is its fee: 0.1% of what you sold, paid in USDT (your buy paid its 0.1% in Bitcoin).',
       missingHint: 'Open the Order History tab to find your sell.',
       nextLabel: 'Next →',
     },

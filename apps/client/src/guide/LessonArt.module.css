@@ -232,6 +232,14 @@
   fill: var(--color-brand-purple); /* color.purple */
 }
 
+/* How far the price moved (Thin or deep): dashed, neutral (red means a loss or a sell) */
+.moveLine {
+  fill: none;
+  stroke: var(--color-brand-white); /* color.white */
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
 /* The price now, as a thin bright rule */
 .priceLine {
   stroke: var(--color-brand-white); /* color.white */
