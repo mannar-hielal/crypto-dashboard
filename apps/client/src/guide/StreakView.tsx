@@ -59,7 +59,7 @@ export function StreakView({
                   className={`${styles.dot} ${habits.thisWeek?.[i] ? styles.done : ''}`}
                   aria-hidden="true"
                 />
-                <span className={styles.dayName}>
+                <span>
                   <span aria-hidden="true">{d[0]}</span>
                   <span className={styles.srOnly}>
                     {d}: {habits.thisWeek?.[i] ? 'learned' : 'not yet'}

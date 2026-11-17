@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
-import { accountFromToken } from './account';
+import { accountFor } from './account';
 import { finishSaved } from './finishSync';
 
 /**
@@ -17,7 +17,7 @@ export function useHabits(
   // account's (a sign-out, then a sign-in) is never shown
   // The account: the profile's id, or the token's own user while the profile loads
   const profileId = useAuthStore((s) => s.user?.id ?? null);
-  const account = profileId ?? accountFromToken(accessToken);
+  const account = accountFor(profileId, accessToken);
   const [read, setRead] = useState<{
     account: string | null;
     habits: HabitsResponse | null;

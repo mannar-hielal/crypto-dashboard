@@ -7,7 +7,12 @@ import { useAuthStore } from '@/store/authStore';
  * `userId` (read, not verified: it only names the account's things here)
  */
 export function accountOf(accessToken: string | null): string | null {
-  return useAuthStore.getState().user?.id ?? accountFromToken(accessToken);
+  return accountFor(useAuthStore.getState().user?.id ?? null, accessToken);
+}
+
+/** The rule itself, for a hook that watches the profile's id: that id, else the token's own user */
+export function accountFor(profileId: string | null, accessToken: string | null): string | null {
+  return profileId ?? accountFromToken(accessToken);
 }
 
 /** The access token's own `userId` (read, not verified), or null */
