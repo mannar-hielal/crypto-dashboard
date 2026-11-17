@@ -1,8 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { dropDone, forgetAllDone, pendingDone, queueDone } from '@/learn/pendingDone';
 
 describe('pendingDone', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    forgetAllDone(); // this session's in-memory lists too
+  });
 
   it('should keep a finish per account until it is dropped, one per item', () => {
     queueDone('a', { itemId: 'lesson-01', step: 81 });
@@ -83,5 +86,14 @@ describe('pendingDone', () => {
     };
     expect(kept(Date.now() + 2 * 86_400_000)).toBe(0); // a wrong clock or an edit: never expires
     expect(kept(Date.now() + 600_000)).toBe(1); // ten minutes fast, corrected since: still kept
+  });
+
+  it('should keep a finish made in this session when the storage write fails', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    queueDone('a', { itemId: 'lesson-01', step: 81 });
+    expect(pendingDone('a')).toEqual([expect.objectContaining({ itemId: 'lesson-01', step: 81 })]);
+    setItem.mockRestore();
   });
 });

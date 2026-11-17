@@ -63,9 +63,12 @@ function migrate(raw: unknown): unknown[] {
 
 /** The account's finishes and passes still to save */
 export function pendingDone(account: string): PendingDone[] {
+  const oldest = Date.now() - MAX_AGE_MS;
+  // The list a failed storage write left in memory, for this session
+  const held = unstored.get(account);
+  if (held) return held.filter((p) => p.since >= oldest);
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
-    const oldest = Date.now() - MAX_AGE_MS;
     return migrate(raw)
       .filter(isPending)
       .filter((p) => p.since >= oldest)
@@ -75,6 +78,12 @@ export function pendingDone(account: string): PendingDone[] {
   }
 }
 
+/**
+ * Lists the storage refused (full, blocked, private mode), held for this session so a finish made
+ * here is never lost to it; a later write that works clears its account's. Cleared at sign-out
+ */
+const unstored = new Map<string, PendingDone[]>();
+
 function write(account: string, items: PendingDone[]): void {
   try {
     if (items.length === 0) localStorage.removeItem(key(account));
@@ -82,8 +91,10 @@ function write(account: string, items: PendingDone[]): void {
       const stored = { v: VERSION, items: items.slice(0, MAX_PENDING) };
       localStorage.setItem(key(account), JSON.stringify(stored));
     }
+    unstored.delete(account);
   } catch {
-    // No storage (private mode, full): nothing is kept
+    // No storage (private mode, full): held in memory for this session
+    unstored.set(account, items.slice(0, MAX_PENDING));
   }
 }
 
@@ -117,6 +128,7 @@ export function keepOnly(account: string, items: PendingDone[]): void {
  * other account's id or progress (what wasn't saved yet is redone, the worst case)
  */
 export function forgetAllDone(): void {
+  unstored.clear();
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
