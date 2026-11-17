@@ -100,11 +100,7 @@ function saveDone(
       // session, an older API's 400) stays kept. Told apart by status, never the words
       const status = (err as { status?: unknown } | null)?.status;
       if (typeof status !== 'number' || !REFUSED_FOR_GOOD.has(status)) return;
-      // (only this finish: a newer one of the item, kept meanwhile, stays, still shown, and is sent
-      // next; it isn't taken off the screen for this one's refusal)
       if (account) dropDone(account, itemId, step);
-      const newer = account ? pendingDone(account).find((p) => p.itemId === itemId) : undefined;
-      if (newer) return; // sent once this save lets go (below)
       if (accountOf(useAuthStore.getState().accessToken) !== account) return;
       // With the token signed in now (it may have rotated since this save left)
       return (
@@ -123,20 +119,10 @@ function saveDone(
     })
     // Always settles: every learn request (the save, the check) times out at SDK_REQUEST_TIMEOUT_MS.
     // (Not onePerKey: a second save of the item is dropped, not handed this one's outcome)
-    .finally(() => {
-      inFlight.delete(key);
-      // 🔐 Only for the account still signed in, with its current token (a sign-out or a rotation
-      // may have landed meanwhile: the queue it was kept in is then gone, or the token stale).
-      // A newer finish of the item kept while this save was on its way is sent now, however this
-      // one ended (saved, refused, failed): it was held back only by this one being in flight
-      const now = useAuthStore.getState().accessToken;
-      const newer = account
-        ? pendingDone(account).find((p) => p.itemId === itemId && p.step !== step)
-        : undefined;
-      if (newer && now && accountOf(now) === account) {
-        saveDone(itemId, newer.step, now, { kept: true });
-      }
-    });
+    // (No "newer finish" follow-up: within one build an item always sends the same step, a lesson
+    // its last screen and a checkpoint its version, so a second finish meanwhile is this one; a
+    // new build starts with no save in flight. Weighed, review after release #302)
+    .finally(() => inFlight.delete(key));
 }
 
 /**
@@ -247,6 +233,20 @@ export function useTourProgress(): void {
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)
+        // Lessons finished on this device while signed out (never sent: the writes need a token)
+        // belong to the account signing in, as the screens reached then do (learn/signedOut.ts):
+        // kept and sent like any finish, so this read doesn't wipe them
+        if (account) {
+          for (const id of Object.keys(useLessonStore.getState().completed) as LessonId[]) {
+            const onServer = items.some((i) => i.itemId === id && i.status === 'completed');
+            if (onServer || pendingDone(account).some((p) => p.itemId === id)) continue;
+            const lesson = getLesson(id);
+            queueDone(account, {
+              itemId: id,
+              step: lessonStepNumber(lesson, lessonScreens(lesson).length - 1),
+            });
+          }
+        }
         const kept = account ? pendingDone(account) : [];
         const stillQueued = keptToShow(kept).filter(
           (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
