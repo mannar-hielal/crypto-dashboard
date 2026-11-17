@@ -12,7 +12,7 @@ import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
 import { noteFinishSent } from '@/learn/finishSync';
-import { dropDone, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
+import { dropDone, dropMany, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
@@ -44,7 +44,10 @@ function currentQueued(account: string): PendingDone[] {
       ? lessonScreenOfStep(getLesson(q.itemId), q.step) !== null
       : q.step === getCheckpoint(q.itemId).version
   );
-  for (const q of kept) if (!current.includes(q)) dropDone(account, q.itemId);
+  dropMany(
+    account,
+    kept.filter((q) => !current.includes(q)).map((q) => q.itemId)
+  );
   return current;
 }
 
@@ -77,20 +80,34 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
   const key = `${account ?? ''}:${itemId}`;
   if (inFlight.has(key)) return;
   inFlight.add(key);
+  // A save that never answers (a hung link) stops holding later resends back after a while
+  const released = setTimeout(() => inFlight.delete(key), SAVE_HOLD_MS);
   learnApi
     .setProgress(itemId, 'completed', accessToken, step)
     .catch((err: unknown) => {
-      // Refused for good (REFUSED_FOR_GOOD): no retry changes it, so it's dropped and taken back off
-      // the screen, if that account is still the one signed in. Anything else (offline, a 5xx, an
-      // expired session, an older API's 400) stays kept. Told apart by status, never the words
+      // Refused for good (REFUSED_FOR_GOOD): no retry changes it, so it's dropped. Taken back off
+      // the screen only if that account is still the one signed in and the server has no finish
+      // of it either (another device's may be there). Anything else (offline, a 5xx, an expired
+      // session, an older API's 400) stays kept. Told apart by status, never the words
       const status = (err as { status?: unknown } | null)?.status;
-      if (typeof status === 'number' && REFUSED_FOR_GOOD.has(status)) {
-        if (account) dropDone(account, itemId);
-        if (accountOf(useAuthStore.getState().accessToken) === account) undone(itemId);
-      }
+      if (typeof status !== 'number' || !REFUSED_FOR_GOOD.has(status)) return;
+      if (account) dropDone(account, itemId);
+      if (accountOf(useAuthStore.getState().accessToken) !== account) return;
+      return learnApi
+        .getProgress(accessToken)
+        .then(({ items }) => {
+          if (!items.some((i) => i.itemId === itemId && i.status === 'completed')) undone(itemId);
+        })
+        .catch(() => undone(itemId));
     })
-    .finally(() => inFlight.delete(key));
+    .finally(() => {
+      clearTimeout(released);
+      inFlight.delete(key);
+    });
 }
+
+/** How long one save holds back resends of its item at most (the SDK's own fetch has no timeout) */
+const SAVE_HOLD_MS = 20_000;
 
 /** Saves on their way, by account and item */
 const inFlight = new Set<string>();
@@ -136,7 +153,10 @@ export function useTourProgress(): void {
           (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
         );
         if (account) {
-          for (const q of queued) if (!stillQueued.includes(q)) dropDone(account, q.itemId);
+          dropMany(
+            account,
+            queued.filter((q) => !stillQueued.includes(q)).map((q) => q.itemId)
+          );
         }
         const lessons = [
           ...new Set([

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 
 const getHabits = vi.fn();
 vi.mock('@crypto-dashboard/sdk', () => ({
@@ -13,7 +13,14 @@ import { useAuthStore } from '@/store/authStore';
 const habits = { badges: [], learningDays: 1, streakDays: 1, thisWeek: [] };
 
 describe('useHabits', () => {
-  beforeEach(() => getHabits.mockReset());
+  // Each test's hooks unmounted: none left to read again when the next one changes the account
+  afterEach(() => cleanup());
+
+  beforeEach(() => {
+    getHabits.mockReset();
+    // No profile from an earlier test: each names its own account
+    useAuthStore.getState().clearAuth();
+  });
 
   it('should read nothing when there is no token', () => {
     const { result } = renderHook(() => useHabits(null));

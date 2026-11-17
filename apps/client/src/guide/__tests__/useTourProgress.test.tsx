@@ -486,6 +486,19 @@ describe('useTourProgress', () => {
       ]);
     });
 
+    it('should keep a refused finish shown when the server has one of its own (another device)', async () => {
+      await loaded([]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      // This tab's version is refused, but another device's finish is stored
+      getProgress.mockResolvedValue({ items: [item('lesson-01', 'completed')] });
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+      act(() => useLessonStore.getState().finish());
+      await waitFor(() => expect(getProgress).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      expect(pendingDone('u1')).toEqual([]);
+    });
+
     it('should drop a kept finish the server already has, without sending it again', async () => {
       localStorage.clear();
       queueDone('u1', { itemId: 'lesson-01', step: 81 });

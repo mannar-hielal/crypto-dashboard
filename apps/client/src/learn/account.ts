@@ -1,3 +1,4 @@
+import { tokenPayload } from '@/lib/tokenPayload';
 import { useAuthStore } from '@/store/authStore';
 
 /**
@@ -9,12 +10,6 @@ export function accountOf(accessToken: string | null): string | null {
   const id = useAuthStore.getState().user?.id;
   if (id) return id;
   if (!accessToken) return null;
-  try {
-    const part = accessToken.split('.')[1] ?? '';
-    const payload: unknown = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
-    const userId = (payload as { userId?: unknown } | null)?.userId;
-    return typeof userId === 'string' && userId !== '' ? userId : null;
-  } catch {
-    return null;
-  }
+  const userId = tokenPayload(accessToken)?.userId;
+  return typeof userId === 'string' && userId !== '' ? userId : null;
 }
