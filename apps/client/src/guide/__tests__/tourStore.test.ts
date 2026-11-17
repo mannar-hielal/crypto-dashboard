@@ -147,4 +147,21 @@ describe('tourStore', () => {
     s().setWide(false);
     expect(s().stepIndex).toBe(tourSteps(getTour('practice-buy'), false).length - 1);
   });
+
+  it('should not replay the phone’s form step after Back to a desktop-only step', () => {
+    window.matchMedia = ((q: string) => ({ matches: false, media: q })) as never;
+    try {
+      s().start('buy-first-coin'); // portrait: Tap Buy / Long
+      s().next(); // the form open: Market
+      s().setWide(true); // landscape: Market
+      s().back(); // the desktop-only side-button step
+      s().setWide(false); // portrait again: not Tap Buy / Long a second time
+      expect(tourSteps(getTour('buy-first-coin'), false)[s().stepIndex].anchor).not.toBe(
+        'trade.mobile.buy'
+      );
+    } finally {
+      // @ts-expect-error -- jsdom has no matchMedia: back to that
+      delete window.matchMedia;
+    }
+  });
 });

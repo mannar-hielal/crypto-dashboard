@@ -134,8 +134,14 @@ export const useTourStore = create<TourState>()((set, get) => ({
     let lastShared = -1;
     for (let i = 0; i <= current; i++) if (!tour.steps[i].screen) lastShared = i;
     const from = missed !== -1 ? missed : shared ? current : lastShared + 1;
+    // Narrowing, whichever way `from` was found: a phone step this run already showed (the form
+    // opened from the bar) is never shown again, the form may still be open and the bar hidden
+    let start = from;
+    while (!next && tour.steps[start]?.screen === 'phone' && seen.includes(tour.steps[start].id)) {
+      start++;
+    }
     const shown = tourSteps(tour, next).map((s) => all.indexOf(s.id));
-    const at = shown.findIndex((i) => i >= from);
+    const at = shown.findIndex((i) => i >= start);
     const stepIndexNow = at === -1 ? shown.length - 1 : at;
     const nowId = tourSteps(tour, next)[stepIndexNow]?.id ?? '';
     set({ wide: next, stepIndex: stepIndexNow, seen: [...seen, nowId] });
