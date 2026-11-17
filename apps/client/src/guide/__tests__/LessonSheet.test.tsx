@@ -184,12 +184,21 @@ describe('LessonSheet', () => {
     expect(getHabits).not.toHaveBeenCalled();
   });
 
-  it('should leave Esc pressed in the journal field to the field, never closing the lesson', () => {
+  it('should take a first Esc while typing the journal line as leaving the field, the next as closing', async () => {
     at(lessonScreens(lesson).length - 1); // the close screen, with the journal line
     renderSheet();
     const note = document.querySelector<HTMLTextAreaElement>('[data-guide="lesson.note"]')!;
+    note.focus();
+    fireEvent.change(note, { target: { value: 'Sized for the fall' } });
     fireEvent.keyDown(note, { key: 'Escape' });
+    // Still open, the line kept, the field left
     expect(useLessonStore.getState().activeId).toBe('lesson-02');
+    expect(note.value).toBe('Sized for the fall');
+    expect(document.activeElement).not.toBe(note);
+    // The next Esc closes, once the line typed is saved
+    addJournalNote.mockResolvedValue(null);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => expect(useLessonStore.getState().activeId).toBeNull());
   });
 
   it('should only close, never finish, when an earlier screen is left with ✕', async () => {

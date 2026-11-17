@@ -547,9 +547,18 @@ export function LessonSheet() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       // Esc inside the journal field (or closing an IME's candidates) belongs to the field, never
-      // to the sheet: it would close the lesson on a half-typed line
-      const target = e.target as HTMLElement | null;
-      if (e.isComposing || target?.tagName === 'TEXTAREA' || target?.tagName === 'INPUT') return;
+      // to the sheet only while a line is being typed: the first Esc leaves the field (the line
+      // stays), the next one closes. An empty or saved (read-only) field lets Esc close at once
+      if (e.isComposing) return;
+      const field = e.target as HTMLTextAreaElement | HTMLInputElement | null;
+      const typing =
+        (field?.tagName === 'TEXTAREA' || field?.tagName === 'INPUT') &&
+        !field.readOnly &&
+        field.value.trim() !== '';
+      if (typing) {
+        field.blur();
+        return;
+      }
       if (peekOpen) setPeek(null);
       else if (streakActive) leaveStreakFinishing(setStreakThen);
       else leaveSheet();
