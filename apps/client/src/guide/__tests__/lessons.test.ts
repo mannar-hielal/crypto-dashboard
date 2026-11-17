@@ -60,7 +60,9 @@ describe('lessons', () => {
     }
   });
 
-  it('should never use * as a times sign in articles, checkpoints or tours either (one renderer)', () => {
+  // (Articles, checkpoints and the tours' quiz Whys render through RichText; tour step text is plain,
+  // where a times-sign * is harmless but still wrong: one rule for all the copy)
+  it('should never use * as a times sign in articles, checkpoints or tours either', () => {
     const tours = [...TOUR_IDS, ...PRACTICE_TOUR_IDS, ...PRACTICE_REVIEW_IDS].map(getTour);
     for (const [name, data] of [
       ['articles', ARTICLES],
