@@ -28,8 +28,26 @@ import {
 import { useTourStore } from './tourStore';
 import { tourSteps, getTour, isTourId, type PathTourId, type TourId } from './tours';
 
-/** Set while the server's furthest screens are merged in: they're already stored, so never sent */
+/** Set while the server's answer is put in the stores: it's already stored, so never sent back */
 let applyingServer = false;
+
+/**
+ * The signed-in account, for the device's queue: the profile's id, or, while the profile is still
+ * loading (a restored session), the access token's own `userId` (read, not verified: it only names
+ * the queue)
+ */
+function accountOf(accessToken: string): string | null {
+  const id = useAuthStore.getState().user?.id;
+  if (id) return id;
+  try {
+    const part = accessToken.split('.')[1] ?? '';
+    const payload: unknown = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    const userId = (payload as { userId?: unknown } | null)?.userId;
+    return typeof userId === 'string' && userId !== '' ? userId : null;
+  } catch {
+    return null;
+  }
+}
 
 /** A lesson finish or a checkpoint pass refused as an earlier version: no longer shown as done */
 function undone(itemId: PendingDone['itemId']): void {
@@ -52,7 +70,7 @@ function undone(itemId: PendingDone['itemId']): void {
  * retry changes, is dropped and taken back off the screen
  */
 function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: string): void {
-  const account = useAuthStore.getState().user?.id;
+  const account = accountOf(accessToken);
   // Kept before it's sent: a progress read that lands while the save is on its way still shows it
   if (account) queueDone(account, { itemId, step });
   learnApi
@@ -61,9 +79,9 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
       if (account) dropDone(account, itemId);
     })
     .catch((err: unknown) => {
-      // Refused for good (an earlier version, a step this API won't take, a bad request): no retry
-      // changes it, so it's dropped and taken back off the screen. Anything else (offline, a 5xx,
-      // an expired session) stays kept for the next read. Told apart by status, never the words
+      // Refused for good (REFUSED_FOR_GOOD): no retry changes it, so it's dropped and taken back off
+      // the screen. Anything else (offline, a 5xx, an expired session, an older API's 400) stays
+      // kept for the next read. Told apart by status, never the words
       const status = (err as { status?: unknown } | null)?.status;
       if (typeof status === 'number' && REFUSED_FOR_GOOD.has(status)) {
         if (account) dropDone(account, itemId);
@@ -72,8 +90,12 @@ function saveDone(itemId: PendingDone['itemId'], step: number, accessToken: stri
     });
 }
 
-/** Answers no retry changes: a bad request, not found, an earlier version, unprocessable */
-const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([400, 404, 409, 422]);
+/**
+ * Answers no retry changes: not found, a version conflict (an earlier version, a step past it),
+ * unprocessable. Never 400: an API from before 2026-11-16, rolled back on its own, answers a
+ * finish's step with 400, and that finish is kept until the API is back
+ */
+const REFUSED_FOR_GOOD: ReadonlySet<number> = new Set([404, 409, 422]);
 
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
@@ -102,7 +124,7 @@ export function useTourProgress(): void {
           .map((i) => i.itemId as PathTourId);
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
-        const account = useAuthStore.getState().user?.id;
+        const account = accountOf(accessToken);
         const queued = account ? pendingDone(account) : [];
         const stillQueued = queued.filter(
           (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
@@ -147,38 +169,53 @@ export function useTourProgress(): void {
         } finally {
           applyingServer = false;
         }
-        // The learning map: practice skipped on a phone, and checkpoints passed
-        usePathStore.getState().setProgress({
-          skippedTours: items
-            .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
-            .map((i) => i.itemId as TourId),
-          checkpoints: [
-            ...new Set([
-              ...items
-                .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
-                .map((i) => i.itemId as CheckpointId),
-              ...stillQueued.map((q) => q.itemId).filter(isCheckpointId),
-            ]),
-          ],
-        });
-        const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
-        useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
+        // The learning map: practice skipped on a phone, and checkpoints passed. The server's own
+        // answer: the writers below must not echo it back (applyingServer)
+        applyingServer = true;
+        try {
+          usePathStore.getState().setProgress({
+            skippedTours: items
+              .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
+              .map((i) => i.itemId as TourId),
+            checkpoints: [
+              ...new Set([
+                ...items
+                  .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
+                  .map((i) => i.itemId as CheckpointId),
+                ...stillQueued.map((q) => q.itemId).filter(isCheckpointId),
+              ]),
+            ],
+          });
+          const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
+          useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
+        } finally {
+          applyingServer = false;
+        }
         for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken);
       })
       .catch(() => {
         // Can't read it: show no offer rather than one that may already have been answered
         if (!cancelled) {
-          useTourStore
-            .getState()
-            .setProgress({ completed: [], cardDismissed: true, fillOfferDismissed: true });
-          // (a pass this device still has to save stays shown, as on a read that lands)
-          const account = useAuthStore.getState().user?.id;
-          usePathStore.getState().setProgress({
-            skippedTours: [],
-            checkpoints: (account ? pendingDone(account) : [])
-              .map((q) => q.itemId)
-              .filter(isCheckpointId),
-          });
+          // (finishes and passes this device still has to save stay shown, as on a read that lands;
+          // nothing here is echoed back)
+          const account = accountOf(accessToken);
+          const queued = (account ? pendingDone(account) : []).map((q) => q.itemId);
+          applyingServer = true;
+          try {
+            useTourStore
+              .getState()
+              .setProgress({ completed: [], cardDismissed: true, fillOfferDismissed: true });
+            usePathStore.getState().setProgress({
+              skippedTours: [],
+              checkpoints: queued.filter(isCheckpointId),
+            });
+            const done = Object.keys(useLessonStore.getState().completed) as LessonId[];
+            useLessonStore
+              .getState()
+              .setCompleted([...new Set([...done, ...queued.filter(isLessonId)])]);
+          } finally {
+            applyingServer = false;
+          }
         }
       });
     return () => {
@@ -191,7 +228,7 @@ export function useTourProgress(): void {
     if (!accessToken) return;
     return useTourStore.subscribe((state, prev) => {
       // The read above flips `loaded`: that change is the server's answer, not the learner's
-      if (!prev.loaded) return;
+      if (!prev.loaded || applyingServer) return;
       for (const id of Object.keys(state.completed) as PathTourId[]) {
         if (!prev.completed[id]) {
           learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
@@ -243,7 +280,7 @@ export function useTourProgress(): void {
     if (!accessToken) return;
     return usePathStore.subscribe((state, prev) => {
       // The read above flips `loaded`: that change is the server's answer, not the learner's
-      if (!prev.loaded) return;
+      if (!prev.loaded || applyingServer) return;
       for (const id of Object.keys(state.skippedTours) as TourId[]) {
         if (!prev.skippedTours[id] && isTourId(id)) {
           learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);

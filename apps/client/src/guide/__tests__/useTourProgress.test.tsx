@@ -14,10 +14,12 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 }));
 
 let token: string | null = 'tok';
+/** The signed-in profile (null: still loading after a restored session) */
+let profile: { id: string } | null = { id: 'u1' };
 vi.mock('@/store/authStore', () => ({
   useAuthStore: Object.assign(
     (selector: (s: { accessToken: string | null }) => unknown) => selector({ accessToken: token }),
-    { getState: () => ({ user: { id: 'u1' } }) }
+    { getState: () => ({ user: profile }) }
   ),
 }));
 
@@ -38,6 +40,7 @@ const LESSON_01_LAST_STEP = 60 + lessonScreens(getLesson('lesson-01')).length;
 
 describe('useTourProgress', () => {
   beforeEach(() => {
+    profile = { id: 'u1' };
     token = 'tok';
     useTourStore.getState().reset();
     useLessonStore.getState().reset();
@@ -95,6 +98,49 @@ describe('useTourProgress', () => {
     renderHook(() => useTourProgress());
     await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
     expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
+    localStorage.clear();
+  });
+
+  it('should keep a finish this device still has to save shown when the progress cannot be read', async () => {
+    localStorage.clear();
+    queueDone('u1', { itemId: 'lesson-02', step: 81 });
+    getProgress.mockRejectedValue(new Error('network'));
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
+    localStorage.clear();
+  });
+
+  it('should not send the server’s own passes back after a first read failed', async () => {
+    getProgress.mockRejectedValueOnce(new Error('network'));
+    const { rerender } = renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    // A later read (a session refresh) brings the server's pass: never written back
+    getProgress.mockResolvedValue({ items: [item('checkpoint-ch1', 'completed')] });
+    token = 'tok2';
+    rerender();
+    await waitFor(() => expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true));
+    expect(setProgress).not.toHaveBeenCalled();
+    token = 'tok';
+  });
+
+  it('should name the queue by the token’s own user while the profile is still loading', async () => {
+    localStorage.clear();
+    profile = null;
+    const payload = btoa(JSON.stringify({ userId: 'u9', email: 'x@y' }))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    token = `h.${payload}.s`;
+    getProgress.mockResolvedValue({ items: [] });
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+    setProgress.mockRejectedValueOnce(new Error('offline'));
+    act(() =>
+      usePathStore.getState().setProgress({ skippedTours: [], checkpoints: ['checkpoint-ch1'] })
+    );
+    await waitFor(() => expect(pendingDone('u9')).toEqual([{ itemId: 'checkpoint-ch1', step: 2 }]));
+    token = 'tok';
     localStorage.clear();
   });
 
@@ -360,14 +406,18 @@ describe('useTourProgress', () => {
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
     });
 
-    it('should take a finish back when the server refuses its step for good (a 400)', async () => {
+    it('should keep a finish an older API refuses (a 400), shown as done, for when the API is back', async () => {
       localStorage.clear();
       await loaded([]);
       act(() => useLessonStore.getState().start('lesson-01'));
-      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 400 }));
+      // The real answer of an API from before 2026-11-16, status included
+      setProgress.mockRejectedValueOnce(
+        Object.assign(new Error('Only a start takes a step'), { status: 400 })
+      );
       act(() => useLessonStore.getState().finish());
-      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBeUndefined());
-      expect(pendingDone('u1')).toEqual([]);
+      await act(async () => {});
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
+      expect(pendingDone('u1')).toEqual([{ itemId: 'lesson-01', step: LESSON_01_LAST_STEP }]);
     });
 
     it('should drop a kept finish the server already has, without sending it again', async () => {
