@@ -204,7 +204,9 @@ function QuestionBody({
       {q.chart && (
         <LessonChart
           scene={q.chart}
-          revealed={answer !== undefined}
+          // What happened next only once it can't give the answer away: a right answer (a wrong one
+          // waits for Try again, owner 2026-11-17)
+          revealed={answer === q.correct}
           fallback={<LessonArt id={q.chart.fallback} />}
         />
       )}
@@ -248,14 +250,16 @@ export function QuestionView({
       </div>
       <div className={styles.options}>
         {q.options.map((option, i) => {
-          // Only the learner's own pick is marked: a wrong one never points at the right option, so
-          // "Try again" still asks (owner 2026-11-17)
+          // With Try again (the lessons) only the learner's own pick is marked: a wrong one never
+          // points at the right option (owner 2026-11-17). Without it (the checkpoint: one scored
+          // go) the right option is shown, so the learner still learns it
+          const showRight = answered && (answer === q.correct || !onRetry);
           const cls =
-            !answered || i !== answer
-              ? styles.option
-              : answer === q.correct
-                ? `${styles.option} ${styles.right}`
-                : `${styles.option} ${styles.wrong}`;
+            showRight && i === q.correct
+              ? `${styles.option} ${styles.right}`
+              : answered && i === answer && answer !== q.correct
+                ? `${styles.option} ${styles.wrong}`
+                : styles.option;
           return (
             <button
               key={option}

@@ -53,9 +53,11 @@ export function BuySellView({
       <p className={styles.question}>{q.question}</p>
       <div className={styles.sides} role="group" aria-label={q.question}>
         {SIDES.map(({ label, Icon, className }, i) => {
-          // Only the learner's own pick is marked: a wrong one never points at the right side, so
-          // "Try again" still asks (owner 2026-11-17: Try again until right)
-          const mark = i !== answer ? null : answer === q.correct ? 'right' : 'wrong';
+          // With Try again only the learner's own pick is marked: a wrong one never points at the
+          // right side (owner 2026-11-17). Without it (one scored go) the right side is shown
+          const showRight = answered && (answer === q.correct || !onRetry);
+          const mark =
+            showRight && i === q.correct ? 'right' : answered && i === answer ? 'wrong' : null;
           return (
             <button
               key={label}
@@ -65,7 +67,7 @@ export function BuySellView({
               type="button"
               // Dimmed: the other side once the answer is right; after a wrong pick nothing is dimmed,
               // so the dimming never hints at the right side either
-              className={`${styles.side} ${className} ${answered && answer === q.correct && mark === null ? styles.unpicked : ''}`}
+              className={`${styles.side} ${className} ${showRight && mark === null ? styles.unpicked : ''}`}
               disabled={answered}
               onClick={() => onAnswer(i)}
               onKeyDown={(e) => onKeyDown(e, i)}
@@ -87,7 +89,7 @@ export function BuySellView({
       {answered && (
         <AnswerResult right={answer === q.correct} explain={q.explain} onRetry={onRetry} />
       )}
-      {answered && q.chart?.freezeAt && (
+      {answered && (answer === q.correct || !onRetry) && q.chart?.freezeAt && (
         <p className={styles.after}>What happened next (the plan doesn&apos;t depend on it)</p>
       )}
     </>
