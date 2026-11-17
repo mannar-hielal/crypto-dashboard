@@ -93,8 +93,14 @@ function write(account: string, items: PendingDone[]): void {
     }
     unstored.delete(account);
   } catch {
-    // No storage (private mode, full): held in memory for this session
+    // No storage (private mode, full): held in memory for this session, and the older stored list
+    // removed if it can be, so a reload never brings back finishes given up on meanwhile
     unstored.set(account, items.slice(0, MAX_PENDING));
+    try {
+      localStorage.removeItem(key(account));
+    } catch {
+      // Storage refuses everything: the old list stays until it expires or a read prunes it
+    }
   }
 }
 

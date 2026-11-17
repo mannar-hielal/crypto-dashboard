@@ -96,4 +96,18 @@ describe('pendingDone', () => {
     expect(pendingDone('a')).toEqual([expect.objectContaining({ itemId: 'lesson-01', step: 81 })]);
     setItem.mockRestore();
   });
+
+  it('should not bring back a finish given up on when storage refused the write that dropped it', async () => {
+    queueDone('a', { itemId: 'lesson-01', step: 81 });
+    queueDone('a', { itemId: 'checkpoint-ch1', step: 2 }); // both stored
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    dropDone('a', 'lesson-01'); // given up on: the write that drops it is refused
+    setItem.mockRestore();
+    // A reload: a fresh module (no list held in memory), the same storage
+    vi.resetModules();
+    const fresh = await import('@/learn/pendingDone');
+    expect(fresh.pendingDone('a').some((p) => p.itemId === 'lesson-01')).toBe(false);
+  });
 });
