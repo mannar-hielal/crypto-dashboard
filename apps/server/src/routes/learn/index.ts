@@ -159,7 +159,11 @@ export async function learnRoutes(app: FastifyInstance) {
       const items = rows.filter((r) => !isStaleRow(r)).map(toItem);
       // Lesson 1 finished in its earlier version after the reset (an old API machine during the
       // rollout): the welcome card is answered as dismissed, as the migration did for earlier
-      // finishes. Saved by the start that takes that row over (PUT), never by this read
+      // finishes. Saved by the start that takes that row over (PUT), never by this read.
+      // (Weighed, review round 23: running the reset after the rollout instead would drop this and
+      // the takeover, but it needs a post-deploy step in deploy.yml (Fly runs migrations before the
+      // swap) and a rollback would let old machines write again; these cases cost a few lines and
+      // hold either way)
       const oldLesson1Done = rows.some(
         (r) => r.itemId === 'lesson-01' && r.status === 'completed' && isStaleRow(r)
       );
