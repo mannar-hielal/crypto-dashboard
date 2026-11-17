@@ -226,10 +226,10 @@
   font-weight: 700;
 }
 
-/* A buy offer still waiting (Thin or deep): solid, in the buy side's colour */
+/* A buy offer still waiting (Thin or deep): solid, in the accent (green and red mean profit/loss
+   and buy/sell, design.md) */
 .offer {
-  fill: var(--color-brand-green); /* color.green */
-  opacity: 0.75;
+  fill: var(--color-brand-purple); /* color.purple */
 }
 
 /* The price now, as a thin bright rule */
