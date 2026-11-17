@@ -52,7 +52,7 @@ function undone(itemId: PendingDone['itemId']): void {
   }
   const { skippedTours, checkpoints, setProgress } = usePathStore.getState();
   setProgress({
-    skippedTours: Object.keys(skippedTours) as TourId[],
+    skippedTours: Object.keys(skippedTours) as PathTourId[],
     checkpoints: (Object.keys(checkpoints) as CheckpointId[]).filter((id) => id !== itemId),
   });
 }
@@ -229,7 +229,7 @@ export function useTourProgress(): void {
           usePathStore.getState().setProgress({
             skippedTours: items
               .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
-              .map((i) => i.itemId as TourId),
+              .map((i) => i.itemId as PathTourId),
             checkpoints: [
               ...new Set([
                 ...items
@@ -343,8 +343,8 @@ export function useTourProgress(): void {
       if (signedOut()) return;
       // The read above flips `loaded`: that change is the server's answer, not the learner's
       if (!prev.loaded || applyingServer) return;
-      for (const id of Object.keys(state.skippedTours) as TourId[]) {
-        if (!prev.skippedTours[id] && isTourId(id)) {
+      for (const id of Object.keys(state.skippedTours) as PathTourId[]) {
+        if (!prev.skippedTours[id]) {
           learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);
         }
       }

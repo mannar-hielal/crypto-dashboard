@@ -10,13 +10,13 @@
  */
 
 import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
-import { getTour, type TourId } from '@/guide/tours';
+import { getTour, type PathTourId } from '@/guide/tours';
 import { canOpen, FREE, type Entitlement } from './access';
 import { getCheckpoint, type CheckpointId } from './checkpoints';
 
 export type BuiltNode =
   | { kind: 'lesson'; id: LessonId; access: Entitlement }
-  | { kind: 'tour'; id: TourId; access: Entitlement }
+  | { kind: 'tour'; id: PathTourId; access: Entitlement }
   | { kind: 'checkpoint'; id: CheckpointId; access: Entitlement };
 
 export type NodeKind = BuiltNode['kind'];
@@ -125,9 +125,9 @@ export type ChapterView =
 
 export interface PathProgress {
   lessons: Partial<Record<LessonId, true>>;
-  tours: Partial<Record<TourId, true>>;
+  tours: Partial<Record<PathTourId, true>>;
   /** Tours skipped for now (the server's `dismissed`) */
-  skippedTours: Partial<Record<TourId, true>>;
+  skippedTours: Partial<Record<PathTourId, true>>;
   checkpoints: Partial<Record<CheckpointId, true>>;
   /** The furthest screen (0-based) reached in each lesson, synced through the server */
   reached?: Partial<Record<LessonId, number>>;
