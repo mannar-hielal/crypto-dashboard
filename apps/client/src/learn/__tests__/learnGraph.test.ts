@@ -81,7 +81,6 @@ describe('the learning graph', () => {
       'Buy your first coin',
     ]);
     expect(labels('price-swings')).toEqual([
-      'Lesson 1: The result',
       'Lesson 1: The market never sleeps',
       'Lesson 1: Smaller coins swing harder',
       'Lesson 3: Big swings, both ways',

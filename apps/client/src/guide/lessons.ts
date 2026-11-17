@@ -148,6 +148,29 @@ export interface LessonPhoto {
 }
 
 /**
+ * A worked sum under a card (owner 2026-11-17): a guide in glasses says "Let's do the math", then
+ * numbered steps, one operation each with its result, and the answer set apart. Every figure comes
+ * from the card's own data (the dated candles beside it) and is checked when written.
+ */
+export interface MathBreakdown {
+  /** The guide doing the math, in glasses */
+  who: Speaker;
+  /** In order: what the step does ("Divide by the start") and the sum ("1.50 ÷ 12.34 = 0.12") */
+  steps: { label: string; sum: string }[];
+  /** The result in words, highlighted under the steps */
+  answer: string;
+}
+
+/**
+ * A new, harder idea told as an analogy by one guide in glasses (owner 2026-11-17), in place of the
+ * guides' chit-chat. It says where the analogy stops matching when that matters.
+ */
+export interface Analogy {
+  who: Speaker;
+  text: string;
+}
+
+/**
  * The sheet's one label set, in every lesson (owner 2026-11-17): the main button always says
  * Continue, the back link Back, and the summary's button (the last screen that teaches) Finish
  * lesson. A card has no label of its own, so a question-style one can't come back.
@@ -177,6 +200,10 @@ export interface LessonCard {
    * right, they meet in the middle, then what the lesson will answer fades in
    */
   meet?: GuidesMeeting;
+  /** A worked sum under the text (gain, loss, percent): numbered steps, one operation each */
+  math?: MathBreakdown;
+  /** A new, harder idea as an analogy, told by one guide in glasses (under the text) */
+  analogy?: Analogy;
   /** Bold-labelled points under the text ("**Print coins.** Write …") */
   points?: CardPoint[];
   /** A Read more under the card, to the article that goes deeper (owner 2026-11-12) */
@@ -485,16 +512,25 @@ const lesson01: Lesson = {
       text: 'Say you bought $1,000 of Bitcoin on the spot market at the close on 2 October 2023, at $27,484. Over the winter the price climbed. On 13 March 2024 you sold at the close: $73,133.',
     },
     {
+      // Owner 2026-11-17: rewritten around the math (the hindsight line dropped). From LONG_2023's
+      // closes: 73,133.0 − 27,484.1 = 45,648.9; ÷ 27,484.1 = 1.6609; $1,000 → $2,660.92 before fees;
+      // a 0.1% fee each way keeps 0.999² = 99.8%: $2,655.60
       title: 'The result',
       presenter: { who: 'tock', mood: 'grin', pose: 'stand' },
-      text: 'Your $1,000 became about **$2,661**. That’s around **$1,661 profit**. Spot takes a 0.1% fee on each trade: about $1 to buy and $2.66 to sell. Still a very good trade.',
-      lines: [
-        { speaker: 'tick', text: 'Easy! I’ll just do that every time.' },
-        {
-          speaker: 'tock',
-          text: '[[Hindsight|hindsight]] makes every chart look easy. Nobody knew in October.',
-        },
-      ],
+      text: 'You bought $1,000 of Bitcoin at $27,484 and sold it at $73,133. How much is that, in percent and in dollars? One more thing: Spot takes a 0.1% fee when you buy and again when you sell, so you keep about 99.8%.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Price rise', sum: '73,133 − 27,484 = 45,649' },
+          { label: 'Divide by the start', sum: '45,649 ÷ 27,484 = 1.661' },
+          { label: 'As a percent', sum: '1.661 × 100 = 166.1%' },
+          { label: 'Your gain', sum: '$1,000 × 1.661 = $1,661' },
+          { label: 'Add your $1,000', sum: '$1,000 + $1,661 = $2,661' },
+          { label: 'Keep 99.8% after fees', sum: '$2,661 × 0.998 ≈ $2,656' },
+        ],
+        answer:
+          'Bitcoin rose about 166%. After fees, your $1,000 became about **$2,656**: about **$1,656 profit**.',
+      },
     },
     {
       title: 'Close it to keep it',
@@ -502,13 +538,15 @@ const lesson01: Lesson = {
       text: 'While you hold a position, the profit on screen is only on paper: it changes with every tick. It becomes real when you **close** the position. In our app that’s the Close button on your position row. Until then, it can still shrink.',
     },
     {
+      // Owner 2026-11-17: the borrowing analogy, by one guide in glasses, replaces the chit-chat; it
+      // says where it stops matching (a perpetual borrows nothing)
       title: 'Going short',
       presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
-      text: 'Going **short** is the mirror move: you win when the price falls. In our app you short on the USDT Perpetual market: you open a contract that gains as the price drops. No coin changes hands; you put up USDT as margin, and the difference is paid in USDT.',
-      lines: [
-        { speaker: 'tick', text: 'Selling something I don’t own feels illegal.' },
-        { speaker: 'tock', text: 'It’s a contract. Very normal. Very risky. Hold that thought.' },
-      ],
+      text: 'Going **short** is the mirror move: you win when the price falls. In our app you short on the USDT Perpetual market, with USDT as margin.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as borrowing. A friend lends you a game that sells for $60, and you sell it today. Next month it costs $40: you buy one, give it back, and keep $20. If it climbs to $90, you lose $30. Our perpetual borrows nothing: the contract simply settles the difference in USDT.',
+      },
       practice: { tour: 'practice-short', label: 'Try a short on the real chart' },
     },
     {
@@ -518,10 +556,30 @@ const lesson01: Lesson = {
       text: 'On 10 November 2021 Bitcoin hit a then-record near $69,000 and closed at $64,894. Say you shorted 0.01 BTC there. Over the next months the price slid. On 18 June 2022 you bought it back at the close: $18,965.',
     },
     {
-      // A real warning (the lesson rules): a short's loss has no ceiling; liquidation on a perpetual
+      // A real warning (the lesson rules): a short's loss has no ceiling; liquidation on a perpetual.
+      // The math (owner 2026-11-17), from SHORT_2021's closes: 0.01 × 64,893.5 = 648.94;
+      // 0.01 × 18,964.5 = 189.65; 459.29 ÷ 648.94 = 0.7078
       title: 'The catch',
       presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
-      text: 'Your short opened at about $649 and closed at about $190: roughly **$459 profit**, before fees and funding. Now the catch: a price can only fall to zero, but it can rise without a ceiling. On a perpetual, the exchange closes a losing short once your margin is gone (liquidation). Shorts need a stop, always.',
+      text: 'Back to your short of 0.01 BTC: opened at $64,894, bought back at $18,965. What did it make?',
+      math: {
+        who: 'tock',
+        steps: [
+          { label: 'Value when opened', sum: '0.01 × 64,894 = $648.94' },
+          { label: 'Value when closed', sum: '0.01 × 18,965 = $189.65' },
+          { label: 'Your profit', sum: '$648.94 − $189.65 = $459.29' },
+          { label: 'Divide by the start', sum: '459.29 ÷ 648.94 = 0.708' },
+          { label: 'As a percent', sum: '0.708 × 100 = 70.8%' },
+        ],
+        answer:
+          'Bitcoin fell about 71%, and your short made about **$459**, before fees and funding.',
+      },
+      lines: [
+        {
+          speaker: 'tock',
+          text: 'Now the catch: a price can only fall to zero, but it can rise without a ceiling. On a perpetual, the exchange closes a losing short once your margin is gone (liquidation). Shorts need a stop, always.',
+        },
+      ],
     },
     {
       title: 'Quick check',
@@ -552,7 +610,19 @@ const lesson01: Lesson = {
       title: 'Smaller coins swing harder',
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: SOL_2024,
-      text: 'In the week to 5 August 2024, Bitcoin fell about **19%**. Solana, a smaller coin, fell about **29%**. That’s [[volatility]]: smaller coins usually swing harder, up and down. Bigger moves mean bigger chances, and bigger losses.',
+      text: 'In the week to 5 August 2024, Bitcoin fell about **19%**. Solana, a smaller coin, fell about **29%**, from $182.57 to $129.70. That’s [[volatility]]: smaller coins usually swing harder, up and down. Bigger moves mean bigger chances, and bigger losses.',
+      // The math (owner 2026-11-17), from SOL_2024's closes: 52.87 ÷ 182.57 = 0.2896; Bitcoin's
+      // 66,757.7 → 53,988.2: 12,769.5 ÷ 66,757.7 = 0.1913
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Price fall', sum: '182.57 − 129.70 = 52.87' },
+          { label: 'Divide by the start', sum: '52.87 ÷ 182.57 = 0.290' },
+          { label: 'As a percent', sum: '0.290 × 100 = 29.0%' },
+        ],
+        answer:
+          'Solana fell about **29%**. The same three steps for Bitcoin ($66,758 → $53,988) give about **19%**.',
+      },
       more: { article: 'price-swings', section: 'volatility' },
     },
     {
@@ -972,6 +1042,16 @@ const lesson02: Lesson = {
       presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
       chart: MAY_2021,
       text: 'Swings like these are [[volatility]] (Lesson 1). On 19 May 2021 bitcoin fell from about $42,900 to as low as $28,800, then closed near $36,700. It swings up just as hard, which is why no one can time it. So size for the fall: only put in what you could watch drop by a third.',
+      // The math (owner 2026-11-17), from MAY_2021: (42,903.5 − 28,801) ÷ 42,903.5 = 0.3287
+      math: {
+        who: 'tock',
+        steps: [
+          { label: 'Price fall', sum: '42,900 − 28,800 = 14,100' },
+          { label: 'Divide by the start', sum: '14,100 ÷ 42,900 = 0.329' },
+          { label: 'As a percent', sum: '0.329 × 100 = 32.9%' },
+        ],
+        answer: 'At its low that day, bitcoin was down about **33%**: a third.',
+      },
       more: { article: 'price-swings', section: 'size' },
     },
     {
@@ -1003,6 +1083,16 @@ const lesson02: Lesson = {
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: FTX_2022,
       text: 'In November 2022 FTX, then one of the biggest exchanges, ran into trouble and stopped paying people out. Bitcoin closed at $20,583 on 7 November and at $15,892 two days later, down about 23%. One company’s collapse shook the whole market.',
+      // The math (owner 2026-11-17), from FTX_2022: 4,691 ÷ 20,582.5 = 0.2279
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Price fall', sum: '20,583 − 15,892 = 4,691' },
+          { label: 'Divide by the start', sum: '4,691 ÷ 20,583 = 0.228' },
+          { label: 'As a percent', sum: '0.228 × 100 = 22.8%' },
+        ],
+        answer: 'Bitcoin fell about **23%** in two days.',
+      },
     },
     {
       title: 'A plan beats panic',
@@ -1020,6 +1110,16 @@ const lesson02: Lesson = {
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
       chart: PEAK_2021,
       text: 'On 13 April 2021 bitcoin closed at $63,588, a record close at the time. Three months later, on 20 July, it closed at $29,765, down more than half. People who bought at the top waited about six months to get back to even.',
+      // The math (owner 2026-11-17), from PEAK_2021: 33,822.5 ÷ 63,587.5 = 0.5319
+      math: {
+        who: 'tock',
+        steps: [
+          { label: 'Price fall', sum: '63,588 − 29,765 = 33,823' },
+          { label: 'Divide by the start', sum: '33,823 ÷ 63,588 = 0.532' },
+          { label: 'As a percent', sum: '0.532 × 100 = 53.2%' },
+        ],
+        answer: 'Bitcoin fell about **53%**: more than half.',
+      },
     },
     {
       title: 'Thin or deep',
@@ -1251,11 +1351,16 @@ export function lessonScreenOfStep(lesson: Lesson, step: number): number | null 
 }
 
 /**
- * The terms a card marks, in its text and its guides' lines (both open the peek since 2026-11-17):
+ * The terms a card marks, in its text, its guides' lines and its analogy (all open the peek since
+ * 2026-11-17):
  * the two-terms rule, and where a concept is taught (`learn/graph.ts`)
  */
 export function cardTermIds(card: LessonCard): string[] {
-  return [card.text ?? '', ...(card.lines ?? []).map((l) => l.text)].flatMap(termIds);
+  return [
+    card.text ?? '',
+    ...(card.lines ?? []).map((l) => l.text),
+    card.analogy?.text ?? '',
+  ].flatMap(termIds);
 }
 
 /** Every word in a card, for the 80-word rule (a term counts as the words of its label) */
@@ -1263,6 +1368,8 @@ export function cardWords(card: LessonCard): number {
   const text = [
     plainText(card.text ?? ''),
     ...(card.lines ?? []).map((l) => plainText(l.text)),
+    // An analogy is prose, so it counts; a math breakdown's numbered sums don't (a worked figure)
+    plainText(card.analogy?.text ?? ''),
     ...(card.meet ? [card.meet.tick, card.meet.tock, card.meet.lead, ...card.meet.list] : []),
     ...(card.points ?? []).flatMap((p) => [p.label, p.text]),
     ...(card.beats ?? []).map((b) => b.text),

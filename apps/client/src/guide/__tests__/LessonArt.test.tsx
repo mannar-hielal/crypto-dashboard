@@ -19,6 +19,22 @@ const ARTS: LessonArtId[] = [
 describe('the guides', () => {
   afterEach(() => cleanup());
 
+  it('should put round glasses on either guide only when asked, in every mood (owner 2026-11-17)', () => {
+    for (const who of ['tick', 'tock'] as const) {
+      for (const mood of MOODS) {
+        const { container, unmount } = render(<GuideFigure who={who} mood={mood} glasses />);
+        const glasses = container.querySelector('[data-glasses]')!;
+        // Two round frames, a bridge and two arms
+        expect(glasses.querySelectorAll('circle')).toHaveLength(2);
+        expect(glasses.querySelectorAll('path')).toHaveLength(3);
+        unmount();
+      }
+      const { container } = render(<GuideFigure who={who} mood="smile" />);
+      expect(container.querySelector('[data-glasses]')).toBeNull();
+      cleanup();
+    }
+  });
+
   it('should draw every mood for both guides, each with its wick cue', () => {
     for (const who of ['tick', 'tock'] as const) {
       for (const mood of MOODS) {

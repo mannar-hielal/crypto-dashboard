@@ -113,13 +113,42 @@ describe('lessons', () => {
           // Worried only for a real warning (owner 2026-10-24): a short's open-ended loss,
           // liquidation, a rug pull or a scam, never sharing a key
           if (card.presenter.mood === 'worried') {
-            expect(card.text, card.title).toMatch(/liquidation|scam|rug pull|stop|share|warning/i);
+            // In its text or its guide's line (The catch: Berwyn's line, after the math, 2026-11-17)
+            const said = [card.text ?? '', ...(card.lines ?? []).map((l) => l.text)].join(' ');
+            expect(said, card.title).toMatch(/liquidation|scam|rug pull|stop|share|warning/i);
           }
         }
         for (const q of [lesson.moment, ...lesson.checks]) {
           if (q.presenter?.mood === 'worried') {
             expect(q.question, 'a worried guide warns').toMatch(/recovery phrase|share|support/i);
           }
+        }
+      });
+
+      it('should work every sum in numbered steps, one operation each, by a guide (owner 2026-11-17)', () => {
+        for (const card of lesson.cards) {
+          if (!card.math) continue;
+          const { who, steps, answer } = card.math;
+          expect(['tick', 'tock'], card.title).toContain(who);
+          expect(steps.length, card.title).toBeGreaterThanOrEqual(2);
+          expect(steps.length, card.title).toBeLessThanOrEqual(6);
+          for (const step of steps) {
+            // A short label, then one operation and its result
+            expect(step.label.length, step.label).toBeLessThanOrEqual(24);
+            expect(step.sum, step.label).toMatch(/^[^=≈]+ [−+×÷] [^=≈]+ [=≈] [^=≈]+$/);
+          }
+          expect(answer.trim(), card.title).not.toBe('');
+          // A worked sum sits on a teaching card, never a quiz
+          expect(card.quiz, card.title).toBeUndefined();
+        }
+      });
+
+      it('should tell an analogy by one guide, on a card without the guides’ chit-chat (owner 2026-11-17)', () => {
+        for (const card of lesson.cards) {
+          if (!card.analogy) continue;
+          expect(['tick', 'tock'], card.title).toContain(card.analogy.who);
+          expect(card.lines, card.title).toBeUndefined();
+          expect(card.analogy.text, card.title).toMatch(/^Think of it as /);
         }
       });
 
@@ -134,8 +163,15 @@ describe('lessons', () => {
           expect(isLessonId(lesson.next)).toBe(true);
           expect(lesson.next).not.toBe(lesson.id);
         }
-        const all = JSON.stringify(lesson);
+        // A worked sum's real result may pass 100% (Lesson 1's long: 166%, owner 2026-11-17): the
+        // percent rule reads everything else, the other words the math too
+        const cards = lesson.cards.map((card) => ({ ...card, math: undefined }));
+        const all = JSON.stringify({ ...lesson, cards });
         for (const h of HYPE) expect(all, String(h)).not.toMatch(h);
+        const sums = JSON.stringify(lesson.cards.map((c) => c.math ?? null));
+        for (const h of HYPE.filter((x) => !x.source.includes('%'))) {
+          expect(sums, String(h)).not.toMatch(h);
+        }
       });
 
       it('should mark at most two terms a card, and end on two or three things the learner can do', () => {
@@ -234,6 +270,48 @@ describe('lessons', () => {
     expect(l.cards[l.momentAfter!].quiz?.options[l.cards[l.momentAfter!].quiz!.correct]).toBe(
       'Stay out for now'
     );
+  });
+
+  it('should work out Lesson 1’s long and short in numbered steps, from the cards’ own prices', () => {
+    const l = getLesson('lesson-01');
+    const card = (title: string) => l.cards.find((c) => c.title === title)!;
+    // The result (owner 2026-11-17): rewritten around the math, the hindsight line dropped
+    const result = card('The result');
+    expect(result.lines).toBeUndefined();
+    expect(JSON.stringify(result)).not.toMatch(/hindsight/i);
+    expect(result.text).toMatch(/\$27,484.*\$73,133/);
+    expect(card('A real long').text).toMatch(/\$27,484.*\$73,133/);
+    expect(result.math?.steps[0].sum).toBe('73,133 − 27,484 = 45,649');
+    expect(result.math?.answer).toMatch(/\$2,656.*\$1,656 profit/);
+    // The catch: the short's numbers match the chart's markers and the card before it
+    const short = card('A real short');
+    expect(short.text).toMatch(/\$64,894.*0\.01 BTC.*\$18,965/);
+    const caught = card('The catch');
+    expect(caught.math?.steps.map((x) => x.sum)).toEqual([
+      '0.01 × 64,894 = $648.94',
+      '0.01 × 18,965 = $189.65',
+      '$648.94 − $189.65 = $459.29',
+      '459.29 ÷ 648.94 = 0.708',
+      '0.708 × 100 = 70.8%',
+    ]);
+    expect(caught.lines?.[0].text).toMatch(/^Now the catch/);
+    // Going short: the borrowing analogy, by one guide, in place of the guides' exchange
+    const short2 = card('Going short');
+    expect(short2.analogy?.text).toMatch(/borrow.*give it back.*keep \$20/);
+    expect(short2.analogy?.text).toMatch(/perpetual borrows nothing/);
+    expect(short2.practice?.tour).toBe('practice-short');
+  });
+
+  it('should add the math wherever Lessons 1–3 work out a gain, a loss or a percent', () => {
+    const titles = LESSONS.flatMap((l) => l.cards.filter((c) => c.math).map((c) => c.title));
+    expect(titles).toEqual([
+      'The result',
+      'The catch',
+      'Smaller coins swing harder',
+      'Big swings, both ways',
+      'A market shock',
+      'Up, then down',
+    ]);
   });
 
   it('should offer a practice trade from the Buy, long and short cards', () => {

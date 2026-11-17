@@ -42,6 +42,14 @@
   fill: var(--color-bg-page);
 }
 
+/* The guides' glasses (owner 2026-11-17): thin round frames in the face's line colour */
+.glasses {
+  fill: none;
+  stroke: var(--color-bg-page); /* bg.page, as the mouth */
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
 .mouth {
   fill: none;
   stroke: var(--color-bg-page);

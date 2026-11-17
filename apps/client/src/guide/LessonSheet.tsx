@@ -30,6 +30,7 @@ import { GuideFigure } from './art/Guide';
 import { CardBeats } from './CardBeats';
 import { FinishLine } from './FinishLine';
 import { GuidesMeet } from './GuidesMeet';
+import { GuideSays, MathBreakdownView } from './GuideSays';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
 import { BuySellView } from './BuySellView';
@@ -725,6 +726,15 @@ export function LessonSheet() {
             card.art && <LessonArt id={card.art} presenter={card.presenter} />
           )}
           {card.text && <CardText text={card.text} openTerm={openTerm} onTerm={toggleTerm} />}
+          {card.analogy && (
+            // A harder idea as an analogy, by one guide in glasses (owner 2026-11-17)
+            <div {...guide('lesson.analogy')}>
+              <GuideSays who={card.analogy.who}>
+                <LessonText text={card.analogy.text} openTerm={openTerm} onTerm={toggleTerm} />
+              </GuideSays>
+            </div>
+          )}
+          {card.math && <MathBreakdownView math={card.math} />}
           {card.practice && (
             // A practice trade on the real chart (owner 2026-11-16): the lesson waits, then goes on
             <button

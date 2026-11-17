@@ -537,6 +537,70 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.peek"]')).not.toBeNull();
   });
 
+  // ── The math, the analogy and pictures on top (owner 2026-11-17) ─────────────────
+
+  /** The screen of a lesson's card, by its title */
+  const cardScreen = (id: LessonId, title: string) => {
+    const l = getLesson(id);
+    return lessonScreens(l).findIndex((x) => x.kind === 'card' && l.cards[x.index].title === title);
+  };
+
+  it('should work the result out in numbered steps under the text, by Pulin in glasses', () => {
+    at(cardScreen('lesson-01', 'The result'), 'lesson-01');
+    renderSheet();
+    const math = document.querySelector('[data-guide="lesson.math"]')!;
+    expect(math.textContent).toContain('Let’s do the math.');
+    expect(math.querySelector('[data-guide-who="tick"] [data-glasses]')).not.toBeNull();
+    const steps = [...math.querySelectorAll('ol li')].map((li) => li.textContent);
+    expect(steps).toHaveLength(6);
+    expect(steps[0]).toBe('1.Price rise73,133 − 27,484 = 45,649');
+    const answer = document.querySelector('[data-guide="lesson.math.answer"]')!;
+    expect(answer.querySelectorAll('strong')).toHaveLength(2);
+    expect(answer.textContent).toContain('$2,656');
+    // The text first, then the math; no hindsight line, no chit-chat
+    const text = sheet()!.querySelector('p')!;
+    expect(text.compareDocumentPosition(math) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sheet()!.textContent).not.toMatch(/hindsight|Easy!/i);
+  });
+
+  it('should explain going short with the borrowing analogy, by Berwyn in glasses, before the practice', () => {
+    at(cardScreen('lesson-01', 'Going short'), 'lesson-01');
+    renderSheet();
+    const analogy = document.querySelector('[data-guide="lesson.analogy"]')!;
+    expect(analogy.querySelector('[data-guide-who="tock"] [data-glasses]')).not.toBeNull();
+    expect(analogy.textContent).toMatch(/^Berwyn Think of it as borrowing\./);
+    const practice = document.querySelector('[data-guide="lesson.practice"]')!;
+    expect(
+      analogy.compareDocumentPosition(practice) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(sheet()!.textContent).not.toContain('feels illegal');
+  });
+
+  it('should put every card’s picture above its text (owner 2026-11-17)', () => {
+    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02'] as const) {
+      const l = getLesson(id);
+      lessonScreens(l).forEach((x, i) => {
+        if (x.kind !== 'card') return;
+        const card = l.cards[x.index];
+        if (!card.text || !(card.art || card.chart || card.photo)) return;
+        at(i, id);
+        const { unmount } = renderSheet();
+        const picture = sheet()!.querySelector(
+          '[data-lesson-art], [data-guide="lesson.chart"], [data-guide="lesson.photo"]'
+        )!;
+        const text = [...sheet()!.querySelectorAll('p')].find((p) =>
+          p.textContent?.startsWith(card.text!.replace(/\*|\[\[|\]\]/g, '').slice(0, 12))
+        )!;
+        expect(picture, `${id}: ${card.title}`).not.toBeNull();
+        expect(
+          picture.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING,
+          `${id}: ${card.title}`
+        ).toBeTruthy();
+        unmount();
+      });
+    }
+  });
+
   // ── Lesson 1's cold open and the Next button (owner's visual Q&A 2026-10-25) ───
 
   it('should hold Next until the cold open’s lines are in, then name what comes next', () => {

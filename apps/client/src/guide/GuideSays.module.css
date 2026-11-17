@@ -1,0 +1,95 @@
+/* A guide in glasses beside a speech bubble, and the math breakdown under it (owner 2026-11-17:
+   "Let's do the math", numbered steps, the answer set apart). Colours from tokens.ts via the @theme
+   mirror in index.css. */
+
+.says {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+}
+
+/* The guide at three quarters of its 64 × 92 figure: big enough to see the glasses */
+.figure {
+  flex-shrink: 0;
+  width: 48px;
+  height: 69px;
+}
+
+.bubble {
+  position: relative;
+  margin: 6px 0 0;
+  border-radius: var(--radius-card); /* radius.card */
+  padding: 10px 14px;
+  background: var(--color-bg-surface); /* bg.surface */
+  color: var(--color-brand-white);
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+/* The bubble's tail, pointing at the guide */
+.bubble::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: -6px;
+  border-width: 6px 6px 6px 0;
+  border-style: solid;
+  border-color: transparent var(--color-bg-surface) transparent transparent;
+}
+
+.speaker {
+  font-weight: 700;
+}
+
+.math {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* One step a row: its number, what it does, then the sum on the right; on a narrow phone the sum
+   wraps under its label, so no row scrolls sideways */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+}
+
+.number {
+  min-width: 1.2em;
+  font-weight: 700;
+  color: var(--color-brand-purple); /* color.purple */
+}
+
+.label {
+  flex: 1 1 auto;
+  color: var(--color-brand-muted); /* color.muted */
+}
+
+.sum {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-brand-white);
+  white-space: nowrap;
+}
+
+/* The answer, set apart as the recap's highlight is */
+.answer {
+  margin: 0;
+  border-left: 3px solid var(--color-brand-purple); /* color.purple */
+  border-radius: var(--radius-card); /* radius.card */
+  padding: 10px 14px;
+  background: var(--color-bg-surface); /* bg.surface */
+  font-weight: 600;
+  line-height: 1.5; /* lineHeight.normal */
+}
