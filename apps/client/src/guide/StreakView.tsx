@@ -27,7 +27,7 @@ export function StreakView({
   const reduced = useReducedMotion();
   // Read at once (useHabits): the lesson's own start already counted today; a run carried past
   // midnight shows its new day on the next read (recorded in useHabits)
-  const { habits, failed } = useHabits(accessToken, null, true);
+  const { habits, failed } = useHabits(accessToken);
   const [shown, setShown] = useState(0);
 
   // Count up to the streak once it's known; with reduced motion the number is shown as it is. Keyed

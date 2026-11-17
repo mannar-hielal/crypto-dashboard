@@ -2,53 +2,42 @@ import { useEffect, useRef, useState } from 'react';
 import { learnApi, type HabitsResponse } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { accountFor } from './account';
+import { usePathStore } from './pathStore';
+import { useLessonStore } from '@/guide/lessonStore';
+import { useTourStore } from '@/guide/tourStore';
 
 /**
- * One habits read per account at a time: the map (refreshing on a finish) and the streak screen
- * opening with it share the request on its way. A reader asking because of a new finish (`fresh`)
- * joins only a read sent in the same render's effects; an older one may predate the finish, so it
- * sends its own
+ * One habits read per account and done count at a time. Every reader keys its read on the same
+ * count (lessons, tours and checkpoints done, from the stores), so the map and the streak screen
+ * opening together share one request; a finish changes the count, so a read after it is never
+ * answered by one sent before it
  */
-let tick = 0;
-let tickScheduled = false;
-function currentTick(): number {
-  if (!tickScheduled) {
-    tickScheduled = true;
-    queueMicrotask(() => {
-      tick += 1;
-      tickScheduled = false;
-    });
-  }
-  return tick;
-}
-const reading = new Map<string, { read: Promise<HabitsResponse>; tick: number }>();
-function readHabits(
-  account: string | null,
-  token: string,
-  fresh: boolean
-): Promise<HabitsResponse> {
-  const key = account ?? '';
-  const now = currentTick();
+const reading = new Map<string, Promise<HabitsResponse>>();
+function readHabits(key: string, token: string): Promise<HabitsResponse> {
   const onTheWay = reading.get(key);
-  if (onTheWay && (!fresh || onTheWay.tick === now)) return onTheWay.read;
-  const read = learnApi.getHabits(token).finally(() => {
-    if (reading.get(key)?.read === read) reading.delete(key);
-  });
-  reading.set(key, { read, tick: now });
+  if (onTheWay) return onTheWay;
+  const read = learnApi.getHabits(token).finally(() => reading.delete(key));
+  reading.set(key, read);
   return read;
+}
+
+/** How much this account has done: what the habits count from, so a new finish reads again */
+function useDoneCount(): number {
+  const lessons = useLessonStore((st) => Object.keys(st.completed).length);
+  const tours = useTourStore((st) => Object.keys(st.completed).length);
+  const checkpoints = usePathStore((st) => Object.keys(st.checkpoints).length);
+  return lessons + tours + checkpoints;
 }
 
 /**
  * The account's habits (badges, the learning streak, this week's days), counted on the server.
- * `accessToken` null: nothing is read. Read again when `refresh` changes (a new finish); the last
+ * `accessToken` null: nothing is read. Read again after a finish (the done count changes); the last
  * answer stays shown meanwhile, and `failed` says the latest read didn't arrive.
  */
-export function useHabits(
-  accessToken: string | null,
-  refresh: unknown = null,
-  /** Opened because of a finish (the streak screen): its first read is fresh too */
-  afterFinish = false
-): { habits: HabitsResponse | null; failed: boolean } {
+export function useHabits(accessToken: string | null): {
+  habits: HabitsResponse | null;
+  failed: boolean;
+} {
   // Whose answer it is, by account (a session refresh changes the token, not the account): another
   // account's (a sign-out, then a sign-in) is never shown
   // The account: the profile's id, or the token's own user while the profile loads
@@ -66,8 +55,7 @@ export function useHabits(
     token.current = accessToken;
   }, [accessToken]);
   const signedIn = !!accessToken;
-  // The refresh the last read was asked for: a change means a finish since
-  const lastRefresh = useRef<{ value: unknown } | null>(null);
+  const done = useDoneCount();
 
   useEffect(() => {
     if (!signedIn) return;
@@ -78,10 +66,7 @@ export function useHabits(
     // review round 30: the wait that covered it cost a 4 s hold on every read and kept failing)
     const now = token.current;
     if (!now) return;
-    const fresh =
-      lastRefresh.current === null ? afterFinish : lastRefresh.current.value !== refresh;
-    lastRefresh.current = { value: refresh };
-    readHabits(account, now, fresh)
+    readHabits(`${account ?? ''}|${done}`, now)
       .then((r) => {
         if (!cancelled) setRead({ account, habits: r, failed: false });
       })
@@ -97,7 +82,7 @@ export function useHabits(
     return () => {
       cancelled = true;
     };
-  }, [signedIn, account, refresh, afterFinish]);
+  }, [signedIn, account, done]);
 
   const mine = accessToken && read && read.account === account ? read : null;
   return { habits: mine?.habits ?? null, failed: mine?.failed ?? false };

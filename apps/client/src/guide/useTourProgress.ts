@@ -79,7 +79,8 @@ function saveDone(
   const account = accountOf(accessToken);
   // Kept before it's sent, and until a read shows the server has it (not dropped when the save
   // lands: a read that left before the save and answers after it would hide it again). A resend
-  // from the read is already kept
+  // from the read is already kept. (No account means no token the server signed: every one it signs
+  // carries the userId, so a signed-in save always has one; weighed, review round 35)
   if (account && !kept) queueDone(account, { itemId, step });
   // One save of an item at a time: a read meanwhile doesn't send it again
   const key = `${account ?? ''}:${itemId}`;
@@ -272,6 +273,8 @@ export function useTourProgress(): void {
           const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
           useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
         });
+        // Sent again on every read, a session refresh's included (about every 15 minutes): the only
+        // retry a kept finish gets, a handful of writes at most (weighed, review round 35)
         for (const q of stillQueued) saveDone(q.itemId, q.step, accessToken, { kept: true });
       })
       .catch(() => {

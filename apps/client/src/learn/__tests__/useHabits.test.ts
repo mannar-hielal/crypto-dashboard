@@ -8,6 +8,7 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 
 import { useHabits } from '@/learn/useHabits';
 import { useAuthStore } from '@/store/authStore';
+import { useLessonStore } from '@/guide/lessonStore';
 
 const habits = { badges: [], learningDays: 1, streakDays: 1, thisWeek: [] };
 
@@ -17,6 +18,7 @@ describe('useHabits', () => {
 
   beforeEach(() => {
     getHabits.mockReset();
+    useLessonStore.getState().reset();
     // No profile from an earlier test: each names its own account
     useAuthStore.getState().clearAuth();
   });
@@ -27,14 +29,12 @@ describe('useHabits', () => {
     expect(result.current).toEqual({ habits: null, failed: false });
   });
 
-  it('should read again when the refresh key changes, keeping the last answer on a failure', async () => {
+  it('should read again after a finish, keeping the last answer on a failure', async () => {
     getHabits.mockResolvedValueOnce(habits);
-    const { result, rerender } = renderHook(({ n }) => useHabits('t', n), {
-      initialProps: { n: 0 },
-    });
+    const { result } = renderHook(() => useHabits('t'));
     await waitFor(() => expect(result.current.habits).toEqual(habits));
     getHabits.mockRejectedValueOnce(new Error('offline'));
-    rerender({ n: 1 });
+    act(() => useLessonStore.getState().setCompleted(['lesson-01']));
     await waitFor(() => expect(result.current.failed).toBe(true));
     expect(result.current.habits).toEqual(habits);
     expect(getHabits).toHaveBeenCalledTimes(2);
@@ -78,29 +78,19 @@ describe('useHabits', () => {
   it('should share one habits request between two readers of the same account', async () => {
     getHabits.mockResolvedValue(habits);
     // The map and the streak screen opening together after a finish
-    const a = renderHook(() => useHabits('t', 1));
+    const a = renderHook(() => useHabits('t'));
     const b = renderHook(() => useHabits('t'));
     await waitFor(() => expect(a.result.current.habits).toEqual(habits));
     await waitFor(() => expect(b.result.current.habits).toEqual(habits));
     expect(getHabits).toHaveBeenCalledTimes(1);
   });
 
-  it('should send a new read for a new refresh, never sharing the one from before it', async () => {
-    let answer: (h: typeof habits) => void = () => {};
-    getHabits.mockReturnValueOnce(new Promise((r) => (answer = r))).mockResolvedValue(habits);
-    const { rerender } = renderHook(({ n }) => useHabits('t', n), { initialProps: { n: 1 } });
-    await act(async () => {}); // later: the first read is on its way
-    rerender({ n: 2 }); // a finish meanwhile
-    expect(getHabits).toHaveBeenCalledTimes(2);
-    answer(habits);
-  });
-
-  it('should never let a reader opened by a finish join a read sent before it', async () => {
+  it('should never let a read after a finish join one sent before it', async () => {
     getHabits.mockReturnValueOnce(new Promise(() => {})).mockResolvedValue(habits);
-    renderHook(() => useHabits('t', 1)); // the map, its read on its way
-    await act(async () => {});
-    // The streak screen opens after a finish
-    const streak = renderHook(() => useHabits('t', null, true));
+    renderHook(() => useHabits('t')); // the map, its read on its way
+    act(() => useLessonStore.getState().setCompleted(['lesson-01'])); // a finish
+    // The streak screen opens after it
+    const streak = renderHook(() => useHabits('t'));
     await waitFor(() => expect(streak.result.current.habits).toEqual(habits));
     expect(getHabits).toHaveBeenCalledTimes(2);
   });

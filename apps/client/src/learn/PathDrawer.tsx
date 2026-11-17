@@ -273,10 +273,7 @@ export function PathDrawer() {
   // Read once the account's progress is in: its arrival moves `finished` without a finish, which
   // would otherwise read the habits a second time
   const progressIn = useTourStore((s) => s.loaded);
-  const { habits, failed: habitsError } = useHabits(
-    open && progressIn ? accessToken : null,
-    finished
-  );
+  const { habits, failed: habitsError } = useHabits(open && progressIn ? accessToken : null);
 
   // Esc closes
   useEffect(() => {
