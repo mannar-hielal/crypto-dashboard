@@ -147,6 +147,14 @@ function asServerAnswer(apply: () => void): void {
 /** No one is signed in any more (a token rotation is still signed in) */
 const signedOut = () => !useAuthStore.getState().accessToken;
 
+/**
+ * The kept finishes and passes shown as done, on a read that lands and on one that fails alike:
+ * those of the lesson or checkpoint version this app teaches (the one rule, in one place)
+ */
+function keptToShow(kept: PendingDone[]): PendingDone[] {
+  return kept.filter(isCurrentVersion);
+}
+
 /** The welcome card is hidden only by a Lesson 1 finish still to save (the last read worked it out) */
 let cardByKeptFinish = false;
 
@@ -192,10 +200,8 @@ export function useTourProgress(): void {
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)
         const kept = account ? pendingDone(account) : [];
-        const stillQueued = kept.filter(
-          (q) =>
-            isCurrentVersion(q) &&
-            !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
+        const stillQueued = keptToShow(kept).filter(
+          (q) => !items.some((i) => i.itemId === q.itemId && i.status === 'completed')
         );
         if (account && stillQueued.length !== kept.length) keepOnly(account, stillQueued);
         const lessons = [
@@ -259,9 +265,7 @@ export function useTourProgress(): void {
         if (!stale() && !useTourStore.getState().loaded) {
           // (finishes and passes this device still has to save stay shown, as on a read that lands;
           // nothing here is echoed back)
-          const queued = (account ? pendingDone(account) : [])
-            .filter(isCurrentVersion)
-            .map((q) => q.itemId);
+          const queued = keptToShow(account ? pendingDone(account) : []).map((q) => q.itemId);
           asServerAnswer(() => {
             useTourStore
               .getState()
