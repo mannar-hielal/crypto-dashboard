@@ -25,6 +25,7 @@ vi.mock('@/store/authStore', () => ({
 
 import { useTourProgress } from '@/guide/useTourProgress';
 import { pendingDone, queueDone } from '@/learn/pendingDone';
+import { forgetSignedOutAccount } from '@/learn/signedOut';
 import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
 import { usePathStore } from '@/learn/pathStore';
@@ -562,6 +563,54 @@ describe('useTourProgress', () => {
       // Not taken back on a guess: the next read shows what the server has
       expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
       getProgress.mockResolvedValue({ items: [] });
+    });
+
+    it('should keep what was done signed out after an explicit sign-out, for the next account', async () => {
+      getProgress.mockResolvedValue({ items: [] });
+      const { rerender } = renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      // u1 signs out from the menu; someone reads Lesson 1 signed out, then signs in as u2
+      act(() => forgetSignedOutAccount());
+      token = null;
+      rerender();
+      act(() => useLessonStore.setState({ reached: { 'lesson-01': 4 } }));
+      profile = { id: 'u2' };
+      token = 'tok2';
+      setProgress.mockClear();
+      rerender();
+      await waitFor(() =>
+        expect(setProgress).toHaveBeenCalledWith('lesson-01', 'started', 'tok2', 61 + 4)
+      );
+    });
+
+    it('should send no close for a finished lesson left from a look back', async () => {
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      act(() => useLessonStore.getState().start('lesson-02', 3));
+      act(() => useLessonStore.getState().markFinished());
+      // A look back from it ("From Lesson 1"), then another lesson started from there
+      act(() => useLessonStore.getState().visit('lesson-01', 0));
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().start('lesson-ownership'));
+      const sent = trackEvent.mock.calls.map((c) => c[0] as { name: string; itemId: string });
+      expect(sent).not.toContainEqual(expect.objectContaining({ name: 'tour_closed' }));
+    });
+
+    it('should leave another account’s stores alone when a refusal’s check lands after a switch', async () => {
+      queueDone('u1', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
+      setProgress.mockRejectedValueOnce(Object.assign(new Error('x'), { status: 409 }));
+      let check: (v: { items: never[] }) => void = () => {};
+      getProgress
+        .mockResolvedValueOnce({ items: [] })
+        .mockReturnValueOnce(new Promise((r) => (check = r)));
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(getProgress).toHaveBeenCalledTimes(2));
+      // Another account signs in while the check is on its way, with Lesson 1 finished
+      profile = { id: 'u2' };
+      act(() => useLessonStore.getState().setCompleted(['lesson-01']));
+      await act(async () => check({ items: [] }));
+      expect(useLessonStore.getState().completed['lesson-01']).toBe(true);
     });
 
     it('should keep a finish answered with a 404 (an edge or a proxy, not the route)', async () => {

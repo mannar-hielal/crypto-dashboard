@@ -11,7 +11,7 @@ import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest, LearnProgressItem } from '@crypto-dashboard/sdk';
 import { accountOf } from '@/learn/account';
-import { resetLearningStores } from '@/learn/signedOut';
+import { lastReadAccount, resetLearningStores, setLastReadAccount } from '@/learn/signedOut';
 import { dropDone, keepOnly, pendingDone, queueDone, type PendingDone } from '@/learn/pendingDone';
 import { getCheckpoint, isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
@@ -110,6 +110,9 @@ function saveDone(
         learnApi
           .getProgress(useAuthStore.getState().accessToken ?? accessToken)
           .then(({ items }) => {
+            // 🔐 Still that account (a sign-out or a switch while this read was on its way): never
+            // another's stores
+            if (accountOf(useAuthStore.getState().accessToken) !== account) return;
             if (!items.some((i) => i.itemId === itemId && i.status === 'completed')) {
               undone(itemId, items);
             }
@@ -172,9 +175,6 @@ function cardAnswered(items: LearnProgressItem[]): boolean {
 /** The welcome card is hidden only by a Lesson 1 finish still to save (the last read worked it out) */
 let cardByKeptFinish = false;
 
-/** The account the progress was last read for: another one's read starts from clean stores */
-let readFor: string | null = null;
-
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
   const step = lessonStepNumber(getLesson(id), screen);
@@ -197,11 +197,12 @@ export function useTourProgress(): void {
     // Another account than the last read's (a session expired, then someone else signed in): the
     // previous one's progress never shows, even if this read fails
     const account = accountOf(accessToken);
+    const readFor = lastReadAccount();
     if (readFor !== null && account !== readFor) {
       cardByKeptFinish = false;
       asServerAnswer(resetLearningStores);
     }
-    readFor = account;
+    setLastReadAccount(account);
     // 🔐 An answer that lands after a sign-out or for another account (before this effect's cleanup
     // has run) is never put in the stores or the device's queue
     const stale = () =>
@@ -439,9 +440,10 @@ export function useTourProgress(): void {
         : prev.activeId !== null
           ? { id: prev.activeId, screen: prev.screen }
           : null;
-      // (a run already counted as finished, its streak screen then left, is no close)
+      // (a run already counted as finished, its streak screen then left, is no close: also when it's
+      // the lesson a look back came from, as a look back never changes `starts`)
       const alreadyDone =
-        !prev.returnTo && prev.doneAt?.id === prev.activeId && prev.doneAt?.starts === prev.starts;
+        home !== null && prev.doneAt?.id === home.id && prev.doneAt.starts === prev.starts;
       const closeHome = () => {
         if (home && !alreadyDone) {
           send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));

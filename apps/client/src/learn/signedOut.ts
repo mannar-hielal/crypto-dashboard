@@ -14,6 +14,18 @@ import { forgetAllDone } from './pendingDone';
 export function forgetSignedOutAccount(): void {
   forgetAllDone();
   resetLearningStores();
+  // Already clean: the next account's first read keeps what was done here signed out (a lesson's
+  // screens reached before signing in), as on a fresh page
+  readFor = null;
+}
+
+/** The account the progress was last read for: another one's read starts from clean stores */
+let readFor: string | null = null;
+export function lastReadAccount(): string | null {
+  return readFor;
+}
+export function setLastReadAccount(account: string | null): void {
+  readFor = account;
 }
 
 /**
