@@ -49,8 +49,8 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
   numbers and stories they use), their screen order inside a lesson, their images or layouts. A
   reworded benchmark card is still a close paraphrase of their course: copyright covers expression and
   the selection and arrangement of content, not only exact words.
-- **How to write a card:** start from the concept and our own sources (the knowledge-base articles in
-  `apps/client/src/learn/articles.ts`, the owner's notes in `guided-learning-topics/`, primary
+- **How to write a card:** start from the concept and our own sources (the Blog's articles in
+  `apps/client/src/blog/posts.ts`, the owner's notes in `guided-learning-topics/`, primary
   sources), then write it in our voice with our own example. Never draft a card with the benchmark cell
   open beside you as the thing being rewritten; use table 1 only to tick off concepts.
 - **Never paste** text from the comparison file's benchmark column into code, docs, tests, commit
@@ -158,7 +158,7 @@ quizzes with options and Whys, linked terms) and ask it to:
   docs, the Bitcoin white paper, exchange documentation, regulators), citing each source;
 - check each quiz: exactly one right answer, the Why really explains it, no option that is also
   defensible;
-- check consistency with our knowledge-base articles (`apps/client/src/learn/articles.ts`) and the
+- check consistency with the Blog's articles (`apps/client/src/blog/posts.ts`) and the
   earlier lessons: same terms, same numbers;
 - flag oversimplifications that would mislead a beginner, and unclear wording;
 - report findings as a list (screen, claim, verdict, correction, source). It must not edit files,
@@ -516,27 +516,31 @@ with paper money, and then picks up where it left off.
 - `lessons.test.ts`: the cards that offer a practice, and which tour.
 - The steps in `docs/UI_REPRODUCTIONS.md`.
 
-## Linking terms to articles
+## Terms and peeks (no article links since 2026-11-18)
+
+The articles moved to the public Blog (`/blog`, `apps/client/src/blog/posts.ts`) and **nothing in a
+lesson links to them** (owner 2026-11-18): no `more`, no `article` or `section` on a recap point or a
+can-do line, no "Read more" in a peek.
 
 - Markup: `**bold**`, `*italic*` and `[[term]]` render through one renderer (`RichText`). Never put a
   `[[term]]` inside `*…*` (its asterisks would show), and write sums with `×`, never `*` (the
   run between two `*` would turn italic). The tests catch a nested term (any `*` left on screen)
   and a `*` with spaces around it or flush between digits; other uses of `*` are on you.
-
-- A term in card text links with `[[label|concept-id]]` (or `[[concept-id]]`): it opens a peek, and
-  the peek opens its article. Concept ids must exist in `apps/client/src/learn/graph.ts`
-  (`conceptFor`); `terms.test` checks it. At most two terms a card.
-- A card that goes deeper gets `more: { article, section? }` (a Read more). Article ids are
-  `ARTICLE_IDS` in `apps/client/src/learn/articles.ts`; `section` is an `h` block's id.
-- **Only link to what exists.** If a term deserves an article that doesn't exist yet, don't invent an
-  id: list it in the report as a proposed article (title, what it would explain).
+- A term in card text is `[[label|concept-id]]` (or `[[concept-id]]`): it opens a **peek**, a one-sentence
+  definition and a "Think of it as…" line, and that is all. Concept ids must exist in
+  `apps/client/src/learn/concepts.ts` (`conceptFor` in `graph.ts`); `terms.test` checks it. At most
+  two terms a card.
+- **A new idea that needs a peek** gets a concept (`id`, `term`, `peek`, `think`): no article field.
+  If it also deserves an article, that is a Blog post, written separately and never linked from the
+  lesson: list it in the report as a proposed post (title, what it would explain).
+- A summary (`recap`) and a close (`canDo`) are plain lines (`{ text }`).
 - A term an earlier lesson taught says "Lesson N" where it's reused (lesson rules test).
 
 ## Tests and docs to update (same PR)
 
 - `apps/client/src/guide/__tests__/lessons.test.ts` — the lesson rules (caps, structure, the
   lesson's own expectations); `LessonSheet.test.tsx` for new screen kinds.
-- `apps/client/src/learn/__tests__/terms.test.ts`, `articleMinutes.test.ts` if articles change.
+- `apps/client/src/learn/__tests__/terms.test.ts`, and `apps/client/src/blog/__tests__/` (`articleMinutes`, `posts`) if articles change.
 - `stepBase`: when a lesson's screens change, raise it by at least the SDK's `LESSON_VERSION_SPAN`
   (40: one version's steps, which the server refuses past; a lesson's screens must fit in it), so
   stored steps and rows are never read as today's.
@@ -567,7 +571,7 @@ with paper money, and then picks up where it left off.
 - Screen count: ours vs the benchmark's.
 - Quizzes by format, and any new widget built.
 - Practice trades offered: the card, the concept (buy, sell, long, short, close) and the tour.
-- Terms linked (concept → article) and proposed new articles.
+- Terms marked (their concepts) and proposed new Blog posts.
 - Any Table 2 instruction declined under the IP rule, and the alternative offered.
 
 ## Pick the right ones: the decided design (owner 2026-11-18)

@@ -4643,6 +4643,33 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-18 — The Blog: the articles leave the lessons, and the public header gets Product, Blog, About us, Support
+
+Plan: `docs/BLOG_PLAN.md`; built in one PR on `feat/knowledge-base`. The nine articles (the old knowledge base)
+moved to a public **Blog** and are **no longer linked from any lesson, card, summary, panel or path**.
+
+- **The Blog** (`blog/posts.ts`, `ArticleBody`, `pages/BlogIndexPage`, `BlogPostPage`): `/blog` is a card grid
+  (three columns, one on phones); `/blog/<id>` is a 720 px column with the article, a quick self-test, folded sources,
+  "← Blog" and two more articles. The id is the URL (kebab-case). An unknown id goes back to `/blog`. `SeoHead` per
+  page; **no sitemap entries yet** (a second PR: sitemap, structured data, prerendering decision).
+- **The header** (`components/SiteNav.tsx`, in the marketing `TopBar` only): **Product ▾** (Chart, Features), **Blog**,
+  **About us**, **Support**; text links from md up, one menu button and a full-width sheet below it; Esc and a press
+  outside close what is open. `/about` and `/support` are `ComingSoonPage` (noindex) until written. The dashboard bar
+  has no nav; legal and auth pages keep their own chrome.
+- **Shared widgets** (`components/widgets/`): the interactive pieces (SunCoin notebook, order book, block chain …) are
+  rendered by the Blog's articles and by lessons' Try it, one component each.
+- **Lessons without articles:** `LessonCard.more`, the `article` / `section` fields of `CanDo` and the recap
+  highlight, and every "Read more" are gone. **`[[term]]` peeks stay** (definition and "think of it as"), with no
+  article behind them: `Concept.article` and `practisedIn` are removed, `graph.ts` keeps concept ↔ lesson.
+- **Removed:** `ArticleDrawer`, `articleStore`, the Library tab (its habit badges are now the **Habits** tab,
+  `learn/HabitsTab.tsx`), the article drawer / library anchors, and their tests. New anchors: `nav.product(.item)`,
+  `nav.blog`, `nav.about`, `nav.support`, `nav.menu(.sheet)`, `blog.list`, `blog.card`, `blog.back`, `blog.more`,
+  `page.coming-soon`.
+- **Docs:** `UI_REPRODUCTIONS.md` (the Library steps are the Habits and Blog steps; the header check),
+  `SEO_READINESS.md`, the lesson-authoring skill ("Terms and peeks").
+- **Known gaps:** the articles were written beside the lessons and read oddly alone in places (a standalone editing
+  pass is a later PR); no e2e test walks `/blog` or the header yet; About us and Support content.
+
 ### 2026-11-18 — Chapter 1 finished: four lessons, two practice stops and a ten-question checkpoint
 
 Chapter 1, "Start here: crypto and trading basics", is done. New chapters are made fresh from the benchmark's next

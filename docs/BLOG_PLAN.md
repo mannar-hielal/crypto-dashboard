@@ -1,8 +1,9 @@
 # Blog — Moving the Articles Out of the Lessons
 
-> **Owner:** Mannar Hielal · **Written:** 2026-11-18 · **Status:** 📝 planned, nothing built. Implementation starts
-> only when the owner says go. Branch: `feat/knowledge-base`, cut from `main` after the chapter 1 release (the old
-> `feat/lesson-4-…` branch was merged, so it is not reused).
+> **Owner:** Mannar Hielal · **Written:** 2026-11-18 · **Status:** ✅ PR 1 built the same day (one PR, all of §4);
+> **PR 2 (SEO) and PR 3+ are still to do.** Branch: `feat/knowledge-base`, cut from `main` after the chapter 1
+> release. Built differently from §4.4: the Library tab was **renamed Habits**, not deleted, because it also held the
+> habit badges (`learn/HabitsTab.tsx`).
 
 ## 1. Goal
 
