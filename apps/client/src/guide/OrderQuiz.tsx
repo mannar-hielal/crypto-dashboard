@@ -32,6 +32,9 @@ export function OrderQuiz({
   const steps = useMemo(() => q.steps ?? [], [q.steps]);
   const answered = answer !== undefined;
   const pool = useMemo(() => shuffledOrder(steps.length, q.question), [steps.length, q.question]);
+  // (Component state: a remount while a wrong answer is kept, an article opened over the sheet,
+  // shows the board empty under "Not quite." until Try again resets it. Weighed, review after #311;
+  // MatchQuiz's pairs alike)
   const [slots, setSlots] = useState<(number | null)[]>(() => steps.map(() => null));
   const [picked, setPicked] = useState<number | null>(null);
   // Answered on an earlier visit: no placements in memory, so the right order is shown, unmarked

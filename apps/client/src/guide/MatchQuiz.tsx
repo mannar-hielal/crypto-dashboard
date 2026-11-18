@@ -40,7 +40,8 @@ export function MatchQuiz({
     () => shuffledOrder(pairs.length, q.question),
     [pairs.length, q.question]
   );
-  // term index → meaning index (the meaning's own index in `pairs`)
+  // term index → meaning index (the meaning's own index in `pairs`). Component state: a remount
+  // while a wrong answer is kept shows it empty until Try again (weighed, see OrderQuiz.tsx)
   const [links, setLinks] = useState<Record<number, number>>({});
   const [selected, setSelected] = useState<number | null>(null);
   const complete = Object.keys(links).length === pairs.length;
