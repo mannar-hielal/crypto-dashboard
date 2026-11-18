@@ -332,8 +332,9 @@ rewritten, and to quizzes, Whys, summaries and titles.
   Try again. It marks the right answer for the learner (the right option, the right order or pairs,
   the right tiles, Buy or Sell, the model path drawn on the chart), keeps the Why, and unlocks
   Continue, so nobody is stuck. The three count per visit to that card (Try again keeps the count;
-  going Back and returning starts it again), and an answer revealed this way is not recorded
-  as the learner's own right answer. Checkpoints stay scored and one-go, with no reveal.
+  going Back and returning starts it again), and the lesson counts a revealed answer as
+  answered: it keeps no per-question score (an answer only gates Continue), so a revealed answer and
+  a right one look alike, and coming back to the card shows a plain "Right.". Checkpoints stay scored and one-go, with no reveal.
   - **Say so kindly:** "That's three tries. Here is the answer." then the Why. Never "you failed".
   - **Status (2026-11-18):** built for the draw card only (`DrawQuiz`: `MAX_MISSES`, `AnswerResult`'s
     `revealed`). The other boards (`QuestionView`, `OrderQuiz`, `MatchQuiz`, `BuySellView`,

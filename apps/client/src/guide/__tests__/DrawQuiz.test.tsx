@@ -134,6 +134,78 @@ describe('DrawQuiz (three tries)', () => {
   });
 });
 
+describe('DrawQuiz (resize)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A ResizeObserver stand-in that lets the test fire a resize */
+  function stubObserver() {
+    const callbacks: (() => void)[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: () => void) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+      }
+    );
+    return () => callbacks.forEach((cb) => cb());
+  }
+
+  it('should clear an unchecked line when the stage is resized (the candles moved)', async () => {
+    const fire = stubObserver();
+    await mount();
+    fire(); // the first call is the observer's own initial one
+    fireEvent.pointerDown(area(), {
+      clientX: 20,
+      clientY: 140,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerMove(area(), { clientX: 200, clientY: 120, pointerId: 1, isPrimary: true });
+    expect(check().disabled).toBe(false);
+    fire();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(check().disabled).toBe(true);
+  });
+
+  it('should keep the line after the check, so the answer’s message still refers to it', async () => {
+    const fire = stubObserver();
+    function Harness() {
+      const [answer, setAnswer] = useState<number | undefined>(undefined);
+      return (
+        <DrawQuiz q={q} answer={answer} onAnswer={setAnswer} onRetry={() => setAnswer(undefined)} />
+      );
+    }
+    render(<Harness />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fire();
+    fireEvent.pointerDown(area(), {
+      clientX: 20,
+      clientY: 10,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerMove(area(), { clientX: 440, clientY: 10, pointerId: 1, isPrimary: true });
+    fireEvent.click(check());
+    expect(status()).toContain('Not quite.');
+    fire();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // The wrong line is still there: Try again (which clears it) is still on offer, no revisit label
+    expect(screen.queryByText('Our path, dotted:')).toBeNull();
+    expect(document.querySelectorAll('polyline')).toHaveLength(1);
+  });
+});
+
 describe('DrawQuiz (which pointer draws)', () => {
   const stroke = (init: Record<string, unknown>, to = 200) => {
     fireEvent.pointerDown(area(), { clientX: 20, clientY: 140, ...init });

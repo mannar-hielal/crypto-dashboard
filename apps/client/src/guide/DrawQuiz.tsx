@@ -119,6 +119,11 @@ export function DrawQuiz({
   const [misses, setMisses] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const answered = answer !== undefined;
+  // Read by the resize watcher, which must not wipe a line the answer already refers to
+  const answeredRef = useRef(false);
+  useEffect(() => {
+    answeredRef.current = answered;
+  }, [answered]);
   const right = answer === q.correct;
   // Answered on an earlier visit: no line in memory, so our path is shown on its own
   const revisit = right && points.length === 0;
@@ -140,6 +145,8 @@ export function DrawQuiz({
         first = false;
         return;
       }
+      // After the check the line stays: "Not quite." and "Right." are about it
+      if (answeredRef.current) return;
       setPoints([]);
       setPlaced({});
       setByKeyboard(false);
