@@ -108,6 +108,8 @@ export function PathNode({
 
   let note: ReactNode = null;
   if (state === 'locked') {
+    // (The stop before: right for NEEDS_DONE too while each prerequisite sits just before its stop,
+    // Buy before Sell. A stop placed between them carries its own reason; weighed, review after #311)
     note = previousTitle
       ? `Finish “${previousTitle}” first.`
       : 'Finish the chapter before it first.';

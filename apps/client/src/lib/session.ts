@@ -32,7 +32,9 @@ export function refreshAccessToken(): Promise<string | null> {
         const { user, setAuth, clearAuth } = useAuthStore.getState();
         if (!res) {
           // No refresh cookie any more (expired, or cleared by a logout elsewhere): the
-          // session is gone, same as a 401.
+          // session is gone, same as a 401. (Not an explicit sign-out: the learning stores and the
+          // account's unsaved finishes stay for its return, and another account's first read resets
+          // them. A sign-out in another tab reaches this one this way too; weighed, review after #311)
           clearAuth();
           return null;
         }
