@@ -70,7 +70,12 @@ export function pendingDone(account: string): PendingDone[] {
   const held = unstored.get(account);
   // (write() is its only writer and keeps it capped and checked: no second pass here. Weighed,
   // review after #311)
-  if (held) return held.filter((p) => p.since >= oldest);
+  if (held) {
+    // (expired ones leave the memory list too, not only the answer)
+    const live = held.filter((p) => p.since >= oldest);
+    if (live.length !== held.length) unstored.set(account, live);
+    return live;
+  }
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
     const stored = migrate(raw);
@@ -101,7 +106,25 @@ function store(account: string, items: PendingDone[]): void {
   localStorage.setItem(key(account), JSON.stringify(stored));
 }
 
+/** A stored value of another shape version (a newer tab's queue), which this one never replaces */
+function anotherVersionStored(account: string): boolean {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
+    if (typeof raw !== 'object' || raw === null) return false;
+    const { v } = raw as Record<string, unknown>;
+    return typeof v === 'number' && v !== VERSION;
+  } catch {
+    return false;
+  }
+}
+
 function write(account: string, items: PendingDone[]): void {
+  // 🔐 A newer tab's queue is never overwritten (only the sign-out wipe removes it): this tab's
+  // list stays in memory for the session instead
+  if (anotherVersionStored(account)) {
+    unstored.set(account, items.slice(0, MAX_PENDING));
+    return;
+  }
   try {
     if (items.length === 0) localStorage.removeItem(key(account));
     else {

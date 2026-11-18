@@ -151,4 +151,12 @@ describe('pendingDone', () => {
     expect(pendingDone('a')).toEqual([]);
     expect(localStorage.getItem('cd-pending-done:a')).toBe(newer);
   });
+
+  it('should never write over a queue of another version, keeping its own in memory instead', () => {
+    const newer = JSON.stringify({ v: 2, items: [{ itemId: 'lesson-02', step: 81, since: 1 }] });
+    localStorage.setItem('cd-pending-done:a', newer);
+    queueDone('a', { itemId: 'checkpoint-ch1', step: 1 });
+    expect(localStorage.getItem('cd-pending-done:a')).toBe(newer);
+    expect(pendingDone('a').map((p) => p.itemId)).toEqual(['checkpoint-ch1']);
+  });
 });
