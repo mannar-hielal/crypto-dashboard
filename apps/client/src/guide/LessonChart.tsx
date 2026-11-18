@@ -51,15 +51,29 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+/** What a drawing card needs from the chart, to turn dates and prices into pixels (owner 2026-11-18) */
+export interface LessonChartApi {
+  chart: IChartApi;
+  series: ISeriesApi<'Candlestick'>;
+  bars: LessonBar[];
+}
+
 interface LessonChartProps {
   scene: ChartScene;
+  /** Taller than the usual picture slot (a Draw a line card, owner's visual Q&A 2026-11-18) */
+  tall?: boolean;
+  /**
+   * Called each time the candles are (re)drawn, with what it takes to place a point on them. Pass a
+   * stable callback (`useCallback`): it is a dependency of the drawing effect
+   */
+  onReady?: (api: LessonChartApi) => void;
   /** The learner has answered: a frozen scene plays on to its end */
   revealed: boolean;
   /** Shown while loading fails: the card's drawn picture */
   fallback: ReactNode;
 }
 
-export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
+export function LessonChart({ scene, revealed, fallback, tall, onReady }: LessonChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -209,13 +223,14 @@ export function LessonChart({ scene, revealed, fallback }: LessonChartProps) {
     chartRef.current
       ?.timeScale()
       .setVisibleLogicalRange({ from: -EDGE_ROOM, to: bars.length - 1 + EDGE_ROOM });
-  }, [bars, count, scene]);
+    if (chartRef.current) onReady?.({ chart: chartRef.current, series, bars });
+  }, [bars, count, scene, onReady]);
 
   if (failed) return <>{fallback}</>;
   return (
     <div
       ref={containerRef}
-      className={styles.chart}
+      className={tall ? `${styles.chart} ${styles.tall}` : styles.chart}
       role="img"
       aria-label={scene.label}
       {...guide('lesson.chart')}

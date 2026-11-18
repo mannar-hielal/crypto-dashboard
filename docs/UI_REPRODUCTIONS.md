@@ -370,10 +370,10 @@ the analogy, and the math's steps (a sum wraps under its label on a narrow phone
    Open Lesson 1 to its sixth screen, close it, reload → Expect a ring about half round Lesson 1 (read back from the
    server) and **Continue**.
 3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “Up, down and your first trade” first." and no lesson.
-   [path.chapter.info `ch1`] → Expect the six stops with minutes and "What you’ll learn" (each lesson's summary lines).
-4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 17 %, **Continue** on Lesson 2,
+   [path.chapter.info `ch1`] → Expect the seven stops with minutes and "What you’ll learn" (each lesson's summary lines).
+4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 14 %, **Continue** on Lesson 2,
    and the dot back on the Route icon before reopening.
-5. [path.test-out] → answer one wrong, four right → Expect "Checkpoint passed · 4 of 5 right";
+5. [path.test-out] → answer two wrong, eight right → Expect "Checkpoint passed · 8 of 10 right";
    [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked, except
    "Sell it and read the result": still a padlock until "Buy your first coin" is done (2026-11-17).
 6. A fresh account with Lessons 1–3 done: **Start** on "Buy your first coin" and a padlock on "Sell it and read the
@@ -394,7 +394,7 @@ the analogy, and the math's steps (a sum wraps under its label on a narrow phone
    With no Bitcoin held (sold from Assets first, or the tour started from a failed checkpoint's **Review**): the
    second bubble shows "Open the Assets tab to find your Bitcoin. None there? You need some to sell: do “Buy your
    first coin” on the learning map first, then come back to this lesson." and no ring.
-8. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
+8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen), **Back to the path** full width and **Try again** under it.
 
 **Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,

@@ -22,6 +22,8 @@ interface BoardFooterProps {
   explain: string;
   /** "Try again" after a wrong check: the board empties itself, then the lesson clears the answer */
   onRetry?: () => void;
+  /** The answer was shown after three wrong checks (owner 2026-11-18) */
+  revealed?: boolean;
 }
 
 export function BoardFooter({
@@ -32,6 +34,7 @@ export function BoardFooter({
   revisitLabel,
   explain,
   onRetry,
+  revealed,
 }: BoardFooterProps) {
   const answered = right !== undefined;
   return (
@@ -48,7 +51,9 @@ export function BoardFooter({
         </button>
       )}
       {revisit && <p className={styles.explain}>{revisitLabel}</p>}
-      {right !== undefined && <AnswerResult right={right} explain={explain} onRetry={onRetry} />}
+      {right !== undefined && (
+        <AnswerResult right={right} explain={explain} onRetry={onRetry} revealed={revealed} />
+      )}
     </>
   );
 }

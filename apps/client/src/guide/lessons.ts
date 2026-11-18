@@ -20,7 +20,7 @@ import { plainText, termIds } from '@/learn/terms';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId, PracticeTourId } from './tours';
 
-export const LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
+export const LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02', 'lesson-04'] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
 export function isLessonId(value: string): value is LessonId {
@@ -55,7 +55,11 @@ export type LessonArtId =
   /** Lesson 2, The hash links the chain: blocks carrying the one before's fingerprint */
   | 'hashChain'
   /** Lesson 2, Sealed by hard work: one old number changed, every later block broken */
-  | 'sealBroken';
+  | 'sealBroken'
+  /** Lesson 4 (owner 2026-11-18): Lena the calm investor and Zoe the active trader (Open Peeps, CC0) */
+  | 'friends'
+  | 'lena'
+  | 'zoe';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -87,6 +91,10 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
     'Three blocks in a row: each carries the fingerprint, or hash, of the block before it, which links them into a chain.',
   sealBroken:
     'An old block’s number is changed from 5 to 9, so its fingerprint changes and the blocks after it no longer match: each must be redone.',
+  friends:
+    'Lena, a calm long-term investor, holding a mug; Zoe, an active trader, looking at her phone.',
+  lena: 'Lena, a calm long-term investor, holding a mug.',
+  zoe: 'Zoe, an active trader, looking at her phone.',
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -293,7 +301,20 @@ export interface CanDo {
  * `pairs` term with its meaning. Those two have no `options` (their `correct` is 0): the stored
  * answer is `correct` when every slot or pair was right, -1 otherwise.
  */
-export type QuestionFormat = 'choice' | 'buy-sell' | 'order' | 'match';
+export type QuestionFormat = 'choice' | 'buy-sell' | 'order' | 'match' | 'pick' | 'draw';
+
+/** The icons a Pick-the-right tile can carry (Phosphor duotone, mapped in `PickQuiz.tsx`) */
+export type TileIcon = 'calendar' | 'pie' | 'calm' | 'repeat' | 'lightning' | 'eye';
+
+/** A day's close on the chart, where a drawn line should start or end */
+export interface DrawPoint {
+  /** YYYY-MM-DD (UTC), the candle */
+  date: string;
+  /** Its close, the price the line is checked against */
+  price: number;
+  /** The pin's words ("Buy"), read out to keyboard users */
+  label: string;
+}
 
 export interface LessonQuestion {
   /** Default `choice` */
@@ -304,6 +325,19 @@ export interface LessonQuestion {
   steps?: string[];
   /** Match boxes: each term with its meaning (the meanings are shown shuffled) */
   pairs?: { term: string; meaning: string }[];
+  /**
+   * Pick the right ones (owner's visual Q&A 2026-11-18): a 2 × 3 grid of tiles; the learner picks
+   * exactly the tiles marked `right` (their number is the question's `pickCount`). No `options`.
+   */
+  tiles?: { label: string; icon: TileIcon; right: boolean }[];
+  /**
+   * Draw a line (owner's visual Q&A 2026-11-18): one freehand line over the question's `chart`,
+   * from the buy to the sell. Graded against the two points (their dated close prices); the dotted
+   * model path is the closes between them. No `options`.
+   */
+  draw?: { buy: DrawPoint; sell: DrawPoint; hint: string };
+  /** A picture above the question (owner 2026-11-18: Lena or Zoe on their quiz) */
+  art?: LessonArtId;
   question: string;
   /** A short context line above the question (a headline, a situation) */
   context?: string;
@@ -327,8 +361,8 @@ export interface Lesson {
   /** "Try it": a tour on the real screen (desktop), or an interactive piece inside the sheet */
   tour?: TourId;
   tryWidget?: WidgetId;
-  /** What the learner will do in "Try it", on the screen before it */
-  tryIntro: string;
+  /** What the learner will do in "Try it", on the screen before it (none: a lesson with no practice) */
+  tryIntro?: string;
   cards: LessonCard[];
   /** The mid-lesson moment: a question where the honest answer is the praised one */
   moment: LessonQuestion;
@@ -1312,7 +1346,251 @@ const lesson02: Lesson = {
   access: FREE,
 };
 
-export const LESSONS: readonly Lesson[] = [lesson01, lessonOwnership, lesson02];
+// ─── Lesson 4 — Trader or investor? Find your style ──────────────────────────
+// Owner 2026-11-18: the topic's fourth lesson, placed after the practical stops. Our own examples,
+// computed from Bybit BTCUSDT perpetual daily candles (UTC closes, fetched and fact-checked
+// 2026-11-18, guided-learning-topics notes 18). Lena and Zoe are our own pair (Open Peeps, CC0).
+
+// The traced trade: bought at the 8 Apr 2025 close 76,286.90, sold at the 22 Apr close 93,400.00
+// (+22%); the pullback on 10 Apr closed 79,557.50 after 82,593.90 (−3.7%)
+const TRACE_2025: ChartScene = {
+  symbol: 'BTCUSDT',
+  end: '2025-04-24',
+  bars: 24,
+  markers: [],
+  label:
+    'Bitcoin perpetual daily candles from 1 to 24 April 2025: a dip to 8 April, a rise to 22 April.',
+  fallback: 'swings',
+};
+
+// A trader's day: 22 Apr 2025, low 87,013.60, high 94,000.00 (6,986.40, +8.03% of the low)
+const TRADER_DAY_2025: ChartScene = {
+  symbol: 'BTCUSDT',
+  end: '2025-04-24',
+  bars: 14,
+  markers: [
+    { date: '2025-04-22', text: 'High $94,000.00', position: 'above' },
+    { date: '2025-04-22', text: 'Low $87,013.60', position: 'below' },
+  ],
+  label:
+    'Bitcoin perpetual daily candles from 11 to 24 April 2025: on 22 April the price ran from $87,013.60 up to $94,000.00 in one day.',
+  fallback: 'swings',
+};
+
+// An investor's year: close 69,495.50 on 1 Nov 2024, 110,046.00 on 1 Nov 2025 (+40,550.50, +58.35%)
+const INVESTOR_YEAR: ChartScene = {
+  symbol: 'BTCUSDT',
+  end: '2025-11-01',
+  bars: 366,
+  markers: [
+    { date: '2024-11-01', text: '$69,495.50', position: 'below' },
+    { date: '2025-11-01', text: '$110,046.00', position: 'above' },
+  ],
+  label:
+    'Bitcoin perpetual daily candles from 1 November 2024 to 1 November 2025: from $69,495.50 up to $110,046.00.',
+  fallback: 'swings',
+};
+
+const lesson04: Lesson = {
+  id: 'lesson-04',
+  number: 4,
+  title: 'Trader or investor? Find your style',
+  stage: 'Getting started',
+  minutes: 8,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // No practice trade here, so no Try it screen (owner 2026-11-18)
+  cards: [
+    {
+      title: 'Two paths, one goal',
+      art: 'swings',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Crypto can be fast and exciting, but people use it in two different ways. Some jump in and out of trades to catch short moves. Others buy and hold for a long time. Today you’ll see the difference and find the style that fits you.',
+    },
+    {
+      title: 'What trading is',
+      art: 'candleAnatomy',
+      presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
+      text: '**Trading** means buying and selling to profit from short moves. Think in minutes, hours or days. Traders watch charts, prices and news. It’s fast and hands-on, and it’s risky: you can lose money as fast as you can make it.',
+    },
+    {
+      title: 'Trace a trade',
+      quiz: {
+        format: 'draw',
+        chart: TRACE_2025,
+        draw: {
+          buy: { date: '2025-04-08', price: 76_286.9, label: 'Buy' },
+          sell: { date: '2025-04-22', price: 93_400, label: 'Sell' },
+          hint: 'Start at the candle for 8 April and end at the candle for 22 April. The price is the day’s close.',
+        },
+        question:
+          'Here’s a real trade on Bitcoin. A trader bought at the close on 8 April 2025, held through a pullback, and sold at the close on 22 April. Draw one line from the buy to the sell, following the price.',
+        options: [],
+        correct: 0,
+        explain:
+          'A trade is a path: the buy, the days you hold, and the sell. The hard part is the pullback in the middle: on 10 April the price slipped back about 4% in a day, and holding through it takes a plan.',
+      },
+    },
+    {
+      title: 'What investing is',
+      art: 'threePaths',
+      presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
+      text: '**Investing** means buying and holding for months or years, hoping the value grows. Investors don’t chase every move. They look at the big picture: new technology, how many people use a coin, and the slow cycles of the market. No gain is certain.',
+    },
+    {
+      title: 'The split in one line',
+      art: 'swings',
+      presenter: { who: 'tick', mood: 'grin', pose: 'point' },
+      lines: [
+        { speaker: 'tick', text: 'Traders hunt quick gains and react fast.' },
+        { speaker: 'tock', text: 'Investors wait for growth and stay calm.' },
+        { speaker: 'tick', text: 'Both can win. Both can lose.' },
+        { speaker: 'tock', text: 'Their styles are just very different.' },
+      ],
+    },
+    {
+      title: 'Two ways to study',
+      art: 'checkCoin',
+      presenter: { who: 'tock', mood: 'curious', pose: 'point' },
+      text: 'Traders mostly use technical analysis (many also read the news): studying charts and indicators. Investors lean on fundamental analysis: what a project is for, who builds it, and how the coin works behind the scenes.',
+    },
+    {
+      title: 'How traders pick',
+      art: 'candleAnatomy',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'A trader picks coins by speed and pattern. A coin that moves a lot, or shows a clear pattern on its chart, gets attention. The trader cares more about how a coin moves than about what it is.',
+    },
+    {
+      title: 'How investors pick',
+      art: 'checkCoin',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
+      text: 'Investors often spread their money across several coins, for example Bitcoin and Ether, so one bad coin doesn’t sink everything. It helps, but it isn’t a shield: crypto coins often move together, so in a big crash many fall at once.',
+    },
+    {
+      title: 'Investor habits',
+      quiz: {
+        format: 'pick',
+        question: 'Pick the three habits of a long-term investor.',
+        tiles: [
+          { label: 'Holds for years', icon: 'calendar', right: true },
+          { label: 'Buys and sells every day', icon: 'repeat', right: false },
+          { label: 'Spreads money across coins', icon: 'pie', right: true },
+          { label: 'Chases the fastest mover', icon: 'lightning', right: false },
+          { label: 'Stays calm in price swings', icon: 'calm', right: true },
+          { label: 'Watches the chart all day', icon: 'eye', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Investors hold for years, spread their money and stay calm. The other three are typical trader habits.',
+      },
+    },
+    {
+      title: 'On to real numbers',
+      art: 'swings',
+      presenter: { who: 'tick', mood: 'wink', pose: 'wave' },
+      text: 'Nice work. Now let’s put numbers on the two styles, using real Bitcoin days, so you can compare them side by side.',
+    },
+    {
+      title: 'A trader’s day',
+      chart: TRADER_DAY_2025,
+      presenter: { who: 'tick', mood: 'smile', pose: 'stand' },
+      text: 'On 22 April 2025, Bitcoin traded between **$87,013.60** and **$94,000.00** in one day. A trader with perfect timing, buying the low and selling the high, would have made about **8%**. But nobody knows the low or the high in advance, so real trades earn less, and can lose.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'The rise', sum: '94,000.00 − 87,013.60 = 6,986.40' },
+          { label: 'Divide by the low', sum: '6,986.40 ÷ 87,013.60 = 0.0803' },
+          { label: 'As a percent', sum: '0.0803 × 100 = 8.03%' },
+        ],
+        answer: 'About **8%** in one day, seen in hindsight.',
+      },
+    },
+    {
+      title: 'An investor’s year',
+      chart: INVESTOR_YEAR,
+      presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
+      text: 'An investor who bought Bitcoin on 1 November 2024 at **$69,495.50** and held for a year saw it close at **$110,046.00** on 1 November 2025. No trades, just waiting. But holding carries risk too: Bitcoin has fallen far below past prices before, and another year could end lower. These two days were picked in hindsight.',
+      math: {
+        who: 'tock',
+        steps: [
+          { label: 'The rise', sum: '110,046.00 − 69,495.50 = 40,550.50' },
+          { label: 'Divide by the start', sum: '40,550.50 ÷ 69,495.50 = 0.5835' },
+          { label: 'As a percent', sum: '0.5835 × 100 = 58.35%' },
+        ],
+        answer: 'About **58%** in one year, seen in hindsight.',
+      },
+    },
+    {
+      title: 'What it means',
+      art: 'threePaths',
+      presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
+      text: 'Trading can move faster, in both directions, and needs good timing and steady nerves. Investing needs patience and means fewer decisions, and it carries risk too. Neither is better. The right one depends on your time, your nerves and your goals.',
+    },
+    {
+      title: 'Meet Lena and Zoe',
+      art: 'friends',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Meet my friends Lena and Zoe. Both want to grow their money, but they work very differently. Let’s see which style fits each of them.',
+    },
+    {
+      title: 'What suits Lena?',
+      quiz: {
+        art: 'lena',
+        context:
+          'Lena is a nurse on long shifts. She checks her accounts once a week, dislikes big risks, and wants her money to grow slowly over many years.',
+        question: 'Which style fits Lena?',
+        options: ['Investing', 'Trading'],
+        correct: 0,
+        explain:
+          'Investing. Lena has little time, wants low stress and can wait years. Those are an investor’s strengths.',
+      },
+    },
+    {
+      title: 'What suits Zoe?',
+      quiz: {
+        art: 'zoe',
+        context:
+          'Zoe designs apps and enjoys charts. She checks the market every morning, decides fast, and accepts more risk for the chance of quicker gains.',
+        question: 'Which style fits Zoe?',
+        options: ['Trading', 'Investing'],
+        correct: 0,
+        explain:
+          'Trading. Zoe has time for charts, likes quick decisions and accepts the risk. Fast trading can also mean fast losses, so she needs a plan for every trade.',
+      },
+    },
+  ],
+  // Your call follows the two friends' quizzes (the last card): the honest answer is the praised one
+  moment: {
+    context:
+      'A friend says: “Trading is for the clever ones, investing is for the boring ones. So which is better?”',
+    question: 'What’s the honest answer?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Trading is better',
+      'Investing is better',
+      'It depends on you: your time, your nerves and your goals',
+    ],
+    correct: 2,
+    explain:
+      'Neither is better for everyone. Trading suits people with time, quick nerves and a plan for losses. Investing suits people who can wait and stay calm. Your style can change, and on paper you can try both with no real money.',
+  },
+  checks: [],
+  notePrompt: 'Which style sounds more like you, and why?',
+  canDo: [],
+  recap: {
+    title: 'Trader or investor',
+    points: [
+      { text: 'Trading means short moves: it needs timing and carries risk.' },
+      { text: 'Investing means long holds: it needs patience and carries risk too.' },
+      { text: 'Spreading money helps, but it isn’t a shield.' },
+      { text: 'Neither is better: choose by your time, your nerves and your goals.' },
+    ],
+    highlight: { text: 'Pick the style that fits your life, not the one that sounds exciting.' },
+  },
+  access: FREE,
+};
+
+export const LESSONS: readonly Lesson[] = [lesson01, lessonOwnership, lesson02, lesson04];
 
 export function getLesson(id: LessonId): Lesson {
   const lesson = LESSONS.find((l) => l.id === id);
@@ -1397,7 +1675,8 @@ export function lessonScreens(lesson: Lesson): LessonScreen[] {
     ...cards.slice(0, split),
     { kind: 'moment' as const },
     ...cards.slice(split),
-    { kind: 'try' as const },
+    // A lesson with no practice (Lesson 4, owner 2026-11-18) has no Try it screen
+    ...(lesson.tour || lesson.tryWidget ? [{ kind: 'try' as const }] : []),
     ...lesson.checks.map((_, index) => ({ kind: 'check' as const, index })),
     // Owner 2026-11-08: the summary, then the end with the journal line, the rating and the way on
     { kind: 'summary' as const },

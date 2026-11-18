@@ -73,6 +73,7 @@ export const LEARN_ITEM_IDS = [
   'lesson-01',
   'lesson-ownership',
   'lesson-02',
+  'lesson-04',
   // A chapter's checkpoint on the learning path: passed, it opens the next chapter
   'checkpoint-ch1',
 ] as const;
@@ -86,7 +87,7 @@ export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
  * so its earlier passes no longer count
  */
 export const CHECKPOINT_VERSIONS = {
-  'checkpoint-ch1': 2,
+  'checkpoint-ch1': 3,
 } as const;
 
 /**
@@ -107,6 +108,7 @@ export const LESSON_FIRST_STEPS = {
   'lesson-01': 61,
   'lesson-ownership': 61,
   'lesson-02': 61,
+  'lesson-04': 61,
 } as const;
 
 /**

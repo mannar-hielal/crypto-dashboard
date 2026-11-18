@@ -1,6 +1,6 @@
 ---
 name: lesson-authoring
-description: "Use when writing or rewriting a guided lesson (cards, quizzes, the 'Your call' moment, Try it) for cryptopapertrade.com's learning path, benchmarked against a reference course (its screenshots and the comparison files live in the git-ignored guided-learning-topics/). Covers: same concepts and a similar length, never paraphrased text; the beginner tone; quiz formats (multiple choice, drag and drop, choose buy or sell, match boxes); practice paper trades from a card and the look at what just happened; the one label set (Continue, Back, Finish lesson); Try again until right; the math breakdown and the analogy (a guide in glasses); pictures on top; linking terms to articles; the technical-writer fact check; illustrations; the learning path's order; lessons.ts rules, tests and docs. Trigger words: write a lesson, new card, rewrite Lesson N, match the benchmark, compare lessons, lesson quiz, drag and drop, buy or sell quiz, match boxes, lesson coverage, fact check a lesson, lesson illustration, path order, new unit, practice trade, paper trade from the lesson, try it on the chart, do the math, percent, analogy, glasses, try again, button label."
+description: "Use when writing or rewriting a guided lesson (cards, quizzes, the 'Your call' moment, Try it) for cryptopapertrade.com's learning path, benchmarked against a reference course (its screenshots and the comparison files live in the git-ignored guided-learning-topics/). Covers: same concepts and a similar length, never paraphrased text; the beginner tone; quiz formats (multiple choice, drag and drop, choose buy or sell, match boxes); practice paper trades from a card and the look at what just happened; the one label set (Continue, Back, Finish lesson); Try again until right; the math breakdown and the analogy (a guide in glasses); pictures on top; linking terms to articles; the technical-writer fact check; illustrations; the learning path's order; lessons.ts rules, tests and docs. Trigger words: write a lesson, new card, rewrite Lesson N, match the benchmark, compare lessons, lesson quiz, drag and drop, buy or sell quiz, match boxes, lesson coverage, fact check a lesson, lesson illustration, path order, new unit, practice trade, paper trade from the lesson, try it on the chart, do the math, percent, analogy, glasses, try again, button label, draw a line, chart practice, freehand, trash button, bull, bear, human characters, the friends."
 ---
 
 # Lesson authoring — cryptopapertrade.com
@@ -62,15 +62,19 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
 
 ## Inputs
 
-1. The comparison file for the lessons, `guided-learning-topics/notes/10-…-vs-cpt-lessons-1-3.md`
-   (git-ignored):
-   - **Table 1** — the benchmark's screens and our cards side by side, per lesson, numbered rows (1.01 …).
-   - **Table 2** — the merged plan: one row per topic, with the owner's **take / drop / rewrite**
+1. The comparison file for the lesson or checkpoint being written, in the git-ignored
+   `guided-learning-topics/notes/` (made per "Benchmark screenshots" below). Chapter 1 is finished
+   (2026-11-18) and its notes were cleared, so each new chapter starts from an empty `notes/`:
+   - **Table 1** — the benchmark's screens and our cards side by side, numbered rows (N.01 …).
+   - **Table 2** — the topics, one row each, with the owner's **take / drop / rewrite**
      instruction. **This drives the work.** Rows with an empty instruction are not started: list them
      and ask.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
-   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3).
+   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4). The chapter's
+   checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
+   a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
+   `CHECKPOINT_VERSION` (server).
 
 ## Benchmark screenshots: where they live (owner 2026-11-14)
 
@@ -91,9 +95,8 @@ guided-learning-topics/
 - Screenshots sort by filename into screen order (the macOS `Screenshot <date> at <time>.png` names
   do this). Don't rename them.
 - When a new lesson folder appears, the first step is its comparison, before any writing: a new
-  file in `guided-learning-topics/notes/`, next to the Lessons 1–3 comparison (number 10), with
-  the next free number in `notes/` (e.g. 12 for Lesson 4; 11 is the makeover plan). Comparisons and
-  plans live in `notes/` so their numbers never mix with the unit folders' numbers. The file has
+  file in `guided-learning-topics/notes/` with the next free number (numbers start at 10 and
+  count up across chapters). Comparisons and plans live in `notes/` so their numbers never mix with the unit folders' numbers. The file has
   the same two tables. Table 1 has the benchmark's screens (transcribed for the owner's reference
   only) beside our nearest content. Table 2 has the topics, with the owner's instruction column left
   empty. Then wait for the owner's Table 2 instructions.
@@ -117,13 +120,10 @@ guided-learning-topics/
    - which concepts each screen covers (every _take_ concept appears at least once).
    - the practice trades offered: each card whose concept is a buy, sell, long or short, and the
      tour it starts (see "Practise it for real" below).
-   - **Length vs the current caps.** `lessons.test.ts` allows at most six teaching cards of at most
-     80 words, two or three questions, at most two `[[terms]]` a card. A benchmark-length lesson
-     (~23–25 screens) doesn't fit. **Lessons 1–3:** the owner chose to raise the caps (2026-11-16) to
-     about 16 teaching cards and up to 6 quizzes. **Not done yet:** `lessons.test.ts` still allows 6
-     teaching cards and 3 checks; raising them, with the decision and date in the test, is the
-     makeover's first platform step.
-     **Later lessons:** don't silently go past the caps: offer the owner the choice for that lesson
+   - **Length vs the current caps.** `lessons.test.ts` allows at most 16 teaching cards of at most
+     80 words, up to six questions (at most three of them `checks`), at most two `[[terms]]` a card
+     (raised by the owner, 2026-11-16, to fit a benchmark-length lesson of ~23–25 screens).
+     **Beyond that:** don't silently go past the caps: offer the owner the choice for that lesson
      — raise them, or split the topic into two lessons. A new lesson id must be added everywhere
      that checks it, in the same change: `LESSON_IDS` (client), the path (`learn/path.ts`), the
      server's `LEARN_LESSON_IDS` (with `LEARN_TOUR_IDS` it builds `LEARN_EVENT_ITEM_IDS`, which the
@@ -194,6 +194,33 @@ trust), and list in the report to the owner which were applied and which decline
      `README` beside the files, and each asset's source in a code comment where it's used.
 - Never use the benchmark's illustrations, or trace or redraw them.
 
+### Human characters: a fresh pair (owner 2026-11-18)
+
+Where the benchmark shows a **human pair** on a card (e.g. two people with opposite money styles
+for a trading-versus-investing comparison), our lesson uses **our own human pair**, not Pulin and
+Berwyn. Everywhere else the guides stay.
+
+- **Two female friends**, in the same teaching roles as the benchmark's pair: one calm, long-term
+  **investor** (relaxed pose, glasses), one active, tech-using **trader** (laptop, on the move).
+  The owner asked for the same _look types_; keep to the type only, and make everything else ours:
+  different faces, hair, clothes, colours, poses and props. Never trace or redraw the benchmark's
+  characters (see "Hard rule: benchmark, never copy").
+- **The pair (owner approved 2026-11-18):** every lesson reuses the same two people (same names,
+  roles and look):
+  - **Lena**, 38, a nurse: the calm, long-term **investor** (glasses, relaxed pose).
+  - **Zoe**, 34, an app designer: the active **trader** (laptop, on the move).
+  - They were flatmates at university.
+- **Art:** **Open Peeps** (Pablo Stanley, CC0: "Free for commercial and personal use under CC0
+  License", recolouring invited; checked on openpeeps.com 2026-11-18), chosen by the owner
+  2026-11-18. **No file is added yet:** before adding any, build a sample of Lena and Zoe on our
+  dark theme for the owner's visual Q&A, then follow the five steps above (copy the SVG parts into
+  `apps/client/src/assets/illustrations/open-peeps/`, recolour to our tokens, record the library in
+  `docs/APP_LOG.md` and a README beside the files). Until then, a card that needs the pair is
+  written with a placeholder and flagged in the report.
+- **Bull and bear roles:** when a card needs the two market moods, **Pulin plays the bull** (the
+  optimist) and **Berwyn the bear** (the cautious one). The spelling is "Berwyn" (owner
+  2026-11-18). The human pair is for people's styles, not for the bull and the bear.
+
 ## The learning path (owner 2026-11-14)
 
 - **What's approved (owner, 2026-11-14):** until the owner has placed our practical lessons (the
@@ -241,7 +268,8 @@ rewritten, and to quizzes, Whys, summaries and titles.
   card.
 
 - Two guides present: Pulin (`tick`, asks the questions a beginner is too polite to ask) and Berwyn
-  (`tock`, answers them, usually). A card has `text` (may hold `[[terms]]`), or `lines` (a short
+  (`tock`, answers them, usually). When a card needs the bull and the bear, Pulin is the bull and
+  Berwyn the bear (owner 2026-11-18). A card has `text` (may hold `[[terms]]`), or `lines` (a short
   exchange), or `beats` (a cold open), plus a `presenter` or a real `photo` (with its `credit`).
 - Short: one idea per card.
 - **One label set** (owner 2026-11-17): the main button always says **Continue**, the back link
@@ -283,12 +311,14 @@ rewritten, and to quizzes, Whys, summaries and titles.
 
 ## Quiz formats
 
-| Format             | Use for                                                     | Status                                             |
-| ------------------ | ----------------------------------------------------------- | -------------------------------------------------- |
-| Multiple choice    | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)      |
-| Choose buy or sell | read a situation or a chart, pick Buy or Sell, then the Why | designed 2026-11-16 (visual Q&A done); being built |
-| Drag and drop      | put steps in order, or items into the right slot            | new widget                                         |
-| Match boxes        | connect terms to meanings, two columns                      | new widget                                         |
+| Format              | Use for                                                     | Status                                             |
+| ------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| Multiple choice     | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)      |
+| Choose buy or sell  | read a situation or a chart, pick Buy or Sell, then the Why | designed 2026-11-16 (visual Q&A done); being built |
+| Drag and drop       | put steps in order, or items into the right slot            | new widget                                         |
+| Match boxes         | connect terms to meanings, two columns                      | new widget                                         |
+| Draw a line         | trace a path, trend or level with one freehand line         | built 2026-11-18: `DrawQuiz` (`format: 'draw'`)    |
+| Pick the right ones | choose exactly N of 6 icon tiles                            | built 2026-11-18: `PickQuiz` (`format: 'pick'`)    |
 
 - Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
   2026-11-13); the chosen option is already marked.
@@ -297,6 +327,19 @@ rewritten, and to quizzes, Whys, summaries and titles.
   again** button (`lesson.retry`) clears the answer and empties the board; Continue shows only once
   the answer is right. Back off a wrong answer clears it too. Checkpoints keep their scored, one-go
   answers.
+- **After three "Not quite." the right answer is shown** (owner 2026-11-18), on every lesson question
+  (all formats, the draw card and Your call included): the third wrong check doesn't offer another
+  Try again. It marks the right answer for the learner (the right option, the right order or pairs,
+  the right tiles, Buy or Sell, the model path drawn on the chart), keeps the Why, and unlocks
+  Continue, so nobody is stuck. The three count per visit to that card (Try again keeps the count;
+  going Back and returning starts it again), and the lesson counts a revealed answer as
+  answered: it keeps no per-question score (an answer only gates Continue), so a revealed answer and
+  a right one look alike, and coming back to the card shows a plain "Right.". Checkpoints stay scored and one-go, with no reveal.
+  - **Say so kindly:** "That's three tries. Here is the answer." then the Why. Never "you failed".
+  - **Status (2026-11-18):** built for the draw card only (`DrawQuiz`: `MAX_MISSES`, `AnswerResult`'s
+    `revealed`). The other boards (`QuestionView`, `OrderQuiz`, `MatchQuiz`, `BuySellView`,
+    `PickQuiz`) still offer Try again without end; give each its reveal the same way (its own right
+    answer marked, the Why, no Try again) when the owner asks.
 - Every quiz has a Why that teaches, not only "correct".
 - A buy-or-sell quiz never rewards guessing a price direction: the right answer follows from a stated
   plan or rule in the situation (the same honesty rule as "Your call").
@@ -340,6 +383,34 @@ Later lessons reuse this design as it is; no new visual Q&A unless it changes.
 - **Access:** two real buttons in tab order with the focus ring; arrow keys move between them;
   screen readers hear the chart's label, the plan, then Buy / Sell; the result is announced
   (`role="status"`); reduced motion skips the reveal animation.
+
+### Draw a line: the decided design (owner 2026-11-18)
+
+Whenever a lesson step asks the learner to **draw** (trace a trade's path from buy to sell, a trend,
+a level), it is a draw-a-line card. Don't turn it into a multiple-choice question about the chart.
+
+- **One freehand line per card**, drawn over our own chart (`ChartScene`, real BTCUSDT history, dated
+  candles). A **trash button clears the whole line** so the learner can redraw; there is no
+  per-stroke undo.
+- **Graded against an expected path** (owner 2026-11-18). The card's data holds the expected path
+  (e.g. the buy candle, the sell candle and the direction between) and a tolerance. Check turns on
+  once there is a line. A line that fits gets "Right." and our model path drawn beside theirs; one
+  that doesn't gets "Not quite.", a kind Why, and **Try again** (the line is cleared), as for every
+  quiz above. After the third "Not quite." our model path is drawn for them instead (the rule
+  above), with the Why.
+- **"Stuck? Use a hint"** link under the chart: the hint names where the path starts and ends
+  (the dated candles), never the shape to copy.
+- Every figure and date comes from the card's own candles (noted in a code comment), recomputed
+  when written. Our own title and wording: never the benchmark's.
+- The card follows the same rules as the other quizzes: picture on top, text below, the one label
+  set, at most 80 words.
+- **Access:** pointer events (mouse, touch and pen); a keyboard / screen-reader way to place the
+  start and end points; reduced motion skips any animation. The exact fallback is settled in the
+  visual Q&A.
+- **Status:** built 2026-11-18 (`guide/DrawQuiz.tsx`, `drawGrade.ts`; Lesson 4's "Trace a trade").
+  A card sets `format: 'draw'`, a `chart` with no markers, and `draw: { buy, sell, hint }` (each a
+  dated close); `options: []`, `correct: 0`. The visual Q&A is done, so later lessons reuse it as
+  it is. The keyboard way (arrow keys and Enter for the buy and the sell) is built in.
 
 ## Practise it for real: a paper trade from the lesson (owner 2026-11-16)
 
@@ -498,3 +569,16 @@ with paper money, and then picks up where it left off.
 - Practice trades offered: the card, the concept (buy, sell, long, short, close) and the tour.
 - Terms linked (concept → article) and proposed new articles.
 - Any Table 2 instruction declined under the IP rule, and the alternative offered.
+
+## Pick the right ones: the decided design (owner 2026-11-18)
+
+A card that asks the learner to **choose several of a list** (traits, habits, signs) is a Pick card, not
+a multiple-choice question with many answers.
+
+- `format: 'pick'`, `tiles: [{ label, icon, right }]` (4–6 tiles, at least two right and one wrong;
+  six lays out as 2 × 3), `options: []`, `correct: 0`. The question text names how many to pick.
+- Each tile has a Phosphor duotone icon (`TileIcon` in `lessons.ts`; add a name and its icon in
+  `PickQuiz.tsx` for a new one) and a few words. A tapped tile gets a purple outline; "Picked 2 of 3"
+  counts; Check turns on at exactly the number right; a third pick is refused until one is unpicked.
+- After Check each picked tile shows ✓ or ✕ (never colour alone), then "Right." / "Not quite." and the
+  Why, then Try again, as for every quiz. Keyboard: Tab to a tile, Space toggles.

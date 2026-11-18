@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MatchQuiz } from '@/guide/MatchQuiz';
 import { OrderQuiz } from '@/guide/OrderQuiz';
+import { PickQuiz } from '@/guide/PickQuiz';
 import { shuffledOrder, type LessonQuestion } from '@/guide/lessons';
 import { guideSelector } from '@/lib/guideAnchors';
 
@@ -272,5 +273,97 @@ describe('Try again on the boards', () => {
   it('should never show the right pairs on a board shown again after a wrong check', () => {
     render(<MatchQuiz q={match} answer={-1} onAnswer={() => {}} />);
     expect(screen.queryByText('The right pairs:')).toBeNull();
+  });
+});
+
+// ─── Pick the right ones (owner 2026-11-18) ──────────────────────────────────
+
+const pick: LessonQuestion = {
+  format: 'pick',
+  question: 'Pick the two that are fruit.',
+  tiles: [
+    { label: 'Apple', icon: 'calendar', right: true },
+    { label: 'Brick', icon: 'repeat', right: false },
+    { label: 'Pear', icon: 'pie', right: true },
+    { label: 'Chair', icon: 'lightning', right: false },
+  ],
+  options: [],
+  correct: 0,
+  explain: 'Apples and pears are fruit.',
+};
+
+describe('PickQuiz (Pick the right ones)', () => {
+  it('should allow Check only at exactly the number to pick, and refuse a third tile', () => {
+    render(<PickQuiz q={pick} answer={undefined} onAnswer={() => {}} />);
+    expect(checkButton().disabled).toBe(true);
+    fireEvent.click(el('lesson.pick-tile', 0));
+    expect(screen.getByText('Picked 1 of 2')).toBeTruthy();
+    expect(checkButton().disabled).toBe(true);
+    fireEvent.click(el('lesson.pick-tile', 2));
+    expect(checkButton().disabled).toBe(false);
+    fireEvent.click(el('lesson.pick-tile', 1));
+    expect(el('lesson.pick-tile', 1).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('Picked 2 of 2')).toBeTruthy();
+  });
+
+  it('should let a picked tile be tapped again to unpick it', () => {
+    render(<PickQuiz q={pick} answer={undefined} onAnswer={() => {}} />);
+    fireEvent.click(el('lesson.pick-tile', 0));
+    fireEvent.click(el('lesson.pick-tile', 0));
+    expect(el('lesson.pick-tile', 0).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('should answer the correct answer when the picks are the right tiles, and -1 otherwise', () => {
+    const onAnswer = vi.fn();
+    const { unmount } = render(<PickQuiz q={pick} answer={undefined} onAnswer={onAnswer} />);
+    fireEvent.click(el('lesson.pick-tile', 0));
+    fireEvent.click(el('lesson.pick-tile', 2));
+    fireEvent.click(checkButton());
+    expect(onAnswer).toHaveBeenLastCalledWith(0);
+    unmount();
+    render(<PickQuiz q={pick} answer={undefined} onAnswer={onAnswer} />);
+    fireEvent.click(el('lesson.pick-tile', 0));
+    fireEvent.click(el('lesson.pick-tile', 1));
+    fireEvent.click(checkButton());
+    expect(onAnswer).toHaveBeenLastCalledWith(-1);
+  });
+
+  it('should mark each pick ✓ or ✕ in words, say "Not quite.", and offer Try again that clears the picks', () => {
+    const onRetry = vi.fn();
+    function Harness() {
+      const [answer, setAnswer] = useState<number | undefined>(undefined);
+      return (
+        <PickQuiz
+          q={pick}
+          answer={answer}
+          onAnswer={setAnswer}
+          onRetry={() => {
+            setAnswer(undefined);
+            onRetry();
+          }}
+        />
+      );
+    }
+    render(<Harness />);
+    fireEvent.click(el('lesson.pick-tile', 0));
+    fireEvent.click(el('lesson.pick-tile', 1));
+    fireEvent.click(checkButton());
+    expect(status()).toContain('Not quite.');
+    expect(status()).toContain('Apples and pears are fruit.');
+    expect(el('lesson.pick-tile', 0).getAttribute('aria-label')).toBe('Apple, right');
+    expect(el('lesson.pick-tile', 1).getAttribute('aria-label')).toBe('Brick, not quite');
+    expect(el('lesson.pick-tile', 0).disabled).toBe(true);
+    fireEvent.click(screen.getByText('Try again'));
+    expect(onRetry).toHaveBeenCalled();
+    expect(el('lesson.pick-tile', 0).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('Picked 0 of 2')).toBeTruthy();
+  });
+
+  it('should show the right tiles, unmarked, when a right answer is revisited', () => {
+    render(<PickQuiz q={pick} answer={0} onAnswer={() => {}} />);
+    expect(screen.getByText('The right ones:')).toBeTruthy();
+    expect(el('lesson.pick-tile', 0).getAttribute('aria-pressed')).toBe('true');
+    expect(el('lesson.pick-tile', 1).getAttribute('aria-pressed')).toBe('false');
+    expect(status()).toContain('Right.');
   });
 });

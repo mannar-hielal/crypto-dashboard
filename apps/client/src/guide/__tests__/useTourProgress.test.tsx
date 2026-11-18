@@ -98,7 +98,7 @@ describe('useTourProgress', () => {
 
   it('should keep a pass this device still has to save shown when the progress cannot be read', async () => {
     localStorage.clear();
-    queueDone('u1', { itemId: 'checkpoint-ch1', step: 2 });
+    queueDone('u1', { itemId: 'checkpoint-ch1', step: 3 });
     getProgress.mockRejectedValue(new Error('network'));
     renderHook(() => useTourProgress());
     await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
@@ -146,7 +146,7 @@ describe('useTourProgress', () => {
     );
     await waitFor(() =>
       expect(pendingDone('u9')).toEqual([
-        expect.objectContaining({ itemId: 'checkpoint-ch1', step: 2 }),
+        expect.objectContaining({ itemId: 'checkpoint-ch1', step: 3 }),
       ])
     );
     token = 'tok';
@@ -167,7 +167,7 @@ describe('useTourProgress', () => {
 
   it('should drop a kept finish of another version, never showing it done', async () => {
     queueDone('u1', { itemId: 'lesson-01', step: 30 }); // an earlier version's step
-    queueDone('u1', { itemId: 'checkpoint-ch1', step: 1 }); // an earlier question set
+    queueDone('u1', { itemId: 'checkpoint-ch1', step: 2 }); // an earlier question set
     getProgress.mockResolvedValue({ items: [] });
     renderHook(() => useTourProgress());
     await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
@@ -268,7 +268,7 @@ describe('useTourProgress', () => {
       usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
     });
     // With its question set's version (owner 2026-11-17: earlier passes no longer count)
-    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 2);
+    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 3);
     expect(setProgress).toHaveBeenCalledTimes(2);
   });
 
@@ -280,7 +280,7 @@ describe('useTourProgress', () => {
     act(() => {
       usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
     });
-    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 2);
+    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok', 3);
     await act(async () => land({ items: [] }));
     expect(usePathStore.getState().checkpoints['checkpoint-ch1']).toBe(true);
   });

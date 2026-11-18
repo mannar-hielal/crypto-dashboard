@@ -212,13 +212,13 @@ describe('/api/learn/progress', () => {
       method: 'PUT',
       url: '/api/learn/progress/checkpoint-ch1',
       headers: auth(),
-      payload: { status: 'completed', step: 2 }, // its question set's version
+      payload: { status: 'completed', step: 3 }, // its question set's version
     });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().item.itemId).toBe('checkpoint-ch1');
     expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ update: { status: 'completed', step: 2 } })
+      expect.objectContaining({ update: { status: 'completed', step: 3 } })
     );
   });
 
@@ -234,7 +234,7 @@ describe('/api/learn/progress', () => {
       (await put('/api/learn/progress/lesson-01', { status: 'completed', step: 999 })).statusCode
     ).toBe(400);
     expect(
-      (await put('/api/learn/progress/checkpoint-ch1', { status: 'completed', step: 3 })).statusCode
+      (await put('/api/learn/progress/checkpoint-ch1', { status: 'completed', step: 4 })).statusCode
     ).toBe(400);
     expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
     expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
@@ -269,8 +269,10 @@ describe('/api/learn/progress', () => {
     expect((await put({ status: 'completed', step: 1 })).json()).toEqual({
       error: 'An earlier version of this checkpoint',
     });
+    // Version 2 was the five-question set before the finished chapter (owner 2026-11-18)
+    expect((await put({ status: 'completed', step: 2 })).statusCode).toBe(409);
     // Never begun or dismissed
-    expect((await put({ status: 'started', step: 2 })).statusCode).toBe(400);
+    expect((await put({ status: 'started', step: 3 })).statusCode).toBe(400);
     expect((await put({ status: 'dismissed' })).statusCode).toBe(400);
     expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
     expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
@@ -578,7 +580,7 @@ describe('/api/learn/progress', () => {
     // A tab or a cached PWA still on the old Lessons 1–3 can't undo the reset (2026-11-16)
     const put = (url: string, payload: unknown) =>
       app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
-    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02']) {
+    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02', 'lesson-04']) {
       const url = `/api/learn/progress/${id}`;
       expect((await put(url, { status: 'started', step: 21 })).statusCode, id).toBe(409);
       expect((await put(url, { status: 'started', step: 60 })).statusCode, id).toBe(409);

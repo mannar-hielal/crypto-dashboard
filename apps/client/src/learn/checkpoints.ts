@@ -42,9 +42,12 @@ const checkpointCh1: Checkpoint = {
   id: 'checkpoint-ch1',
   // Owner 2026-11-16: our own name (unit 1 is "Start here: crypto and trading basics")
   title: 'Chapter 1 checkpoint',
-  pass: 4,
-  // 2: the Lessons 1–3 rewrite's questions (owner 2026-11-17: earlier passes no longer count)
-  version: 2,
+  // Ten questions, pass at eight (owner 2026-11-18: the length of the benchmark's checkpoint, whose
+  // pass mark isn't shown; 80%, as our five-question set's four)
+  pass: 8,
+  // 3: the finished chapter's ten questions across Lessons 1–4 (owner 2026-11-18: earlier passes no
+  // longer count); 2 was the Lessons 1–3 rewrite's five
+  version: 3,
   access: FREE,
   questions: [
     {
@@ -104,6 +107,66 @@ const checkpointCh1: Checkpoint = {
       explain:
         'Spot charges 0.1% when you buy and again when you sell. The price has to move further than the fees before a trade pays.',
       taughtIn: { kind: 'tour', id: 'sell-and-review' },
+    },
+    {
+      context: 'You expect a coin’s price to fall over the next week.',
+      question: 'Which trade would profit if you’re right?',
+      options: ['Going long', 'Going short', 'Staying out'],
+      correct: 1,
+      explain:
+        'Going short profits when the price falls: you sell first and buy back lower. Going long is the other side: it profits when the price rises.',
+      taughtIn: { kind: 'lesson', id: 'lesson-01' },
+    },
+    {
+      question: 'How is the crypto market different from a shop?',
+      options: [
+        'It is open all day, every day, so prices can move while you sleep',
+        'It closes at night, like a shop',
+        'Only professionals can trade at weekends',
+      ],
+      correct: 0,
+      explain:
+        'Crypto never closes: there is no opening time and no weekend. That’s why a plan, with its exit set in advance, matters.',
+      taughtIn: { kind: 'lesson', id: 'lesson-01' },
+    },
+    {
+      context:
+        'A coin has only a few buyers waiting, far apart in price. One big market sell order (sell at any price) arrives.',
+      question: 'What happens to the price?',
+      options: [
+        'It barely moves',
+        'It jumps down as the order uses up the few buyers',
+        'It rises, because someone is selling',
+      ],
+      correct: 1,
+      explain:
+        'In a thin market the order uses up the nearby buyers and has to reach the ones far below. A deep market, with many buyers close by, absorbs it.',
+      taughtIn: { kind: 'lesson', id: 'lesson-02' },
+    },
+    {
+      context: 'A stranger online says a brand-new coin “can’t lose” and tells you to hurry.',
+      question: 'What’s the smartest first move?',
+      options: [
+        'Buy a little, just to test it',
+        'Borrow money to buy more',
+        'Check who runs it and whether you could sell it',
+      ],
+      correct: 2,
+      explain:
+        'Hurry and “can’t lose” are classic scam warning signs. Before any money moves, check who is behind the coin and whether buyers exist, so you could get out.',
+      taughtIn: { kind: 'lesson', id: 'lesson-02' },
+    },
+    {
+      question: 'Which describes an investor, not a trader?',
+      options: [
+        'Holds for years and ignores daily moves',
+        'Buys and sells several times a day',
+        'Picks the coins that move fastest',
+      ],
+      correct: 0,
+      explain:
+        'Investors hold for a long time, often years, and look at the big picture. Buying and selling often is a trader’s habit, and chasing the fastest movers is usually a short-term, trader-style approach.',
+      taughtIn: { kind: 'lesson', id: 'lesson-04' },
     },
   ],
 };
