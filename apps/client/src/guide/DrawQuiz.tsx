@@ -147,6 +147,8 @@ export function DrawQuiz({
       }
       // After the check the line stays: "Not quite." and "Right." are about it
       if (answeredRef.current) return;
+      // A finger still down ends its stroke: its next moves would be in the new coordinates
+      drawing.current = null;
       setPoints([]);
       setPlaced({});
       setByKeyboard(false);

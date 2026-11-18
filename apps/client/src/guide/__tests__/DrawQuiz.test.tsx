@@ -173,6 +173,29 @@ describe('DrawQuiz (resize)', () => {
     expect(check().disabled).toBe(true);
   });
 
+  it('should end a stroke in progress when the stage is resized, so no stray line restarts', async () => {
+    const fire = stubObserver();
+    await mount();
+    fire(); // the observer's own first call
+    fireEvent.pointerDown(area(), {
+      clientX: 20,
+      clientY: 140,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerMove(area(), { clientX: 100, clientY: 130, pointerId: 1, isPrimary: true });
+    fire(); // a resize with the finger still down
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // The finger keeps moving: nothing is drawn from it any more
+    fireEvent.pointerMove(area(), { clientX: 300, clientY: 100, pointerId: 1, isPrimary: true });
+    fireEvent.pointerMove(area(), { clientX: 400, clientY: 90, pointerId: 1, isPrimary: true });
+    expect(check().disabled).toBe(true);
+    expect(document.querySelectorAll('polyline')).toHaveLength(0);
+  });
+
   it('should keep the line after the check, so the answer’s message still refers to it', async () => {
     const fire = stubObserver();
     function Harness() {
