@@ -100,9 +100,21 @@ describe('DrawQuiz (three tries)', () => {
       await Promise.resolve();
     });
     const wrongLine = () => {
-      fireEvent.pointerDown(area(), { clientX: 20, clientY: 10, pointerId: 1 });
-      fireEvent.pointerMove(area(), { clientX: 440, clientY: 10, pointerId: 1 });
-      fireEvent.pointerUp(area(), { pointerId: 1 });
+      fireEvent.pointerDown(area(), {
+        clientX: 20,
+        clientY: 10,
+        pointerId: 1,
+        isPrimary: true,
+        button: 0,
+      });
+      fireEvent.pointerMove(area(), {
+        clientX: 440,
+        clientY: 10,
+        pointerId: 1,
+        isPrimary: true,
+        button: 0,
+      });
+      fireEvent.pointerUp(area(), { pointerId: 1, isPrimary: true, button: 0 });
       fireEvent.click(check());
     };
     wrongLine();
@@ -122,6 +134,39 @@ describe('DrawQuiz (three tries)', () => {
   });
 });
 
+describe('DrawQuiz (which pointer draws)', () => {
+  const stroke = (init: Record<string, unknown>, to = 200) => {
+    fireEvent.pointerDown(area(), { clientX: 20, clientY: 140, ...init });
+    fireEvent.pointerMove(area(), { clientX: to, clientY: 120, ...init });
+  };
+
+  it('should ignore a right or middle click, which must not start a line', async () => {
+    await mount();
+    stroke({ pointerId: 1, isPrimary: true, button: 2 });
+    stroke({ pointerId: 1, isPrimary: true, button: 1 });
+    expect(check().disabled).toBe(true);
+  });
+
+  it('should ignore a second finger, which must not wipe the line in progress', async () => {
+    await mount();
+    stroke({ pointerId: 1, isPrimary: true, button: 0 });
+    // A second finger lands and moves; the first line stays
+    fireEvent.pointerDown(area(), {
+      clientX: 300,
+      clientY: 10,
+      pointerId: 2,
+      isPrimary: false,
+      button: 0,
+    });
+    fireEvent.pointerMove(area(), { clientX: 310, clientY: 12, pointerId: 2, isPrimary: false });
+    fireEvent.pointerUp(area(), { pointerId: 2, isPrimary: false });
+    // The first finger is still drawing: its line is intact and long enough to check
+    expect(check().disabled).toBe(false);
+    fireEvent.pointerMove(area(), { clientX: 260, clientY: 110, pointerId: 1, isPrimary: true });
+    expect(check().disabled).toBe(false);
+  });
+});
+
 describe('DrawQuiz (Draw a line)', () => {
   it('should show the question, so the learner knows what to draw', async () => {
     await mount();
@@ -130,13 +175,37 @@ describe('DrawQuiz (Draw a line)', () => {
 
   it('should keep Check off for a tap or a tiny scribble, on only once the line runs across', async () => {
     await mount();
-    fireEvent.pointerDown(area(), { clientX: 20, clientY: 140, pointerId: 1 });
-    fireEvent.pointerMove(area(), { clientX: 24, clientY: 141, pointerId: 1 });
-    fireEvent.pointerUp(area(), { pointerId: 1 });
+    fireEvent.pointerDown(area(), {
+      clientX: 20,
+      clientY: 140,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerMove(area(), {
+      clientX: 24,
+      clientY: 141,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerUp(area(), { pointerId: 1, isPrimary: true, button: 0 });
     expect(check().disabled).toBe(true);
-    fireEvent.pointerDown(area(), { clientX: 20, clientY: 140, pointerId: 1 });
-    fireEvent.pointerMove(area(), { clientX: 200, clientY: 120, pointerId: 1 });
-    fireEvent.pointerUp(area(), { pointerId: 1 });
+    fireEvent.pointerDown(area(), {
+      clientX: 20,
+      clientY: 140,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerMove(area(), {
+      clientX: 200,
+      clientY: 120,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerUp(area(), { pointerId: 1, isPrimary: true, button: 0 });
     expect(check().disabled).toBe(false);
   });
 
@@ -192,13 +261,25 @@ describe('DrawQuiz (Draw a line)', () => {
   it('should take a freehand line drawn with a pointer, and grade it against the path', async () => {
     const { onAnswer } = await mount();
     const down = (x: number, y: number) =>
-      fireEvent.pointerDown(area(), { clientX: x, clientY: y, pointerId: 1 });
+      fireEvent.pointerDown(area(), {
+        clientX: x,
+        clientY: y,
+        pointerId: 1,
+        isPrimary: true,
+        button: 0,
+      });
     const move = (x: number, y: number) =>
-      fireEvent.pointerMove(area(), { clientX: x, clientY: y, pointerId: 1 });
+      fireEvent.pointerMove(area(), {
+        clientX: x,
+        clientY: y,
+        pointerId: 1,
+        isPrimary: true,
+        button: 0,
+      });
     // From the buy (x 20, close 100 → y 140) along the closes to the sell (x 440, close 150 → y 90)
     down(20, 140);
     bars.forEach((b, i) => move(i * 30 + 20, 240 - b.close));
-    fireEvent.pointerUp(area(), { pointerId: 1 });
+    fireEvent.pointerUp(area(), { pointerId: 1, isPrimary: true, button: 0 });
     expect(check().disabled).toBe(false);
     fireEvent.click(check());
     expect(onAnswer).toHaveBeenCalledWith(0);
@@ -206,9 +287,21 @@ describe('DrawQuiz (Draw a line)', () => {
 
   it('should answer -1 for a freehand line that ignores the path', async () => {
     const { onAnswer } = await mount();
-    fireEvent.pointerDown(area(), { clientX: 20, clientY: 10, pointerId: 1 });
-    fireEvent.pointerMove(area(), { clientX: 440, clientY: 10, pointerId: 1 });
-    fireEvent.pointerUp(area(), { pointerId: 1 });
+    fireEvent.pointerDown(area(), {
+      clientX: 20,
+      clientY: 10,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerMove(area(), {
+      clientX: 440,
+      clientY: 10,
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    });
+    fireEvent.pointerUp(area(), { pointerId: 1, isPrimary: true, button: 0 });
     fireEvent.click(check());
     expect(onAnswer).toHaveBeenCalledWith(-1);
   });

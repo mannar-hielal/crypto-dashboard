@@ -107,7 +107,8 @@ export function DrawQuiz({
   );
   const api = ready?.api ?? null;
   const [points, setPoints] = useState<Pt[]>([]);
-  const drawing = useRef(false);
+  // The pointer drawing the line (null: none); a second finger or another button is ignored
+  const drawing = useRef<number | null>(null);
   // The keyboard way: a marker over the days, the buy then the sell placed with Enter
   const [cursor, setCursor] = useState(0);
   const [placed, setPlaced] = useState<{ buy?: number; sell?: number }>({});
@@ -253,24 +254,26 @@ export function DrawQuiz({
           tabIndex={0}
           aria-label="Drawing area. Draw one line from the buy to the sell. With a keyboard, move over the days with Left and Right, and press Enter to place the buy, then the sell."
           onPointerDown={(e) => {
-            if (answered) return;
+            // Only the primary pointer's main button draws: a right-click, or a second finger,
+            // must not wipe the line in progress
+            if (answered || !e.isPrimary || e.button !== 0) return;
             e.currentTarget.setPointerCapture?.(e.pointerId);
-            drawing.current = true;
+            drawing.current = e.pointerId;
             setPlaced({});
             setByKeyboard(false);
             setPoints([at(e)]);
           }}
           onPointerMove={(e) => {
-            if (!drawing.current || answered) return;
+            if (drawing.current !== e.pointerId || answered) return;
             const p = at(e);
             // Past the cap the last point follows the finger, so the line still ends where it does
             setPoints((cur) => (cur.length >= MAX_POINTS ? [...cur.slice(0, -1), p] : [...cur, p]));
           }}
-          onPointerUp={() => {
-            drawing.current = false;
+          onPointerUp={(e) => {
+            if (drawing.current === e.pointerId) drawing.current = null;
           }}
-          onPointerCancel={() => {
-            drawing.current = false;
+          onPointerCancel={(e) => {
+            if (drawing.current === e.pointerId) drawing.current = null;
           }}
           onKeyDown={onKeyDown}
           {...guide('lesson.draw-area')}
