@@ -89,7 +89,12 @@ const staleWhere = (range: { from: number; to: number }) => ({
   OR: [{ step: null }, { step: { lt: range.from } }, { step: { gte: range.to } }],
 });
 
-/** A step outside the item's current version (none counts as outside) */
+/**
+ * A step outside the item's current version (none counts as outside). A step past the span (a newer
+ * version's) counts too: weighed, review after #311. An API rolled back alone across a stepBase
+ * raise would hide newer finishes, so such a release says in its APP_LOG entry that the API alone
+ * may not be rolled back (git.md, Emergencies)
+ */
 const outsideVersion = (range: { from: number; to: number }, step: number | null | undefined) =>
   typeof step !== 'number' || step < range.from || step >= range.to;
 

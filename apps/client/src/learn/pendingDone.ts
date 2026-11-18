@@ -84,8 +84,9 @@ export function pendingDone(account: string): PendingDone[] {
       .filter((p) => p.since >= oldest)
       .slice(0, MAX_PENDING);
     // Ones given up on (too old, unreadable, dated far ahead) leave storage too, not only the screen.
-    // A value of another version is left alone: a newer tab's queue, which an older one never wipes
-    // (weighed, review after #311)
+    // (Version skew between cached tabs is weighed, review after #311: a value of another shape
+    // reads as nothing kept and the next write replaces it. No shape bump is planned; one adds its
+    // migration step and a newer-is-kept rule together, here and for items, rather than in patches)
     if (kept.length !== stored.length) write(account, kept);
     return kept;
   } catch {
@@ -106,25 +107,7 @@ function store(account: string, items: PendingDone[]): void {
   localStorage.setItem(key(account), JSON.stringify(stored));
 }
 
-/** A stored value of another shape version (a newer tab's queue), which this one never replaces */
-function anotherVersionStored(account: string): boolean {
-  try {
-    const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
-    if (typeof raw !== 'object' || raw === null) return false;
-    const { v } = raw as Record<string, unknown>;
-    return typeof v === 'number' && v !== VERSION;
-  } catch {
-    return false;
-  }
-}
-
 function write(account: string, items: PendingDone[]): void {
-  // 🔐 A newer tab's queue is never overwritten (only the sign-out wipe removes it): this tab's
-  // list stays in memory for the session instead
-  if (anotherVersionStored(account)) {
-    unstored.set(account, items.slice(0, MAX_PENDING));
-    return;
-  }
   try {
     if (items.length === 0) localStorage.removeItem(key(account));
     else {

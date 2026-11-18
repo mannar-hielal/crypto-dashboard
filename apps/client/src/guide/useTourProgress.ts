@@ -250,6 +250,8 @@ export function useTourProgress(): void {
           items.some((i) => i.itemId === id && i.status === 'completed');
         const kept = account ? pendingDone(account) : [];
         const stillQueued = keptToShow(kept).filter((q) => !onServer(q.itemId));
+        // (An older cached tab drops a newer build's items it can't place: version skew, weighed with
+        // the queue's shape in pendingDone.ts, review after #311)
         if (account && stillQueued.length !== kept.length) keepOnly(account, stillQueued);
         const lessons = [
           ...new Set([
