@@ -4643,6 +4643,40 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-18 — Chapter 1 finished: four lessons, two practice stops and a ten-question checkpoint
+
+Chapter 1, "Start here: crypto and trading basics", is done. New chapters are made fresh from the benchmark's next
+unit, with this one as the working pattern (the lesson-authoring skill holds the rules).
+
+**What ships (the map's seven stops, `learn/path.ts`):**
+
+| Stop                                    | Id                                  | Notes                                                                  |
+| --------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| Lesson 1, Up, down and your first trade | `lesson-01`                         | Buy / Sell, long and short, 24/7, risk; ends on the buy practice       |
+| Lesson 2, Money nobody controls         | `lesson-ownership`                  | The ledger, nodes, blocks, no one in charge                            |
+| Lesson 3, News, swings and traps        | `lesson-02`                         | Why prices swing, thin and deep markets, scams (id kept as stored)     |
+| Buy your first coin / Sell it           | `buy-first-coin`, `sell-and-review` | One job each; Sell needs Buy done                                      |
+| Lesson 4, Trader or investor?           | `lesson-04`                         | Draw a line, Pick the right ones, Lena and Zoe; no practice, no Try it |
+| Chapter 1 checkpoint                    | `checkpoint-ch1`                    | See below                                                              |
+
+- **The checkpoint** (`learn/checkpoints.ts`) was cross-checked with the benchmark's (10 multiple-choice questions, no
+  stated pass mark, no explanations, all about trading mindset). Now **ten questions, pass at eight (80%, as the old
+  four of five), version 3**: our five (the ledger, a plan's rule, what sets the price, a forecast isn't a fact,
+  fees on a round trip) plus five new, in our own wording: going short, the market that never closes, a thin market,
+  a "can't lose" coin, investor versus trader. Dropped from the benchmark: take-profit and "why a plan" (covered by our
+  plan question), liquidity's definition (we ask it as the thin-market case), a bare definition of trading and "low
+  volatility" (our fees question covers a flat price). **Version 3** is raised in the SDK's `CHECKPOINT_VERSIONS`
+  and the server's `CHECKPOINT_VERSION`, so a pass of the five-question set no longer counts, and the server refuses
+  an earlier version with a 409. Each question names the lesson it was taught in, for the Review button.
+- **Cleanup:** the chapter's working notes (comparisons, outlines, drafts) in the git-ignored
+  `guided-learning-topics/notes/` were deleted; the screenshot folders stay until the owner says they can go.
+  `docs/` was reviewed: `GUIDED_TRADE_MVP.md` stays (`guide/tours.ts` and `UI_REPRODUCTIONS.md` still point at its
+  anchors and scenario format; its two MVP tours are marked superseded), `PRIVACY_NOTICE_1_3.md` is the owner's
+  unsent draft, and the other plans are not about chapter 1. `UI_REPRODUCTIONS.md` now says seven stops, 14%, and
+  the checkpoint's eight of ten.
+- **Known gaps:** no e2e test walks Lesson 4 or the full checkpoint; the checkpoint's draw and tile formats are not
+  used (multiple choice only, as the benchmark's).
+
 ### 2026-11-18 — Lesson 4 "Trader or investor? Find your style", Draw a line, Pick the right ones, Lena and Zoe
 
 The fourth lesson (`lesson-04`), on trading versus investing, written from the owner's Lesson 6 folder of

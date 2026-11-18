@@ -62,15 +62,19 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
 
 ## Inputs
 
-1. The comparison file for the lessons, `guided-learning-topics/notes/10-…-vs-cpt-lessons-1-3.md`
-   (git-ignored):
-   - **Table 1** — the benchmark's screens and our cards side by side, per lesson, numbered rows (1.01 …).
-   - **Table 2** — the merged plan: one row per topic, with the owner's **take / drop / rewrite**
+1. The comparison file for the lesson or checkpoint being written, in the git-ignored
+   `guided-learning-topics/notes/` (made per "Benchmark screenshots" below). Chapter 1 is finished
+   (2026-11-18) and its notes were cleared, so each new chapter starts from an empty `notes/`:
+   - **Table 1** — the benchmark's screens and our cards side by side, numbered rows (N.01 …).
+   - **Table 2** — the topics, one row each, with the owner's **take / drop / rewrite**
      instruction. **This drives the work.** Rows with an empty instruction are not started: list them
      and ask.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
-   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4).
+   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4). The chapter's
+   checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
+   a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
+   `CHECKPOINT_VERSION` (server).
 
 ## Benchmark screenshots: where they live (owner 2026-11-14)
 
@@ -91,9 +95,8 @@ guided-learning-topics/
 - Screenshots sort by filename into screen order (the macOS `Screenshot <date> at <time>.png` names
   do this). Don't rename them.
 - When a new lesson folder appears, the first step is its comparison, before any writing: a new
-  file in `guided-learning-topics/notes/`, next to the Lessons 1–3 comparison (number 10), with
-  the next free number in `notes/` (e.g. 12 for Lesson 4; 11 is the makeover plan). Comparisons and
-  plans live in `notes/` so their numbers never mix with the unit folders' numbers. The file has
+  file in `guided-learning-topics/notes/` with the next free number (numbers start at 10 and
+  count up across chapters). Comparisons and plans live in `notes/` so their numbers never mix with the unit folders' numbers. The file has
   the same two tables. Table 1 has the benchmark's screens (transcribed for the owner's reference
   only) beside our nearest content. Table 2 has the topics, with the owner's instruction column left
   empty. Then wait for the owner's Table 2 instructions.
@@ -117,13 +120,10 @@ guided-learning-topics/
    - which concepts each screen covers (every _take_ concept appears at least once).
    - the practice trades offered: each card whose concept is a buy, sell, long or short, and the
      tour it starts (see "Practise it for real" below).
-   - **Length vs the current caps.** `lessons.test.ts` allows at most six teaching cards of at most
-     80 words, two or three questions, at most two `[[terms]]` a card. A benchmark-length lesson
-     (~23–25 screens) doesn't fit. **Lessons 1–3:** the owner chose to raise the caps (2026-11-16) to
-     about 16 teaching cards and up to 6 quizzes. **Not done yet:** `lessons.test.ts` still allows 6
-     teaching cards and 3 checks; raising them, with the decision and date in the test, is the
-     makeover's first platform step.
-     **Later lessons:** don't silently go past the caps: offer the owner the choice for that lesson
+   - **Length vs the current caps.** `lessons.test.ts` allows at most 16 teaching cards of at most
+     80 words, up to six questions (at most three of them `checks`), at most two `[[terms]]` a card
+     (raised by the owner, 2026-11-16, to fit a benchmark-length lesson of ~23–25 screens).
+     **Beyond that:** don't silently go past the caps: offer the owner the choice for that lesson
      — raise them, or split the topic into two lessons. A new lesson id must be added everywhere
      that checks it, in the same change: `LESSON_IDS` (client), the path (`learn/path.ts`), the
      server's `LEARN_LESSON_IDS` (with `LEARN_TOUR_IDS` it builds `LEARN_EVENT_ITEM_IDS`, which the
