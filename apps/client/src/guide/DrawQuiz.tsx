@@ -24,6 +24,9 @@ import styles from './DrawQuiz.module.css';
 /** A line shorter than this across the chart can't be checked (a tap, a slip of the finger) */
 const MIN_LINE_PX = 40;
 
+/** After this many wrong checks the right path is shown for them (owner 2026-11-18) */
+const MAX_MISSES = 3;
+
 /** A freehand line never holds more points than this (a memory cap: a finger can run a long time) */
 const MAX_POINTS = 600;
 
@@ -111,6 +114,9 @@ export function DrawQuiz({
   const [byKeyboard, setByKeyboard] = useState(false);
   const [hint, setHint] = useState(false);
   const [say, setSay] = useState('');
+  // Wrong checks so far, kept through Try again; the third shows the answer (owner 2026-11-18)
+  const [misses, setMisses] = useState(0);
+  const [revealed, setRevealed] = useState(false);
   const answered = answer !== undefined;
   const right = answer === q.correct;
   // Answered on an earlier visit: no line in memory, so our path is shown on its own
@@ -207,11 +213,21 @@ export function DrawQuiz({
     // Read again now: the chart may have resized since the last layout
     const fresh = targetOf(api, draw, stageRef.current?.clientHeight ?? height);
     if (!fresh) return;
-    onAnswer(gradeLine(points, fresh, !byKeyboard) ? q.correct : -1);
+    if (gradeLine(points, fresh, !byKeyboard)) {
+      onAnswer(q.correct);
+    } else if (misses + 1 >= MAX_MISSES) {
+      // Three tries: show our path, and let them on (the lesson counts the answer as given)
+      setMisses(misses + 1);
+      setRevealed(true);
+      onAnswer(q.correct);
+    } else {
+      setMisses(misses + 1);
+      onAnswer(-1);
+    }
   };
   const markerX =
     api && bars[cursor] ? api.chart.timeScale().timeToCoordinate(bars[cursor].time as never) : null;
-  const showModel = right && target !== null;
+  const showModel = (right || revealed) && target !== null;
   // A tap or a tiny scribble isn't a line: it must run at least this far across
   const xs = points.map((p) => p.x);
   const spans = points.length > 1 && Math.max(...xs) - Math.min(...xs) >= MIN_LINE_PX;
@@ -321,6 +337,7 @@ export function DrawQuiz({
         right={answered ? right : undefined}
         ready={spans && target !== null}
         onCheck={check}
+        revealed={revealed}
         revisit={revisit}
         revisitLabel="Our path, dotted:"
         explain={q.explain}

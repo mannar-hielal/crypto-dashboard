@@ -327,6 +327,18 @@ rewritten, and to quizzes, Whys, summaries and titles.
   again** button (`lesson.retry`) clears the answer and empties the board; Continue shows only once
   the answer is right. Back off a wrong answer clears it too. Checkpoints keep their scored, one-go
   answers.
+- **After three "Not quite." the right answer is shown** (owner 2026-11-18), on every lesson question
+  (all formats, the draw card and Your call included): the third wrong check doesn't offer another
+  Try again. It marks the right answer for the learner (the right option, the right order or pairs,
+  the right tiles, Buy or Sell, the model path drawn on the chart), keeps the Why, and unlocks
+  Continue, so nobody is stuck. The three count per visit to that card (Try again keeps the count;
+  going Back and returning starts it again), and an answer revealed this way is not recorded
+  as the learner's own right answer. Checkpoints stay scored and one-go, with no reveal.
+  - **Say so kindly:** "That's three tries. Here is the answer." then the Why. Never "you failed".
+  - **Status (2026-11-18):** built for the draw card only (`DrawQuiz`: `MAX_MISSES`, `AnswerResult`'s
+    `revealed`). The other boards (`QuestionView`, `OrderQuiz`, `MatchQuiz`, `BuySellView`,
+    `PickQuiz`) still offer Try again without end; give each its reveal the same way (its own right
+    answer marked, the Why, no Try again) when the owner asks.
 - Every quiz has a Why that teaches, not only "correct".
 - A buy-or-sell quiz never rewards guessing a price direction: the right answer follows from a stated
   plan or rule in the situation (the same honesty rule as "Your call").
@@ -383,7 +395,8 @@ a level), it is a draw-a-line card. Don't turn it into a multiple-choice questio
   (e.g. the buy candle, the sell candle and the direction between) and a tolerance. Check turns on
   once there is a line. A line that fits gets "Right." and our model path drawn beside theirs; one
   that doesn't gets "Not quite.", a kind Why, and **Try again** (the line is cleared), as for every
-  quiz above.
+  quiz above. After the third "Not quite." our model path is drawn for them instead (the rule
+  above), with the Why.
 - **"Stuck? Use a hint"** link under the chart: the hint names where the path starts and ends
   (the dated candles), never the shape to copy.
 - Every figure and date comes from the card's own candles (noted in a code comment), recomputed

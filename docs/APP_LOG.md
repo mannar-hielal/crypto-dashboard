@@ -4656,7 +4656,7 @@ all absent and `lessonScreens` leaves the screen out). Ids added everywhere a le
 - **Draw a line** (`format: 'draw'`, `DrawQuiz.tsx`, `drawGrade.ts`): one freehand line over a dated chart, a trash
   button that clears it, "Stuck? Use a hint", Check. Graded against the buy and the sell (their dated closes, in
   pixels) and, for a freehand line, against the closes between (mean distance within 15% of the height); "Right."
-  shows our dotted path, "Not quite." offers Try again. Keyboard and screen readers: Left / Right move a marker over
+  shows our dotted path, "Not quite." offers Try again. After the **third** "Not quite." the card shows our path for them ("That's three tries. Here's the answer."), offers no more tries and lets them on (`MAX_MISSES`, `AnswerResult`'s `revealed`); only this board has it so far. Keyboard and screen readers: Left / Right move a marker over
   the days, Enter places the buy and then the sell (graded on the two ends). A resize clears the line; a line holds at
   most 600 points. `LessonChart` takes `tall` and `onReady`.
 - **Pick the right ones** (`format: 'pick'`, `PickQuiz.tsx`): a 2 × 3 grid of icon tiles (Phosphor duotone), pick

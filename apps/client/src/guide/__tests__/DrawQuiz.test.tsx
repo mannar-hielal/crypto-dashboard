@@ -78,6 +78,50 @@ const keys = (...list: string[]) => {
   for (const key of list) fireEvent.keyDown(area(), { key });
 };
 
+describe('DrawQuiz (three tries)', () => {
+  it('should show the answer after the third wrong check, with no Try again (owner 2026-11-18)', async () => {
+    const onAnswer = vi.fn();
+    function Harness() {
+      const [answer, setAnswer] = useState<number | undefined>(undefined);
+      return (
+        <DrawQuiz
+          q={q}
+          answer={answer}
+          onAnswer={(a) => {
+            onAnswer(a);
+            setAnswer(a);
+          }}
+          onRetry={() => setAnswer(undefined)}
+        />
+      );
+    }
+    render(<Harness />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const wrongLine = () => {
+      fireEvent.pointerDown(area(), { clientX: 20, clientY: 10, pointerId: 1 });
+      fireEvent.pointerMove(area(), { clientX: 440, clientY: 10, pointerId: 1 });
+      fireEvent.pointerUp(area(), { pointerId: 1 });
+      fireEvent.click(check());
+    };
+    wrongLine();
+    expect(onAnswer).toHaveBeenLastCalledWith(-1);
+    expect(status()).toContain('Not quite.');
+    fireEvent.click(screen.getByText('Try again'));
+    wrongLine();
+    expect(onAnswer).toHaveBeenLastCalledWith(-1);
+    fireEvent.click(screen.getByText('Try again'));
+    wrongLine();
+    // The third miss unlocks the lesson as answered, says so, and offers no more tries
+    expect(onAnswer).toHaveBeenLastCalledWith(0);
+    expect(status()).toContain('That’s three tries.');
+    expect(status()).not.toContain('Not quite.');
+    expect(status()).toContain('A trade is a path.');
+    expect(screen.queryByText('Try again')).toBeNull();
+  });
+});
+
 describe('DrawQuiz (Draw a line)', () => {
   it('should show the question, so the learner knows what to draw', async () => {
     await mount();
