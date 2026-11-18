@@ -151,24 +151,4 @@ describe('pendingDone', () => {
     expect(pendingDone('a')).toEqual([]);
     expect(localStorage.getItem('cd-pending-done:a')).toBe(newer);
   });
-
-  it('should drop an expired one from the in-memory list too, when storage refuses writes', () => {
-    const t0 = Date.now();
-    const now = vi.spyOn(Date, 'now').mockReturnValue(t0);
-    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('quota');
-    });
-    try {
-      queueDone('a', { itemId: 'lesson-01', step: 81 });
-      expect(pendingDone('a').map((p) => p.itemId)).toEqual(['lesson-01']); // held in memory
-      now.mockReturnValue(t0 + 31 * 86_400_000);
-      expect(pendingDone('a')).toEqual([]);
-      // Gone from memory, not only hidden: a clock set back doesn't bring it back
-      now.mockReturnValue(t0);
-      expect(pendingDone('a')).toEqual([]);
-    } finally {
-      set.mockRestore();
-      now.mockRestore();
-    }
-  });
 });

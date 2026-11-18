@@ -70,12 +70,9 @@ export function pendingDone(account: string): PendingDone[] {
   const held = unstored.get(account);
   // (write() is its only writer and keeps it capped and checked: no second pass here. Weighed,
   // review after #311)
-  if (held) {
-    // (expired ones leave the memory list too, not only the answer)
-    const live = held.filter((p) => p.since >= oldest);
-    if (live.length !== held.length) unstored.set(account, live);
-    return live;
-  }
+  // (Expired ones are hidden here, not removed: the list is capped and lives for the session only.
+  // Pruning it here was tried and weighed, review after #311: a second writer broke this rule)
+  if (held) return held.filter((p) => p.since >= oldest);
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
     const stored = migrate(raw);
