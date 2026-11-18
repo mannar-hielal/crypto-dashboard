@@ -89,7 +89,12 @@ const staleWhere = (range: { from: number; to: number }) => ({
   OR: [{ step: null }, { step: { lt: range.from } }, { step: { gte: range.to } }],
 });
 
-/** A step outside the item's current version (none counts as outside) */
+/**
+ * A step outside the item's current version (none counts as outside). A step past the span (a newer
+ * version's) counts too: weighed, review after #311. An API rolled back alone across a stepBase
+ * raise would hide newer finishes, so such a release says in its APP_LOG entry that the API alone
+ * may not be rolled back (git.md, Emergencies)
+ */
 const outsideVersion = (range: { from: number; to: number }, step: number | null | undefined) =>
   typeof step !== 'number' || step < range.from || step >= range.to;
 
@@ -316,7 +321,9 @@ export async function learnRoutes(app: FastifyInstance) {
           if (replaced.count === 1) {
             return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
           }
-          // Another request (a second tab) took it over first: answer what is stored now
+          // Another request (a second tab) took it over first: answer what is stored now. (Weighed,
+          // review after #311: in a rollout an old machine may have stored an old finish here, which
+          // GET then hides as stale; the next read settles it, and the client's queue resends)
           const now = await app.prisma.learningProgress.findUnique({
             where: { userId_itemId: { userId, itemId } },
             select: ROW,

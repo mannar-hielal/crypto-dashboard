@@ -145,7 +145,7 @@ describe('pendingDone', () => {
     expect(localStorage.getItem('cd-pending-done:a')).toBeNull();
   });
 
-  it('should leave a queue of another version alone (a newer tab’s), never wiping it', () => {
+  it('should read a queue of another version as nothing kept, leaving it in place', () => {
     const newer = JSON.stringify({ v: 2, items: [{ itemId: 'lesson-01', step: 81, since: 1 }] });
     localStorage.setItem('cd-pending-done:a', newer);
     expect(pendingDone('a')).toEqual([]);

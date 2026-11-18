@@ -70,6 +70,8 @@ export function pendingDone(account: string): PendingDone[] {
   const held = unstored.get(account);
   // (write() is its only writer and keeps it capped and checked: no second pass here. Weighed,
   // review after #311)
+  // (Expired ones are hidden here, not removed: the list is capped and lives for the session only.
+  // Pruning it here was tried and weighed, review after #311: a second writer broke this rule)
   if (held) return held.filter((p) => p.since >= oldest);
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key(account)) ?? 'null');
@@ -79,12 +81,13 @@ export function pendingDone(account: string): PendingDone[] {
       .filter((p) => p.since >= oldest)
       .slice(0, MAX_PENDING);
     // Ones given up on (too old, unreadable, dated far ahead) leave storage too, not only the screen.
-    // A value of another version is left alone: a newer tab's queue, which an older one never wipes
-    // (weighed, review after #311)
+    // (Version skew between cached tabs is weighed, review after #311: a value of another shape
+    // reads as nothing kept and the next write replaces it. No shape bump is planned; one adds its
+    // migration step and a newer-is-kept rule together, here and for items, rather than in patches)
     if (kept.length !== stored.length) write(account, kept);
     return kept;
   } catch {
-    // Not even JSON: nothing readable kept (left alone, as another version's value would be)
+    // Not even JSON: reads as nothing kept, and the next write replaces it
     return [];
   }
 }

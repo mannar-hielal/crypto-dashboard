@@ -51,7 +51,13 @@ interface MissedProps {
   onReview: (t: TaughtIn) => void;
   /** Where its Review goes (reviewTarget) */
   target: TaughtIn;
-  /** The first missed question with this target: the only one with the button (no twin links) */
+  /**
+   * The first missed question with this target: the only one with the button (no twin links). The
+   * others name where they were taught, which stays true; the button above leads there, through Buy
+   * while Sell is locked (weighed, review after #311). The "(on a larger screen)" note is the
+   * target's: it could mismatch the lesson named only if Buy couldn't run on a phone, and Buy is
+   * phone-ready, so it gets its button there
+   */
   firstForTarget: boolean;
 }
 

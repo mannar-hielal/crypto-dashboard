@@ -559,6 +559,8 @@ export function LessonSheet() {
         setPeek(null);
         return;
       }
+      // (Any filled input counts, a checkbox or slider too: no lesson's Try widget has one today, so
+      // it's left broad; a widget with one narrows it to text fields. Weighed, review after #311)
       const field = e.target as HTMLTextAreaElement | HTMLInputElement | null;
       const typing =
         (field?.tagName === 'TEXTAREA' || field?.tagName === 'INPUT') &&
