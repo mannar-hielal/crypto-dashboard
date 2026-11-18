@@ -3,8 +3,8 @@
  * the zig-zag kept after a vertical rail was tried and reverted the same day): opened from the
  * Route button beside the avatar, a 400 px drawer on the right over the dimmed dashboard, full
  * screen on phones. Chapters scroll by under a sticky band; each is a zig-zag of stops walked in
- * order (`learn/path.ts` holds the rules). A second tab keeps the Library — articles are reference
- * material and are never locked — and the habit badges.
+ * order (`learn/path.ts` holds the rules). A second tab keeps the habit badges (the Library's
+ * articles moved to the public Blog, owner 2026-11-18).
  */
 
 import { RichText } from './RichText';
@@ -21,18 +21,18 @@ import { startLesson, startTour } from '@/guide/afterNote';
 import { useTourStore } from '@/guide/tourStore';
 import { trapFocus } from '@/lib/trapFocus';
 import { useAuthStore } from '@/store/authStore';
-import { LibraryTab } from './LibraryTab';
+import { HabitsTab } from './HabitsTab';
 import { nodeOffset, onChart, type ChapterView, type NodeKind, type NodeView } from './path';
 import { NodeIcon, PathNode } from './PathNode';
 import { usePathStore } from './pathStore';
 import { usePathView } from './usePathView';
 import styles from './PathDrawer.module.css';
 
-type Tab = 'path' | 'library';
+type Tab = 'path' | 'habits';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'path', label: 'Path' },
-  { id: 'library', label: 'Library' },
+  { id: 'habits', label: 'Habits' },
 ];
 
 // ─── A chapter ───────────────────────────────────────────────────────────────
@@ -429,7 +429,7 @@ export function PathDrawer() {
               ))}
             </>
           ) : (
-            <LibraryTab habits={habits} habitsError={habitsError} />
+            <HabitsTab habits={habits} habitsError={habitsError} />
           )}
         </div>
       </aside>

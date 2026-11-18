@@ -7,15 +7,14 @@
  * questions with a "Why", praise for the plan and never for a lucky guess, no hype. Every dated
  * price is checked against Bybit's daily candles before it ships (noted beside it).
  *
- * Knowledge base (owner 2026-10-23): card text marks up to two tappable terms (`[[label|concept]]`,
- * learn/terms.ts) that open a peek and, from it, the article; history cards show a real mini chart
- * (`chart`); the close lists what the learner can now do, each with its article.
+ * Card text marks up to two tappable terms (`[[label|concept]]`, learn/terms.ts) that open a peek, a
+ * one-sentence definition (owner 2026-11-18: no article behind it any more, the Blog is separate);
+ * history cards show a real mini chart (`chart`); the close lists what the learner can now do.
  *
  * Pure data: no React, so the tests can walk every lesson.
  */
 
 import { FREE, type Entitlement } from '@/learn/access';
-import type { ArticleId } from '@/learn/articles';
 import type { WidgetId } from '@/components/widgets/widgetIds';
 import { plainText, termIds } from '@/learn/terms';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
@@ -270,8 +269,6 @@ export interface LessonCard {
   analogy?: Analogy;
   /** Bold-labelled points under the text ("**Print coins.** Write …") */
   points?: CardPoint[];
-  /** A Read more under the card, to the article that goes deeper (owner 2026-11-12) */
-  more?: { article: ArticleId; section?: string };
   /**
    * A quick check between cards (owner 2026-11-16: quizzes can sit mid-lesson). The card is then a
    * question screen: its `title` is the heading, the question replaces the text, and Next waits for
@@ -285,13 +282,9 @@ export interface LessonCard {
   practice?: { tour: PracticeTourId; label: string };
 }
 
-/** One "You can now…" line on the close, with the article that goes deeper */
+/** One "You can now…" line on the close */
 export interface CanDo {
   text: string;
-  /** The article it opens; none yet = a plain line (owner 2026-11-16) */
-  article?: ArticleId;
-  /** The article section to open at (an `h` block's id) */
-  section?: string;
 }
 
 /**
@@ -379,14 +372,14 @@ export interface Lesson {
   /** What the learner can do after the lesson, shown on the close */
   canDo: CanDo[];
   /**
-   * The close's summary, in place of "You can now" (owner 2026-11-08): a few lines, each opening its
-   * article. Lessons without one list `canDo` instead.
+   * The close's summary, in place of "You can now" (owner 2026-11-08): a few plain lines (no article
+   * links since 2026-11-18). Lessons without one list `canDo` instead.
    */
   recap?: {
     title: string;
     points: CanDo[];
-    /** The conclusion; with no article it has no Read more (Lesson 1's ending, owner 2026-11-12) */
-    highlight?: { text: string; article?: ArticleId; section?: string };
+    /** The conclusion (Lesson 1's ending, owner 2026-11-12) */
+    highlight?: { text: string };
   };
   /**
    * The lesson the close offers next. None: the path shows what comes next (Lesson 3 since the
@@ -403,7 +396,7 @@ export interface Lesson {
 
 // ─── Lesson 1 — Up, down and your first trade ────────────────────────────────
 // From the owner's notes on Kevin and Colt's lectures (Drive docs 01–06), rewritten in our voice;
-// each card's terms open the matching article (learn/articles.ts). Owner 2026-10-23: the Pizza Day
+// each card's terms open a peek (learn/concepts.ts). Owner 2026-10-23: the Pizza Day
 // hook, and "Try it" is Nora cheating in the notebook, inside the sheet, on every screen size.
 
 /** Lesson 1's length: its card, the guides' meeting and the welcome card all say it */
@@ -703,7 +696,6 @@ const lesson01: Lesson = {
           text: 'Please sleep. Set your plan, your stop and your target first. Fast moves can fill a stop a little worse than its price ([[slippage]]), but it still works while you sleep.',
         },
       ],
-      more: { article: 'price-swings', section: 'always-open' },
     },
     {
       title: 'Smaller coins swing harder',
@@ -722,7 +714,6 @@ const lesson01: Lesson = {
         answer:
           'Solana fell about **29%**. The same three steps for Bitcoin ($66,758 → $53,988) give about **19%**.',
       },
-      more: { article: 'price-swings', section: 'volatility' },
     },
     {
       title: 'Big swings, big risks',
@@ -749,7 +740,6 @@ const lesson01: Lesson = {
   notePrompt: 'One sentence: what will your plan say before your next trade?',
   teaser: 'Next: where Bitcoin came from, and how thousands of computers agree on one record.',
   canDo: [],
-  // Owner 2026-11-16: four lines have no article yet (plain text until they're written)
   recap: {
     title: 'What you learned',
     points: [
@@ -759,8 +749,6 @@ const lesson01: Lesson = {
       { text: 'Closing a position makes the result real.' },
       {
         text: 'Crypto never closes, and smaller coins swing harder.',
-        article: 'price-swings',
-        section: 'volatility',
       },
     ],
     highlight: { text: 'Decide when and why before you click.' },
@@ -846,7 +834,6 @@ const lessonOwnership: Lesson = {
       title: 'A paper, then a block',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'On 31 October 2008 someone called **Satoshi Nakamoto** shared a short paper: *Bitcoin: A Peer-to-Peer Electronic Cash System*. Money that people send each other directly, with no bank in the middle. On 3 January 2009 the first block was created, with that newspaper headline inside. Nobody knows who Satoshi is.',
-      more: { article: 'bitcoin-story', section: 'timeline' },
     },
     {
       title: 'One record, many copies',
@@ -857,7 +844,6 @@ const lessonOwnership: Lesson = {
         { speaker: 'tick', text: 'So there’s no one teacher to bribe.' },
         { speaker: 'tock', text: 'Exactly. And no one teacher to lose the sheet.' },
       ],
-      more: { article: 'bitcoin-network', section: 'three-jobs' },
     },
     {
       title: 'Sending bitcoin',
@@ -868,7 +854,6 @@ const lessonOwnership: Lesson = {
       title: 'Two checks, then a block',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
       text: 'Nodes make two key checks: is the signature really yours, and do you still have those coins, not already spent? A payment that fails is dropped. [[Miners|mining]] then pick waiting payments, mostly by fee, and bundle them into a **block**, a new page of the ledger, on average every 10 minutes.',
-      more: { article: 'bitcoin-network', section: 'checks' },
     },
     {
       // Proof of work (white paper §4, §11): costly to redo, not impossible (fact check 2026-11-16)
@@ -876,14 +861,12 @@ const lessonOwnership: Lesson = {
       art: 'sealBroken',
       presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
       text: 'Each block is sealed with a code that took huge computing work to find. Change one number in an old block and the code changes. To fake it, you’d have to redo that work for the block and every block after it, faster than all the other miners together. Practically, nobody can.',
-      more: { article: 'bitcoin-story', section: 'mining' },
     },
     {
       title: 'The hash links the chain',
       art: 'hashChain',
       presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       text: 'Every block carries the **hash** of the block before it: a short code that works like a fingerprint. Change anything in an earlier block and its fingerprint changes, so the next block no longer matches, and the next. That’s why it’s called a [[blockchain]].',
-      more: { article: 'bitcoin-network', section: 'blocks' },
     },
     {
       title: 'Quick check',
@@ -985,30 +968,21 @@ const lessonOwnership: Lesson = {
   teaser: 'Next: why prices swing so hard, and how to spot a trap.',
   canDo: [],
   // Plain lines (owner 2026-11-17: the staged birth of Bitcoin dropped after the makeover); the
-  // fact check (2026-11-17) put the actual why first, and points "no one is in charge" at the
-  // network article's answer to the one-Nora problem
+  // fact check (2026-11-17) put the actual why first
   recap: {
     title: 'Why Bitcoin exists',
     points: [
       {
         text: 'Bitcoin was made so people can pay each other online without trusting a bank in the middle.',
-        article: 'bitcoin-story',
-        section: 'plan',
       },
       {
         text: 'Bitcoin keeps one ledger, copied on thousands of computers.',
-        article: 'bitcoin-network',
-        section: 'three-jobs',
       },
       {
         text: 'Nodes check every payment, and blocks are linked by their hash.',
-        article: 'bitcoin-network',
-        section: 'blocks',
       },
       {
         text: 'No one is in charge: the network agrees.',
-        article: 'bitcoin-network',
-        section: 'answered',
       },
     ],
   },
@@ -1162,13 +1136,11 @@ const lesson02: Lesson = {
         ],
         answer: 'At its low that day, Bitcoin was down about **33%**: a third.',
       },
-      more: { article: 'price-swings', section: 'size' },
     },
     {
       title: 'News moves it, fast',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'Crypto trades all day, every day, so news hits the price within minutes, even at 3 a.m. A new law, an exchange in trouble, a big company buying: people react, and the price moves before most of us have read the headline.',
-      more: { article: 'price-swings', section: 'news' },
     },
     {
       title: 'Same news, either way',
@@ -1186,7 +1158,6 @@ const lesson02: Lesson = {
       art: 'candleAnatomy',
       presenter: { who: 'tock', mood: 'smile' },
       text: 'Thousands of deals happen every minute, so charts sum them up. A [[candle]] covers one slice of time: its body runs from the first deal (the open) to the last (the close), and thin wicks reach the highest and lowest deals. Green means it closed higher than it opened; red, lower. Crypto never closes, so new candles keep coming, nights and holidays too. A candle shows what happened, never what comes next.',
-      more: { article: 'price-swings', section: 'candles' },
     },
     {
       title: 'A market shock',
@@ -1231,7 +1202,6 @@ const lesson02: Lesson = {
       art: 'deepThin',
       presenter: { who: 'tock', mood: 'smile', pose: 'stand' },
       text: 'Remember [[liquidity]] from Lesson 2? Picture buyers and sellers waiting with their prices. When many wait close to the price, the market is **deep**: a big order barely moves it. When few wait, it’s **thin**: a big order runs through them and the price jumps.',
-      more: { article: 'exchange-price', section: 'liquidity' },
     },
     {
       title: 'The $8,200 moment',
@@ -1243,7 +1213,6 @@ const lesson02: Lesson = {
       title: 'Bitcoin is deep',
       presenter: { who: 'tock', mood: 'calm', pose: 'stand' },
       text: 'On the big exchanges, Bitcoin is one of the deepest markets in crypto: billions of dollars change hands every day. Smaller coins are thinner, which is one reason they swing harder. Deep doesn’t mean calm, though. It just means one order rarely moves it far.',
-      more: { article: 'exchange-price', section: 'small-coins' },
     },
     {
       title: 'Quick check',
@@ -1271,14 +1240,12 @@ const lesson02: Lesson = {
       title: 'A rug pull',
       presenter: { who: 'tock', mood: 'worried', pose: 'stand' },
       text: 'Some coins are traps from the start. The creators hype a new coin, people buy, the price climbs, and then the creators sell everything at once or make sure buyers can’t sell. The price collapses and the creators vanish with the money. That’s a [[rug pull|rug-pull]] (Lesson 1), a scam.',
-      more: { article: 'spot-a-scam', section: 'rug-pull' },
     },
     {
       title: 'Check before you trust',
       art: 'checkCoin',
       presenter: { who: 'tock', mood: 'frank' },
       text: 'Before you trust any coin, check: who runs it, and are they named? Can you actually sell it? Does anyone promise easy or sure profits? A rising price only means people traded. It doesn’t mean the coin is real.',
-      more: { article: 'spot-a-scam', section: 'checklist' },
     },
     {
       title: 'Quick check',
@@ -1323,23 +1290,15 @@ const lesson02: Lesson = {
     points: [
       {
         text: 'Prices swing hard, both ways: size for the fall.',
-        article: 'price-swings',
-        section: 'size',
       },
       {
         text: 'News, shocks and hype move prices, often fast.',
-        article: 'price-swings',
-        section: 'news',
       },
       {
         text: 'Thin markets jump; deep ones absorb.',
-        article: 'exchange-price',
-        section: 'liquidity',
       },
       {
         text: 'Check who runs a coin and whether you can sell it.',
-        article: 'spot-a-scam',
-        section: 'checklist',
       },
     ],
     highlight: { text: 'Your plan decides, not the headline.' },

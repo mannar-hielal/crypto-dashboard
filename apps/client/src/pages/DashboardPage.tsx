@@ -42,7 +42,6 @@ import { LearnCard } from '@/guide/LearnCard';
 import { CheckpointSheet } from '@/learn/CheckpointSheet';
 import { PathDrawer } from '@/learn/PathDrawer';
 import { LessonSheet } from '@/guide/LessonSheet';
-import { ArticleDrawer } from '@/learn/ArticleDrawer';
 import { useTourProgress } from '@/guide/useTourProgress';
 
 // ─── Edit target type ────────────────────────────────────────────────────────
@@ -373,7 +372,6 @@ export function DashboardInner() {
       <TopBar />
       <GuideOverlay />
       <LessonSheet />
-      <ArticleDrawer />
       <PathDrawer />
       <CheckpointSheet />
 

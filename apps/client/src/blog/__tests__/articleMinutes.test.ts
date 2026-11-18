@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARTICLES, type ArticleBlock } from '@/learn/articles';
+import { ARTICLES, type ArticleBlock } from '@/blog/posts';
 
 const words = (t: string) => t.split(/\s+/).filter((w) => /\w/.test(w)).length;
 

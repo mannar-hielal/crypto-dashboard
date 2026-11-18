@@ -13,6 +13,7 @@ import { usePathSeen } from '@/learn/pathSeen';
 import { usePathView } from '@/learn/usePathView';
 import { isAdminEmail } from '@/lib/adminEmail';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
+import { SiteNav } from '@/components/SiteNav';
 import { SettingsModal } from './SettingsModal';
 import { TradeMenu } from './TradeMenu';
 
@@ -117,6 +118,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
         </span>
 
         {!marketing && <TradeMenu />}
+        {/* The public pages' links: Product, Blog, About us, Support (owner 2026-11-18) */}
+        {marketing && <SiteNav />}
       </div>
 
       {/* ── Right: User menu, or a single CTA on marketing pages ─────────── */}

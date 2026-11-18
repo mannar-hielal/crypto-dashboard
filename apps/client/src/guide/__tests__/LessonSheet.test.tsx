@@ -29,7 +29,6 @@ vi.mock('@/store/paperStore', () => {
 
 import { clearLessonChartCache } from '@/guide/lessonChartLoader';
 import { LessonSheet } from '@/guide/LessonSheet';
-import { useArticleStore } from '@/learn/articleStore';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
@@ -70,7 +69,6 @@ describe('LessonSheet', () => {
     useLessonStore.getState().reset();
     useTourStore.getState().reset();
     useTourStore.setState({ loaded: true }); // the account's progress is in
-    useArticleStore.getState().reset();
     useAuthStore.setState({ accessToken: null });
     getHabits.mockReset();
   });
@@ -467,24 +465,19 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.peek"]')).toBeNull();
   });
 
-  it('should open the article from a peek, wait behind it, and come back on the same card', () => {
+  it('should show a peek with its definition and no Read more, and keep the lesson open (owner 2026-11-18)', () => {
     at(11); // Thin or deep: [[liquidity]] (Lesson 2)
     renderSheet();
     fireEvent.click(
       document.querySelector('[data-guide="lesson.term"][data-guide-key="liquidity"]')!
     );
-    fireEvent.click(document.querySelector('[data-guide="lesson.peek.more"]')!);
-
-    expect(useArticleStore.getState().openId).toBe('exchange-price');
-    expect(useArticleStore.getState().from).toEqual({ lesson: 'lesson-02', screen: 11 });
-    expect(sheet()).toBeNull(); // hidden while the article is open
-
-    // Esc belongs to the drawer now: the lesson stays
-    fireEvent.keyDown(window, { key: 'Escape' });
-    expect(useLessonStore.getState().activeId).toBe('lesson-02');
-
-    act(() => useArticleStore.getState().close());
+    const peek = document.querySelector('[data-guide="lesson.peek"]')!;
+    expect(peek.textContent).toContain('Think of it as');
+    // The Blog's articles are separate: nothing in the peek opens one
+    expect(peek.textContent).not.toContain('Read more');
+    expect(document.querySelector('[data-guide="lesson.peek.more"]')).toBeNull();
     expect(sheet()!.textContent).toContain('Thin or deep');
+    expect(useLessonStore.getState().activeId).toBe('lesson-02');
   });
 
   it('should keep a history card’s drawn picture when the chart can’t load', async () => {
@@ -505,7 +498,7 @@ describe('LessonSheet', () => {
     expect(sheet()!.querySelector('[data-mood="thinking"]')).not.toBeNull();
   });
 
-  it('should sum Lesson 3 up in four lines, each opening its article at the section', () => {
+  it('should sum Lesson 3 up in four plain lines, with no Read more', () => {
     at(19); // the summary
     renderSheet();
     expect(document.querySelector('#lesson-heading')!.textContent).toBe('What moves a price');
@@ -514,12 +507,8 @@ describe('LessonSheet', () => {
     expect(document.querySelector('[data-guide="lesson.highlight"]')!.textContent).toContain(
       'Your plan decides, not the headline.'
     );
-    fireEvent.click(document.querySelector('[data-guide="lesson.recap"][data-guide-key="news"]')!);
-    expect(useArticleStore.getState()).toMatchObject({
-      openId: 'price-swings',
-      section: 'news',
-      from: { lesson: 'lesson-02', screen: 19 },
-    });
+    expect(sheet()!.textContent).not.toContain('Read more');
+    expect(sheet()!.querySelectorAll('button[data-guide^="lesson.recap"]')).toHaveLength(0);
   });
 
   it('should put the moment after the halving card and go on teaching after it', () => {
@@ -779,12 +768,12 @@ describe('LessonSheet', () => {
     expect(sheet()!.textContent).toContain('A headline in the first block');
   });
 
-  it('should sum Lesson 1 up in five lines, a Read more only where an article exists', () => {
+  it('should sum Lesson 1 up in five plain lines and a highlight, with no Read more', () => {
     at(19, 'lesson-01');
     renderSheet();
     expect(document.querySelector('#lesson-heading')!.textContent).toBe('What you learned');
-    // Owner 2026-11-16: four lines have no article yet (plain text); price swings has one
-    expect(document.querySelectorAll('[data-guide="lesson.recap"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-guide="lesson.recap"]')).toHaveLength(5);
+    expect(sheet()!.textContent).not.toContain('Read more');
     const highlight = document.querySelector('[data-guide="lesson.highlight"]')!;
     expect(highlight.textContent).toContain('Decide when and why before you click.');
     expect(highlight.querySelector('button')).toBeNull();
@@ -792,16 +781,6 @@ describe('LessonSheet', () => {
     // The summary's button: the one finish label, in every lesson (owner 2026-11-17)
     expect(nextBtn()!.textContent).toBe('Finish lesson');
     expect(document.querySelector('[data-guide="lesson.back"]')!.textContent).toBe('← Back');
-  });
-
-  it('should open the paper card’s Read more on Lesson 2’s story article', () => {
-    at(3, 'lesson-ownership'); // A paper, then a block
-    renderSheet();
-    fireEvent.click(document.querySelector('[data-guide="lesson.more"]')!);
-    expect(useArticleStore.getState()).toMatchObject({
-      openId: 'bitcoin-story',
-      section: 'timeline',
-    });
   });
 
   it('should tease the next lesson on the close, but not on a look back', () => {

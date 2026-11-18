@@ -1,17 +1,11 @@
 /**
- * The knowledge-base articles (knowledge-base plan, owner 2026-10-23): the depth behind the lessons,
- * written in our own voice from the owner's notes and checked against sources. An article opens in
- * the drawer beside the dashboard; a lesson waits behind it ("Back to Lesson 1").
- *
- * An article lists the concepts it explains (`concepts.ts`). Which lesson cards send learners here,
- * and where the learner can practise, are worked out from those lists (`graph.ts`), never written by
- * hand. Sources sit in a folded list at the end so the reading itself never leaves the app.
+ * The Blog's articles (the old knowledge base, owner 2026-10-23; moved out of the lessons to the
+ * public Blog, owner 2026-11-18): written in our own voice from the owner's notes and checked against
+ * sources. Each is read on its own page, `/blog/<id>` (the id is its URL), and nothing in a lesson,
+ * the path or a panel links to it. Sources sit in a folded list at the end.
  *
  * Text is plain, with `**bold**` as the only markup. Pure data: no React, so the tests can walk it.
  */
-
-import type { GuideAnchor } from '@/lib/guideAnchors';
-import { FREE, type Entitlement } from './access';
 
 export const ARTICLE_IDS = [
   'money-101',
@@ -33,13 +27,13 @@ export function isArticleId(value: string): value is ArticleId {
 import type { WidgetId } from '@/components/widgets/widgetIds';
 
 export type ArticleBlock =
-  /** A section heading; `id` lets a lesson link straight to it */
+  /** A section heading; `id` is its anchor on the page */
   | { kind: 'h'; text: string; id?: string }
   | { kind: 'p'; text: string }
   | { kind: 'list'; items: string[]; ordered?: boolean }
   | { kind: 'table'; head: string[]; rows: string[][] }
   /** `idea`: the big idea; `warn`: a caution; `chart`: where to see it on the real screen */
-  | { kind: 'callout'; tone: 'idea' | 'warn' | 'chart'; text: string; anchor?: GuideAnchor }
+  | { kind: 'callout'; tone: 'idea' | 'warn' | 'chart'; text: string }
   | { kind: 'widget'; id: WidgetId };
 
 export interface SelfTestItem {
@@ -60,12 +54,9 @@ export interface Article {
   minutes: number;
   /** Last fact-check (YYYY-MM-DD) */
   checked: string;
-  access: Entitlement;
   blocks: ArticleBlock[];
   selfTest: SelfTestItem[];
   sources: Source[];
-  /** Until a lesson practises this article's concepts: where it will be practised */
-  practiceSoon?: string;
 }
 
 // ─── SunCoin: money in a notebook ────────────────────────────────────────────
@@ -75,7 +66,6 @@ const suncoin: Article = {
   title: 'SunCoin: money in a notebook',
   minutes: 3,
   checked: '2026-10-28',
-  access: FREE,
   // Owner 2026-10-25: this article only lays out the problem; the answer is the next article's
   blocks: [
     {
@@ -175,7 +165,6 @@ const bitcoinNetwork: Article = {
     'Thousands of computers each keep a copy of the ledger and check every payment, so nobody has to trust a Nora.',
   minutes: 4,
   checked: '2026-11-08',
-  access: FREE,
   // Owner 2026-11-08: short, and a graphic for every process; the long text version lives in git
   blocks: [
     {
@@ -265,7 +254,6 @@ const exchangePrice: Article = {
     'Nobody decides the price of Bitcoin. The number on your screen is the last deal between someone who wanted to buy and someone who wanted to sell.',
   minutes: 4,
   checked: '2026-11-12',
-  access: FREE,
   blocks: [
     { kind: 'h', text: 'Two queues', id: 'queues' },
     {
@@ -285,7 +273,6 @@ const exchangePrice: Article = {
     {
       kind: 'callout',
       tone: 'chart',
-      anchor: 'symbolbar.price',
       text: 'On the chart: the live price at the top of the screen. Watch it for ten seconds and count the deals.',
     },
     { kind: 'h', text: 'The gap: the spread', id: 'spread' },
@@ -296,7 +283,6 @@ const exchangePrice: Article = {
     {
       kind: 'callout',
       tone: 'chart',
-      anchor: 'trade.spread',
       text: 'On the chart: the order form shows the current spread.',
     },
     { kind: 'h', text: 'When the queue runs thin', id: 'liquidity' },
@@ -371,7 +357,6 @@ const priceSwings: Article = {
     'A candle sums up a slice of deals. News moves the price either way, and crypto’s swings are big in both directions, so the size of a trade matters more than its timing.',
   minutes: 4,
   checked: '2026-11-12',
-  access: FREE,
   blocks: [
     { kind: 'h', text: 'From deals to candles', id: 'candles' },
     {
@@ -395,7 +380,6 @@ const priceSwings: Article = {
     {
       kind: 'callout',
       tone: 'chart',
-      anchor: 'pane.chart',
       text: 'On the chart: hover the newest candle on the far right. It’s still being drawn, so its close is the last price.',
     },
     { kind: 'h', text: 'A market that never closes', id: 'always-open' },
@@ -479,7 +463,6 @@ const spotAScam: Article = {
     'A price on a screen only means someone traded. Before you trust a coin, check who runs it, whether you can sell it, and what it promises.',
   minutes: 4,
   checked: '2026-11-12',
-  access: FREE,
   blocks: [
     { kind: 'h', text: 'The Squid Game token', id: 'squid' },
     {
@@ -548,7 +531,6 @@ const spotAScam: Article = {
       url: 'https://consumer.ftc.gov/articles/what-know-about-cryptocurrency-and-scams',
     },
   ],
-  practiceSoon: 'Lesson 4, Not all crypto is Bitcoin',
 };
 
 // ─── Mailboxes and keys ──────────────────────────────────────────────────────
@@ -560,9 +542,6 @@ const mailboxesKeys: Article = {
     'An address is a mailbox slot anyone can post bitcoin into. A private key is the only key that opens the box. Whoever holds the key controls the bitcoin.',
   minutes: 3,
   checked: '2026-11-12',
-  access: FREE,
-  // Lesson 2's keys and custody cards moved to a later lesson in the rewrite (owner 2026-11-16)
-  practiceSoon: 'a later lesson on keys and custody',
   // Owner 2026-11-08: the Many notebooks recipe, one line of text and a graphic to tap
   blocks: [
     { kind: 'h', text: 'Two things, two rules', id: 'key' },
@@ -630,9 +609,6 @@ const money101: Article = {
     'Money is whatever people accept for paying, for swapping and for comparing what things are worth. Almost every kind depends on someone in charge, and that is the weakness Bitcoin was built around.',
   minutes: 2,
   checked: '2026-10-23',
-  access: FREE,
-  // Lesson 1's money-and-trust cards moved to a later lesson in the rewrite (owner 2026-11-16)
-  practiceSoon: 'a later lesson on money and trust',
   blocks: [
     { kind: 'h', text: 'Three jobs' },
     {
@@ -703,7 +679,6 @@ const bitcoinStory: Article = {
     'In 2008 someone called Satoshi Nakamoto published a nine-page plan for online cash without a bank. Its idea fits in one line: replace “trust me” with “check it”.',
   minutes: 3,
   checked: '2026-11-12',
-  access: FREE,
   // Practised in Lesson 2's Bitcoin card, whose Read more opens it (owner 2026-11-12)
   blocks: [
     { kind: 'h', text: 'A short timeline', id: 'timeline' },
@@ -811,9 +786,6 @@ const gettingBitcoin: Article = {
     'You can buy bitcoin on an exchange, receive it from another person, or earn it by mining. The easy way puts a company between you and your coins.',
   minutes: 3,
   checked: '2026-11-12',
-  access: FREE,
-  // Lesson 2's keys and custody cards moved to a later lesson in the rewrite (owner 2026-11-16)
-  practiceSoon: 'a later lesson on keys and custody',
   blocks: [
     { kind: 'h', text: '1. Buy it on an exchange' },
     {

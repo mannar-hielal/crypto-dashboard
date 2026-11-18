@@ -5,9 +5,9 @@
  * journal line, and the close with the lesson's rule and an optional rating. Questions praise the
  * honest answer and explain every answer; there are no prizes and no confetti.
  *
- * Knowledge base (owner's visual Q&A 2026-10-23): a card's terms (dotted underline) open a peek
- * inside the sheet, and its "Read more" opens the article in the drawer while the lesson waits;
- * history cards show a real mini chart; the close lists what the learner can now do.
+ * A card's terms (dotted underline, owner's visual Q&A 2026-10-23) open a peek inside the sheet, a
+ * one-sentence definition with no article behind it (2026-11-18); history cards show a real mini
+ * chart; the close lists what the learner can now do.
  */
 
 import { AnswerResult } from './AnswerResult';
@@ -18,8 +18,6 @@ import { Star, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { guide } from '@/lib/guideAnchors';
 import { trapFocus } from '@/lib/trapFocus';
-import { getArticle } from '@/learn/articles';
-import { useArticleStore } from '@/learn/articleStore';
 import { useAuthStore } from '@/store/authStore';
 import { ArticleWidget } from '@/components/widgets/ArticleWidgets';
 import type { Concept } from '@/learn/concepts';
@@ -51,7 +49,6 @@ import {
   GUIDE_NAMES,
   LESSON_LABELS,
   lessonScreens,
-  type CanDo,
   type Lesson,
   type LessonPhoto,
   questionGuide,
@@ -121,14 +118,12 @@ function TermPeek({
   concept,
   from,
   onClose,
-  onMore,
   onFrom,
 }: {
   concept: Concept;
   /** The earlier lesson that taught it, if any (owner 2026-11-08) */
   from: string | null;
   onClose: () => void;
-  onMore: () => void;
   onFrom: () => void;
 }) {
   return (
@@ -160,9 +155,6 @@ function TermPeek({
           From {from} →
         </button>
       )}
-      <button type="button" className={styles.link} onClick={onMore} {...guide('lesson.peek.more')}>
-        Read more ({getArticle(concept.article).minutes} min) →
-      </button>
     </div>
   );
 }
@@ -357,67 +349,32 @@ function LessonPhotoView({ photo }: { photo: LessonPhoto }) {
   );
 }
 
-/** A line to read more on: a recap line or a "You can now" line, each opening its article */
-function ReadMore({
-  item,
-  lesson,
-  screen,
-  anchor = lesson.recap ? 'lesson.recap' : 'lesson.can-do',
-}: {
-  item: Pick<CanDo, 'article' | 'section'>;
-  lesson: Lesson;
-  screen: number;
-  anchor?: 'lesson.recap' | 'lesson.can-do' | 'lesson.more';
-}) {
-  // A line with no article yet is plain text (owner 2026-11-16)
-  const article = item.article;
-  if (!article) return null;
-  return (
-    <button
-      type="button"
-      className={styles.link}
-      onClick={() =>
-        useArticleStore.getState().open(article, {
-          section: item.section,
-          from: { lesson: lesson.id, screen },
-        })
-      }
-      {...guide(anchor, item.section ?? article)}
-    >
-      Read more →
-    </button>
-  );
-}
-
 /** The summary before the end: the lesson's recap, or what the learner can now do */
-function SummaryView({ lesson, screen }: { lesson: Lesson; screen: number }) {
+function SummaryView({ lesson }: { lesson: Lesson }) {
   const recap = lesson.recap;
   if (!recap) {
     return (
       <ul className={styles.canDo}>
-        {lesson.canDo.map((item) => (
-          <li key={item.text}>
+        {lesson.canDo.map((item, i) => (
+          <li key={item.text} {...guide('lesson.can-do', String(i))}>
             <span aria-hidden="true">✓ </span>
-            <RichText text={item.text} />. <ReadMore item={item} lesson={lesson} screen={screen} />
+            <RichText text={item.text} />
           </li>
         ))}
       </ul>
     );
   }
-  // A highlight with no article has no Read more (the end of Lesson 1, owner 2026-11-12)
-  const { article, section } = recap.highlight ?? {};
   const highlight = recap.highlight && (
     <p className={styles.highlight} {...guide('lesson.highlight')}>
-      <RichText text={recap.highlight.text} />{' '}
-      {article && <ReadMore item={{ article, section }} lesson={lesson} screen={screen} />}
+      <RichText text={recap.highlight.text} />
     </p>
   );
   return (
     <>
       <ol className={styles.recap}>
-        {recap.points.map((item) => (
-          <li key={item.text}>
-            <RichText text={item.text} /> <ReadMore item={item} lesson={lesson} screen={screen} />
+        {recap.points.map((item, i) => (
+          <li key={item.text} {...guide('lesson.recap', String(i))}>
+            <RichText text={item.text} />
           </li>
         ))}
       </ol>
@@ -478,7 +435,6 @@ export function LessonSheet() {
   const inTour = useLessonStore((s) => s.inTour);
   const returnTo = useLessonStore((s) => s.returnTo);
   const writeNote = usePaperStore((s) => s.addJournalNote);
-  const articleOpen = useArticleStore((s) => s.openId !== null);
   const mapOpen = useTourStore((s) => s.panelOpen);
   const dialogRef = useRef<HTMLDivElement>(null);
   /**
@@ -552,7 +508,7 @@ export function LessonSheet() {
   const leaveSheet = () => afterNote(() => useLessonStore.getState().close());
   const peekOpen = peek !== null;
   useEffect(() => {
-    if (!activeId || inTour || articleOpen || mapOpen) return;
+    if (!activeId || inTour || mapOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       // Esc inside the journal field (or closing an IME's candidates) belongs to the field, never
@@ -582,13 +538,13 @@ export function LessonSheet() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeId, inTour, articleOpen, mapOpen, peekOpen, streakActive]);
+  }, [activeId, inTour, mapOpen, peekOpen, streakActive]);
 
   // Each new screen takes the focus, so a screen reader reads it from the top (the streak screen
   // too: the button pressed to reach it is gone)
   useEffect(() => {
     dialogRef.current?.focus();
-  }, [screenIndex, activeId, inTour, articleOpen, streakActive]);
+  }, [screenIndex, activeId, inTour, streakActive]);
 
   // When the map closes over the sheet, the sheet takes the focus back (so Tab stays trapped in
   // it), unless what the map opened has taken it (a checkpoint's sheet)
@@ -616,7 +572,7 @@ export function LessonSheet() {
   // Enter or → moves on (not from a button, an option or the note: they handle their own keys);
   // during a cold open, it shows the lines first
   useEffect(() => {
-    if (!activeId || inTour || articleOpen || mapOpen) return;
+    if (!activeId || inTour || mapOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' && e.key !== 'ArrowRight') return;
       const target = e.target as HTMLElement | null;
@@ -632,10 +588,10 @@ export function LessonSheet() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeId, inTour, articleOpen, mapOpen, ready, beatsKey]);
+  }, [activeId, inTour, mapOpen, ready, beatsKey]);
 
-  // The lesson waits, hidden, while its tour runs or an article is open in the drawer
-  if (!lesson || inTour || articleOpen) return null;
+  // The lesson waits, hidden, while its tour runs
+  if (!lesson || inTour) return null;
 
   if (!screen) return null;
   const { next, back, answer } = useLessonStore.getState();
@@ -708,12 +664,6 @@ export function LessonSheet() {
   const earlier = peekConcept ? earlierPlace(peekConcept, lesson) : null;
   const toggleTerm = (id: string) =>
     setPeek(openTerm === id ? null : { run, screen: screenIndex, id });
-  const readMore = (concept: Concept) => {
-    setPeek(null);
-    useArticleStore
-      .getState()
-      .open(concept.article, { from: { lesson: lesson.id, screen: screenIndex } });
-  };
 
   let heading: string;
   let body: ReactNode;
@@ -792,7 +742,6 @@ export function LessonSheet() {
               concept={peekConcept}
               from={earlier?.label ?? null}
               onClose={() => setPeek(null)}
-              onMore={() => readMore(peekConcept)}
               onFrom={() => {
                 if (!earlier) return;
                 setPeek(null);
@@ -808,16 +757,6 @@ export function LessonSheet() {
                 </li>
               ))}
             </ul>
-          )}
-          {card.more && (
-            <p className={styles.more}>
-              <ReadMore
-                item={card.more}
-                lesson={lesson}
-                screen={screenIndex}
-                anchor="lesson.more"
-              />
-            </p>
           )}
           {card.lines?.map((line) => (
             <p key={line.text} className={styles.line}>
@@ -872,7 +811,7 @@ export function LessonSheet() {
       break;
     case 'summary':
       heading = lesson.recap?.title ?? 'You can now';
-      body = <SummaryView lesson={lesson} screen={screenIndex} />;
+      body = <SummaryView lesson={lesson} />;
       break;
     case 'close':
       if (streakActive && streakThen && accessToken) {

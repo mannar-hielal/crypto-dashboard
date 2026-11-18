@@ -1,0 +1,173 @@
+/* The public pages' header links (owner's visual Q&A, 2026-11-18): Product ▾ (Chart, Features), Blog,
+   About us, Support, as text links beside the logo; below md (768 px) one menu button opens a
+   full-width sheet. Colours from tokens.ts via the @theme mirror in index.css; raw values without a
+   CSS variable are noted with their token. */
+
+.nav {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.link,
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  font: inherit;
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.link:hover,
+.trigger:hover {
+  color: var(--color-brand-white);
+}
+
+/* The page you are on: white, with a purple underline */
+.current {
+  border-bottom-color: var(--color-brand-purple-dark); /* color.purpleDark */
+  color: var(--color-brand-white);
+}
+
+.link:focus-visible,
+.trigger:focus-visible,
+.item:focus-visible,
+.menuButton:focus-visible,
+.row:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing.color */
+  outline-offset: 2px;
+}
+
+.product {
+  position: relative;
+}
+
+.chevron {
+  transition: transform 0.15s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  box-sizing: border-box;
+  width: 260px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 8px;
+  padding: 6px;
+  background: var(--color-bg-footer); /* bg.modal */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--color-brand-white);
+  text-decoration: none;
+}
+
+.item:hover {
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.itemName {
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 600;
+}
+
+.itemText {
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+/* Phones */
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-brand-white);
+  cursor: pointer;
+}
+
+.sheet {
+  position: fixed;
+  top: 48px; /* under the h-12 bar */
+  left: 0;
+  right: 0;
+  z-index: 60;
+  box-sizing: border-box;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  padding: 8px 12px 16px;
+  background: var(--color-bg-panel); /* bg.panel */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px; /* a 44 px tap target */
+  border: 0;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--color-brand-white);
+  font: inherit;
+  font-size: 16px; /* fontSize.sm */
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.sub {
+  padding-left: 22px;
+  color: var(--color-brand-muted);
+}
+
+/* From md (768 px) up the text links show and the phone menu goes: last in the file, so it wins over
+   the base `display` rules above */
+@media (min-width: 768px) {
+  .nav {
+    display: flex;
+  }
+
+  .menuButton,
+  .sheet {
+    display: none;
+  }
+}
