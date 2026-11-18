@@ -506,21 +506,6 @@
   font-size: 13px; /* fontSize.xs11 */
 }
 
-.rowAction {
-  flex: none;
-  border: 0;
-  border-radius: 9999px;
-  padding: 5px 14px;
-  background: var(--color-bg-surface); /* bg.surface */
-  color: var(--color-brand-white);
-  font: inherit;
-  cursor: pointer;
-}
-
-.rowAction:hover {
-  background: var(--color-brand-purple-dark);
-}
-
 .tick {
   display: inline-flex;
   width: 20px;

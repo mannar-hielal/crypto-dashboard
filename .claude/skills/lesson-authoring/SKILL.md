@@ -49,8 +49,8 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
   numbers and stories they use), their screen order inside a lesson, their images or layouts. A
   reworded benchmark card is still a close paraphrase of their course: copyright covers expression and
   the selection and arrangement of content, not only exact words.
-- **How to write a card:** start from the concept and our own sources (the knowledge-base articles in
-  `apps/client/src/learn/articles.ts`, the owner's notes in `guided-learning-topics/`, primary
+- **How to write a card:** start from the concept and our own sources (the Blog's articles in
+  `apps/client/src/blog/posts.ts`, the owner's notes in `guided-learning-topics/`, primary
   sources), then write it in our voice with our own example. Never draft a card with the benchmark cell
   open beside you as the thing being rewritten; use table 1 only to tick off concepts.
 - **Never paste** text from the comparison file's benchmark column into code, docs, tests, commit
@@ -158,7 +158,7 @@ quizzes with options and Whys, linked terms) and ask it to:
   docs, the Bitcoin white paper, exchange documentation, regulators), citing each source;
 - check each quiz: exactly one right answer, the Why really explains it, no option that is also
   defensible;
-- check consistency with our knowledge-base articles (`apps/client/src/learn/articles.ts`) and the
+- check consistency with the Blog's articles (`apps/client/src/blog/posts.ts`) and the
   earlier lessons: same terms, same numbers;
 - flag oversimplifications that would mislead a beginner, and unclear wording;
 - report findings as a list (screen, claim, verdict, correction, source). It must not edit files,
@@ -212,11 +212,28 @@ Berwyn. Everywhere else the guides stay.
   - They were flatmates at university.
 - **Art:** **Open Peeps** (Pablo Stanley, CC0: "Free for commercial and personal use under CC0
   License", recolouring invited; checked on openpeeps.com 2026-11-18), chosen by the owner
-  2026-11-18. **No file is added yet:** before adding any, build a sample of Lena and Zoe on our
-  dark theme for the owner's visual Q&A, then follow the five steps above (copy the SVG parts into
-  `apps/client/src/assets/illustrations/open-peeps/`, recolour to our tokens, record the library in
-  `docs/APP_LOG.md` and a README beside the files). Until then, a card that needs the pair is
-  written with a placeholder and flagged in the report.
+  2026-11-18; the files are in `apps/client/src/assets/illustrations/open-peeps/` (`lena.svg` is
+  peep-38, `zoe.svg` peep-67) with a README that records the licence and the palette. A card that
+  needs the pair uses the art ids `friends`, `lena`, `zoe`. A new person follows the same steps:
+  sample on our dark theme for the owner's visual Q&A, then the five steps above.
+- **People are coloured like people** (owner 2026-11-18: the first version, white line art with
+  purple skin on a purple card, looked wrong). When an illustrated person is recoloured:
+  - **Natural, believable colours**: a real **skin tone** for the face and hands (warm brown, peach,
+    tan, deep brown: vary it across a lesson's people), natural **hair** (dark brown, black), and
+    **clothes** in soft, friendly colours. **Never** skin in a UI colour (purple, green, grey) and
+    never white line art on a dark fill.
+  - **Dark ink** (a deep warm plum or brown such as `#3a2c3f`, not pure black) for outlines, hair and
+    a dark jumper; the same ink on every person of a pair.
+  - **A light disc behind each figure** (their accent mixed with white: `color-mix(in srgb,
+<token> 22–28%, white)`), so the natural colours read on our dark panels. Each friend keeps
+    their accent: Lena green, Zoe amber.
+  - **Recolour by role, not by swapping black and white.** The library's skin, clothes and hands are
+    often one shape; split what you can (the head's fill is the skin, a second sub-path is a prop
+    like a mug), and paint the hands skin by drawing the clothes shape again, clipped to a small
+    ellipse over each hand.
+  - The art file carries its own palette (an illustration, not UI: `design.md`'s no-hex rule is for
+    components); list every colour and its role in the README beside the files.
+  - Show the owner the result on the real card (a screenshot) before the PR, as with any picture.
 - **Bull and bear roles:** when a card needs the two market moods, **Pulin plays the bull** (the
   optimist) and **Berwyn the bear** (the cautious one). The spelling is "Berwyn" (owner
   2026-11-18). The human pair is for people's styles, not for the bull and the bear.
@@ -330,7 +347,7 @@ rewritten, and to quizzes, Whys, summaries and titles.
 - **After three "Not quite." the right answer is shown** (owner 2026-11-18), on every lesson question
   (all formats, the draw card and Your call included): the third wrong check doesn't offer another
   Try again. It marks the right answer for the learner (the right option, the right order or pairs,
-  the right tiles, Buy or Sell, the model path drawn on the chart), keeps the Why, and unlocks
+  the right tiles, Buy or Sell, the answer path drawn on the chart in green: see "Draw a line"), keeps the Why, and unlocks
   Continue, so nobody is stuck. The three count per visit to that card (Try again keeps the count;
   going Back and returning starts it again), and the lesson counts a revealed answer as
   answered: it keeps no per-question score (an answer only gates Continue), so a revealed answer and
@@ -394,10 +411,20 @@ a level), it is a draw-a-line card. Don't turn it into a multiple-choice questio
   per-stroke undo.
 - **Graded against an expected path** (owner 2026-11-18). The card's data holds the expected path
   (e.g. the buy candle, the sell candle and the direction between) and a tolerance. Check turns on
-  once there is a line. A line that fits gets "Right." and our model path drawn beside theirs; one
-  that doesn't gets "Not quite.", a kind Why, and **Try again** (the line is cleared), as for every
-  quiz above. After the third "Not quite." our model path is drawn for them instead (the rule
-  above), with the Why.
+  once there is a line at least 40 px across. A line that fits gets "Right." and the answer drawn
+  with theirs; one that doesn't gets "Not quite.", a kind Why, and **Try again** (the line is
+  cleared), as for every quiz above.
+- **After the third "Not quite." show the answer on the chart** (owner 2026-11-18, from a
+  screenshot where the answer was a faint dotted line nobody could see). The answer is **the line
+  they should have drawn**, and it must be unmissable:
+  - a **solid green line** (`color.green`, 4 px) through the dated closes from the buy to the sell,
+    over a dark halo (`bg.page`, 9 px) so it stays clear of the candles; **never dotted or thin**;
+  - a **dot and a label on the Buy and on the Sell** (the card's `draw.buy.label` / `draw.sell.label`);
+  - the learner's own line **stays but steps back** (35% opacity), so the answer reads first;
+  - the message starts "That's three tries. Here's the answer." and the Why opens with "The green
+    line is the path to draw."; no more Try again, Continue unlocks.
+  - A right answer shows the same green line beside theirs, and a revisit shows it alone ("The
+    path, in green:").
 - **"Stuck? Use a hint"** link under the chart: the hint names where the path starts and ends
   (the dated candles), never the shape to copy.
 - Every figure and date comes from the card's own candles (noted in a code comment), recomputed
@@ -516,27 +543,31 @@ with paper money, and then picks up where it left off.
 - `lessons.test.ts`: the cards that offer a practice, and which tour.
 - The steps in `docs/UI_REPRODUCTIONS.md`.
 
-## Linking terms to articles
+## Terms and peeks (no article links since 2026-11-18)
+
+The articles moved to the public Blog (`/blog`, `apps/client/src/blog/posts.ts`) and **nothing in a
+lesson links to them** (owner 2026-11-18): no `more`, no `article` or `section` on a recap point or a
+can-do line, no "Read more" in a peek.
 
 - Markup: `**bold**`, `*italic*` and `[[term]]` render through one renderer (`RichText`). Never put a
   `[[term]]` inside `*…*` (its asterisks would show), and write sums with `×`, never `*` (the
   run between two `*` would turn italic). The tests catch a nested term (any `*` left on screen)
   and a `*` with spaces around it or flush between digits; other uses of `*` are on you.
-
-- A term in card text links with `[[label|concept-id]]` (or `[[concept-id]]`): it opens a peek, and
-  the peek opens its article. Concept ids must exist in `apps/client/src/learn/graph.ts`
-  (`conceptFor`); `terms.test` checks it. At most two terms a card.
-- A card that goes deeper gets `more: { article, section? }` (a Read more). Article ids are
-  `ARTICLE_IDS` in `apps/client/src/learn/articles.ts`; `section` is an `h` block's id.
-- **Only link to what exists.** If a term deserves an article that doesn't exist yet, don't invent an
-  id: list it in the report as a proposed article (title, what it would explain).
+- A term in card text is `[[label|concept-id]]` (or `[[concept-id]]`): it opens a **peek**, a one-sentence
+  definition and a "Think of it as…" line, and that is all. Concept ids must exist in
+  `apps/client/src/learn/concepts.ts` (`conceptFor` in `graph.ts`); `terms.test` checks it. At most
+  two terms a card.
+- **A new idea that needs a peek** gets a concept (`id`, `term`, `peek`, `think`): no article field.
+  If it also deserves an article, that is a Blog post, written separately and never linked from the
+  lesson: list it in the report as a proposed post (title, what it would explain).
+- A summary (`recap`) and a close (`canDo`) are plain lines (`{ text }`).
 - A term an earlier lesson taught says "Lesson N" where it's reused (lesson rules test).
 
 ## Tests and docs to update (same PR)
 
 - `apps/client/src/guide/__tests__/lessons.test.ts` — the lesson rules (caps, structure, the
   lesson's own expectations); `LessonSheet.test.tsx` for new screen kinds.
-- `apps/client/src/learn/__tests__/terms.test.ts`, `articleMinutes.test.ts` if articles change.
+- `apps/client/src/learn/__tests__/terms.test.ts`, and `apps/client/src/blog/__tests__/` (`articleMinutes`, `posts`) if articles change.
 - `stepBase`: when a lesson's screens change, raise it by at least the SDK's `LESSON_VERSION_SPAN`
   (40: one version's steps, which the server refuses past; a lesson's screens must fit in it), so
   stored steps and rows are never read as today's.
@@ -567,7 +598,7 @@ with paper money, and then picks up where it left off.
 - Screen count: ours vs the benchmark's.
 - Quizzes by format, and any new widget built.
 - Practice trades offered: the card, the concept (buy, sell, long, short, close) and the tour.
-- Terms linked (concept → article) and proposed new articles.
+- Terms marked (their concepts) and proposed new Blog posts.
 - Any Table 2 instruction declined under the IP rule, and the alternative offered.
 
 ## Pick the right ones: the decided design (owner 2026-11-18)

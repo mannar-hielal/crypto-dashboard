@@ -39,6 +39,22 @@ export const GUIDE_ANCHORS = [
   'nav.sign-out',
   'nav.trade-menu',
   'nav.trade-menu.option',
+  // The public pages' header links (owner 2026-11-18): Product ▾ with Chart and Features (key), Blog,
+  // About us, Support, and the phone menu with its sheet
+  'nav.product',
+  'nav.product.item',
+  'nav.blog',
+  'nav.about',
+  'nav.support',
+  'nav.menu',
+  'nav.menu.sheet',
+  // The Blog (owner 2026-11-18): the card list, a card (key: the article), the back link, a "More
+  // articles" card, and the About us / Support placeholder (key: which)
+  'blog.list',
+  'blog.card',
+  'blog.back',
+  'blog.more',
+  'page.coming-soon',
   // settings
   'settings.username.input',
   'settings.username.save',
@@ -260,13 +276,11 @@ export const GUIDE_ANCHORS = [
   'tour.skip-step',
   'tour.done',
   'tour.quiz-option',
-  // learn (the welcome card; the Route button and its learning map, whose Library tab lists articles)
+  // learn (the welcome card; the Route button and its learning map, whose second tab holds the habits)
   'nav.learn',
   'learn.card',
   'learn.card.start',
   'learn.card.dismiss',
-  'learn.article',
-  'learn.article.open',
   'session.retry',
   'path.drawer',
   'path.close',
@@ -330,8 +344,6 @@ export const GUIDE_ANCHORS = [
   'lesson.note',
   'lesson.note.save',
   'lesson.recap',
-  /** A card's Read more (key: the article) */
-  'lesson.more',
   /** The close's line on what the next lesson brings */
   'lesson.teaser',
   'lesson.highlight',
@@ -342,17 +354,11 @@ export const GUIDE_ANCHORS = [
   'lesson.term',
   'lesson.peek',
   'lesson.peek.close',
-  'lesson.peek.more',
   'lesson.peek.from',
   'lesson.return',
   'lesson.chart',
   'lesson.can-do',
-  // article (the knowledge-base drawer and its interactive pieces)
-  'article.drawer',
-  'article.close',
-  'article.back',
-  'article.practice',
-  'article.sources',
+  // article (the interactive pieces, shared by the Blog's articles and the lessons' Try it)
   'article.notebook.next',
   'article.notebook.reset',
   'article.nora.amount',

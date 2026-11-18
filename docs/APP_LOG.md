@@ -4643,6 +4643,33 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-18 — The Blog: the articles leave the lessons, and the public header gets Product, Blog, About us, Support
+
+Plan: `docs/BLOG_PLAN.md`; built in one PR on `feat/knowledge-base`. The nine articles (the old knowledge base)
+moved to a public **Blog** and are **no longer linked from any lesson, card, summary, panel or path**.
+
+- **The Blog** (`blog/posts.ts`, `ArticleBody`, `pages/BlogIndexPage`, `BlogPostPage`): `/blog` is a card grid
+  (three columns, one on phones); `/blog/<id>` is a 720 px column with the article, a quick self-test, folded sources,
+  "← Blog" and two more articles. The id is the URL (kebab-case). An unknown id goes back to `/blog`. `SeoHead` per
+  page; **no sitemap entries yet** (a second PR: sitemap, structured data, prerendering decision).
+- **The header** (`components/SiteNav.tsx`, in the marketing `TopBar` only): **Product ▾** (Chart, Features), **Blog**,
+  **About us**, **Support**; text links from md up, one menu button and a full-width sheet below it; Esc and a press
+  outside close what is open. `/about` and `/support` are `ComingSoonPage` (noindex) until written. The dashboard bar
+  has no nav; legal and auth pages keep their own chrome.
+- **Shared widgets** (`components/widgets/`): the interactive pieces (SunCoin notebook, order book, block chain …) are
+  rendered by the Blog's articles and by lessons' Try it, one component each.
+- **Lessons without articles:** `LessonCard.more`, the `article` / `section` fields of `CanDo` and the recap
+  highlight, and every "Read more" are gone. **`[[term]]` peeks stay** (definition and "think of it as"), with no
+  article behind them: `Concept.article` and `practisedIn` are removed, `graph.ts` keeps concept ↔ lesson.
+- **Removed:** `ArticleDrawer`, `articleStore`, the Library tab (its habit badges are now the **Habits** tab,
+  `learn/HabitsTab.tsx`), the article drawer / library anchors, and their tests. New anchors: `nav.product(.item)`,
+  `nav.blog`, `nav.about`, `nav.support`, `nav.menu(.sheet)`, `blog.list`, `blog.card`, `blog.back`, `blog.more`,
+  `page.coming-soon`.
+- **Docs:** `UI_REPRODUCTIONS.md` (the Library steps are the Habits and Blog steps; the header check),
+  `SEO_READINESS.md`, the lesson-authoring skill ("Terms and peeks").
+- **Known gaps:** the articles were written beside the lessons and read oddly alone in places (a standalone editing
+  pass is a later PR); no e2e test walks `/blog` or the header yet; About us and Support content.
+
 ### 2026-11-18 — Chapter 1 finished: four lessons, two practice stops and a ten-question checkpoint
 
 Chapter 1, "Start here: crypto and trading basics", is done. New chapters are made fresh from the benchmark's next
@@ -4690,13 +4717,13 @@ all absent and `lessonScreens` leaves the screen out). Ids added everywhere a le
 - **Draw a line** (`format: 'draw'`, `DrawQuiz.tsx`, `drawGrade.ts`): one freehand line over a dated chart, a trash
   button that clears it, "Stuck? Use a hint", Check. Graded against the buy and the sell (their dated closes, in
   pixels) and, for a freehand line, against the closes between (mean distance within 15% of the height); "Right."
-  shows our dotted path, "Not quite." offers Try again. After the **third** "Not quite." the card shows our path for them ("That's three tries. Here's the answer."), offers no more tries and lets them on (`MAX_MISSES`, `AnswerResult`'s `revealed`); only this board has it so far. Keyboard and screen readers: Left / Right move a marker over
+  shows the answer path, "Not quite." offers Try again. After the **third** "Not quite." the card shows the answer for them: **a solid green line from the Buy to the Sell with a dot and a label on each, over a dark halo, the learner's own line dimmed to 35%** (it was a thin dotted line that nobody could see, 2026-11-18) ("That's three tries. Here's the answer."), offers no more tries and lets them on (`MAX_MISSES`, `AnswerResult`'s `revealed`); only this board has it so far. Keyboard and screen readers: Left / Right move a marker over
   the days, Enter places the buy and then the sell (graded on the two ends). A resize clears the line; a line holds at
   most 600 points. `LessonChart` takes `tall` and `onReady`.
 - **Pick the right ones** (`format: 'pick'`, `PickQuiz.tsx`): a 2 × 3 grid of icon tiles (Phosphor duotone), pick
   exactly the number marked right, ✓ / ✕ with words, Try again. Right when every pick is a right tile.
 - **Lena and Zoe** (`LessonArtId` `friends`, `lena`, `zoe`; `LessonQuestion.art`): our human pair, Open Peeps (Pablo
-  Stanley, CC0, read 2026-11-18) peeps 38 and 67 recoloured to `tokens.ts` (white lines, `surface` fills), each with
+  Stanley, CC0, read 2026-11-18) peeps 38 and 67 recoloured by role with natural colours (a real skin tone, dark ink, sage and amber clothes; the first white-line-on-purple version was redone 2026-11-18), each on a pastel disc
   an accent halo (Lena green, Zoe amber). Files and licence in `assets/illustrations/open-peeps/README.md`.
 - **Our own data** (Bybit BTCUSDT perpetual daily closes, fetched and fact-checked 2026-11-18): the traced trade
   8 → 22 Apr 2025 (+22%), a trader's day 22 Apr 2025 (+8.03% low to high) and an investor's year 1 Nov 2024 → 1 Nov

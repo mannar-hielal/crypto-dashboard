@@ -23,7 +23,7 @@ import {
 } from '@/guide/lessons';
 import { daySeconds } from '@/guide/lessonChartData';
 import { getTour, isTourId, PRACTICE_REVIEW_IDS, PRACTICE_TOUR_IDS, TOUR_IDS } from '@/guide/tours';
-import { ARTICLE_IDS, ARTICLES, getArticle } from '@/learn/articles';
+import { ARTICLES } from '@/blog/posts';
 import { FREE } from '@/learn/access';
 import { termIds } from '@/learn/terms';
 
@@ -228,9 +228,6 @@ describe('lessons', () => {
           expect(lesson.canDo.length).toBeLessThanOrEqual(3);
         }
         expect(lesson.access).toBe(FREE);
-        for (const item of lesson.canDo) {
-          if (item.article) expect(ARTICLE_IDS).toContain(item.article);
-        }
       });
 
       it('should give every chart a sane window: markers and the freeze day inside it', () => {
@@ -497,26 +494,14 @@ describe('lessons', () => {
     const charge = l.cards.find((c) => c.title === 'No one in charge')!;
     expect(charge.text).toMatch(/never be more than 21 million/);
     expect(charge.text).toMatch(/anyone can read the whole ledger/);
-    // The summary: plain points, no staged birth story (owner 2026-11-17); the actual why first,
-    // and no one in charge opens the network article's answer (fact check 2026-11-17)
+    // The summary: plain points, no staged birth story (owner 2026-11-17); the actual why first
+    // (fact check 2026-11-17); no article links since 2026-11-18
     expect(l.recap?.title).toBe('Why Bitcoin exists');
-    expect(l.recap?.points.map((p) => [p.text, p.article, p.section])).toEqual([
-      [
-        'Bitcoin was made so people can pay each other online without trusting a bank in the middle.',
-        'bitcoin-story',
-        'plan',
-      ],
-      [
-        'Bitcoin keeps one ledger, copied on thousands of computers.',
-        'bitcoin-network',
-        'three-jobs',
-      ],
-      [
-        'Nodes check every payment, and blocks are linked by their hash.',
-        'bitcoin-network',
-        'blocks',
-      ],
-      ['No one is in charge: the network agrees.', 'bitcoin-network', 'answered'],
+    expect(l.recap?.points.map((p) => p.text)).toEqual([
+      'Bitcoin was made so people can pay each other online without trusting a bank in the middle.',
+      'Bitcoin keeps one ledger, copied on thousands of computers.',
+      'Nodes check every payment, and blocks are linked by their hash.',
+      'No one is in charge: the network agrees.',
     ]);
     expect(Object.keys(l.recap ?? {})).toEqual(['title', 'points']);
   });
@@ -540,7 +525,6 @@ describe('lessons', () => {
     // Proof of work, not "impossible to fake" (fact check 2026-11-16)
     const sealed = l2.cards.find((c) => c.title === 'Sealed by hard work')!;
     expect(sealed.text).toMatch(/redo that work/);
-    expect(sealed.more).toEqual({ article: 'bitcoin-story', section: 'mining' });
   });
 
   it('should give every Choose buy or sell question Buy and Sell, a plan and a chart to reveal (owner 2026-11-16)', () => {
@@ -800,32 +784,30 @@ describe('lessons', () => {
     expect(l.cards[1].meet?.list).toHaveLength(3);
   });
 
-  it('should sum a lesson up in a few lines, each opening a real section of its article', () => {
+  it('should sum a lesson up in a few plain lines, with no link to an article (owner 2026-11-18)', () => {
     for (const lesson of LESSONS) {
       if (!lesson.recap) continue;
       expect(lesson.recap.points.length, lesson.id).toBeGreaterThanOrEqual(2);
       // Up to five: Lesson 1's approved draft (owner 2026-11-16)
       expect(lesson.recap.points.length, lesson.id).toBeLessThanOrEqual(5);
-      // A highlight may have no article: Lesson 1's ending has no Read more (owner 2026-11-12)
-      const lines = [
-        ...lesson.recap.points,
-        ...(lesson.recap.highlight?.article
-          ? [{ ...lesson.recap.highlight, article: lesson.recap.highlight.article }]
-          : []),
-      ];
-      for (const point of lines) {
-        // A line with no article yet is plain text (owner 2026-11-16)
-        if (!point.article) continue;
-        const ids = getArticle(point.article).blocks.flatMap((b) =>
-          b.kind === 'h' && b.id ? [b.id] : []
-        );
-        if (point.section) expect(ids, point.text).toContain(point.section);
+      for (const point of lesson.recap.points) {
+        expect(Object.keys(point), point.text).toEqual(['text']);
+      }
+      expect(Object.keys(lesson.recap.highlight ?? { text: '' })).toEqual(['text']);
+    }
+    // Lesson 1's summary: five lines (owner 2026-11-16)
+    const l = getLesson('lesson-01');
+    expect(l.recap?.points).toHaveLength(5);
+    expect(l.recap?.highlight?.text).toBe('Decide when and why before you click.');
+  });
+
+  it('should carry no article link anywhere in a lesson: no Read more, no can-do article (owner 2026-11-18)', () => {
+    for (const lesson of LESSONS) {
+      for (const card of lesson.cards) expect(Object.keys(card), card.title).not.toContain('more');
+      for (const item of lesson.canDo) {
+        expect(Object.keys(item), item.text).toEqual(['text']);
       }
     }
-    // Lesson 1's summary (owner 2026-11-16): four plain lines (no article yet) and price swings
-    const l = getLesson('lesson-01');
-    expect(l.recap?.points.filter((p) => !p.article)).toHaveLength(4);
-    expect(l.recap?.highlight?.text).toBe('Decide when and why before you click.');
   });
 
   it('should teach Lesson 3’s swings, news and traps in the approved order, and end on the path (owner 2026-11-16)', () => {

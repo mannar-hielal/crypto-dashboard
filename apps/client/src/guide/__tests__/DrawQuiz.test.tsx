@@ -120,6 +120,8 @@ describe('DrawQuiz (three tries)', () => {
     wrongLine();
     expect(onAnswer).toHaveBeenLastCalledWith(-1);
     expect(status()).toContain('Not quite.');
+    // The answer stays hidden until the third miss
+    expect(document.querySelector('[data-draw-answer]')).toBeNull();
     fireEvent.click(screen.getByText('Try again'));
     wrongLine();
     expect(onAnswer).toHaveBeenLastCalledWith(-1);
@@ -127,6 +129,22 @@ describe('DrawQuiz (three tries)', () => {
     wrongLine();
     // The third miss unlocks the lesson as answered, says so, and offers no more tries
     expect(onAnswer).toHaveBeenLastCalledWith(0);
+    // …and draws the answer on the chart: a solid green line from the Buy to the Sell, the learner's
+    // own line stepping back (owner 2026-11-18)
+    const answer = document.querySelector('[data-draw-answer]')!;
+    expect(answer).not.toBeNull();
+    const green = [...answer.querySelectorAll('polyline')].find(
+      (l) => l.getAttribute('stroke') === '#2ccd78'
+    )!;
+    expect(green.getAttribute('stroke-dasharray')).toBeNull();
+    expect(Number(green.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(4);
+    expect(green.getAttribute('points')!.split(' ').length).toBeGreaterThan(5);
+    expect([...answer.querySelectorAll('text')].map((t) => t.textContent)).toEqual(['Buy', 'Sell']);
+    const own = [...document.querySelectorAll('polyline')].find(
+      (l) => l.getAttribute('stroke') === '#a99cff'
+    )!;
+    expect(Number(own.getAttribute('opacity'))).toBeLessThan(0.5);
+    expect(status()).toContain('The green line is the path to draw.');
     expect(status()).toContain('That’s three tries.');
     expect(status()).not.toContain('Not quite.');
     expect(status()).toContain('A trade is a path.');
@@ -224,7 +242,7 @@ describe('DrawQuiz (resize)', () => {
       await Promise.resolve();
     });
     // The wrong line is still there: Try again (which clears it) is still on offer, no revisit label
-    expect(screen.queryByText('Our path, dotted:')).toBeNull();
+    expect(screen.queryByText('The path, in green:')).toBeNull();
     expect(document.querySelectorAll('polyline')).toHaveLength(1);
   });
 });
@@ -405,7 +423,8 @@ describe('DrawQuiz (Draw a line)', () => {
     const view = await mount(vi.fn(), 0);
     expect(status()).toContain('Right.');
     expect(status()).toContain('A trade is a path.');
-    expect(screen.getByText('Our path, dotted:')).toBeTruthy();
+    expect(screen.getByText('The path, in green:')).toBeTruthy();
+    expect(document.querySelector('[data-draw-answer]')).not.toBeNull();
     view.unmount();
     function Harness() {
       const [answer, setAnswer] = useState<number | undefined>(-1);

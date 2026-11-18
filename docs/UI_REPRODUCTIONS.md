@@ -225,11 +225,11 @@ Preconditions: signed out (a private window).
 5. Phone width → Expect [trade.mobile.buy] / [trade.mobile.sell] dimmed and not tappable, with the account panel's
    one-row **Sign in to trade** just above them.
 
-### Learning path — Lessons 1, 2 and 3, the knowledge base (no Part B rows yet)
+### Learning path — Lessons 1, 2 and 3, and the Blog (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT` (local dev; the history
 charts need the real Bybit feed, the fake feed draws its own candles) or production. The content is
-`apps/client/src/guide/lessons.ts` and `apps/client/src/learn/articles.ts`; the unit tests hold their rules.
+`apps/client/src/guide/lessons.ts`; the Blog's articles are `apps/client/src/blog/posts.ts`. The unit tests hold their rules.
 
 1. [learn.card.start] → Expect **Lesson 1 · Up, down and your first trade**, screen 1 of 21 (rewritten 2026-11-16): the
    dark stage, the real photo of Laszlo Hanyecz with the two pizzas ([lesson.photo], credited "Photo: Laszlo
@@ -295,10 +295,9 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
 2. Lesson 2 · **Money nobody controls** (rewritten 2026-11-16), 21 screens → Expect the cold open drawn, no photo
    and no guide: the Bitcoin mark and the beats ("3 January 2009 · The first block" … the Times headline … "In the
    next 9 minutes: why Bitcoin exists…"), then **Continue →**. Then **From the price to the
-   thing** (Pulin and Berwyn), **2008: trust broke**, **A paper, then a block** ([lesson.more] → _Bitcoin's story_
-   at its timeline), **One record, many copies** (the dotted world map; [lesson.term `ledger`] → a peek with no
-   "From" line; [lesson.term `node`] → "A computer that keeps a full copy…", [lesson.peek.more] → the network
-   article in the drawer, the lesson hidden), **Sending bitcoin**, **Two checks, then a block**, **Sealed by hard
+   thing** (Pulin and Berwyn), **2008: trust broke**, **A paper, then a block**, **One record, many copies** (the dotted world map; [lesson.term `ledger`] → a peek with no
+   "From" line; [lesson.term `node`] → "A computer that keeps a full copy…", no Read more: since 2026-11-18 a peek has
+   no article behind it), **Sending bitcoin**, **Two checks, then a block**, **Sealed by hard
    work** (the picture, 2026-11-17: three blocks, Block 1's "pays 5 → 9" and its fingerprint changed, red, the links
    after it crossed out ✕, "change one: redo every block after"), **The hash links the chain** (the picture: three
    blocks, each one's "prev" the fingerprint of the block before, amber arrows, "# = a block's fingerprint").
@@ -316,12 +315,12 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      check** (Match boxes: Decentralized, Fixed supply, Open to check, Borderless).
    - Screen 19, **Try it** (any screen size): the blockchain piece in the sheet; [article.chain.change] → the later
      blocks break, [article.chain.reset] mends them; [lesson.try] Continue.
-   - Screen 20, **Why Bitcoin exists**: four numbered lines with Read more, the first "Bitcoin was made so people
-     can pay each other online without trusting a bank in the middle." (→ `bitcoin-story#plan`), the last "No one is
-     in charge: the network agrees." (→ `bitcoin-network#answered`), shown at once (no story, no Bitcoin
+   - Screen 20, **Why Bitcoin exists**: four plain numbered lines, the first "Bitcoin was made so people
+     can pay each other online without trusting a bank in the middle.", the last "No one is
+     in charge: the network agrees." (no Read more since 2026-11-18), shown at once (no story, no Bitcoin
      mark: dropped 2026-11-17), and **Finish lesson** ready straight away. Screen 21: the close,
      [lesson.teaser] "Next: why prices swing so hard…", [lesson.next-lesson] **Lesson 3: News, swings and traps**.
-3. The knowledge base from Lesson 2 (unchanged articles): in _Many notebooks, no Nora_, [article.gossip.send] → the
+3. The interactive pieces, now on the Blog (`/blog/bitcoin-network`) and as Lesson 2's Try it: in _Many notebooks, no Nora_, [article.gossip.send] → the
    dots light ring by ring (1, 8, 64), all at once with reduced motion; [article.balance.try] → "✗ Rejected by every
    node: 9 is more than 6."; [article.stamp.try `sofia`] → the amber stamp rises into the checker's outline, ✓;
    [`sam`] → ✗; [article.chain.change] → the later blocks break; [article.answer.tile `lose`] → its answer shown. In
@@ -342,11 +341,13 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      pull's five steps in order).
    - Desktop: **Try it** → [lesson.try] Show me → the primer's three tasks, then the summary. A phone gets Continue
      and "needs a larger screen" (the primer's hover steps).
-   - **What moves a price**: four lines with Read more and "Your plan decides, not the headline."; the close with no
+   - **What moves a price**: four plain lines and "Your plan decides, not the headline."; the close with no
      teaser and one button, [lesson.finish] **Finish lesson** (2026-11-17; the map's practice stops, buy then sell, come next).
-5. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of nine articles;
-   [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
-   In **When the queue runs thin**, [article.queue.size] to 10 → Expect the thin queue down to 90; [article.queue.limit]
+5. [nav.learn] (the Route icon beside the avatar) → Expect two tabs, **Path** and **Habits** (the old Library tab
+   went to the Blog on 2026-11-18); [path.tab `habits`] → the habit badges. Open the Blog at `/blog` (the header's
+   [nav.blog]) → Expect nine cards ([blog.card]), each with its reading time; [blog.card `exchange-price`] → the article
+   in a readable column with [blog.back] "← Blog", the sources folded, two [blog.more] cards.
+   On the article page, in **When the queue runs thin**, [article.queue.size] to 10 → Expect the thin queue down to 90; [article.queue.limit]
    → Expect "6 wait unsold". In _Candles, news and big swings_, [article.candle.next] ×5 → Expect "▲ Closed higher…
    green"; [article.swing.size `1000`] → Expect "$1,000.00 became $671.30 at the low: −$328.70 (−32.9%)". In
    _Check before you trust_, the red-flag sorter → Expect a Why after every pick and "3 red flags…" once all six are in.
@@ -397,7 +398,10 @@ the analogy, and the math's steps (a sum wraps under its label on a narrow phone
 8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen), **Back to the path** full width and **Try again** under it.
 
-**Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
+**Manual check (M).** The public header (2026-11-18): on `/`, `/features`, `/blog` and `/about` at 1440 px [nav.product]
+opens Chart and Features (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
+their pages, the current one underlined; at 375 px [nav.menu] opens a full-width sheet of 44 px rows with Product
+expanding. `/about` and `/support` say "Coming soon." and are not indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the
 bubble (2026-11-17). Frequency: per release touching `learn/Path*`, `learn/CheckpointSheet.tsx` or `guide/tours.ts`.
 

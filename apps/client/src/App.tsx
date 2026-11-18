@@ -39,6 +39,15 @@ const AcceptableUsePolicyPage = lazy(() =>
 const LandingPage = lazy(() =>
   import('@/pages/LandingPage').then((m) => ({ default: m.LandingPage }))
 );
+const BlogIndexPage = lazy(() =>
+  import('@/pages/BlogIndexPage').then((m) => ({ default: m.BlogIndexPage }))
+);
+const BlogPostPage = lazy(() =>
+  import('@/pages/BlogPostPage').then((m) => ({ default: m.BlogPostPage }))
+);
+const ComingSoonPage = lazy(() =>
+  import('@/pages/ComingSoonPage').then((m) => ({ default: m.ComingSoonPage }))
+);
 const FeaturesPage = lazy(() =>
   import('@/pages/FeaturesPage').then((m) => ({ default: m.FeaturesPage }))
 );
@@ -110,6 +119,11 @@ export default function App() {
             {/* Landing page */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/features" element={<FeaturesPage />} />
+            {/* The Blog (owner 2026-11-18), and the two pages still to be written */}
+            <Route path="/blog" element={<BlogIndexPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/about" element={<ComingSoonPage page="about" />} />
+            <Route path="/support" element={<ComingSoonPage page="support" />} />
 
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />

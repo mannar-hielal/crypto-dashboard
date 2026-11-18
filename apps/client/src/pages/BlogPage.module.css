@@ -1,0 +1,167 @@
+/* The Blog's index and article pages (owner's visual Q&A, 2026-11-18): a card grid (three columns,
+   one on phones) and a readable 720 px column. Colours from tokens.ts via the @theme mirror in
+   index.css; raw values without a CSS variable are noted with their token. */
+
+.wrap {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 16px 56px;
+  color: var(--color-brand-white);
+}
+
+.column {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 16px 56px;
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.intro {
+  margin: 8px 0 28px;
+  color: var(--color-brand-muted);
+  font-size: 16px; /* fontSize.sm */
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 10px;
+  padding: 18px;
+  background: var(--color-bg-panel); /* bg.panel */
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.card:hover {
+  border-color: rgba(105, 91, 236, 0.6); /* color.purpleDark */
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.card:focus-visible,
+.back:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing.color */
+  outline-offset: 3px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+  line-height: 1.375; /* lineHeight.snug */
+}
+
+.cardSummary {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+}
+
+.cardMeta {
+  margin: auto 0 0;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--color-brand-white);
+}
+
+.moreTitle {
+  margin: 40px 0 12px;
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+}
+
+.moreGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 640px) {
+  .moreGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* The placeholder pages: About us and Support */
+.soon {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 16px;
+  text-align: center;
+}
+
+.soonText {
+  margin: 0;
+  max-width: 420px;
+  color: var(--color-brand-muted);
+}
+
+.soonLink {
+  margin-top: 8px;
+  border-radius: 25px; /* radius.button */
+  padding: 10px 20px;
+  background: var(--color-brand-purple-dark);
+  color: var(--color-brand-white);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.soonLink:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark);
+  outline-offset: 3px;
+}
