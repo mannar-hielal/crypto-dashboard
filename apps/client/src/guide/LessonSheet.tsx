@@ -21,7 +21,7 @@ import { trapFocus } from '@/lib/trapFocus';
 import { getArticle } from '@/learn/articles';
 import { useArticleStore } from '@/learn/articleStore';
 import { useAuthStore } from '@/store/authStore';
-import { ArticleWidget } from '@/learn/ArticleWidgets';
+import { ArticleWidget } from '@/components/widgets/ArticleWidgets';
 import type { Concept } from '@/learn/concepts';
 import { conceptFor, lessonPlaceLabel, lessonPlacesOf } from '@/learn/graph';
 import { RichText } from '@/learn/RichText';

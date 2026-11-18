@@ -28,11 +28,11 @@ import {
 import pizzaDayThumb from '@/assets/lessons/pizza-day-thumb.jpg';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { guide } from '@/lib/guideAnchors';
-import type { WidgetId } from './articles';
+import type { WidgetId } from './widgetIds';
 import { StampShape } from './StampShape';
 import { STAMP_SHAPES } from './stamp';
 import { NOTEBOOK, balancesAfter, copiesAgreeing, ledgerTotal, PEOPLE } from './suncoin';
-import styles from './ArticleDrawer.module.css';
+import styles from './Widgets.module.css';
 
 // ─── SunCoin: the notebook, one payment at a time ────────────────────────────
 

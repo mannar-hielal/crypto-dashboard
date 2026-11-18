@@ -18,7 +18,7 @@ import { getLesson } from '@/guide/lessons';
 import { startLesson, startTour } from '@/guide/afterNote';
 import { getArticle, type ArticleBlock } from './articles';
 import { useArticleStore } from './articleStore';
-import { ArticleWidget } from './ArticleWidgets';
+import { ArticleWidget } from '@/components/widgets/ArticleWidgets';
 import { RichText } from './RichText';
 import { practiceFor, type PracticeLink } from './graph';
 import styles from './ArticleDrawer.module.css';

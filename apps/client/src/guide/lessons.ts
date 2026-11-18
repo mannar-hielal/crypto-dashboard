@@ -15,7 +15,8 @@
  */
 
 import { FREE, type Entitlement } from '@/learn/access';
-import type { ArticleId, WidgetId } from '@/learn/articles';
+import type { ArticleId } from '@/learn/articles';
+import type { WidgetId } from '@/components/widgets/widgetIds';
 import { plainText, termIds } from '@/learn/terms';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId, PracticeTourId } from './tours';

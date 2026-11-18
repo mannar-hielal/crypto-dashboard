@@ -7,7 +7,7 @@ vi.mock('framer-motion', async (importOriginal) => ({
   useReducedMotion: () => reduced,
 }));
 
-import { ArticleWidget } from '@/learn/ArticleWidgets';
+import { ArticleWidget } from '@/components/widgets/ArticleWidgets';
 import { guideSelector } from '@/lib/guideAnchors';
 
 const status = () => screen.getByRole('status').textContent;
