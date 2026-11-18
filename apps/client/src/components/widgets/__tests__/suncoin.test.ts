@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balancesAfter, copiesAgreeing, ledgerTotal, NOTEBOOK } from '@/learn/suncoin';
+import { balancesAfter, copiesAgreeing, ledgerTotal, NOTEBOOK } from '@/components/widgets/suncoin';
 
 describe('SunCoin', () => {
   it('should work balances out by reading the notebook: Emi 5, Leo 3, Sofia 7, 15 in all', () => {

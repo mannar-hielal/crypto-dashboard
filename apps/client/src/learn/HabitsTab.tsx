@@ -1,48 +1,22 @@
 /**
- * The learning map's Library tab: every knowledge-base article, always open (reference material is
- * never locked behind the path), then the habit badges. Moved from the old Learn panel unchanged.
+ * The learning map's Habits tab: the habit badges. It was the Library tab, whose articles moved to
+ * the public Blog (owner 2026-11-18), leaving the habits here.
  */
 
 import { Check } from 'lucide-react';
 import type { HabitsResponse } from '@crypto-dashboard/sdk';
 import { HABIT_COPY } from '@/guide/habits';
-import { useTourStore } from '@/guide/tourStore';
 import { guide } from '@/lib/guideAnchors';
-import { ARTICLES } from './articles';
-import { useArticleStore } from './articleStore';
 import styles from './PathDrawer.module.css';
 
-interface LibraryTabProps {
+interface HabitsTabProps {
   habits: HabitsResponse | null;
   habitsError: boolean;
 }
 
-export function LibraryTab({ habits, habitsError }: LibraryTabProps) {
+export function HabitsTab({ habits, habitsError }: HabitsTabProps) {
   return (
-    <div className={styles.library}>
-      <h3 className={styles.sectionTitle}>Articles</h3>
-      <ul className={styles.list}>
-        {ARTICLES.map((article) => (
-          <li key={article.id} className={styles.row} {...guide('learn.article', article.id)}>
-            <div className={styles.rowText}>
-              <p className={styles.rowTitle}>{article.title}</p>
-              <p className={styles.rowMeta}>{article.minutes} min read</p>
-            </div>
-            <button
-              type="button"
-              className={styles.rowAction}
-              onClick={() => {
-                useTourStore.getState().closePanel();
-                useArticleStore.getState().open(article.id);
-              }}
-              {...guide('learn.article.open', article.id)}
-            >
-              Read
-            </button>
-          </li>
-        ))}
-      </ul>
-
+    <div>
       <h3 className={styles.sectionTitle}>Your habits</h3>
       {habitsError && (
         <p className={styles.hint} {...guide('learn.habits.error')}>

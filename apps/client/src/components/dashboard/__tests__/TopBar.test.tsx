@@ -45,6 +45,17 @@ describe('TopBar signed out', () => {
     expect(screen.getByRole('link', { name: 'Live Chart' }).getAttribute('href')).toBe('/chart');
   });
 
+  it('should stack the marketing bar above a page’s own sticky bar (z-index 50), so the Product dropdown opens over it', () => {
+    // The Features page's anchor nav sits at z-index 50; at 50 too, the later one covered the dropdown
+    renderAt('/features', true);
+    const header = document.querySelector('header') as HTMLElement;
+    expect(Number(header.style.zIndex)).toBeGreaterThan(50);
+    cleanup();
+    renderAt('/chart', false);
+    const dashboard = document.querySelector('header') as HTMLElement;
+    expect(Number(dashboard.style.zIndex)).toBeLessThan(50);
+  });
+
   it('should send Sign in back to the market on screen when on the dashboard or /chart', () => {
     renderAt('/chart', false);
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));

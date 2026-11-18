@@ -22,7 +22,7 @@
 
 ## Tier 4 — Content & growth
 
-- [ ] **Blog / educational content** — 3–5 articles ("What is paper trading?", "How to read candlestick charts").
+- [ ] **Blog / educational content** — the Blog exists since 2026-11-18 (`/blog`, nine articles moved out of the lessons, client-rendered with `SeoHead`). **Still to do (second PR):** add `/blog` and each `/blog/<id>` to `sitemap.xml`, per-article structured data, decide on prerendering; then 3–5 new articles ("What is paper trading?", "How to read candlestick charts"). `/about` and `/support` are `noindex` placeholders.
 - [ ] **Backlink strategy** — Product Hunt, relevant subreddits, paper trading comparison sites, GitHub.
 - [x] **Competitive differentiation** — Visible USP on landing page (real-time Bybit data, free, no sign-up wall). Done 2026-10-03: hero "Live crypto charts. No signup." → `/chart`; landing retitled "Free Live Crypto Charts & Paper Trading" (Bybit only as the data source); `/chart` description no longer promises trading without an account.
 

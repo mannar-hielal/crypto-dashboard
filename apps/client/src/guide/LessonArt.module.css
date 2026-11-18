@@ -332,13 +332,12 @@
   fill: var(--color-brand-purple-dark); /* color.purpleDark */
 }
 
-/* Lesson 4's friends: a soft halo behind each figure, in their accent (Lena green, Zoe amber) */
+/* Lesson 4's friends: a soft pastel disc behind each figure, from their accent (Lena green, Zoe amber)
+   mixed with white, so the natural skin and clothes read on it (owner 2026-11-18) */
 .haloGreen {
-  fill: var(--color-brand-green); /* color.green */
-  opacity: 0.22;
+  fill: color-mix(in srgb, var(--color-brand-green) 22%, white); /* color.green */
 }
 
 .haloAmber {
-  fill: var(--color-brand-amber); /* color.amber */
-  opacity: 0.22;
+  fill: color-mix(in srgb, var(--color-brand-amber) 28%, white); /* color.amber */
 }

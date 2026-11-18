@@ -12,7 +12,8 @@ import { openKeys } from '@/learn/path';
 import { usePathSeen } from '@/learn/pathSeen';
 import { usePathView } from '@/learn/usePathView';
 import { isAdminEmail } from '@/lib/adminEmail';
-import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
+import { bg, color, fontSize, gradient, radius, zIndex } from '@/lib/tokens';
+import { SiteNav } from '@/components/SiteNav';
 import { SettingsModal } from './SettingsModal';
 import { TradeMenu } from './TradeMenu';
 
@@ -91,7 +92,9 @@ export function TopBar({ marketing = false }: TopBarProps) {
   return (
     <header
       className={`flex h-12 w-full shrink-0 items-center justify-between border-b border-white/6 px-3 sm:px-4${marketing ? ' sticky top-0' : ''}`}
-      style={{ background: bg.panel, zIndex: marketing ? 50 : 20 }}
+      // Marketing: above a page's own sticky bar (the Features page's anchor nav is at 50), so the
+      // Product dropdown opens over it, and below tooltips and dialogs
+      style={{ background: bg.panel, zIndex: marketing ? zIndex.dropdown + 10 : 20 }}
     >
       {/* ── Left: Logo + name + badge ──────────────────────────────────── */}
       <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
@@ -117,6 +120,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
         </span>
 
         {!marketing && <TradeMenu />}
+        {/* The public pages' links: Product, Blog, About us, Support (owner 2026-11-18) */}
+        {marketing && <SiteNav />}
       </div>
 
       {/* ── Right: User menu, or a single CTA on marketing pages ─────────── */}

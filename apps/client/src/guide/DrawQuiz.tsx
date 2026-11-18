@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Lightbulb, Trash } from '@phosphor-icons/react';
 import { guide } from '@/lib/guideAnchors';
-import { color } from '@/lib/tokens';
+import { bg, color, font } from '@/lib/tokens';
 import { BoardFooter } from './BoardFooter';
 import { LessonArt } from './LessonArt';
 import { LessonChart, type LessonChartApi } from './LessonChart';
@@ -298,17 +298,6 @@ export function DrawQuiz({
                 strokeDasharray="4 4"
               />
             )}
-            {showModel && target && (
-              <polyline
-                points={toPoints(target.path)}
-                fill="none"
-                stroke={color.green}
-                strokeWidth={3}
-                strokeDasharray="2 6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
             {points.length > 1 && (
               <polyline
                 points={toPoints(points)}
@@ -317,7 +306,62 @@ export function DrawQuiz({
                 strokeWidth={4}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                // Under the answer the learner's own line steps back, so the answer reads first
+                opacity={showModel ? 0.35 : 1}
               />
+            )}
+            {showModel && target && (
+              <g data-draw-answer="">
+                {/* A dark halo under the green line keeps it clear of the candles */}
+                <polyline
+                  points={toPoints(target.path)}
+                  fill="none"
+                  stroke={bg.page}
+                  strokeWidth={9}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={0.85}
+                />
+                <polyline
+                  points={toPoints(target.path)}
+                  fill="none"
+                  stroke={color.green}
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {(
+                  [
+                    [draw.buy.label, target.buy, 22],
+                    [draw.sell.label, target.sell, -12],
+                  ] as const
+                ).map(([label, p, dy]) => (
+                  <g key={label}>
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={6}
+                      fill={color.green}
+                      stroke={bg.page}
+                      strokeWidth={2}
+                    />
+                    <text
+                      x={p.x}
+                      y={Math.min(Math.max(p.y + dy, 14), height - 6)}
+                      textAnchor="middle"
+                      fill={color.white}
+                      stroke={bg.page}
+                      strokeWidth={3}
+                      paintOrder="stroke"
+                      fontFamily={font.sans}
+                      fontSize={13}
+                      fontWeight={700}
+                    >
+                      {label}
+                    </text>
+                  </g>
+                ))}
+              </g>
             )}
           </svg>
         </div>
@@ -351,8 +395,8 @@ export function DrawQuiz({
         onCheck={check}
         revealed={revealed}
         revisit={revisit}
-        revisitLabel="Our path, dotted:"
-        explain={q.explain}
+        revisitLabel="The path, in green:"
+        explain={showModel ? `The green line is the path to draw. ${q.explain}` : q.explain}
         onRetry={
           onRetry &&
           (() => {

@@ -38,7 +38,6 @@ import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson, lessonScreens } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
 import { guideSelector } from '@/lib/guideAnchors';
-import { useArticleStore } from '@/learn/articleStore';
 import { PathDrawer } from '@/learn/PathDrawer';
 import { usePathStore } from '@/learn/pathStore';
 
@@ -61,7 +60,6 @@ describe('PathDrawer', () => {
     useTourStore.getState().reset();
     useLessonStore.getState().reset();
     usePathStore.getState().reset();
-    useArticleStore.getState().reset();
   });
   afterEach(() => cleanup());
 
@@ -230,7 +228,7 @@ describe('PathDrawer', () => {
     }
   });
 
-  it('should show the streak, and keep the library and habits in their own tab', async () => {
+  it('should show the streak, and keep the habits in their own tab with no Library (owner 2026-11-18)', async () => {
     getHabits.mockResolvedValue({
       learningDays: 4,
       streakDays: 2,
@@ -242,14 +240,13 @@ describe('PathDrawer', () => {
     await waitFor(() =>
       expect(document.querySelector(guideSelector('learn.streak'))!.textContent).toContain('2')
     );
-    fireEvent.click(document.querySelector(guideSelector('path.tab', 'library'))!);
-    expect(screen.getByText('SunCoin: money in a notebook')).toBeTruthy();
+    // The old Library tab is gone: the Blog holds the articles, nothing here opens one
+    expect(document.querySelector(guideSelector('path.tab', 'library'))).toBeNull();
+    fireEvent.click(document.querySelector(guideSelector('path.tab', 'habits'))!);
     expect(screen.getByText(/4 \/ 10/)).toBeTruthy();
     expect(screen.getByText(/never about profit/)).toBeTruthy();
-
-    fireEvent.click(document.querySelector(guideSelector('learn.article.open', 'exchange-price'))!);
-    expect(useTourStore.getState().panelOpen).toBe(false);
-    expect(useArticleStore.getState().openId).toBe('exchange-price');
+    expect(screen.queryByText('SunCoin: money in a notebook')).toBeNull();
+    expect(screen.queryByText('Read')).toBeNull();
   });
 
   it('should read the habits once the progress is in, not before and again after', async () => {
@@ -266,7 +263,7 @@ describe('PathDrawer', () => {
     getHabits.mockRejectedValue(new Error('offline'));
     useTourStore.setState({ panelOpen: true, loaded: true });
     renderDrawer();
-    fireEvent.click(document.querySelector(guideSelector('path.tab', 'library'))!);
+    fireEvent.click(document.querySelector(guideSelector('path.tab', 'habits'))!);
     await waitFor(() => expect(screen.getByText(/Could not load your habits/)).toBeTruthy());
   });
 
