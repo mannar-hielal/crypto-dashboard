@@ -239,7 +239,9 @@ export function useTourProgress(): void {
         // until the next read, which shows what the server has, as before this branch. Keeping and
         // re-sending them on a refresh read was tried and weighed, review after #311: it could undo
         // a server-side reset and only covered one of the fields, so they stay fire-and-forget. A
-        // lost Buy finish can lock Sell again until Buy is run again; accepted, review after #311)
+        // lost Buy finish can lock Sell again until Buy is run again; so can a read that left before
+        // a save landed, or a finish made before the first read (never sent). Accepted, review after
+        // #311: a tour-finish queue like the lessons' is the fix, a feature for the owner to decide)
         // Finishes and passes this device couldn't save yet: still shown as done, and sent again
         // (one the server already has is dropped; one refused as an earlier version is taken back)
         // (the stored list read once, worked out in memory, and written once)

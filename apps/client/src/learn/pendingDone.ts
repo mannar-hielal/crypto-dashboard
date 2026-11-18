@@ -90,7 +90,7 @@ export function pendingDone(account: string): PendingDone[] {
     if (kept.length !== stored.length) write(account, kept);
     return kept;
   } catch {
-    // Not even JSON: nothing readable kept (left alone, as another version's value would be)
+    // Not even JSON: reads as nothing kept, and the next write replaces it
     return [];
   }
 }
