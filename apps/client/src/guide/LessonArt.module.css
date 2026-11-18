@@ -331,3 +331,14 @@
 .openFill {
   fill: var(--color-brand-purple-dark); /* color.purpleDark */
 }
+
+/* Lesson 4's friends: a soft halo behind each figure, in their accent (Lena green, Zoe amber) */
+.haloGreen {
+  fill: var(--color-brand-green); /* color.green */
+  opacity: 0.22;
+}
+
+.haloAmber {
+  fill: var(--color-brand-amber); /* color.amber */
+  opacity: 0.22;
+}

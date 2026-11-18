@@ -306,7 +306,13 @@ export const GUIDE_ANCHORS = [
   // Match boxes: a term and a meaning (variant: its index in the question's pairs)
   'lesson.match-term',
   'lesson.match-meaning',
-  // Drag and drop / Match boxes: the Check button that grades the board
+  // Pick the right ones (owner 2026-11-18): a tile (variant: its index in the question's tiles)
+  'lesson.pick-tile',
+  // Draw a line (owner 2026-11-18): the drawing area, its trash button and its hint
+  'lesson.draw-area',
+  'lesson.draw-clear',
+  'lesson.draw-hint',
+  // Drag and drop / Match boxes / Pick / Draw: the Check button that grades the board
   'lesson.check',
   // A card's worked sum (owner 2026-11-17): the breakdown, and its answer under the steps
   'lesson.math',

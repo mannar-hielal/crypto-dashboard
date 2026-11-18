@@ -197,9 +197,9 @@ describe('PathDrawer', () => {
     expect(usePathStore.getState().skippedTours).toEqual({ 'buy-first-coin': true });
     const state = (key: string) =>
       document.querySelector(guideSelector('path.node', key))!.getAttribute('data-state');
-    // Sell needs Buy done (owner 2026-11-17): it stays locked, the checkpoint is next
+    // Sell needs Buy done (owner 2026-11-17): it stays locked, Lesson 4 is next (owner 2026-11-18)
     expect(state('tour:sell-and-review')).toBe('locked');
-    expect(state('checkpoint:checkpoint-ch1')).toBe('current');
+    expect(state('lesson:lesson-04')).toBe('current');
     notOnPhones.clear();
   });
 

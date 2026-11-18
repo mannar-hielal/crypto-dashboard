@@ -69,16 +69,32 @@ describe('usePathStore', () => {
 });
 
 describe('the chapter 1 checkpoint', () => {
-  it('should have five questions, pass at four, and point every one back to where it was taught', () => {
-    expect(checkpoint.questions).toHaveLength(5);
-    expect(checkpoint.pass).toBe(4);
+  it('should have ten questions, pass at eight, and point every one back to where it was taught', () => {
+    expect(checkpoint.questions).toHaveLength(10);
+    expect(checkpoint.pass).toBe(8);
     for (const q of checkpoint.questions) {
       expect(q.correct).toBeGreaterThanOrEqual(0);
       expect(q.correct).toBeLessThan(q.options.length);
+      expect(new Set(q.options).size).toBe(q.options.length);
       expect(q.explain.length).toBeGreaterThan(0);
       expect(q.taughtIn.id).toBeTruthy();
     }
-    expect(checkpointScore(checkpoint, right)).toBe(5);
+    expect(checkpointScore(checkpoint, right)).toBe(10);
     expect(checkpointScore(checkpoint, [])).toBe(0);
+  });
+
+  it('should test all four lessons and the sell practice, and not hide the right answer in one slot (owner 2026-11-18)', () => {
+    const taught = new Set(checkpoint.questions.map((q) => q.taughtIn.id));
+    for (const id of [
+      'lesson-01',
+      'lesson-ownership',
+      'lesson-02',
+      'lesson-04',
+      'sell-and-review',
+    ]) {
+      expect(taught.has(id as never), id).toBe(true);
+    }
+    // The right option isn't always in the same place
+    expect(new Set(checkpoint.questions.map((q) => q.correct)).size).toBeGreaterThanOrEqual(3);
   });
 });

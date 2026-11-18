@@ -9,3 +9,8 @@
   overflow: hidden;
   border-radius: 10px;
 }
+
+/* A Draw a line card's chart: room to draw on (owner's visual Q&A 2026-11-18) */
+.tall {
+  height: 240px;
+}

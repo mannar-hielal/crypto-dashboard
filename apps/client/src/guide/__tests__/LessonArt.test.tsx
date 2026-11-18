@@ -22,6 +22,9 @@ const ARTS: LessonArtId[] = [
   'alwaysOpen',
   'hashChain',
   'sealBroken',
+  'friends',
+  'lena',
+  'zoe',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -35,6 +38,9 @@ const TELLING: LessonArtId[] = [
   'alwaysOpen',
   'hashChain',
   'sealBroken',
+  'friends',
+  'lena',
+  'zoe',
 ];
 
 describe('the guides', () => {

@@ -4643,6 +4643,70 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-18 — Chapter 1 finished: four lessons, two practice stops and a ten-question checkpoint
+
+Chapter 1, "Start here: crypto and trading basics", is done. New chapters are made fresh from the benchmark's next
+unit, with this one as the working pattern (the lesson-authoring skill holds the rules).
+
+**What ships (the map's seven stops, `learn/path.ts`):**
+
+| Stop                                    | Id                                  | Notes                                                                  |
+| --------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| Lesson 1, Up, down and your first trade | `lesson-01`                         | Buy / Sell, long and short, 24/7, risk; ends on the buy practice       |
+| Lesson 2, Money nobody controls         | `lesson-ownership`                  | The ledger, nodes, blocks, no one in charge                            |
+| Lesson 3, News, swings and traps        | `lesson-02`                         | Why prices swing, thin and deep markets, scams (id kept as stored)     |
+| Buy your first coin / Sell it           | `buy-first-coin`, `sell-and-review` | One job each; Sell needs Buy done                                      |
+| Lesson 4, Trader or investor?           | `lesson-04`                         | Draw a line, Pick the right ones, Lena and Zoe; no practice, no Try it |
+| Chapter 1 checkpoint                    | `checkpoint-ch1`                    | See below                                                              |
+
+- **The checkpoint** (`learn/checkpoints.ts`) was cross-checked with the benchmark's (10 multiple-choice questions, no
+  stated pass mark, no explanations, all about trading mindset). Now **ten questions, pass at eight (80%, as the old
+  four of five), version 3**: our five (the ledger, a plan's rule, what sets the price, a forecast isn't a fact,
+  fees on a round trip) plus five new, in our own wording: going short, the market that never closes, a thin market,
+  a "can't lose" coin, investor versus trader. Dropped from the benchmark: take-profit and "why a plan" (covered by our
+  plan question), liquidity's definition (we ask it as the thin-market case), a bare definition of trading and "low
+  volatility" (our fees question covers a flat price). **Version 3** is raised in the SDK's `CHECKPOINT_VERSIONS`
+  and the server's `CHECKPOINT_VERSION`, so a pass of the five-question set no longer counts, and the server refuses
+  an earlier version with a 409. Each question names the lesson it was taught in, for the Review button.
+- **Cleanup:** the chapter's working notes (comparisons, outlines, drafts) in the git-ignored
+  `guided-learning-topics/notes/` were deleted; the screenshot folders stay until the owner says they can go.
+  `docs/` was reviewed: `GUIDED_TRADE_MVP.md` stays (`guide/tours.ts` and `UI_REPRODUCTIONS.md` still point at its
+  anchors and scenario format; its two MVP tours are marked superseded), `PRIVACY_NOTICE_1_3.md` is the owner's
+  unsent draft, and the other plans are not about chapter 1. `UI_REPRODUCTIONS.md` now says seven stops, 14%, and
+  the checkpoint's eight of ten.
+- **Known gaps:** no e2e test walks Lesson 4 or the full checkpoint; the checkpoint's draw and tile formats are not
+  used (multiple choice only, as the benchmark's).
+
+### 2026-11-18 — Lesson 4 "Trader or investor? Find your style", Draw a line, Pick the right ones, Lena and Zoe
+
+The fourth lesson (`lesson-04`), on trading versus investing, written from the owner's Lesson 6 folder of
+screenshots (concepts only: our own wording, examples, pictures and data). Owner decisions this day: take concepts
+1–14, no reward / XP / leaderboard screens and no streak goal picker; the lesson sits **after the practical stops**
+in chapter 1 (`learn/path.ts`); no practice trade, so **no Try it screen** (`tour`, `tryWidget` and `tryIntro` are
+all absent and `lessonScreens` leaves the screen out). Ids added everywhere a lesson id is checked: client
+`LESSON_IDS`, server `LEARN_ITEM_IDS` / `LEARN_LESSON_IDS` / `LESSON_FIRST_STEP`, the SDK's `LEARN_ITEM_IDS` /
+`LESSON_FIRST_STEPS` (first step 61, `stepBase` 60).
+
+- **Draw a line** (`format: 'draw'`, `DrawQuiz.tsx`, `drawGrade.ts`): one freehand line over a dated chart, a trash
+  button that clears it, "Stuck? Use a hint", Check. Graded against the buy and the sell (their dated closes, in
+  pixels) and, for a freehand line, against the closes between (mean distance within 15% of the height); "Right."
+  shows our dotted path, "Not quite." offers Try again. After the **third** "Not quite." the card shows our path for them ("That's three tries. Here's the answer."), offers no more tries and lets them on (`MAX_MISSES`, `AnswerResult`'s `revealed`); only this board has it so far. Keyboard and screen readers: Left / Right move a marker over
+  the days, Enter places the buy and then the sell (graded on the two ends). A resize clears the line; a line holds at
+  most 600 points. `LessonChart` takes `tall` and `onReady`.
+- **Pick the right ones** (`format: 'pick'`, `PickQuiz.tsx`): a 2 × 3 grid of icon tiles (Phosphor duotone), pick
+  exactly the number marked right, ✓ / ✕ with words, Try again. Right when every pick is a right tile.
+- **Lena and Zoe** (`LessonArtId` `friends`, `lena`, `zoe`; `LessonQuestion.art`): our human pair, Open Peeps (Pablo
+  Stanley, CC0, read 2026-11-18) peeps 38 and 67 recoloured to `tokens.ts` (white lines, `surface` fills), each with
+  an accent halo (Lena green, Zoe amber). Files and licence in `assets/illustrations/open-peeps/README.md`.
+- **Our own data** (Bybit BTCUSDT perpetual daily closes, fetched and fact-checked 2026-11-18): the traced trade
+  8 → 22 Apr 2025 (+22%), a trader's day 22 Apr 2025 (+8.03% low to high) and an investor's year 1 Nov 2024 → 1 Nov
+  2025 (+58.35%), all flagged as hindsight. The sums are pinned in `lessons.test.ts`. Terms on cards 6–8 stay
+  unlinked: there is no article on technical or fundamental analysis or diversification yet (a later job).
+- **Skill** (`.claude/skills/lesson-authoring`): the draw-a-line design, Pulin = the bull and Berwyn = the bear, the
+  fresh human pair with its IP guard, and the library choice are recorded there.
+- **Known gaps:** the e2e smoke doesn't walk Lesson 4; the benchmark's recap quiz after the lesson was not in the
+  screenshots, so none is written.
+
 ### 2026-11-17 — Lessons 1–3 after release: one label set, Try again, the math, the glasses, what just happened
 
 The owner's ten tasks after the Lessons 1–3 release (screenshots; the new rules are in

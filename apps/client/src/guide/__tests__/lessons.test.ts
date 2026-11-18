@@ -123,8 +123,8 @@ describe('lessons', () => {
         expect(lesson.checks.length).toBeLessThanOrEqual(3);
         for (const q of questions) {
           expect(q.explain.trim().length, q.question).toBeGreaterThan(0);
-          // Drag and drop and Match boxes grade the whole board (checked in their own rule)
-          if (q.format === 'order' || q.format === 'match') continue;
+          // Drag and drop, Match boxes, Pick and Draw a line grade the whole board (checked in their own rules)
+          if (['order', 'match', 'pick', 'draw'].includes(q.format ?? '')) continue;
           expect(q.correct, q.question).toBeGreaterThanOrEqual(0);
           expect(q.correct, q.question).toBeLessThan(q.options.length);
           expect(new Set(q.options).size, q.question).toBe(q.options.length);
@@ -184,6 +184,18 @@ describe('lessons', () => {
       });
 
       it('should have one "Try it": a tour on the real screen, or a piece inside the sheet', () => {
+        // A Try it screen always has its intro line
+        if (lesson.tour || lesson.tryWidget)
+          expect(lesson.tryIntro?.trim(), lesson.id).toBeTruthy();
+        // Lesson 4 has no practice, so no Try it screen (owner 2026-11-18)
+        if (lesson.id === 'lesson-04') {
+          expect([lesson.tour, lesson.tryWidget, lesson.tryIntro]).toEqual([
+            undefined,
+            undefined,
+            undefined,
+          ]);
+          return;
+        }
         expect(!!lesson.tour !== !!lesson.tryWidget).toBe(true);
         if (lesson.tour) expect(isTourId(lesson.tour)).toBe(true);
         if (lesson.tryWidget) expect(isWidgetId(lesson.tryWidget)).toBe(true);
@@ -253,7 +265,7 @@ describe('lessons', () => {
           ...lesson.cards.slice(0, split).map(() => 'card'),
           'moment',
           ...lesson.cards.slice(split).map(() => 'card'),
-          'try',
+          ...(lesson.tour || lesson.tryWidget ? ['try'] : []),
           ...lesson.checks.map(() => 'check'),
           'summary',
           'close',
@@ -262,11 +274,12 @@ describe('lessons', () => {
     });
   }
 
-  it('should number the lessons 1, 2, 3, keeping the stored ids (owner 2026-11-08)', () => {
+  it('should number the lessons 1, 2, 3 and 4, keeping the stored ids (owner 2026-11-08)', () => {
     expect(LESSONS.map((l) => [l.id, l.number, l.title])).toEqual([
       ['lesson-01', 1, 'Up, down and your first trade'],
       ['lesson-ownership', 2, 'Money nobody controls'],
       ['lesson-02', 3, 'News, swings and traps'],
+      ['lesson-04', 4, 'Trader or investor? Find your style'],
     ]);
   });
 
@@ -369,6 +382,8 @@ describe('lessons', () => {
       'Smaller coins swing harder',
       'Big swings, both ways',
       'Up, then down',
+      'A trader’s day',
+      'An investor’s year',
     ]);
   });
 
@@ -560,6 +575,102 @@ describe('lessons', () => {
         expect([q.options, q.correct], `${l.id}: ${q.question}`).toEqual([[], 0]);
       }
     }
+  });
+
+  it('should give every Pick question 4+ tiles with 2+ right ones, no options and correct 0 (owner 2026-11-18)', () => {
+    for (const l of LESSONS) {
+      const questions = [
+        l.moment,
+        ...l.checks,
+        ...l.cards.flatMap((c) => (c.quiz ? [c.quiz] : [])),
+      ];
+      for (const q of questions.filter((x) => x.format === 'pick')) {
+        const tiles = q.tiles ?? [];
+        expect(tiles.length, `${l.id}: ${q.question}`).toBeGreaterThanOrEqual(4);
+        expect(
+          tiles.filter((t) => t.right).length,
+          `${l.id}: ${q.question}`
+        ).toBeGreaterThanOrEqual(2);
+        expect(
+          tiles.filter((t) => !t.right).length,
+          `${l.id}: ${q.question}`
+        ).toBeGreaterThanOrEqual(1);
+        expect(new Set(tiles.map((t) => t.label)).size, `${l.id}: ${q.question}`).toBe(
+          tiles.length
+        );
+        expect([q.options, q.correct], `${l.id}: ${q.question}`).toEqual([[], 0]);
+      }
+    }
+  });
+
+  it('should give every Draw a line question a chart that holds its buy and sell days, a hint and no options (owner 2026-11-18)', () => {
+    for (const l of LESSONS) {
+      const questions = [
+        l.moment,
+        ...l.checks,
+        ...l.cards.flatMap((c) => (c.quiz ? [c.quiz] : [])),
+      ];
+      for (const q of questions.filter((x) => x.format === 'draw')) {
+        const where = `${l.id}: ${q.question}`;
+        expect(q.draw, where).toBeDefined();
+        expect(q.chart, where).toBeDefined();
+        expect(q.draw?.hint.trim(), where).toBeTruthy();
+        expect([q.options, q.correct], where).toEqual([[], 0]);
+        const end = daySeconds(q.chart!.end);
+        const start = end - (q.chart!.bars - 1) * 86_400;
+        const buy = daySeconds(q.draw!.buy.date);
+        const sell = daySeconds(q.draw!.sell.date);
+        expect(buy, where).toBeGreaterThanOrEqual(start);
+        expect(sell, where).toBeLessThanOrEqual(end);
+        expect(sell, where).toBeGreaterThan(buy);
+        // The chart gives nothing away: no markers on the days to find
+        expect(q.chart!.markers, where).toEqual([]);
+      }
+    }
+  });
+
+  it('should keep Lesson 4’s worked sums true to the dated prices on its cards (fact check 2026-11-18)', () => {
+    const l = getLesson('lesson-04');
+    const pct = (from: number, to: number) => ((to - from) / from) * 100;
+    // A trader's day: 22 Apr 2025, low 87,013.60, high 94,000.00
+    expect(pct(87_013.6, 94_000)).toBeCloseTo(8.03, 2);
+    // An investor's year: closes 1 Nov 2024 and 1 Nov 2025
+    expect(pct(69_495.5, 110_046)).toBeCloseTo(58.35, 2);
+    // The traced trade: closes 8 and 22 Apr 2025
+    expect(pct(76_286.9, 93_400)).toBeCloseTo(22.43, 2);
+    const day = l.cards.find((c) => c.title === 'A trader’s day')!;
+    expect(day.math?.steps.map((s) => s.sum)).toEqual([
+      '94,000.00 − 87,013.60 = 6,986.40',
+      '6,986.40 ÷ 87,013.60 = 0.0803',
+      '0.0803 × 100 = 8.03%',
+    ]);
+    const year = l.cards.find((c) => c.title === 'An investor’s year')!;
+    expect(year.math?.steps.map((s) => s.sum)).toEqual([
+      '110,046.00 − 69,495.50 = 40,550.50',
+      '40,550.50 ÷ 69,495.50 = 0.5835',
+      '0.5835 × 100 = 58.35%',
+    ]);
+    // Each marker's price is the figure its card quotes
+    expect(day.chart?.markers.map((m) => m.text)).toEqual(['High $94,000.00', 'Low $87,013.60']);
+    expect(year.chart?.markers.map((m) => m.text)).toEqual(['$69,495.50', '$110,046.00']);
+  });
+
+  it('should have Lesson 4 teach trading and investing, with Lena and Zoe each on one quiz (owner 2026-11-18)', () => {
+    const l = getLesson('lesson-04');
+    // The two friends' questions are plain multiple choice (no format of their own)
+    expect(l.cards.flatMap((c) => (c.quiz ? [c.quiz.format ?? 'choice'] : []))).toEqual([
+      'draw',
+      'pick',
+      'choice',
+      'choice',
+    ]);
+    const friends = l.cards.filter((c) => c.quiz?.art);
+    expect(friends.map((c) => c.quiz?.art)).toEqual(['lena', 'zoe']);
+    // Pulin speaks for the trader mood, Berwyn for the investor mood
+    expect(l.cards.find((c) => c.title === 'What trading is')?.presenter?.who).toBe('tick');
+    expect(l.cards.find((c) => c.title === 'What investing is')?.presenter?.who).toBe('tock');
+    // Chapter 1's stored ids and this lesson's first step agree with the server's floor
+    expect(l.stepBase).toBe(60);
   });
 
   it('should keep a card that is a quiz to its question alone (no text, lines, beats or meeting)', () => {

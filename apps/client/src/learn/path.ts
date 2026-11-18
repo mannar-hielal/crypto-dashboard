@@ -61,6 +61,8 @@ export const CHAPTERS: readonly Chapter[] = [
       // (lesson-authoring skill: the path keeps its order until the owner places them)
       { kind: 'tour', id: 'buy-first-coin', access: FREE },
       { kind: 'tour', id: 'sell-and-review', access: FREE },
+      // Lesson 4, trader or investor (owner 2026-11-18): after the practical stops
+      { kind: 'lesson', id: 'lesson-04', access: FREE },
       { kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE },
     ],
   },

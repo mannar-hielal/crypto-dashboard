@@ -35,7 +35,9 @@ import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
 import { BuySellView } from './BuySellView';
 import { StreakView } from './StreakView';
+import { DrawQuiz } from './DrawQuiz';
 import { MatchQuiz } from './MatchQuiz';
+import { PickQuiz } from './PickQuiz';
 import { OrderQuiz } from './OrderQuiz';
 import {
   afterNote,
@@ -201,7 +203,8 @@ function QuestionBody({
   const props = { q, answer, onAnswer, onRetry };
   return (
     <>
-      {q.chart && (
+      {q.art && <LessonArt id={q.art} />}
+      {q.chart && q.format !== 'draw' && (
         <LessonChart
           scene={q.chart}
           // What happened next only once it can't give the answer away: a right answer (a wrong one
@@ -216,6 +219,10 @@ function QuestionBody({
         <OrderQuiz {...props} />
       ) : q.format === 'match' ? (
         <MatchQuiz {...props} />
+      ) : q.format === 'pick' ? (
+        <PickQuiz {...props} />
+      ) : q.format === 'draw' ? (
+        <DrawQuiz {...props} />
       ) : (
         <QuestionView {...props} />
       )}

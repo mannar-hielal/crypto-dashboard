@@ -15,6 +15,7 @@ export function AnswerResult({
   explain,
   className = styles.explain,
   onRetry,
+  revealed,
 }: {
   right: boolean;
   explain: string;
@@ -22,14 +23,21 @@ export function AnswerResult({
   className?: string;
   /** Offered after a wrong answer: clears it for another go (a lesson's questions; not a checkpoint) */
   onRetry?: () => void;
+  /**
+   * The third "Not quite." (owner 2026-11-18): the answer is shown for them, so it says so instead
+   * of "Right.", and there is no Try again
+   */
+  revealed?: boolean;
 }) {
   return (
     <>
       <p className={className} role="status">
-        <strong>{right ? 'Right. ' : 'Not quite. '}</strong>
+        <strong>
+          {revealed ? 'That’s three tries. Here’s the answer. ' : right ? 'Right. ' : 'Not quite. '}
+        </strong>
         <RichText text={explain} />
       </p>
-      {!right && onRetry && (
+      {!right && !revealed && onRetry && (
         <button type="button" className={styles.check} onClick={onRetry} {...guide('lesson.retry')}>
           Try again
         </button>
