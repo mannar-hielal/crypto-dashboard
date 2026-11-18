@@ -11,6 +11,8 @@
 import type { JSX } from 'react';
 import { Clock, HardDrives, MagnifyingGlass } from '@phosphor-icons/react';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
+import lenaUrl from '@/assets/illustrations/open-peeps/lena.svg';
+import zoeUrl from '@/assets/illustrations/open-peeps/zoe.svg';
 import { Guide, GuideFigure } from './art/Guide';
 import { WORLD_DOTS } from './art/worldDots';
 import { ART_LABELS, type LessonArtId, type Presenter, type Speaker } from './lessons';
@@ -857,7 +859,39 @@ function AlwaysOpen() {
   );
 }
 
+// ─── Lesson 4's friends: Open Peeps (CC0), recoloured; each has an accent halo from tokens ──
+// (assets/illustrations/open-peeps/README.md). The figure is 240 × 324, shown at height 150.
+
+function Friend({ url, x, halo }: { url: string; x: number; halo: string }) {
+  return (
+    <g>
+      <circle cx={x + 52} cy={86} r={60} className={halo} />
+      <image href={url} x={x} y={6} width={104} height={150} />
+    </g>
+  );
+}
+
+function Friends() {
+  return (
+    <g>
+      <Friend url={lenaUrl} x={84} halo={styles.haloGreen} />
+      <Friend url={zoeUrl} x={206} halo={styles.haloAmber} />
+    </g>
+  );
+}
+
+function LenaAlone() {
+  return <Friend url={lenaUrl} x={108} halo={styles.haloGreen} />;
+}
+
+function ZoeAlone() {
+  return <Friend url={zoeUrl} x={108} halo={styles.haloAmber} />;
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
+  friends: Friends,
+  lena: LenaAlone,
+  zoe: ZoeAlone,
   ledger: WorldLedgers,
   bitcoin: BitcoinBirth,
   etf: Etf,

@@ -28,6 +28,7 @@ describe('pathState', () => {
       'lesson:lesson-02=locked',
       'tour:buy-first-coin=locked',
       'tour:sell-and-review=locked',
+      'lesson:lesson-04=locked',
       'checkpoint:checkpoint-ch1=open',
     ]);
     const view = pathState(empty());
@@ -43,10 +44,11 @@ describe('pathState', () => {
       'locked',
       'locked',
       'locked',
+      'locked',
       'open',
     ]);
     expect(view.chapters[0].done).toBe(1);
-    expect(view.percent).toBe(17);
+    expect(view.percent).toBe(14);
   });
 
   it('should let a tour skipped on a phone stop blocking the path, without counting it as done', () => {
@@ -55,7 +57,7 @@ describe('pathState', () => {
       lessons: { 'lesson-01': true, 'lesson-ownership': true, 'lesson-02': true },
       skippedTours: { 'buy-first-coin': true },
     });
-    // Sell needs Buy done (owner 2026-11-17): it stays locked, and the checkpoint is next
+    // Sell needs Buy done (owner 2026-11-17): it stays locked, and Lesson 4 is next (owner 2026-11-18)
     expect(view.chapters[0].nodes.map((n) => n.state)).toEqual([
       'done',
       'done',
@@ -63,8 +65,9 @@ describe('pathState', () => {
       'skipped',
       'locked',
       'current',
+      'open',
     ]);
-    expect(view.percent).toBe(50);
+    expect(view.percent).toBe(43);
   });
 
   it('should keep Sell locked until Buy is done, then make it the next step (owner 2026-11-17)', () => {
@@ -95,7 +98,12 @@ describe('pathState', () => {
   it('should make the checkpoint the next step once everything before it is done', () => {
     const view = pathState({
       ...empty(),
-      lessons: { 'lesson-01': true, 'lesson-ownership': true, 'lesson-02': true },
+      lessons: {
+        'lesson-01': true,
+        'lesson-ownership': true,
+        'lesson-02': true,
+        'lesson-04': true,
+      },
       tours: { 'buy-first-coin': true, 'sell-and-review': true },
     });
     expect(view.current).toBe('checkpoint:checkpoint-ch1');
@@ -110,12 +118,13 @@ describe('pathState', () => {
       'open',
       'open',
       'locked',
+      'open',
       'done',
     ]);
     expect(view.chapters[0].done).toBe(1);
     // Chapter 2 isn't written yet, so there is no next step
     expect(view.current).toBeNull();
-    expect(view.percent).toBe(17);
+    expect(view.percent).toBe(14);
   });
 
   it('should keep a chapter that is coming soon inert', () => {
@@ -123,7 +132,7 @@ describe('pathState', () => {
     expect(soon.chapter.status).toBe('soon');
     expect(soon.locked).toBe(true);
     expect(soon.nodes).toEqual([]);
-    expect(soon.firstIndex).toBe(6);
+    expect(soon.firstIndex).toBe(7);
   });
 
   it('should lock a later chapter until the one before it has its checkpoint passed', () => {
@@ -139,7 +148,7 @@ describe('pathState', () => {
       [open, { ...open, id: 'two', number: 2, nodes: open.nodes.slice(2, 4) }]
     );
     expect(after.chapters[1].locked).toBe(false);
-    expect(after.chapters[1].firstIndex).toBe(6);
+    expect(after.chapters[1].firstIndex).toBe(7);
     expect(after.current).toBe('lesson:lesson-02');
   });
 
