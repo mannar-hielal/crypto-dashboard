@@ -57,7 +57,7 @@ describe('CheckpointSheet', () => {
     renderSheet();
     const next = document.querySelector<HTMLButtonElement>(guideSelector('checkpoint.next'))!;
     expect(next.disabled).toBe(true);
-    expect(screen.getByText('1 / 5')).toBeTruthy();
+    expect(screen.getByText('1 / 10')).toBeTruthy();
 
     fireEvent.click(
       document.querySelector(
@@ -70,13 +70,13 @@ describe('CheckpointSheet', () => {
     expect(next.disabled).toBe(false);
   });
 
-  it('should pass at four right, record it, and go back to the path', () => {
+  it('should pass at eight right, record it, and go back to the path', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
-    answerAll((i) => (i === 0 ? wrongFor(0) : checkpoint.questions[i].correct));
+    answerAll((i) => (i < 2 ? wrongFor(i) : checkpoint.questions[i].correct));
 
     expect(screen.getByText('Checkpoint passed')).toBeTruthy();
-    expect(screen.getByText('4 of 5 right')).toBeTruthy();
+    expect(screen.getByText('8 of 10 right')).toBeTruthy();
     expect(usePathStore.getState().checkpoints).toEqual({ 'checkpoint-ch1': true });
     expect(document.querySelector(guideSelector('checkpoint.retry'))).toBeNull();
 
@@ -85,14 +85,15 @@ describe('CheckpointSheet', () => {
     expect(useTourStore.getState().panelOpen).toBe(true);
   });
 
-  it('should not pass at three, point back to the lessons, and allow another try', () => {
+  it('should not pass at seven, point back to the lessons, and allow another try', () => {
     usePathStore.getState().startCheckpoint('checkpoint-ch1');
     renderSheet();
-    answerAll((i) => (i < 2 ? wrongFor(i) : checkpoint.questions[i].correct));
+    answerAll((i) => (i < 3 ? wrongFor(i) : checkpoint.questions[i].correct));
 
     expect(screen.getByText('Not yet')).toBeTruthy();
     expect(usePathStore.getState().checkpoints).toEqual({});
-    // The two missed questions: the record's copies (Lesson 2) and the plan's rule (Lesson 1)
+    // The three missed questions: the record's copies (Lesson 2), the plan's rule (Lesson 1) and
+    // the price (Lesson 3)
     expect(
       document.querySelectorAll(guideSelector('checkpoint.review', 'lesson-ownership'))
     ).toHaveLength(1);
@@ -101,7 +102,7 @@ describe('CheckpointSheet', () => {
     );
 
     fireEvent.click(document.querySelector(guideSelector('checkpoint.retry'))!);
-    expect(screen.getByText('1 / 5')).toBeTruthy();
+    expect(screen.getByText('1 / 10')).toBeTruthy();
   });
 
   it('should open the lesson a missed question came from', () => {

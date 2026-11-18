@@ -87,7 +87,7 @@ export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
  * so its earlier passes no longer count
  */
 export const CHECKPOINT_VERSIONS = {
-  'checkpoint-ch1': 2,
+  'checkpoint-ch1': 3,
 } as const;
 
 /**

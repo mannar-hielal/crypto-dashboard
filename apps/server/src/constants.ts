@@ -96,7 +96,7 @@ export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
  * earlier version (owner 2026-11-17: chapter 1's questions changed with the Lessons 1–3 rewrite)
  */
 export const CHECKPOINT_VERSION: Record<(typeof LEARN_CHECKPOINT_IDS)[number], number> = {
-  'checkpoint-ch1': 2,
+  'checkpoint-ch1': 3,
 };
 
 /** Events are only accepted for these: a lesson reports its screens like a tour reports its steps */
