@@ -18,8 +18,11 @@ import {
   HandPalm,
   ListChecks,
   MagnifyingGlass,
+  Money,
+  Note,
   Storefront,
   Ticket,
+  Vault,
 } from '@phosphor-icons/react';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import lenaUrl from '@/assets/illustrations/open-peeps/lena.svg';
@@ -1113,6 +1116,253 @@ function StopCoin() {
   );
 }
 
+// ─── Chapter 2, Lesson 6: stablecoins (owner's visual Q&A 2026-11-19) ─────────────────────────────
+// The cloakroom ticket: hand in a dollar, get a ticket. One flat counter, a different vault behind
+// it for each kind of stablecoin. The de-peg is drawn, never a real chart (a stablecoin priced in
+// another stablecoin would confuse a beginner).
+
+/** The cold open: a coin that swings beside one that sits still */
+function WobbleSteady() {
+  return (
+    <>
+      <polyline
+        points="96,96 112,60 128,112 144,54 160,118 176,70 192,104"
+        className={`${styles.stroke} ${styles.down}`}
+      />
+      <text x="144" y="142" textAnchor="middle" className={`${styles.small} ${styles.down}`}>
+        my coin
+      </text>
+      <polyline
+        points="226,82 246,80 266,83 286,81 306,82"
+        className={`${styles.stroke} ${styles.up}`}
+      />
+      <text x="266" y="142" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        built to sit still
+      </text>
+    </>
+  );
+}
+
+/** A stablecoin's line stays on the $1.00 guide */
+function SteadyPeg() {
+  return (
+    <>
+      <line
+        x1="96"
+        x2="304"
+        y1="76"
+        y2="76"
+        className={`${styles.stroke} ${styles.muted} ${styles.dashed} ${styles.guideLine}`}
+      />
+      <text x="106" y="64" className={`${styles.chipText} ${styles.white}`}>
+        $1.00
+      </text>
+      <polyline
+        points="96,77 128,75 160,78 192,76 224,77 256,75 304,77"
+        className={`${styles.stroke} ${styles.up}`}
+      />
+      <text x="200" y="118" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        stays on its line
+      </text>
+    </>
+  );
+}
+
+/** Hand in a dollar, get a ticket */
+function Cloakroom() {
+  return (
+    <>
+      <Money weight={DUO} x={102} y={36} size={44} className={styles.up} />
+      <text x="124" y="30" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        $1 in
+      </text>
+      <PathArrow
+        points={[
+          [152, 58],
+          [182, 58],
+        ]}
+        className={styles.muted}
+      />
+      <Ticket weight={DUO} x={190} y={36} size={44} className={styles.white} />
+      <text x="212" y="30" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        ticket out
+      </text>
+      <rect x="96" y="104" width="136" height="32" rx="5" className={styles.panel} />
+      <rect x="92" y="98" width="144" height="8" rx="3" className={styles.road} />
+      <text x="164" y="125" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        cloakroom
+      </text>
+    </>
+  );
+}
+
+/** The same counter for the three kinds; the vault behind it is what changes */
+function CounterAndVault({ kind }: { kind: 'dollar' | 'crypto' | 'rule' }) {
+  return (
+    <>
+      <Ticket weight={DUO} x={122} y={46} size={38} className={styles.white} />
+      <rect x="96" y="98" width="84" height="38" rx="5" className={styles.panel} />
+      <rect x="92" y="92" width="92" height="8" rx="3" className={styles.road} />
+      <text x="138" y="122" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        counter
+      </text>
+      <PathArrow
+        points={[
+          [188, 106],
+          [212, 106],
+        ]}
+        className={styles.muted}
+      />
+      <rect x="216" y="32" width="92" height="106" rx="8" className={styles.panel} />
+      {kind === 'dollar' && (
+        <>
+          <Money weight={DUO} x={240} y={44} size={44} className={styles.up} />
+          <Money weight={DUO} x={240} y={88} size={44} className={styles.up} />
+        </>
+      )}
+      {kind === 'crypto' && (
+        <>
+          <Coins weight={DUO} x={236} y={42} size={52} className={styles.amber} />
+          <Coins weight={DUO} x={236} y={86} size={52} className={styles.amber} />
+        </>
+      )}
+      {kind === 'rule' && (
+        <>
+          <line
+            x1="228"
+            x2="296"
+            y1="104"
+            y2="104"
+            className={`${styles.stroke} ${styles.muted} ${styles.dashed}`}
+          />
+          <Note weight={DUO} x={240} y={48} size={44} className={styles.muted} />
+        </>
+      )}
+      <text x="262" y="152" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        {kind === 'dollar' ? 'real money' : kind === 'crypto' ? 'extra crypto' : 'just a rule'}
+      </text>
+    </>
+  );
+}
+
+const VaultDollar = () => <CounterAndVault kind="dollar" />;
+const VaultCrypto = () => <CounterAndVault kind="crypto" />;
+const VaultRule = () => <CounterAndVault kind="rule" />;
+
+/** Not every vault is full, and someone should check */
+function VaultCheck() {
+  return (
+    <>
+      <Vault weight={DUO} x={112} y={34} size={84} className={styles.amber} />
+      <MagnifyingGlass weight={DUO} x={190} y={62} size={62} className={styles.white} />
+      <text x="204" y="142" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        who checks?
+      </text>
+    </>
+  );
+}
+
+/** Our market is priced in USDT: the pair tag with USDT lit up */
+function UsdtPair() {
+  return (
+    <>
+      <rect x="104" y="46" width="188" height="52" rx="26" className={styles.panel} />
+      <text x="150" y="78" textAnchor="middle" className={styles.bigNumber}>
+        BTC
+      </text>
+      <text x="190" y="78" textAnchor="middle" className={`${styles.bigNumber} ${styles.muted}`}>
+        /
+      </text>
+      <rect x="208" y="52" width="78" height="40" rx="20" className={styles.badge} />
+      <text x="247" y="77" textAnchor="middle" className={styles.badgeText}>
+        USDT
+      </text>
+      <text x="247" y="38" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
+        priced in
+      </text>
+      <text x="198" y="128" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        1 BTC costs … USDT
+      </text>
+    </>
+  );
+}
+
+/** Parking a profit: the coin is sold, a steady coin arrives */
+function ParkProfit() {
+  return (
+    <>
+      <circle cx="132" cy="74" r="22" className={styles.coin} />
+      <text x="132" y="78" textAnchor="middle" className={styles.hashText}>
+        coin
+      </text>
+      <text x="132" y="116" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        now $300
+      </text>
+      <PathArrow
+        points={[
+          [162, 74],
+          [200, 74],
+        ]}
+        className={styles.amber}
+      />
+      <text x="181" y="64" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
+        sell
+      </text>
+      <circle cx="244" cy="74" r="24" className={styles.badge} />
+      <text x="244" y="78" textAnchor="middle" className={styles.badgeText}>
+        USDT
+      </text>
+      <text x="244" y="116" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        300 USDT, steady
+      </text>
+    </>
+  );
+}
+
+/** A drawn dip below the peg and the way back: an example, not a real chart */
+function PegDip() {
+  return (
+    <>
+      <line
+        x1="96"
+        x2="304"
+        y1="46"
+        y2="46"
+        className={`${styles.stroke} ${styles.muted} ${styles.dashed} ${styles.guideLine}`}
+      />
+      <text x="104" y="38" className={`${styles.chipText} ${styles.white}`}>
+        $1.00 peg
+      </text>
+      <polyline
+        points="96,47 164,47 190,112 206,118 232,70 262,48 304,47"
+        className={`${styles.stroke} ${styles.down}`}
+      />
+      <text x="206" y="138" textAnchor="middle" className={`${styles.small} ${styles.down}`}>
+        about $0.87
+      </text>
+      <text x="290" y="150" textAnchor="end" className={`${styles.small} ${styles.muted}`}>
+        drawn example
+      </text>
+    </>
+  );
+}
+
+/** A reward that looks too good, on a ticket */
+function TooSweet() {
+  return (
+    <>
+      <Ticket weight={DUO} x={98} y={44} size={80} className={styles.white} />
+      <rect x="190" y="56" width="112" height="40" rx="8" className={styles.panel} />
+      <text x="246" y="82" textAnchor="middle" className={`${styles.chipText} ${styles.amber}`}>
+        +20% a year
+      </text>
+      <text x="246" y="122" textAnchor="middle" className={`${styles.small} ${styles.down}`}>
+        too good to be true?
+      </text>
+    </>
+  );
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
   friends: Friends,
   lena: LenaAlone,
@@ -1143,6 +1393,17 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   ballotBox: BallotBox,
   calmStormy: CalmStormy,
   stopCoin: StopCoin,
+  wobbleSteady: WobbleSteady,
+  steadyPeg: SteadyPeg,
+  cloakroom: Cloakroom,
+  vaultDollar: VaultDollar,
+  vaultCrypto: VaultCrypto,
+  vaultRule: VaultRule,
+  vaultCheck: VaultCheck,
+  usdtPair: UsdtPair,
+  parkProfit: ParkProfit,
+  pegDip: PegDip,
+  tooSweet: TooSweet,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */

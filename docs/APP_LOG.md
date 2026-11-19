@@ -4674,6 +4674,31 @@ keys, Why sending crypto costs a fee, Trading without a middleman, and the check
   `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`.
   `ChartScene.symbol` accepts `LINKUSDT`; the Pick quiz has five more tile icons.
 
+### 2026-11-19 — Chapter 2, Lesson 6 "Stablecoins: the coins that try to sit still"
+
+The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoins`, 8 min, 17 screens, step base 60; first step 61.
+
+- **One metaphor, the cloakroom ticket:** you hand in a dollar, you get a ticket. One flat counter, a different vault behind it for
+  each kind: dollar-backed (real money), crypto-backed (extra crypto), rule-based (a rule only). Berwyn's analogy says where it stops
+  matching (most people sell the ticket on an exchange instead of handing it back).
+- **Cards:** the cold open, what a stablecoin is, the ticket, the three kinds, **Match boxes** on what stands behind each, why
+  traders keep them (a BTC / USDT tag; **one practice buy**, the Lesson 1 spot buy paid in USDT, with its review), a **Do the math**
+  card (a $200 coin now $300: 50%, parked in USDT), **Drag and drop** (the steps of parking a profit), the peg slipping (a **drawn**
+  dip to about $0.87, never a chart: a stablecoin priced in another would confuse a beginner), "stable is a goal, not a promise",
+  two multiple-choice questions, **Your call** (a "stablecoin" paying 20% a year: check what stands behind it), summary, close.
+- **Text:** fact checked by a technical-writer agent (2026-11-19). Applied: "mostly cash and short-term US government debt"
+  instead of "very safe" (Tether also holds gold and bitcoin); the rule-based kind is "no vault of dollars" and "also called
+  algorithmic"; the March 2023 USDC dip is about 87 cents over a weekend after a bank holding part of its cash failed, and it
+  recovered when the US government protected that bank's depositors; stablecoins are tokens on someone else's road (consistent with
+  Lesson 5). To re-check before a release: Tether's reserves on its own site, the Sky/Maker docs on crypto-backed rules, Bybit's own
+  page on USDT-quoted markets.
+- **Drag and drop was already built** (`OrderQuiz`, 2026-11-16): the lesson-authoring skill's format table now says so (Match boxes
+  and Choose buy or sell too).
+- **Concepts:** `stablecoin`, `peg` (peeks, no article). **Pictures:** eleven new `LessonArtId`s (`LessonArt.tsx`). **Ids:**
+  `lesson-stablecoins` in the client's `LESSON_IDS`, the server's `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP`, the
+  SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
+  "coming soon" titles.
+
 ### 2026-11-18 — The Blog: the articles leave the lessons, and the public header gets Product, Blog, About us, Support
 
 Plan: `docs/BLOG_PLAN.md`; built in one PR on `feat/knowledge-base`. The nine articles (the old knowledge base)

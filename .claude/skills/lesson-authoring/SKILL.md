@@ -72,7 +72,7 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
    `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4), `lesson-coins` (Lesson 5,
-   chapter 2's first lesson; the chapter's later lessons follow as numbered 6 onward). The chapter's
+   chapter 2's first lesson), `lesson-stablecoins` (Lesson 6; the chapter's later lessons follow as numbered 7 onward). The chapter's
    checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
    a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
    `CHECKPOINT_VERSION` (server).
@@ -346,14 +346,14 @@ rewritten, and to quizzes, Whys, summaries and titles.
 
 ## Quiz formats
 
-| Format              | Use for                                                     | Status                                             |
-| ------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
-| Multiple choice     | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)      |
-| Choose buy or sell  | read a situation or a chart, pick Buy or Sell, then the Why | designed 2026-11-16 (visual Q&A done); being built |
-| Drag and drop       | put steps in order, or items into the right slot            | new widget                                         |
-| Match boxes         | connect terms to meanings, two columns                      | new widget                                         |
-| Draw a line         | trace a path, trend or level with one freehand line         | built 2026-11-18: `DrawQuiz` (`format: 'draw'`)    |
-| Pick the right ones | choose exactly N of 6 icon tiles                            | built 2026-11-18: `PickQuiz` (`format: 'pick'`)    |
+| Format              | Use for                                                     | Status                                                     |
+| ------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
+| Multiple choice     | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)              |
+| Choose buy or sell  | read a situation or a chart, pick Buy or Sell, then the Why | built: `BuySellView` (`format: 'buy-sell'`)                |
+| Drag and drop       | put steps in order, or items into the right slot            | built 2026-11-16: `OrderQuiz` (`format: 'order'`, `steps`) |
+| Match boxes         | connect terms to meanings, two columns                      | built 2026-11-16: `MatchQuiz` (`format: 'match'`, `pairs`) |
+| Draw a line         | trace a path, trend or level with one freehand line         | built 2026-11-18: `DrawQuiz` (`format: 'draw'`)            |
+| Pick the right ones | choose exactly N of 6 icon tiles                            | built 2026-11-18: `PickQuiz` (`format: 'pick'`)            |
 
 - Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
   2026-11-13); the chosen option is already marked.

@@ -82,7 +82,7 @@ describe('PathDrawer', () => {
     expect(
       screen.getByText('Your crypto toolbox: coins, wallets and the networks behind them')
     ).toBeTruthy();
-    expect(screen.getByText('Stablecoins: the coins that try to sit still')).toBeTruthy();
+    expect(screen.getByText('Your wallet, your keys: who holds them?')).toBeTruthy();
     // The legend names the two icons, and nothing says "Hands-on" any more (owner 2026-11-12)
     const legend = screen.getByRole('list', { name: 'Kinds of stop' }).textContent;
     expect(legend).toContain('Practice on the real chart');
@@ -147,15 +147,15 @@ describe('PathDrawer', () => {
   it('should never make a coming-soon stop focusable', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const stop = screen.getByText('Stablecoins: the coins that try to sit still').closest('li')!;
+    const stop = screen.getByText('Your wallet, your keys: who holds them?').closest('li')!;
     expect(stop.querySelectorAll('button')).toHaveLength(0);
   });
 
   it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
-    // Review fix 2026-11-19: chapter 2 is open with one built lesson and five stops still to come
+    // Review fix 2026-11-19: chapter 2 is open with two built lessons and four stops still to come
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const stop = screen.getByText('Stablecoins: the coins that try to sit still').closest('li')!;
+    const stop = screen.getByText('Your wallet, your keys: who holds them?').closest('li')!;
     expect(stop.textContent).toContain('(coming soon)');
     expect(screen.getByText(/Chapter 2 · 0 of 6 done/)).toBeTruthy();
   });
