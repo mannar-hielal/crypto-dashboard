@@ -145,12 +145,25 @@ guided-learning-topics/
 6. **Implement** in `lessons.ts` (and new widgets), then tests and docs (below).
    **Progress on a rewritten lesson** (owner 2026-11-16): every learner's progress on it is reset,
    part-way through and completed alike; its `stepBase` moves; the lesson id stays.
-7. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
-   with the screen that teaches it. Report any gap.
+7. **Code review and a second fact check once the lesson is built** (owner 2026-11-19), before the
+   coverage check and the PR:
+   - **Code review:** run `/code-review high` on the lesson's changes: the working tree, or the
+     lesson's commits against its base when they are already committed (never commit just to get a
+     diff; commits wait for the owner's ask). It covers `lessons.ts`, new art or widgets, ids, tests,
+     docs. Fix what holds up, and report what was declined and why.
+   - **Fact check of the built text:** the step-4 check saw the draft; the text changes while it is
+     built and edited. Run the technical-writer check again (see "Fact check") on the lesson as it
+     now stands in `lessons.ts`, so the shipped cards, quiz options and Whys are what was checked.
+   - Each fix gets its test where it can. Show the owner the findings and what changed with the
+     built lesson (screenshots), then go on.
+8. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
+   with the screen that teaches it. Report any gap. It comes last so that the fixes from step 7
+   can't drop a concept unnoticed.
 
 ## Fact check (technical-writer agent)
 
-After drafting and before the owner sees anything, spawn one subagent (the Agent tool,
+It runs twice: on the draft (workflow step 4) and again on the built text (step 7). After drafting
+and before the owner sees anything, spawn one subagent (the Agent tool,
 `general-purpose`) as a **technical writer and fact checker**. Give it the drafted screens (text,
 quizzes with options and Whys, linked terms) and ask it to:
 

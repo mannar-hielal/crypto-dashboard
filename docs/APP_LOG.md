@@ -4665,6 +4665,9 @@ keys, Why sending crypto costs a fee, Trading without a middleman, and the check
   contradiction removed, "no owner" dropped from the road analogy, the van replaced by a shop (a token is a record of balances, not
   something that moves), a quiz option made unambiguous. Still to re-check before a release: LINK's other chains (Chainlink docs) and
   BNB Chain's history.
+- **Process rules added to the lesson-authoring skill** (owner, 2026-11-19): after a lesson is built it gets a `/code-review` and a
+  second technical-writer fact check on the built text, before the coverage check and the PR; a Pulin and Berwyn chat doesn't name
+  them on every line.
 - **Pictures** (visual Q&A, owner): flat side-view road scenes, plain ticker badges (one colour, LINK in an amber ring, never a
   project's logo), Phosphor duotone icons for the token jobs (`LessonArt.tsx`, ten new `LessonArtId`s).
 - **Concepts:** `coin`, `staking`, `token`, `altcoin` (peeks, no article). **Ids:** `lesson-coins` in the client's `LESSON_IDS`, the server's
