@@ -151,6 +151,15 @@ describe('PathDrawer', () => {
     expect(stop.querySelectorAll('button')).toHaveLength(0);
   });
 
+  it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
+    // Review fix 2026-11-19: chapter 2 is open with one built lesson and five stops still to come
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    const stop = screen.getByText('Stablecoins: the coins that try to sit still').closest('li')!;
+    expect(stop.textContent).toContain('(coming soon)');
+    expect(screen.getByText(/Chapter 2 · 0 of 6 done/)).toBeTruthy();
+  });
+
   it('should offer the checkpoint under the first locked stop, and open it', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();

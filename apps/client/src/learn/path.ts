@@ -163,7 +163,10 @@ export interface PathProgress {
 
 export interface PathView {
   chapters: ChapterView[];
-  /** Finished nodes over all built nodes, 0–100 */
+  /**
+   * Finished nodes over all built nodes, 0–100. A built lesson of a chapter that is only partly
+   * written counts too, so the figure can drop below 100 when a new lesson ships (owner 2026-11-19).
+   */
   percent: number;
   /** The next step's key, if any */
   current: string | null;

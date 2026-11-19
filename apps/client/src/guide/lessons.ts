@@ -1646,7 +1646,7 @@ const lessonCoins: Lesson = {
       title: 'A coin has its own road',
       art: 'coinRoad',
       presenter: { who: 'tock', mood: 'calm', pose: 'point' },
-      text: 'A [[coin]] has its own road. The road is a blockchain, and it belongs to that coin alone. Bitcoin runs on the Bitcoin blockchain. Ether runs on the Ethereum blockchain. The coin is that road’s own money. “Coin” and “token” are everyday words, not legal terms.',
+      text: 'A [[coin]] has its own road. The road is a blockchain, and it belongs to that coin alone. Bitcoin runs on the Bitcoin blockchain. Ether runs on the Ethereum blockchain. The coin is that road’s own money. “Coin” and “token” are everyday words. The law mostly looks at what a thing does, not what it is called.',
     },
     {
       title: 'The road needs upkeep',
@@ -1669,7 +1669,7 @@ const lessonCoins: Lesson = {
           { label: 'Its own blockchain', icon: 'road', right: true },
           { label: 'Lives on another blockchain', icon: 'link', right: false },
           { label: 'Pays for its road’s upkeep', icon: 'coins', right: true },
-          { label: 'Gives a vote inside one app', icon: 'vote', right: false },
+          { label: 'A vote on how a project changes', icon: 'vote', right: false },
           { label: 'Pays the people who keep the road running', icon: 'people', right: true },
           { label: 'Is a digital share', icon: 'certificate', right: false },
         ],
@@ -1693,7 +1693,7 @@ const lessonCoins: Lesson = {
       title: 'A token you can trade here',
       chart: LINK_NOW,
       presenter: { who: 'tick', mood: 'smile', pose: 'stand' },
-      text: 'LINK is a token. It began on Ethereum and has copies on other roads too. You can trade it here. The chart looks like any other. You only learn it is a token from where it lives.',
+      text: 'LINK is a token. It began on Ethereum and is also available on other blockchains. You can trade it here. The chart looks like any other. You only learn it is a token from where it lives.',
     },
     {
       title: 'Token job 1: utility',
@@ -1761,7 +1761,8 @@ const lessonCoins: Lesson = {
         question: 'What is LINK?',
         options: ['A coin', 'A token', 'A wallet', 'An exchange'],
         correct: 1,
-        explain: 'LINK has no blockchain of its own. It uses Ethereum’s, so it is a token.',
+        explain:
+          'LINK has no blockchain of its own. It lives on existing ones, such as Ethereum, so it is a token.',
       },
     },
     {
