@@ -1652,7 +1652,7 @@ const lessonCoins: Lesson = {
       title: 'The road needs upkeep',
       art: 'tollBooth',
       presenter: { who: 'tick', mood: 'smile', pose: 'point' },
-      text: 'A road needs upkeep, so its coin pays for it. You pay a little of the coin to use the road. The people who keep the road running are paid in it too. On some roads, part of the fee is even destroyed. Some roads also let you put coins aside to help keep them safe, and earn a reward. That is called staking. Rewards are not promised.',
+      text: 'A road needs upkeep, so its coin pays for it. You pay a little of the coin to use the road. The people who keep the road running are paid in it too. On some roads, part of the fee is even destroyed. Some roads also let you put coins aside to help keep them safe, and earn a reward. That is called [[staking]]. Rewards are not promised.',
     },
     {
       title: 'The coins in our market',

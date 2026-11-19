@@ -933,7 +933,7 @@ describe('lessons', () => {
       'Who pays the fee?',
     ]);
     // The new peeks, one per idea, and no practice trade (nothing here is a buy or a sell)
-    expect(l.cards.flatMap((c) => cardTermIds(c))).toEqual(['coin', 'token', 'altcoin']);
+    expect(l.cards.flatMap((c) => cardTermIds(c))).toEqual(['coin', 'staking', 'token', 'altcoin']);
     expect(l.cards.some((c) => c.practice)).toBe(false);
     // The analogy is Berwyn's and says where it stops matching
     const analogy = l.cards.find((c) => c.title === 'A token uses a road that exists')!.analogy;

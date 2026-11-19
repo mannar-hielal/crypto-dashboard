@@ -4667,7 +4667,7 @@ keys, Why sending crypto costs a fee, Trading without a middleman, and the check
   BNB Chain's history.
 - **Pictures** (visual Q&A, owner): flat side-view road scenes, plain ticker badges (one colour, LINK in an amber ring, never a
   project's logo), Phosphor duotone icons for the token jobs (`LessonArt.tsx`, ten new `LessonArtId`s).
-- **Concepts:** `coin`, `token`, `altcoin` (peeks, no article). **Ids:** `lesson-coins` in the client's `LESSON_IDS`, the server's
+- **Concepts:** `coin`, `staking`, `token`, `altcoin` (peeks, no article). **Ids:** `lesson-coins` in the client's `LESSON_IDS`, the server's
   `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`.
   `ChartScene.symbol` accepts `LINKUSDT`; the Pick quiz has five more tile icons.
 

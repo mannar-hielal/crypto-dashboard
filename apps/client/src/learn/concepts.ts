@@ -40,6 +40,7 @@ export const CONCEPT_IDS = [
   'coin',
   'token',
   'altcoin',
+  'staking',
 ] as const;
 
 export type ConceptId = (typeof CONCEPT_IDS)[number];
@@ -236,6 +237,13 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Altcoin',
     peek: 'Short for “alternative coin”: any crypto that is not bitcoin.',
     think: 'every crypto except the first one.',
+    access: FREE,
+  },
+  {
+    id: 'staking',
+    term: 'Staking',
+    peek: 'Putting coins aside to help keep a blockchain safe, and earning a reward for it. The reward is not guaranteed.',
+    think: 'helping keep the road safe, for a reward.',
     access: FREE,
   },
 ];
