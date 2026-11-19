@@ -71,7 +71,8 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
      and ask.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
-   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4). The chapter's
+   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4), `lesson-coins` (Lesson 5,
+   chapter 2's first lesson; the chapter's later lessons follow as numbered 6 onward). The chapter's
    checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
    a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
    `CHECKPOINT_VERSION` (server).
@@ -144,12 +145,25 @@ guided-learning-topics/
 6. **Implement** in `lessons.ts` (and new widgets), then tests and docs (below).
    **Progress on a rewritten lesson** (owner 2026-11-16): every learner's progress on it is reset,
    part-way through and completed alike; its `stepBase` moves; the lesson id stays.
-7. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
-   with the screen that teaches it. Report any gap.
+7. **Code review and a second fact check once the lesson is built** (owner 2026-11-19), before the
+   coverage check and the PR:
+   - **Code review:** run `/code-review high` on the lesson's changes: the working tree, or the
+     lesson's commits against its base when they are already committed (never commit just to get a
+     diff; commits wait for the owner's ask). It covers `lessons.ts`, new art or widgets, ids, tests,
+     docs. Fix what holds up, and report what was declined and why.
+   - **Fact check of the built text:** the step-4 check saw the draft; the text changes while it is
+     built and edited. Run the technical-writer check again (see "Fact check") on the lesson as it
+     now stands in `lessons.ts`, so the shipped cards, quiz options and Whys are what was checked.
+   - Each fix gets its test where it can. Show the owner the findings and what changed with the
+     built lesson (screenshots), then go on.
+8. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
+   with the screen that teaches it. Report any gap. It comes last so that the fixes from step 7
+   can't drop a concept unnoticed.
 
 ## Fact check (technical-writer agent)
 
-After drafting and before the owner sees anything, spawn one subagent (the Agent tool,
+It runs twice: on the draft (workflow step 4) and again on the built text (step 7). After drafting
+and before the owner sees anything, spawn one subagent (the Agent tool,
 `general-purpose`) as a **technical writer and fact checker**. Give it the drafted screens (text,
 quizzes with options and Whys, linked terms) and ask it to:
 
@@ -288,6 +302,10 @@ rewritten, and to quizzes, Whys, summaries and titles.
   (`tock`, answers them, usually). When a card needs the bull and the bear, Pulin is the bull and
   Berwyn the bear (owner 2026-11-18). A card has `text` (may hold `[[terms]]`), or `lines` (a short
   exchange), or `beats` (a cold open), plus a `presenter` or a real `photo` (with its `credit`).
+- **A chat between Pulin and Berwyn doesn't name them every time** (owner 2026-11-19). Each guide
+  already shows as a speaker (face and side), so don't open every line with "Pulin:" or "Berwyn:",
+  and don't write "Pulin asks…" in the text. Say a name only when it helps: the first time a card
+  introduces one, or when the text talks about them.
 - Short: one idea per card.
 - **One label set** (owner 2026-11-17): the main button always says **Continue**, the back link
   **← Back**, and the summary's button (the last screen that teaches) **Finish lesson**, in every

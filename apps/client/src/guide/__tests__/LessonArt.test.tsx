@@ -25,6 +25,16 @@ const ARTS: LessonArtId[] = [
   'friends',
   'lena',
   'zoe',
+  'twoRoads',
+  'coinRoad',
+  'tollBooth',
+  'tickerBadges',
+  'shopRoad',
+  'arcadeCredits',
+  'shareCertificate',
+  'ballotBox',
+  'calmStormy',
+  'stopCoin',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -41,6 +51,12 @@ const TELLING: LessonArtId[] = [
   'friends',
   'lena',
   'zoe',
+  'twoRoads',
+  'coinRoad',
+  'tollBooth',
+  'tickerBadges',
+  'shopRoad',
+  'calmStormy',
 ];
 
 describe('the guides', () => {
@@ -142,6 +158,14 @@ describe('LessonArt', () => {
     expect(words('closeToKeep')).toMatch(/on paper.*\+\$120\?.*Close.*\+\$120.*yours to keep/);
     expect(words('shortGame')).toMatch(/\$60.*\$40.*keep \$20/);
     expect(words('alwaysOpen')).toMatch(/Shop.*Crypto.*open 24\/7/);
+    // Chapter 2, Lesson 5: the road scenes say who has their own road, and LINK is set apart
+    expect(words('twoRoads')).toMatch(/Its own road.*Someone else’s road/);
+    expect(words('coinRoad')).toMatch(/Its blockchain/);
+    expect(words('tollBooth')).toMatch(/Fee.*paid in the coin/);
+    expect(words('shopRoad')).toMatch(/Token.*house.*rules/);
+    expect(words('calmStormy')).toMatch(/steady.*swings/);
+    const badges = render(<LessonArt id="tickerBadges" />).container.textContent ?? '';
+    expect(badges).toMatch(/BTC.*ETH.*SOL.*BNB.*XRP.*ADA.*AVAX.*DOGE.*LINK.*a token/);
     // The chain: each block's prev is the fingerprint of the block before it
     const chain = render(<LessonArt id="hashChain" />).container.textContent ?? '';
     expect(chain).toMatch(/#k7q2.*#k7q2.*#m4x9.*#m4x9/);

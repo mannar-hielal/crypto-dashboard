@@ -4643,6 +4643,37 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-19 — Chapter 2 starts: "Your crypto toolbox", and Lesson 5 "Coins and tokens: who has their own road"
+
+The learning map's chapter 2 stops being the "Trade with a plan" placeholder (owner, 2026-11-19: follow the benchmark course's topic
+order, even where that rewrites an earlier plan of ours; its topics, limit orders, stop-loss and take-profit, risk and scams, move to
+a later chapter). Chapter 2 is **Your crypto toolbox: coins, wallets and the networks behind them**, built lesson by lesson, one PR
+each (owner 2026-11-19); the five lessons and the checkpoint, with our own titles: Coins and tokens, Stablecoins, Your wallet your
+keys, Why sending crypto costs a fee, Trading without a middleman, and the checkpoint. This PR is the first.
+
+- **The map:** an open chapter may now carry `soon`, the titles of its stops still to write, shown after the built ones as the same
+  locked "coming soon" stops (`learn/path.ts`, `PathDrawer.tsx`). Chapter 2 opens once chapter 1's checkpoint is passed.
+- **Lesson 5, `lesson-coins`** (8 min, 18 screens, step base 60 like the other lessons' current versions): one metaphor, roads. A coin
+  has its own road (its own blockchain); a token is a shop built along someone else's road (Berwyn's analogy, with where it stops
+  matching). Cards: the cold open, the coin and its road, the road's upkeep (fees, staking), the eight coins of our market as ticker
+  badges (LINK set apart as the token), a **Pick the right ones** (a coin's three traits), the token and a real LINK chart, the three
+  common token jobs (utility, security, governance) with a **Match boxes** quiz, altcoins with the calm and stormy lines, a **Do the
+  math** card on real closes (bitcoin −19.1%, LINK −29.9%, 29 Jul to 5 Aug 2024, Bybit USDT perpetual), two multiple-choice questions,
+  **Your call** (a token that promises "triple in a week": find out who made it), the summary and the journal. No practice trade (the
+  stablecoin lesson offers the USDT buy).
+- **Text:** fact checked by a technical-writer agent (2026-11-19): the regulation wording softened, the altcoin and stablecoin
+  contradiction removed, "no owner" dropped from the road analogy, the van replaced by a shop (a token is a record of balances, not
+  something that moves), a quiz option made unambiguous. Still to re-check before a release: LINK's other chains (Chainlink docs) and
+  BNB Chain's history.
+- **Process rules added to the lesson-authoring skill** (owner, 2026-11-19): after a lesson is built it gets a `/code-review` and a
+  second technical-writer fact check on the built text, before the coverage check and the PR; a Pulin and Berwyn chat doesn't name
+  them on every line.
+- **Pictures** (visual Q&A, owner): flat side-view road scenes, plain ticker badges (one colour, LINK in an amber ring, never a
+  project's logo), Phosphor duotone icons for the token jobs (`LessonArt.tsx`, ten new `LessonArtId`s).
+- **Concepts:** `coin`, `staking`, `token`, `altcoin` (peeks, no article). **Ids:** `lesson-coins` in the client's `LESSON_IDS`, the server's
+  `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`.
+  `ChartScene.symbol` accepts `LINKUSDT`; the Pick quiz has five more tile icons.
+
 ### 2026-11-18 — The Blog: the articles leave the lessons, and the public header gets Product, Blog, About us, Support
 
 Plan: `docs/BLOG_PLAN.md`; built in one PR on `feat/knowledge-base`. The nine articles (the old knowledge base)

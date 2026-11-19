@@ -20,7 +20,13 @@ import { plainText, termIds } from '@/learn/terms';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId, PracticeTourId } from './tours';
 
-export const LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02', 'lesson-04'] as const;
+export const LESSON_IDS = [
+  'lesson-01',
+  'lesson-ownership',
+  'lesson-02',
+  'lesson-04',
+  'lesson-coins',
+] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
 export function isLessonId(value: string): value is LessonId {
@@ -59,7 +65,18 @@ export type LessonArtId =
   /** Lesson 4 (owner 2026-11-18): Lena the calm investor and Zoe the active trader (Open Peeps, CC0) */
   | 'friends'
   | 'lena'
-  | 'zoe';
+  | 'zoe'
+  // Chapter 2, Lesson 5 (owner's visual Q&A 2026-11-19): coins are roads, tokens are shops on them
+  | 'twoRoads'
+  | 'coinRoad'
+  | 'tollBooth'
+  | 'tickerBadges'
+  | 'shopRoad'
+  | 'arcadeCredits'
+  | 'shareCertificate'
+  | 'ballotBox'
+  | 'calmStormy'
+  | 'stopCoin';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -95,6 +112,19 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
     'Lena, a calm long-term investor, holding a mug; Zoe, an active trader, looking at her phone.',
   lena: 'Lena, a calm long-term investor, holding a mug.',
   zoe: 'Zoe, an active trader, looking at her phone.',
+  twoRoads:
+    'Two roads: one is a coin’s own road, the other belongs to someone else, with a shop built beside it.',
+  coinRoad: 'A coin on its own road, with a signpost naming its blockchain.',
+  tollBooth:
+    'A coin pays a fee at a toll booth on its road, and the people who keep the road running are paid in the same coin.',
+  tickerBadges:
+    'Eight round badges for the coins BTC, ETH, SOL, BNB, XRP, ADA, AVAX and DOGE, and a ninth, LINK, set apart in an amber ring: a token.',
+  shopRoad: 'A token is like a shop built beside someone else’s road, with its own house rules.',
+  arcadeCredits: null,
+  shareCertificate: null,
+  ballotBox: null,
+  calmStormy: 'A steady line and a line that swings up and down.',
+  stopCoin: null,
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -153,7 +183,7 @@ export interface ChartMarker {
  */
 export interface ChartScene {
   /** Bitcoin, or Solana for the "smaller coins swing harder" comparison (Lesson 1, owner 2026-11-16) */
-  symbol: 'BTCUSDT' | 'SOLUSDT';
+  symbol: 'BTCUSDT' | 'SOLUSDT' | 'LINKUSDT';
   /**
    * Which Bybit market the candles come from: `linear` (the USDT perpetual, the default) or `spot`,
    * when the card's text is about a spot trade and its prices must match (Lesson 1's worked long,
@@ -298,7 +328,20 @@ export interface CanDo {
 export type QuestionFormat = 'choice' | 'buy-sell' | 'order' | 'match' | 'pick' | 'draw';
 
 /** The icons a Pick-the-right tile can carry (Phosphor duotone, mapped in `PickQuiz.tsx`) */
-export type TileIcon = 'calendar' | 'pie' | 'calm' | 'repeat' | 'lightning' | 'eye';
+export type TileIcon =
+  | 'calendar'
+  | 'pie'
+  | 'calm'
+  | 'repeat'
+  | 'lightning'
+  | 'eye'
+  // Lesson 5 (2026-11-19)
+  | 'road'
+  | 'link'
+  | 'coins'
+  | 'people'
+  | 'vote'
+  | 'certificate';
 
 /** A day's close on the chart, where a drawn line should start or end */
 export interface DrawPoint {
@@ -1550,7 +1593,234 @@ const lesson04: Lesson = {
   access: FREE,
 };
 
-export const LESSONS: readonly Lesson[] = [lesson01, lessonOwnership, lesson02, lesson04];
+// ─── Chapter 2, Lesson 5 — Coins and tokens: who has their own road ──────────────────────────────
+// Owner 2026-11-19: the benchmark's topic order, our own words, our own road-and-shop metaphor. Text
+// fact checked by a technical-writer agent 2026-11-19 (guided-learning-topics notes 15).
+
+// A token you can trade here: LINK's daily candles (Bybit USDT perpetual), the last 120 days to 1 Nov 2025
+const LINK_NOW: ChartScene = {
+  symbol: 'LINKUSDT',
+  end: '2025-11-01',
+  bars: 120,
+  markers: [],
+  label: 'Chainlink’s LINK token: daily candles for the four months to 1 November 2025.',
+  fallback: 'swings',
+};
+
+// Bitcoin and LINK, 29 Jul → 5 Aug 2024 (Bybit USDT perpetual daily closes, UTC, checked 2026-11-19):
+// BTC 66,757.7 → 53,988.2 (−12,769.5, −0.191, −19.1%); LINK 13.524 → 9.475 (−4.049, −0.299, −29.9%)
+const LINK_2024: ChartScene = {
+  symbol: 'LINKUSDT',
+  end: '2024-08-12',
+  bars: 28,
+  markers: [
+    { date: '2024-07-29', text: '$13.524', position: 'above' },
+    { date: '2024-08-05', text: '−29.9%', position: 'below' },
+  ],
+  label:
+    'LINK daily candles from mid July to mid August 2024: from $13.524 on 29 July down 29.9% to $9.475 on 5 August.',
+  fallback: 'swings',
+};
+
+const lessonCoins: Lesson = {
+  id: 'lesson-coins',
+  number: 5,
+  title: 'Coins and tokens: who has their own road',
+  stage: 'Your crypto toolbox',
+  minutes: 8,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // No practice trade here: nothing in it teaches a buy or a sell (the stablecoin lesson offers one)
+  cards: [
+    {
+      title: 'Not all crypto is built the same',
+      art: 'twoRoads',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      lines: [
+        { speaker: 'tick', text: 'Bitcoin, Ether, Solana, Chainlink… all “crypto”, right?' },
+        { speaker: 'tock', text: 'Right, but not built the same.' },
+        { speaker: 'tick', text: 'How so?' },
+        { speaker: 'tock', text: 'Some have their own road. Some use someone else’s.' },
+      ],
+    },
+    {
+      title: 'A coin has its own road',
+      art: 'coinRoad',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A [[coin]] has its own road. The road is a blockchain, and it belongs to that coin alone. Bitcoin runs on the Bitcoin blockchain. Ether runs on the Ethereum blockchain. The coin is that road’s own money. “Coin” and “token” are everyday words. The law mostly looks at what a thing does, not what it is called.',
+    },
+    {
+      title: 'The road needs upkeep',
+      art: 'tollBooth',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'A road needs upkeep, so its coin pays for it. You pay a little of the coin to use the road. The people who keep the road running are paid in it too. On some roads, part of the fee is even destroyed. Some roads also let you put coins aside to help keep them safe, and earn a reward. That is called [[staking]]. Rewards are not promised.',
+    },
+    {
+      title: 'The coins in our market',
+      art: 'tickerBadges',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      text: 'Our practice market lists eight coins. Each has its own blockchain: BTC (Bitcoin), ETH (Ethereum), SOL (Solana), BNB (BNB Chain), XRP (XRP Ledger), ADA (Cardano), AVAX (Avalanche) and DOGE (Dogecoin). Eight coins, eight roads. LINK, one more name on the list, is not a coin. Tokens come next.',
+    },
+    {
+      title: 'What does a coin have?',
+      quiz: {
+        format: 'pick',
+        question: 'What does a coin have? Pick three.',
+        tiles: [
+          { label: 'Its own blockchain', icon: 'road', right: true },
+          { label: 'Lives on another blockchain', icon: 'link', right: false },
+          { label: 'Pays for its road’s upkeep', icon: 'coins', right: true },
+          { label: 'A vote on how a project changes', icon: 'vote', right: false },
+          { label: 'Pays the people who keep the road running', icon: 'people', right: true },
+          { label: 'Is a digital share', icon: 'certificate', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'A coin and its road go together: its own blockchain, paid for and kept running in the coin. The other three describe tokens.',
+      },
+    },
+    {
+      title: 'A token uses a road that exists',
+      art: 'shopRoad',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'A [[token]] has no road of its own. It uses a road that already exists, often Ethereum’s.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a shop built along an existing road. It uses the road and follows its traffic rules, and it adds its own house rules. Where it stops matching: a token is not a building but a record of balances, kept in a program on that road.',
+      },
+    },
+    {
+      title: 'A token you can trade here',
+      chart: LINK_NOW,
+      presenter: { who: 'tick', mood: 'smile', pose: 'stand' },
+      text: 'LINK is a token. It began on Ethereum and is also available on other blockchains. You can trade it here. The chart looks like any other. You only learn it is a token from where it lives.',
+    },
+    {
+      title: 'Token job 1: utility',
+      art: 'arcadeCredits',
+      presenter: { who: 'tick', mood: 'grin', pose: 'point' },
+      text: 'Tokens come in many kinds. Three common ones are next. First, **utility** tokens. They work like credits in an arcade: you spend them inside one app or game to get something.',
+    },
+    {
+      title: 'Token job 2: security',
+      art: 'shareCertificate',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Second, **security** tokens. They stand for a share in something real, like a piece of a company. In many places, securities law applies to them.',
+    },
+    {
+      title: 'Token job 3: governance',
+      art: 'ballotBox',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Third, **governance** tokens. Holding one gives you a vote on how a project changes, such as its fees or its next feature. In most projects, more tokens mean more voting power.',
+    },
+    {
+      title: 'Match each token to its job',
+      quiz: {
+        format: 'match',
+        question: 'Match each token to its job.',
+        pairs: [
+          { term: 'Utility', meaning: 'Credits inside an app or game' },
+          { term: 'Security', meaning: 'A share in something real' },
+          { term: 'Governance', meaning: 'A vote on how a project changes' },
+        ],
+        options: [],
+        correct: 0,
+        explain: 'Ask what the token is for. Use it, own a share, or vote.',
+      },
+    },
+    {
+      title: 'Altcoins',
+      art: 'calmStormy',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'Every crypto except bitcoin is called an [[altcoin]], short for “alternative coin”. Most altcoins are smaller than bitcoin. Smaller here means a smaller total value, not a lower price. Smaller things often move more, so the swings can be bigger. Stablecoins are altcoins that try not to swing. We meet them next.',
+    },
+    {
+      title: 'Two assets, one week',
+      chart: LINK_2024,
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'Same two days, two assets. We use each day’s closing price in USDT, from the USDT perpetual market, for bitcoin and for LINK, from 29 July to 5 August 2024. The chart shows LINK.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Bitcoin: the change', sum: '53,988.2 − 66,757.7 = −12,769.5' },
+          { label: 'Bitcoin: divide', sum: '−12,769.5 ÷ 66,757.7 = −0.191' },
+          { label: 'Bitcoin: as a percent', sum: '−0.191 × 100 = −19.1%' },
+          { label: 'LINK: the change', sum: '9.475 − 13.524 = −4.049' },
+          { label: 'LINK: divide', sum: '−4.049 ÷ 13.524 = −0.299' },
+          { label: 'LINK: as a percent', sum: '−0.299 × 100 = −29.9%' },
+        ],
+        answer:
+          'From 29 July to 5 August 2024, **LINK** fell more than bitcoin. One week is only one example.',
+      },
+    },
+    {
+      title: 'What is LINK?',
+      quiz: {
+        art: 'zoe',
+        context: 'Zoe holds LINK.',
+        question: 'What is LINK?',
+        options: ['A coin', 'A token', 'A wallet', 'An exchange'],
+        correct: 1,
+        explain:
+          'LINK has no blockchain of its own. It lives on existing ones, such as Ethereum, so it is a token.',
+      },
+    },
+    {
+      title: 'Who pays the fee?',
+      quiz: {
+        question: 'You send a token on Ethereum from your own wallet. In what do you pay the fee?',
+        options: [
+          'In the token you sent',
+          'In ETH, the road’s own coin',
+          'In dollars to a bank',
+          'You pay no fee',
+        ],
+        correct: 1,
+        explain:
+          'The road’s upkeep is paid in the road’s coin. The lesson on gas fees goes deeper.',
+      },
+    },
+  ],
+  // Your call follows the last quiz: the honest answer is the praised one
+  moment: {
+    art: 'stopCoin',
+    context: 'A brand-new token you have never heard of promises “triple in a week”.',
+    question: 'What do you do first?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Buy a small amount with real money, to see',
+      'Find out who made it and what it is for',
+      'Ask a friend if they are in',
+    ],
+    correct: 1,
+    explain:
+      'Find out who made it and what it is for. A token’s rules are code that someone wrote. A promise of fast gains is a reason to slow down.',
+  },
+  checks: [],
+  notePrompt: 'Name one coin or token you have heard of. Which road does it use?',
+  canDo: [],
+  recap: {
+    title: 'Coins and tokens',
+    points: [
+      { text: 'A coin has its own road. A token uses one.' },
+      { text: 'Three common kinds of token: credits, shares and votes.' },
+      { text: 'Altcoin means any crypto that is not bitcoin.' },
+      { text: 'A promise of fast gains is a reason to check first.' },
+    ],
+    highlight: {
+      text: 'You can now tell a coin from a token, name three common kinds of token, and say why altcoins often swing more. Next up: stablecoins, crypto that tries to sit still.',
+    },
+  },
+  access: FREE,
+};
+
+export const LESSONS: readonly Lesson[] = [
+  lesson01,
+  lessonOwnership,
+  lesson02,
+  lesson04,
+  lessonCoins,
+];
 
 export function getLesson(id: LessonId): Lesson {
   const lesson = LESSONS.find((l) => l.id === id);

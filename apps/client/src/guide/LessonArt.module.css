@@ -341,3 +341,33 @@
 .haloAmber {
   fill: color-mix(in srgb, var(--color-brand-amber) 28%, white); /* color.amber */
 }
+
+/* ─── Chapter 2, Lesson 5 (owner's visual Q&A 2026-11-19): the road scenes and ticker badges ─── */
+
+/* A road: a dark band (bg.surface) with a dashed middle line in the muted colour */
+.road {
+  fill: var(--color-bg-surface); /* bg.surface */
+}
+
+.roadLine {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 8 6;
+}
+
+/* A coin's ticker badge: our purple with white letters; the token is outlined in amber instead */
+.badge {
+  fill: var(--color-brand-purple-dark); /* color.purpleDark */
+}
+
+.tokenBadge {
+  fill: var(--color-bg-panel); /* bg.panel */
+  stroke: var(--color-brand-amber); /* color.amber */
+  stroke-width: 3;
+}
+
+.badgeText {
+  fill: var(--color-brand-white); /* color.white */
+  font-size: 11px;
+  font-weight: 700;
+}

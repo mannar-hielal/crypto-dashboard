@@ -68,7 +68,7 @@ describe('PathDrawer', () => {
     expect(document.querySelector(guideSelector('path.drawer'))).toBeNull();
   });
 
-  it('should show chapter 1 with its stops, the next step marked, and chapter 2 coming soon', () => {
+  it('should show chapter 1 with its stops, the next step marked, and chapter 2 with its lessons still to come', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
 
@@ -79,8 +79,10 @@ describe('PathDrawer', () => {
       'Lesson, on the real chart: Up, down and your first trade, next step'
     );
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
-    expect(screen.getByText('Trade with a plan')).toBeTruthy();
-    expect(screen.getAllByText(/Coming soon/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('Your crypto toolbox: coins, wallets and the networks behind them')
+    ).toBeTruthy();
+    expect(screen.getByText('Stablecoins: the coins that try to sit still')).toBeTruthy();
     // The legend names the two icons, and nothing says "Hands-on" any more (owner 2026-11-12)
     const legend = screen.getByRole('list', { name: 'Kinds of stop' }).textContent;
     expect(legend).toContain('Practice on the real chart');
@@ -145,8 +147,17 @@ describe('PathDrawer', () => {
   it('should never make a coming-soon stop focusable', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const soon = document.querySelector(guideSelector('path.chapter', 'ch2'))!;
-    expect(soon.querySelectorAll('button')).toHaveLength(0);
+    const stop = screen.getByText('Stablecoins: the coins that try to sit still').closest('li')!;
+    expect(stop.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
+    // Review fix 2026-11-19: chapter 2 is open with one built lesson and five stops still to come
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    const stop = screen.getByText('Stablecoins: the coins that try to sit still').closest('li')!;
+    expect(stop.textContent).toContain('(coming soon)');
+    expect(screen.getByText(/Chapter 2 · 0 of 6 done/)).toBeTruthy();
   });
 
   it('should offer the checkpoint under the first locked stop, and open it', () => {
