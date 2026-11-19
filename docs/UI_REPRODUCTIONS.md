@@ -356,6 +356,31 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
 presenter never over the scene); every picture above its card's text; the guides' round glasses on the math and
 the analogy, and the math's steps (a sum wraps under its label on a narrow phone, never a sideways scroll). Frequency: per release touching `guide/LessonArt.tsx`, `guide/art/` or the lessons.
 
+### Learning path — Chapter 2, Lesson 5 "Coins and tokens: who has their own road" (no Part B rows yet)
+
+**UI reproduction** — as for Lessons 1–3 (a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`, local dev with the real
+Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the map's chapter 2 after testing out.
+
+1. Open the map ([nav.learn]) → Expect chapter 2 **Your crypto toolbox: coins, wallets and the networks behind them**: the
+   lesson **Coins and tokens: who has their own road** (open after the checkpoint), then four lesson titles and a checkpoint
+   title as grey "coming soon" stops that can't be focused.
+2. [learn.card.start] the lesson → Expect screen 1 of 18: two roads (**Its own road** with a coin, **Someone else's road** with a
+   shop) and the guides' four lines. Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
+   word _coin_ is a tappable term opening a peek), **The road needs upkeep** (a coin at a toll booth, "paid in the coin"),
+   **The coins in our market** (eight purple ticker badges BTC ETH SOL BNB XRP ADA AVAX DOGE; LINK in an amber ring, "a token").
+3. **What does a coin have?** (Pick the right ones, six tiles): pick the three right ones (**Its own blockchain**, **Pays for its
+   road's upkeep**, **Pays the people who keep the road running**) → Check → "Right." Picking a wrong tile → ✕ on it, "Not quite.",
+   Try again.
+4. **A token uses a road that exists** (Berwyn in glasses, "Think of it as a shop built along an existing road…"), **A token you
+   can trade here** (LINK's daily candles), the three jobs (**utility** arcade credits, **security** a share certificate,
+   **governance** a vote), then **Match each token to its job** (Match boxes, three pairs).
+5. **Altcoins** (a steady green line and a swinging red one), **Two assets, one week** (LINK's candles 29 Jul to 5 Aug 2024 with
+   "$13.524" and "−29.9%"; Pulin's six numbered steps ending "LINK fell more than bitcoin. One week is only one example.").
+6. **What is LINK?** → **A token**. **Who pays the fee?** → **In ETH, the road's own coin**. **Your call** (a hand-and-coins
+   picture) → **Find out who made it and what it is for** (the praised answer); the other two answers give "Not quite." and a
+   Why. Then the summary ("Coins and tokens", four points and "You can now…"), the journal line, the rating.
+7. Phone (390 px): no sideways scroll; the badges and roads sit inside the picture box.
+
 ### Learning path — the learning map (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`. The map is

@@ -177,6 +177,15 @@ function ChapterSection({ view, wide, started, onStart, onSkipTour }: ChapterSec
                 onSkipTour={onSkipTour}
               />
             ))}
+            {chapter.soon?.map((node, i) => (
+              <SoonStop
+                key={node.title}
+                first={false}
+                index={firstIndex + view.nodes.length + i}
+                kind={node.kind}
+                title={node.title}
+              />
+            ))}
           </ul>
         </>
       )}

@@ -187,8 +187,8 @@ describe('lessons', () => {
         // A Try it screen always has its intro line
         if (lesson.tour || lesson.tryWidget)
           expect(lesson.tryIntro?.trim(), lesson.id).toBeTruthy();
-        // Lesson 4 has no practice, so no Try it screen (owner 2026-11-18)
-        if (lesson.id === 'lesson-04') {
+        // Lessons 4 and 5 (coins and tokens) have no practice, so no Try it screen (owner 2026-11-18)
+        if (lesson.id === 'lesson-04' || lesson.id === 'lesson-coins') {
           expect([lesson.tour, lesson.tryWidget, lesson.tryIntro]).toEqual([
             undefined,
             undefined,
@@ -271,12 +271,13 @@ describe('lessons', () => {
     });
   }
 
-  it('should number the lessons 1, 2, 3 and 4, keeping the stored ids (owner 2026-11-08)', () => {
+  it('should number the lessons 1 to 5, keeping the stored ids (owner 2026-11-08)', () => {
     expect(LESSONS.map((l) => [l.id, l.number, l.title])).toEqual([
       ['lesson-01', 1, 'Up, down and your first trade'],
       ['lesson-ownership', 2, 'Money nobody controls'],
       ['lesson-02', 3, 'News, swings and traps'],
       ['lesson-04', 4, 'Trader or investor? Find your style'],
+      ['lesson-coins', 5, 'Coins and tokens: who has their own road'],
     ]);
   });
 
@@ -371,7 +372,7 @@ describe('lessons', () => {
     expect(short2.practice?.tour).toBe('practice-short');
   });
 
-  it('should add the math wherever Lessons 1–3 work out a gain, a loss or a percent', () => {
+  it('should add the math wherever the lessons work out a gain, a loss or a percent', () => {
     const titles = LESSONS.flatMap((l) => l.cards.filter((c) => c.math).map((c) => c.title));
     expect(titles).toEqual([
       'The result',
@@ -381,6 +382,7 @@ describe('lessons', () => {
       'Up, then down',
       'A trader’s day',
       'An investor’s year',
+      'Two assets, one week',
     ]);
   });
 
@@ -909,6 +911,82 @@ describe('lessons', () => {
       who: 'tock',
       mood: 'thinking',
     });
+  });
+
+  it('should teach coins and tokens in the approved order, with the road and shop metaphor (owner 2026-11-19)', () => {
+    const l = getLesson('lesson-coins');
+    expect(l.cards.map((c) => c.title)).toEqual([
+      'Not all crypto is built the same',
+      'A coin has its own road',
+      'The road needs upkeep',
+      'The coins in our market',
+      'What does a coin have?',
+      'A token uses a road that exists',
+      'A token you can trade here',
+      'Token job 1: utility',
+      'Token job 2: security',
+      'Token job 3: governance',
+      'Match each token to its job',
+      'Altcoins',
+      'Two assets, one week',
+      'What is LINK?',
+      'Who pays the fee?',
+    ]);
+    // The new peeks, one per idea, and no practice trade (nothing here is a buy or a sell)
+    expect(l.cards.flatMap((c) => cardTermIds(c))).toEqual(['coin', 'token', 'altcoin']);
+    expect(l.cards.some((c) => c.practice)).toBe(false);
+    // The analogy is Berwyn's and says where it stops matching
+    const analogy = l.cards.find((c) => c.title === 'A token uses a road that exists')!.analogy;
+    expect(analogy?.who).toBe('tock');
+    expect(analogy?.text).toMatch(/shop.*Where it stops matching/);
+    // Stablecoins come next, so the altcoin card says they try not to swing
+    expect(l.cards.find((c) => c.title === 'Altcoins')?.text).toMatch(/Stablecoins are altcoins/);
+    // Your call: the honest answer is to find out who made it
+    expect(l.moment.options[l.moment.correct]).toMatch(/who made it/);
+    // No project's logo, and no link to a lesson that is not written yet
+    expect(l.recap?.highlight?.text).toMatch(/Next up: stablecoins/);
+    expect(l.next).toBeUndefined();
+  });
+
+  it('should keep the coin-traits pick to three right tiles of six, and name the eight coins (fact check 2026-11-19)', () => {
+    const l = getLesson('lesson-coins');
+    const pick = l.cards.find((c) => c.title === 'What does a coin have?')!.quiz!;
+    expect(pick.format).toBe('pick');
+    expect(pick.tiles).toHaveLength(6);
+    expect(pick.tiles!.filter((t) => t.right)).toHaveLength(3);
+    expect(pick.question).toMatch(/Pick three/);
+    const market = l.cards.find((c) => c.title === 'The coins in our market')!.text!;
+    for (const t of ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX', 'DOGE']) {
+      expect(market).toContain(t);
+    }
+    // LINK is the token, not a coin: set apart on the card
+    expect(market).toMatch(/LINK.*not a coin/);
+  });
+
+  it('should keep the coins-and-tokens sums true to the dated closes (fact check 2026-11-19)', () => {
+    // Bybit USDT perpetual daily closes, 29 Jul and 5 Aug 2024, UTC
+    const closes = { BTC: [66_757.7, 53_988.2], LINK: [13.524, 9.475] } as const;
+    const l = getLesson('lesson-coins');
+    const card = l.cards.find((c) => c.title === 'Two assets, one week')!;
+    const steps = card.math!.steps.map((s) => s.sum);
+    const fmt = (n: number, d: number) =>
+      (n < 0 ? '−' : '') +
+      Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const expected: string[] = [];
+    for (const [from, to] of [closes.BTC, closes.LINK]) {
+      const change = Number((to - from).toFixed(4));
+      const ratio = Number((change / from).toFixed(3));
+      const decimals = from > 1000 ? 1 : 3;
+      expected.push(
+        `${fmt(to, decimals)} − ${fmt(from, decimals)} = ${fmt(change, decimals)}`,
+        `${fmt(change, decimals)} ÷ ${fmt(from, decimals)} = ${fmt(ratio, 3)}`,
+        `${fmt(ratio, 3)} × 100 = ${fmt(Number((ratio * 100).toFixed(1)), 1)}%`
+      );
+    }
+    expect(steps).toEqual(expected);
+    // The chart's markers carry the same LINK figures
+    expect(card.chart?.markers.map((m) => m.text)).toEqual(['$13.524', '−29.9%']);
+    expect(card.math?.answer).toMatch(/LINK.*fell more than bitcoin.*only one example/);
   });
 
   it('should keep every funnel step id within the server’s pattern, past each earlier version', () => {

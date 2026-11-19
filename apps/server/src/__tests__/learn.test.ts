@@ -580,7 +580,7 @@ describe('/api/learn/progress', () => {
     // A tab or a cached PWA still on the old Lessons 1–3 can't undo the reset (2026-11-16)
     const put = (url: string, payload: unknown) =>
       app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
-    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02', 'lesson-04']) {
+    for (const id of ['lesson-01', 'lesson-ownership', 'lesson-02', 'lesson-04', 'lesson-coins']) {
       const url = `/api/learn/progress/${id}`;
       expect((await put(url, { status: 'started', step: 21 })).statusCode, id).toBe(409);
       expect((await put(url, { status: 'started', step: 60 })).statusCode, id).toBe(409);

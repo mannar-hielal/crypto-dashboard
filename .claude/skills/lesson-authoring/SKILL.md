@@ -71,7 +71,8 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
      and ask.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
-   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4). The chapter's
+   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4), `lesson-coins` (Lesson 5,
+   chapter 2's first lesson; the chapter's later lessons follow as numbered 6 onward). The chapter's
    checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
    a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
    `CHECKPOINT_VERSION` (server).

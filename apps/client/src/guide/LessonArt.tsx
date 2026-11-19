@@ -9,7 +9,18 @@
  */
 
 import type { JSX } from 'react';
-import { Clock, HardDrives, MagnifyingGlass } from '@phosphor-icons/react';
+import {
+  Certificate,
+  Clock,
+  Coins,
+  GameController,
+  HardDrives,
+  HandPalm,
+  ListChecks,
+  MagnifyingGlass,
+  Storefront,
+  Ticket,
+} from '@phosphor-icons/react';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import lenaUrl from '@/assets/illustrations/open-peeps/lena.svg';
 import zoeUrl from '@/assets/illustrations/open-peeps/zoe.svg';
@@ -888,6 +899,220 @@ function ZoeAlone() {
   return <Friend url={zoeUrl} x={108} halo={styles.haloAmber} />;
 }
 
+// ─── Chapter 2, Lesson 5: coins and tokens (owner's visual Q&A 2026-11-19) ────────────────────────
+// The road metaphor, drawn flat from our tokens: a coin has its own road; a token is a shop built
+// along someone else's. Phosphor duotone icons for the token jobs; plain ticker badges, never a
+// project's logo.
+
+/** A flat road across the scene: a dark band with a dashed middle line */
+function Road({ x1, x2, y }: { x1: number; x2: number; y: number }) {
+  return (
+    <g>
+      <rect x={x1} y={y - 9} width={x2 - x1} height="18" rx="3" className={styles.road} />
+      <line
+        x1={x1 + 6}
+        x2={x2 - 6}
+        y1={y}
+        y2={y}
+        className={`${styles.roadLine} ${styles.muted}`}
+      />
+    </g>
+  );
+}
+
+/** Lesson 5's cold open: two roads, one all its own and one that a token shares */
+function TwoRoads() {
+  return (
+    <>
+      <Road x1={84} x2={312} y={44} />
+      <circle cx="244" cy="44" r="16" className={styles.coin} />
+      <text x="244" y="48" textAnchor="middle" className={styles.hashText}>
+        coin
+      </text>
+      <text x="198" y="22" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Its own road
+      </text>
+      <Road x1={84} x2={312} y={112} />
+      <Storefront weight={DUO} x={226} y={70} size={34} className={styles.amber} />
+      <text x="198" y="146" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Someone else’s road
+      </text>
+    </>
+  );
+}
+
+/** A coin on its own road, with the signpost naming the blockchain */
+function CoinRoad() {
+  return (
+    <>
+      <Road x1={84} x2={312} y={108} />
+      <circle cx="196" cy="108" r="16" className={styles.coin} />
+      <text x="196" y="112" textAnchor="middle" className={styles.hashText}>
+        coin
+      </text>
+      <line x1="270" x2="270" y1="52" y2="99" className={`${styles.stroke} ${styles.muted}`} />
+      <rect x="226" y="30" width="90" height="26" rx="6" className={styles.panel} />
+      <text x="271" y="47" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Its blockchain
+      </text>
+    </>
+  );
+}
+
+/** The road's upkeep: a coin pays at the toll booth, and the people who keep the road running are paid */
+function TollBooth() {
+  return (
+    <>
+      <Road x1={84} x2={312} y={108} />
+      <rect x="170" y="52" width="56" height="48" rx="4" className={styles.panel} />
+      <text x="198" y="82" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Fee
+      </text>
+      <circle cx="128" cy="108" r="11" className={styles.coin} />
+      <PathArrow
+        points={[
+          [142, 104],
+          [158, 90],
+          [168, 84],
+        ]}
+        className={styles.amber}
+      />
+      <circle cx="270" cy="108" r="11" className={styles.coin} />
+      <PathArrow
+        points={[
+          [226, 80],
+          [246, 90],
+          [260, 100],
+        ]}
+        className={styles.up}
+      />
+      <text x="268" y="76" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        paid in the coin
+      </text>
+    </>
+  );
+}
+
+const COIN_BADGES = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX', 'DOGE'] as const;
+
+/** The eight coins of our market as plain ticker badges, and LINK set apart: a token */
+function TickerBadges() {
+  return (
+    <>
+      {COIN_BADGES.map((t, i) => {
+        const cx = 108 + (i % 4) * 52;
+        const cy = 32 + Math.floor(i / 4) * 46;
+        return (
+          <g key={t}>
+            <circle cx={cx} cy={cy} r="20" className={styles.badge} />
+            <text x={cx} y={cy + 4} textAnchor="middle" className={styles.badgeText}>
+              {t}
+            </text>
+          </g>
+        );
+      })}
+      <circle cx="160" cy="130" r="20" className={styles.tokenBadge} />
+      <text x="160" y="134" textAnchor="middle" className={styles.badgeText}>
+        LINK
+      </text>
+      <text x="236" y="135" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
+        a token
+      </text>
+    </>
+  );
+}
+
+/** A token: a shop built along someone else's road, with its own house rules on the door */
+function ShopRoad() {
+  return (
+    <>
+      <Road x1={84} x2={312} y={118} />
+      <Storefront weight={DUO} x={176} y={44} size={56} className={styles.amber} />
+      <text x="204" y="36" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Token
+      </text>
+      <rect x="244" y="62" width="68" height="38" rx="6" className={styles.panel} />
+      <text x="278" y="78" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        its house
+      </text>
+      <text x="278" y="92" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        rules
+      </text>
+    </>
+  );
+}
+
+/** Utility: credits you spend inside one app */
+function ArcadeCredits() {
+  return (
+    <>
+      <GameController weight={DUO} x={110} y={40} size={72} className={styles.amber} />
+      <Ticket weight={DUO} x={214} y={50} size={58} className={styles.white} />
+      <text x="243" y="132" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        credits
+      </text>
+    </>
+  );
+}
+
+/** Security: a share in something real */
+function ShareCertificate() {
+  return (
+    <>
+      <Certificate weight={DUO} x={134} y={30} size={90} className={styles.amber} />
+      <text x="190" y="140" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        a share
+      </text>
+    </>
+  );
+}
+
+/** Governance: a vote on how the project changes */
+function BallotBox() {
+  return (
+    <>
+      <rect x="136" y="84" width="110" height="52" rx="8" className={styles.panel} />
+      <rect x="164" y="78" width="54" height="8" rx="3" className={styles.road} />
+      <ListChecks weight={DUO} x={166} y={14} size={50} className={styles.up} />
+      <text x="191" y="116" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        your vote
+      </text>
+    </>
+  );
+}
+
+/** Altcoins: a calm line and a stormy one */
+function CalmStormy() {
+  return (
+    <>
+      <polyline
+        points="96,52 130,50 164,54 198,51 232,53 266,50 300,52"
+        className={`${styles.stroke} ${styles.up}`}
+      />
+      <text x="198" y="34" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        steady
+      </text>
+      <polyline
+        points="96,122 116,96 136,134 158,92 182,138 206,98 232,142 258,94 284,130 300,104"
+        className={`${styles.stroke} ${styles.down}`}
+      />
+      <text x="198" y="86" textAnchor="middle" className={`${styles.small} ${styles.down}`}>
+        swings
+      </text>
+    </>
+  );
+}
+
+/** A shiny coin promising a lot, with a stop sign: slow down and check */
+function StopCoin() {
+  return (
+    <>
+      <Coins weight={DUO} x={104} y={44} size={78} className={styles.amber} />
+      <HandPalm weight={DUO} x={206} y={32} size={86} className={styles.down} />
+    </>
+  );
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
   friends: Friends,
   lena: LenaAlone,
@@ -908,6 +1133,16 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   alwaysOpen: AlwaysOpen,
   hashChain: HashChain,
   sealBroken: SealBroken,
+  twoRoads: TwoRoads,
+  coinRoad: CoinRoad,
+  tollBooth: TollBooth,
+  tickerBadges: TickerBadges,
+  shopRoad: ShopRoad,
+  arcadeCredits: ArcadeCredits,
+  shareCertificate: ShareCertificate,
+  ballotBox: BallotBox,
+  calmStormy: CalmStormy,
+  stopCoin: StopCoin,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */

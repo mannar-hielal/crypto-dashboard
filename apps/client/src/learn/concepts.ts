@@ -36,6 +36,10 @@ export const CONCEPT_IDS = [
   'private-key',
   'custody',
   'pseudonymous',
+  // Chapter 2, Lesson 5 (2026-11-19)
+  'coin',
+  'token',
+  'altcoin',
 ] as const;
 
 export type ConceptId = (typeof CONCEPT_IDS)[number];
@@ -211,6 +215,27 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Pseudonymous',
     peek: 'Every payment is public, but addresses carry no names. Hidden is not the same as invisible.',
     think: 'a party where everyone wears a mask, but everyone can see what each mask does.',
+    access: FREE,
+  },
+  {
+    id: 'coin',
+    term: 'Coin',
+    peek: 'The money of its own blockchain: it pays for that road’s upkeep and pays the people who keep it running.',
+    think: 'the money of a road that belongs to it alone.',
+    access: FREE,
+  },
+  {
+    id: 'token',
+    term: 'Token',
+    peek: 'A crypto that has no blockchain of its own. It lives on another one, such as Ethereum, and follows that road’s rules.',
+    think: 'a shop built along someone else’s road.',
+    access: FREE,
+  },
+  {
+    id: 'altcoin',
+    term: 'Altcoin',
+    peek: 'Short for “alternative coin”: any crypto that is not bitcoin.',
+    think: 'every crypto except the first one.',
     access: FREE,
   },
 ];
