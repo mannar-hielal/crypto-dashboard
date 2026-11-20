@@ -24,6 +24,7 @@ vi.mock('cryptocurrency-icons/svg/color/ada.svg?url', () => ({ default: '/icons/
 vi.mock('cryptocurrency-icons/svg/color/avax.svg?url', () => ({ default: '/icons/avax.svg' }));
 vi.mock('cryptocurrency-icons/svg/color/link.svg?url', () => ({ default: '/icons/link.svg' }));
 vi.mock('cryptocurrency-icons/svg/color/usdt.svg?url', () => ({ default: '/icons/usdt.svg' }));
+vi.mock('cryptocurrency-icons/svg/color/usdc.svg?url', () => ({ default: '/icons/usdc.svg' }));
 
 // ─── Mock framer-motion (avoids animation side-effects in jsdom) ──────────────
 

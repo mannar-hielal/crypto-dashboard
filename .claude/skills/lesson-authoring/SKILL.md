@@ -189,6 +189,12 @@ trust), and list in the report to the owner which were applied and which decline
 - **Let the picture carry the text** (owner 2026-11-17): when a picture makes sense, choose or draw
   it so the learner understands most of the card by looking at it (the chart with its dated markers,
   the worked sum, the queue running thin). A picture that only decorates isn't enough.
+- **Show the real thing, not a stand-in** (owner 2026-11-20): when a card demonstrates a coin, a token, an
+  exchange or any other known symbol, use as close a match to its real logo or symbol as we may use, never
+  just a plain circle with its ticker text. The learner should recognise it from the picture. The logo's
+  licence and trademark terms are read at the time of use, and the source is recorded, like any other
+  third-party art (steps 1–5 below). Where no logo may be used, say so to the owner and propose the closest
+  honest option, rather than falling back silently to circles and text.
 - First reuse what we have: `LessonArt` drawings (`LessonArtId` in `lessons.ts`), the guides, real
   photos with a stated `credit`, charts from real market history.
 - When a screen needs an illustration we don't have (owner 2026-11-14), take it from a **free

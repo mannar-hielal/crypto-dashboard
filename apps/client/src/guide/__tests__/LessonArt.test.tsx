@@ -203,6 +203,14 @@ describe('LessonArt', () => {
     expect([...seal.querySelectorAll('text')].filter((t) => t.textContent === '✕')).toHaveLength(2);
   });
 
+  it('should show real coin logos, not plain ticker circles (owner 2026-11-20)', () => {
+    const logos = (id: LessonArtId) =>
+      render(<LessonArt id={id} />).container.querySelectorAll('image').length;
+    expect(logos('tickerBadges')).toBe(9); // the eight coins and LINK
+    expect(logos('usdtPair')).toBe(2); // BTC and USDT
+    expect(logos('parkProfit')).toBe(1); // USDT
+  });
+
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {
     const { container } = render(<LessonArt id="etf" />);
     expect(container.querySelector('[data-mood]')).toBeNull();

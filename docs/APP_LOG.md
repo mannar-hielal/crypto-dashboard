@@ -4692,6 +4692,10 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   recovered when the US government protected that bank's depositors; stablecoins are tokens on someone else's road (consistent with
   Lesson 5). To re-check before a release: Tether's reserves on its own site, the Sky/Maker docs on crypto-backed rules, Bybit's own
   page on USDT-quoted markets.
+- **Real coin logos in the lessons** (owner 2026-11-20): the market card (Lesson 5: eight coins, each with its ticker, LINK in an amber
+  ring as the token), the BTC / USDT tag and the parked profit (Lesson 6) draw the real logos from `cryptocurrency-icons` (CC0, already
+  used by `CryptoIcon`; `USDC` added to `lib/cryptoIcons.ts`), through `CoinLogo` in `LessonArt.tsx`. The lesson-authoring skill says: a
+  demo of a coin, token or exchange uses as close a symbol as we may use, never a plain circle with text.
 - **Chat lines show no speaker name** (owner 2026-11-20, all lessons): `LessonSheet` shows a guide's line by the avatar alone; the
   name stays as visually hidden text for screen readers (`.srOnly`).
 - **Drag and drop was already built** (`OrderQuiz`, 2026-11-16): the lesson-authoring skill's format table now says so (Match boxes

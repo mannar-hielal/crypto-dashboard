@@ -136,6 +136,21 @@ function BtcMark({
   );
 }
 
+/** A real coin logo (the cryptocurrency-icons set, CC0) at its top-left corner, `size` wide (owner 2026-11-20) */
+function CoinLogo({
+  symbol,
+  x,
+  y,
+  size,
+}: {
+  symbol: keyof typeof CRYPTO_ICON_URLS;
+  x: number;
+  y: number;
+  size: number;
+}) {
+  return <image href={CRYPTO_ICON_URLS[symbol]} x={x} y={y} width={size} height={size} />;
+}
+
 const MAP_X = 52;
 const MAP_Y = 4;
 const MAP_SCALE = 3.95;
@@ -998,27 +1013,29 @@ function TollBooth() {
 
 const COIN_BADGES = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX', 'DOGE'] as const;
 
-/** The eight coins of our market as plain ticker badges, and LINK set apart: a token */
+/** The eight coins of our market as real logos with their tickers, and LINK set apart in an amber ring: a token */
 function TickerBadges() {
+  const LOGO = 30;
   return (
     <>
       {COIN_BADGES.map((t, i) => {
         const cx = 108 + (i % 4) * 52;
-        const cy = 32 + Math.floor(i / 4) * 46;
+        const top = 4 + Math.floor(i / 4) * 48;
         return (
           <g key={t}>
-            <circle cx={cx} cy={cy} r="20" className={styles.badge} />
-            <text x={cx} y={cy + 4} textAnchor="middle" className={styles.badgeText}>
+            <CoinLogo symbol={t} x={cx - LOGO / 2} y={top} size={LOGO} />
+            <text x={cx} y={top + LOGO + 12} textAnchor="middle" className={styles.badgeText}>
               {t}
             </text>
           </g>
         );
       })}
-      <circle cx="160" cy="130" r="20" className={styles.tokenBadge} />
-      <text x="160" y="134" textAnchor="middle" className={styles.badgeText}>
+      <circle cx="160" cy="116" r="19" className={styles.tokenRing} />
+      <CoinLogo symbol="LINK" x={160 - LOGO / 2} y={116 - LOGO / 2} size={LOGO} />
+      <text x="160" y="152" textAnchor="middle" className={styles.badgeText}>
         LINK
       </text>
-      <text x="236" y="135" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
+      <text x="236" y="120" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
         a token
       </text>
     </>
@@ -1267,14 +1284,16 @@ function UsdtPair() {
   return (
     <>
       <rect x="104" y="46" width="188" height="52" rx="26" className={styles.panel} />
-      <text x="150" y="78" textAnchor="middle" className={styles.bigNumber}>
+      <CoinLogo symbol="BTC" x={112} y={58} size={28} />
+      <text x="164" y="78" textAnchor="middle" className={styles.bigNumber}>
         BTC
       </text>
-      <text x="190" y="78" textAnchor="middle" className={`${styles.bigNumber} ${styles.muted}`}>
+      <text x="196" y="78" textAnchor="middle" className={`${styles.bigNumber} ${styles.muted}`}>
         /
       </text>
       <rect x="208" y="52" width="78" height="40" rx="20" className={styles.badge} />
-      <text x="247" y="77" textAnchor="middle" className={styles.badgeText}>
+      <CoinLogo symbol="USDT" x={213} y={58} size={28} />
+      <text x="258" y="77" textAnchor="middle" className={styles.badgeText}>
         USDT
       </text>
       <text x="247" y="38" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
@@ -1308,10 +1327,7 @@ function ParkProfit() {
       <text x="181" y="64" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
         sell
       </text>
-      <circle cx="244" cy="74" r="24" className={styles.badge} />
-      <text x="244" y="78" textAnchor="middle" className={styles.badgeText}>
-        USDT
-      </text>
+      <CoinLogo symbol="USDT" x={220} y={50} size={48} />
       <text x="244" y="116" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
         300 USDT, steady
       </text>
