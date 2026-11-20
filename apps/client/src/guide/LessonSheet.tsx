@@ -762,7 +762,7 @@ export function LessonSheet() {
             <p key={line.text} className={styles.line}>
               <GuideAvatar who={line.speaker} />
               <span>
-                <strong className={styles.speaker}>{GUIDE_NAMES[line.speaker]}</strong>{' '}
+                <span className={styles.srOnly}>{GUIDE_NAMES[line.speaker]}: </span>
                 <LessonText text={line.text} openTerm={openTerm} onTerm={toggleTerm} />
               </span>
             </p>

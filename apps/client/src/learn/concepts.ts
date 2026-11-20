@@ -41,6 +41,9 @@ export const CONCEPT_IDS = [
   'token',
   'altcoin',
   'staking',
+  // Chapter 2, Lesson 6 (2026-11-19)
+  'stablecoin',
+  'peg',
 ] as const;
 
 export type ConceptId = (typeof CONCEPT_IDS)[number];
@@ -244,6 +247,20 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Staking',
     peek: 'Putting coins aside to help keep a blockchain safe, and earning a reward for it. The reward is not guaranteed.',
     think: 'helping keep the road safe, for a reward.',
+    access: FREE,
+  },
+  {
+    id: 'stablecoin',
+    term: 'Stablecoin',
+    peek: 'A token built to keep one steady price, usually one US dollar.',
+    think: 'a ticket for a dollar kept in a cloakroom.',
+    access: FREE,
+  },
+  {
+    id: 'peg',
+    term: 'Peg',
+    peek: 'The steady price a stablecoin aims for. If it slips off, the coin has lost its peg.',
+    think: 'the line it is meant to stay on.',
     access: FREE,
   },
 ];

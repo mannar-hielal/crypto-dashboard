@@ -47,6 +47,7 @@ export const LEARN_ITEM_IDS = [
   'lesson-02',
   'lesson-04',
   'lesson-coins',
+  'lesson-stablecoins',
   // A chapter's checkpoint on the learning path: passed, it opens the next chapter
   'checkpoint-ch1',
 ] as const;
@@ -61,6 +62,7 @@ export const LEARN_LESSON_IDS = [
   'lesson-02',
   'lesson-04',
   'lesson-coins',
+  'lesson-stablecoins',
 ] as const;
 
 /**
@@ -88,6 +90,7 @@ export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number
   'lesson-02': 61,
   'lesson-04': 61,
   'lesson-coins': 61,
+  'lesson-stablecoins': 61,
 };
 
 /** The learning path's chapter checkpoints: progress only, never events */

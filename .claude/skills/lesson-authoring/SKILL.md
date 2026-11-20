@@ -72,7 +72,7 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
    `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4), `lesson-coins` (Lesson 5,
-   chapter 2's first lesson; the chapter's later lessons follow as numbered 6 onward). The chapter's
+   chapter 2's first lesson), `lesson-stablecoins` (Lesson 6; the chapter's later lessons follow as numbered 7 onward). The chapter's
    checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
    a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
    `CHECKPOINT_VERSION` (server).
@@ -189,6 +189,12 @@ trust), and list in the report to the owner which were applied and which decline
 - **Let the picture carry the text** (owner 2026-11-17): when a picture makes sense, choose or draw
   it so the learner understands most of the card by looking at it (the chart with its dated markers,
   the worked sum, the queue running thin). A picture that only decorates isn't enough.
+- **Show the real thing, not a stand-in** (owner 2026-11-20): when a card demonstrates a coin, a token, an
+  exchange or any other known symbol, use as close a match to its real logo or symbol as we may use, never
+  just a plain circle with its ticker text. The learner should recognise it from the picture. The logo's
+  licence and trademark terms are read at the time of use, and the source is recorded, like any other
+  third-party art (steps 1–5 below). Where no logo may be used, say so to the owner and propose the closest
+  honest option, rather than falling back silently to circles and text.
 - First reuse what we have: `LessonArt` drawings (`LessonArtId` in `lessons.ts`), the guides, real
   photos with a stated `credit`, charts from real market history.
 - When a screen needs an illustration we don't have (owner 2026-11-14), take it from a **free
@@ -305,7 +311,8 @@ rewritten, and to quizzes, Whys, summaries and titles.
 - **A chat between Pulin and Berwyn doesn't name them every time** (owner 2026-11-19). Each guide
   already shows as a speaker (face and side), so don't open every line with "Pulin:" or "Berwyn:",
   and don't write "Pulin asks…" in the text. Say a name only when it helps: the first time a card
-  introduces one, or when the text talks about them.
+  introduces one, or when the text talks about them. The sheet shows a chat line with the avatar
+  alone (no bold name; the name stays as screen-reader text), owner 2026-11-20.
 - Short: one idea per card.
 - **One label set** (owner 2026-11-17): the main button always says **Continue**, the back link
   **← Back**, and the summary's button (the last screen that teaches) **Finish lesson**, in every
@@ -346,14 +353,14 @@ rewritten, and to quizzes, Whys, summaries and titles.
 
 ## Quiz formats
 
-| Format              | Use for                                                     | Status                                             |
-| ------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
-| Multiple choice     | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)      |
-| Choose buy or sell  | read a situation or a chart, pick Buy or Sell, then the Why | designed 2026-11-16 (visual Q&A done); being built |
-| Drag and drop       | put steps in order, or items into the right slot            | new widget                                         |
-| Match boxes         | connect terms to meanings, two columns                      | new widget                                         |
-| Draw a line         | trace a path, trend or level with one freehand line         | built 2026-11-18: `DrawQuiz` (`format: 'draw'`)    |
-| Pick the right ones | choose exactly N of 6 icon tiles                            | built 2026-11-18: `PickQuiz` (`format: 'pick'`)    |
+| Format              | Use for                                                     | Status                                                     |
+| ------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
+| Multiple choice     | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)              |
+| Choose buy or sell  | read a situation or a chart, pick Buy or Sell, then the Why | built: `BuySellView` (`format: 'buy-sell'`)                |
+| Drag and drop       | put steps in order, or items into the right slot            | built 2026-11-16: `OrderQuiz` (`format: 'order'`, `steps`) |
+| Match boxes         | connect terms to meanings, two columns                      | built 2026-11-16: `MatchQuiz` (`format: 'match'`, `pairs`) |
+| Draw a line         | trace a path, trend or level with one freehand line         | built 2026-11-18: `DrawQuiz` (`format: 'draw'`)            |
+| Pick the right ones | choose exactly N of 6 icon tiles                            | built 2026-11-18: `PickQuiz` (`format: 'pick'`)            |
 
 - Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
   2026-11-13); the chosen option is already marked.

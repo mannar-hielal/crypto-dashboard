@@ -187,8 +187,12 @@ describe('lessons', () => {
         // A Try it screen always has its intro line
         if (lesson.tour || lesson.tryWidget)
           expect(lesson.tryIntro?.trim(), lesson.id).toBeTruthy();
-        // Lessons 4 and 5 (coins and tokens) have no practice, so no Try it screen (owner 2026-11-18)
-        if (lesson.id === 'lesson-04' || lesson.id === 'lesson-coins') {
+        // Lessons 4 to 6 have no Try it screen (owner 2026-11-18); Lesson 6 offers its practice buy on a card
+        if (
+          lesson.id === 'lesson-04' ||
+          lesson.id === 'lesson-coins' ||
+          lesson.id === 'lesson-stablecoins'
+        ) {
           expect([lesson.tour, lesson.tryWidget, lesson.tryIntro]).toEqual([
             undefined,
             undefined,
@@ -271,13 +275,14 @@ describe('lessons', () => {
     });
   }
 
-  it('should number the lessons 1 to 5, keeping the stored ids (owner 2026-11-08)', () => {
+  it('should number the lessons 1 to 6, keeping the stored ids (owner 2026-11-08)', () => {
     expect(LESSONS.map((l) => [l.id, l.number, l.title])).toEqual([
       ['lesson-01', 1, 'Up, down and your first trade'],
       ['lesson-ownership', 2, 'Money nobody controls'],
       ['lesson-02', 3, 'News, swings and traps'],
       ['lesson-04', 4, 'Trader or investor? Find your style'],
       ['lesson-coins', 5, 'Coins and tokens: who has their own road'],
+      ['lesson-stablecoins', 6, 'Stablecoins: the coins that try to sit still'],
     ]);
   });
 
@@ -383,6 +388,7 @@ describe('lessons', () => {
       'A trader’s day',
       'An investor’s year',
       'Two assets, one week',
+      'Park your profit',
     ]);
   });
 
@@ -987,6 +993,64 @@ describe('lessons', () => {
     // The chart's markers carry the same LINK figures
     expect(card.chart?.markers.map((m) => m.text)).toEqual(['$13.524', '−29.9%']);
     expect(card.math?.answer).toMatch(/LINK.*fell more than bitcoin.*only one example/);
+  });
+
+  it('should teach stablecoins in the approved order, with the cloakroom metaphor (owner 2026-11-19)', () => {
+    const l = getLesson('lesson-stablecoins');
+    expect(l.cards.map((c) => c.title)).toEqual([
+      'A coin that sits still',
+      'The steady coin',
+      'A ticket for a dollar',
+      'Kind 1: dollar-backed',
+      'Kind 2: crypto-backed',
+      'Kind 3: rule-based',
+      'What stands behind the ticket?',
+      'Why traders keep them',
+      'Park your profit',
+      'Parking a profit, in order',
+      'The catch: the peg can slip',
+      '“Stable” is a goal',
+      'A stablecoin at $0.92',
+      'A key advantage',
+    ]);
+    // The analogy is Berwyn's, starts the approved way and says where it stops matching
+    const analogy = l.cards.find((c) => c.title === 'A ticket for a dollar')!.analogy;
+    expect(analogy?.who).toBe('tock');
+    expect(analogy?.text).toMatch(/^Think of it as a cloakroom ticket.*Where it stops matching/);
+    // Quizzes: match the three kinds, put a profit's steps in order, then two multiple choice
+    const quiz = (title: string) => l.cards.find((c) => c.title === title)!.quiz!;
+    expect(quiz('What stands behind the ticket?').format).toBe('match');
+    expect(quiz('What stands behind the ticket?').pairs).toHaveLength(3);
+    expect(quiz('Parking a profit, in order').format).toBe('order');
+    expect(quiz('Parking a profit, in order').steps).toHaveLength(4);
+    for (const title of ['A stablecoin at $0.92', 'A key advantage']) {
+      expect(quiz(title).options).toHaveLength(4);
+    }
+    // One practice buy, on the card that says our markets are priced in USDT (Lesson 1's tour)
+    const practice = l.cards.filter((c) => c.practice);
+    expect(practice.map((c) => c.title)).toEqual(['Why traders keep them']);
+    expect(practice[0].practice?.tour).toBe('practice-buy');
+    // Your call: check what stands behind it
+    expect(l.moment.options[l.moment.correct]).toMatch(/What stands behind it/);
+    // The de-peg is a drawn picture, never a chart, and its number matches the fact check
+    const peg = l.cards.find((c) => c.title === 'The catch: the peg can slip')!;
+    expect(peg.art).toBe('pegDip');
+    expect(peg.chart).toBeUndefined();
+    expect(peg.text).toMatch(/March 2023.*about 87 cents over a weekend/);
+    // The way on is written in the highlight only: wallets come next, with no lesson to link yet
+    expect(l.recap?.highlight?.text).toMatch(/Next up: wallets/);
+    expect(l.next).toBeUndefined();
+  });
+
+  it('should keep the parked-profit sum true (fact check 2026-11-19)', () => {
+    const l = getLesson('lesson-stablecoins');
+    const card = l.cards.find((c) => c.title === 'Park your profit')!;
+    expect(card.math!.steps.map((s) => s.sum)).toEqual([
+      '300 − 200 = 100',
+      '100 ÷ 200 = 0.5',
+      '0.5 × 100 = 50%',
+    ]);
+    expect(card.math?.answer).toMatch(/50% gain.*300 USDT.*Fees are left out/);
   });
 
   it('should keep every funnel step id within the server’s pattern, past each earlier version', () => {

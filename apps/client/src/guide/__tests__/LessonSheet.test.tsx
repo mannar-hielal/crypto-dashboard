@@ -685,6 +685,19 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState().screen).toBe(0);
   });
 
+  it('should show a guide’s chat line by the avatar alone, the name kept for screen readers only', () => {
+    at(0, 'lesson-stablecoins');
+    renderSheet();
+    const lines = Array.from(sheet()!.querySelectorAll('p')).filter((p) =>
+      /^(Pulin|Berwyn): /.test(p.textContent ?? '')
+    );
+    expect(lines).toHaveLength(2);
+    for (const line of lines) {
+      expect(line.querySelector('strong')).toBeNull();
+      expect(line.querySelector('[data-guide-who]')).not.toBeNull();
+    }
+  });
+
   it('should not move on from an unanswered question', () => {
     at(15, 'lesson-ownership'); // NFTs, briefly
     renderSheet();
