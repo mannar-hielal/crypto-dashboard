@@ -305,7 +305,8 @@ rewritten, and to quizzes, Whys, summaries and titles.
 - **A chat between Pulin and Berwyn doesn't name them every time** (owner 2026-11-19). Each guide
   already shows as a speaker (face and side), so don't open every line with "Pulin:" or "Berwyn:",
   and don't write "Pulin asks…" in the text. Say a name only when it helps: the first time a card
-  introduces one, or when the text talks about them.
+  introduces one, or when the text talks about them. The sheet shows a chat line with the avatar
+  alone (no bold name; the name stays as screen-reader text), owner 2026-11-20.
 - Short: one idea per card.
 - **One label set** (owner 2026-11-17): the main button always says **Continue**, the back link
   **← Back**, and the summary's button (the last screen that teaches) **Finish lesson**, in every
