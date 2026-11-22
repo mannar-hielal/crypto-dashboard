@@ -12,12 +12,12 @@ import { LessonPreviewsLazy } from '../LessonPreviewsLazy';
 describe('LessonPreviewsLazy when the chunk fails', () => {
   afterEach(cleanup);
 
-  it('should cost only its own section, close the reserved gap and offer a reload, since a second import of a missing file would fail again (review 2026-11-22)', async () => {
+  it('should cost only its own section, say so as an alert and close the reserved gap (review 2026-11-22)', async () => {
     const { container } = render(React.createElement(LessonPreviewsLazy));
-    const reload = await screen.findByRole('button', { name: 'Reload the page' });
-    expect(reload).not.toBeNull();
-    // Announced to assistive technology
-    expect(screen.getByRole('alert').textContent).toMatch(/did not load/);
+    // Announced to assistive technology, in plain words (no button to get wrong)
+    const note = await screen.findByRole('alert');
+    expect(note.textContent).toMatch(/did not load.*Refresh the page/);
+    expect(screen.queryByRole('button')).toBeNull();
     // The holder dropped the height it had reserved
     await waitFor(() => expect(container.firstElementChild?.className).toMatch(/holderSettled/));
   });

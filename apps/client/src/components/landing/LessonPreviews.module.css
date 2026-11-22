@@ -122,27 +122,8 @@
 
 /* The quiet retry after a failed chunk: a text button, like the ticker's pause */
 .failed {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  margin: 0;
   color: var(--color-brand-muted);
   font-size: 0.9375rem;
-}
-
-.retry {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 9999px;
-  background: color-mix(in srgb, white 6%, transparent);
-  color: var(--color-brand-muted);
-  font-size: 0.8125rem; /* fontSize.xs11 */
-  cursor: pointer;
-}
-
-.retry:focus-visible {
-  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
-  outline-offset: 3px;
+  text-align: center;
 }
