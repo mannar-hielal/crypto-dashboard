@@ -714,6 +714,16 @@ export function LessonSheet() {
           ) : (
             card.art && <LessonArt id={card.art} presenter={card.presenter} />
           )}
+          {card.preview && (
+            // The sneak peek (owner 2026-11-22): what the lesson will teach, numbered like the summary
+            <ol className={styles.recap}>
+              {card.preview.map((item, i) => (
+                <li key={item} {...guide('lesson.preview', String(i))}>
+                  <RichText text={item} />
+                </li>
+              ))}
+            </ol>
+          )}
           {card.text && <CardText text={card.text} openTerm={openTerm} onTerm={toggleTerm} />}
           {card.analogy && (
             // A harder idea as an analogy, by one guide in glasses (owner 2026-11-17)

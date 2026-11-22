@@ -100,7 +100,7 @@ describe('lessons', () => {
       it('should have at most 16 teaching cards (plus an opening and its quizzes) of at most 80 words each', () => {
         // The opening (a cold open, "meet your guides") hooks and a quiz card checks; the rest
         // teach. Owner 2026-11-16: the caps are raised to the benchmark's length (was 6)
-        const teaching = lesson.cards.filter((c) => !c.beats && !c.meet && !c.quiz);
+        const teaching = lesson.cards.filter((c) => !c.beats && !c.meet && !c.quiz && !c.preview);
         expect(teaching.length).toBeGreaterThan(0);
         expect(teaching.length).toBeLessThanOrEqual(16);
         for (const card of lesson.cards) {
@@ -110,10 +110,33 @@ describe('lessons', () => {
               !!card.lines?.length ||
               !!card.beats?.length ||
               !!card.meet ||
+              !!card.preview ||
               !!card.quiz,
             card.title
           ).toBe(true);
         }
+      });
+
+      it('should open with a sneak peek, never the guides’ chat (owner 2026-11-22)', () => {
+        // Lesson 1's "Meet your guides" card is its peek (it already lists what you will learn);
+        // every other lesson has a "What you will learn" card as card 1 or 2, drawn from its recap
+        if (lesson.id === 'lesson-01') {
+          expect(lesson.cards[1].meet?.list.length).toBeGreaterThanOrEqual(3);
+          return;
+        }
+        const at = lesson.cards.findIndex((c) => c.preview);
+        expect([0, 1], lesson.id).toContain(at);
+        const peek = lesson.cards[at];
+        expect(peek.title).toBe('What you will learn');
+        expect(peek.art, 'the picture on top').toBeDefined();
+        expect(peek.presenter, 'no guide on the card').toBeUndefined();
+        expect(peek.preview!.length).toBeGreaterThanOrEqual(3);
+        expect(peek.preview!.length).toBeLessThanOrEqual(4);
+        for (const line of peek.preview!) {
+          expect(line.split(/\s+/).length, line).toBeLessThanOrEqual(16);
+        }
+        // The opening card is never the guides' back-and-forth
+        expect(lesson.cards[0].lines, lesson.id).toBeUndefined();
       });
 
       it('should ask 2 to 6 questions (the moment, the checks, the quizzes between cards), each with a valid answer and a why', () => {
@@ -143,7 +166,10 @@ describe('lessons', () => {
           // flash crash, 2026-11-12) and a quiz card (its question has its guide); every other
           // card has its guide
           if (!card.presenter) {
-            expect(card.photo ?? (card.beats && card.art) ?? card.quiz, card.title).toBeDefined();
+            expect(
+              card.photo ?? (card.beats && card.art) ?? card.quiz ?? (card.preview && card.art),
+              card.title
+            ).toBeDefined();
             continue;
           }
           expect(['tick', 'tock'], card.title).toContain(card.presenter.who);
@@ -430,6 +456,7 @@ describe('lessons', () => {
     });
     expect(art('lesson-ownership')).toEqual({
       'A headline in the first block': 'bitcoin',
+      'What you will learn': 'ledger',
       'One record, many copies': 'ledger',
       'Sealed by hard work': 'sealBroken',
       'The hash links the chain': 'hashChain',
@@ -437,6 +464,7 @@ describe('lessons', () => {
     // Lesson 3 keeps its pictures as they were
     expect(art('lesson-02')).toEqual({
       'One Bitcoin for $8,200': 'flashCrash',
+      'What you will learn': 'swings',
       'Thousands of deals, one candle': 'candleAnatomy',
       'Thin or deep': 'deepThin',
       'The $8,200 moment': 'staircase',
@@ -479,6 +507,7 @@ describe('lessons', () => {
     expect(l.next).toBe('lesson-02');
     expect(l.cards.map((c) => c.title)).toEqual([
       'A headline in the first block',
+      'What you will learn',
       'From the price to the thing',
       '2008: trust broke',
       'A paper, then a block',
@@ -496,8 +525,8 @@ describe('lessons', () => {
       'NFTs, briefly',
       'Quick check',
     ]);
-    // 21 screens: the moment follows the NFT card, then the features quiz, the Try, the summary
-    expect(lessonScreens(l)).toHaveLength(21);
+    // 22 screens (the sneak peek is card 2, owner 2026-11-22): the moment follows the NFT card, then the features quiz, the Try, the summary
+    expect(lessonScreens(l)).toHaveLength(22);
     expect(lessonScreens(l)[l.momentAfter! + 1]).toEqual({ kind: 'moment' });
     // The cold open: the genesis block's headline, and the lesson's own length
     expect(l.cards[0].beats?.[0].text).toBe('3 January 2009 · The first block');
@@ -669,8 +698,9 @@ describe('lessons', () => {
     // Pulin speaks for the trader mood, Berwyn for the investor mood
     expect(l.cards.find((c) => c.title === 'What trading is')?.presenter?.who).toBe('tick');
     expect(l.cards.find((c) => c.title === 'What investing is')?.presenter?.who).toBe('tock');
-    // Chapter 1's stored ids and this lesson's first step agree with the server's floor
-    expect(l.stepBase).toBe(60);
+    // Chapter 1's stored ids and this lesson's first step agree with the server's floor (100 since
+    // the sneak peek card, 2026-11-22)
+    expect(l.stepBase).toBe(100);
   });
 
   it('should keep a card that is a quiz to its question alone (no text, lines, beats or meeting)', () => {
@@ -706,6 +736,9 @@ describe('lessons', () => {
       'lesson-ownership': 34,
       'lesson-02': 54,
     };
+    // The sneak peek card (owner 2026-11-22) moved Lessons 2 to 4 again: the versions replaced then,
+    // stepBase 60 plus their screens (21, 21 and 19), now start from 100
+    Object.assign(EARLIER_LAST_STEPS, { 'lesson-ownership': 81, 'lesson-02': 81, 'lesson-04': 79 });
     for (const l of LESSONS) {
       expect((l.stepBase ?? 0) + 1, l.id).toBeGreaterThan(EARLIER_LAST_STEPS[l.id] ?? 0);
     }
@@ -833,6 +866,7 @@ describe('lessons', () => {
     expect(l.next).toBeUndefined();
     expect(l.cards.map((c) => c.title)).toEqual([
       'One Bitcoin for $8,200',
+      'What you will learn',
       'Why so much?',
       'Big swings, both ways',
       'News moves it, fast',
@@ -850,7 +884,7 @@ describe('lessons', () => {
       'Check before you trust',
       'Quick check',
     ]);
-    expect(lessonScreens(l)).toHaveLength(21);
+    expect(lessonScreens(l)).toHaveLength(22);
     // Fact check 2026-11-17: Bitcoin with a capital B throughout, the low's source named, and no
     // promise that a swing up is any easier to time
     const prose = JSON.stringify(l, (key: string, v: unknown) =>
@@ -878,7 +912,7 @@ describe('lessons', () => {
     expect(l.cards[l.momentAfter!].text).toMatch(/\$63,775.*\$58,299.*\$71,437/);
     expect(l.moment.explain).toMatch(/the halving went both ways/);
     // Volatility, both ways, and sizing for the fall
-    const swing = l.cards[2];
+    const swing = l.cards[3];
     expect(termIds(swing.text ?? '')).toContain('volatility');
     expect(swing.text).toMatch(/size for the fall/i);
   });
@@ -921,7 +955,7 @@ describe('lessons', () => {
       mood: 'calm',
     });
     // No presenter of its own: Berwyn thinks it over
-    expect(questionGuide(getLesson('lesson-02').cards[13].quiz!, undefined)).toEqual({
+    expect(questionGuide(getLesson('lesson-02').cards[14].quiz!, undefined)).toEqual({
       who: 'tock',
       mood: 'thinking',
     });
@@ -930,7 +964,7 @@ describe('lessons', () => {
   it('should teach coins and tokens in the approved order, with the road and shop metaphor (owner 2026-11-19)', () => {
     const l = getLesson('lesson-coins');
     expect(l.cards.map((c) => c.title)).toEqual([
-      'Not all crypto is built the same',
+      'What you will learn',
       'A coin has its own road',
       'The road needs upkeep',
       'The coins in our market',
@@ -1006,7 +1040,7 @@ describe('lessons', () => {
   it('should teach stablecoins in the approved order, with the cloakroom metaphor (owner 2026-11-19)', () => {
     const l = getLesson('lesson-stablecoins');
     expect(l.cards.map((c) => c.title)).toEqual([
-      'A coin that sits still',
+      'What you will learn',
       'The steady coin',
       'A ticket for a dollar',
       'Kind 1: dollar-backed',
@@ -1064,7 +1098,7 @@ describe('lessons', () => {
   it('should teach wallets and keys in the approved order, with the mailbox metaphor (owner 2026-11-22)', () => {
     const l = getLesson('lesson-wallets');
     expect(l.cards.map((c) => c.title)).toEqual([
-      'Where is your crypto right now?',
+      'What you will learn',
       'A wallet holds keys, not coins',
       'Address and private key',
       'Who is who?',
@@ -1142,8 +1176,10 @@ describe('lessons', () => {
     }
     // Rewritten 2026-11-16: past the versions' 1–20 and 21–40
     expect(getLesson('lesson-01').stepBase).toBe(60);
-    // Rewritten 2026-11-16: Lessons 2 and 3 past their earlier versions' steps
-    expect(getLesson('lesson-ownership').stepBase).toBe(60);
-    expect(getLesson('lesson-02').stepBase).toBe(60);
+    // Rewritten 2026-11-16, then moved again by the sneak peek card (2026-11-22): Lessons 2 to 4
+    // start above both earlier versions
+    expect(getLesson('lesson-ownership').stepBase).toBe(100);
+    expect(getLesson('lesson-02').stepBase).toBe(100);
+    expect(getLesson('lesson-04').stepBase).toBe(100);
   });
 });

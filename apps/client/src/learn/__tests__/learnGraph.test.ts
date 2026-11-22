@@ -30,7 +30,7 @@ describe('the learning graph', () => {
 
   it('should send a term to the lesson card that teaches it', () => {
     // Lesson 2's "One record, many copies" marks the ledger (rewritten 2026-11-16)
-    expect(lessonPlacesOf('ledger')).toEqual([{ lesson: 'lesson-ownership', screen: 4 }]);
+    expect(lessonPlacesOf('ledger')).toEqual([{ lesson: 'lesson-ownership', screen: 5 }]);
   });
 
   it('should keep free things free: a free lesson never marks a paid concept', () => {

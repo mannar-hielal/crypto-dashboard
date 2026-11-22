@@ -344,6 +344,7 @@ export const GUIDE_ANCHORS = [
   'lesson.note',
   'lesson.note.save',
   'lesson.recap',
+  'lesson.preview',
   /** The close's line on what the next lesson brings */
   'lesson.teaser',
   'lesson.highlight',

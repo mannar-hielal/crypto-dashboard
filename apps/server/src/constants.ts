@@ -88,9 +88,9 @@ export const LESSON_VERSION_SPAN = 40;
  */
 export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number> = {
   'lesson-01': 61,
-  'lesson-ownership': 61,
-  'lesson-02': 61,
-  'lesson-04': 61,
+  'lesson-ownership': 101,
+  'lesson-02': 101,
+  'lesson-04': 101,
   'lesson-coins': 61,
   'lesson-stablecoins': 61,
   'lesson-wallets': 61,
