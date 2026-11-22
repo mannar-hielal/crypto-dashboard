@@ -134,6 +134,7 @@ guided-learning-topics/
      and the SDK contract fixtures. A lesson id the server doesn't know gets a 400 on every event and
      progress write, so its rings never sync and it's missing from the funnel.
    - the pictures each screen uses (see "Illustrations").
+   - the sneak peek card and its 3 or 4 lines (see "The opening"), taken from the recap.
 3. **Draft the text** in the outline's order, in our voice (rules below).
 4. **Fact check by a technical-writer agent** (owner 2026-11-14), on every freshly written screen,
    before the owner sees the draft. See "Fact check" below. Apply its corrections, then show the
@@ -307,7 +308,8 @@ rewritten, and to quizzes, Whys, summaries and titles.
 - Two guides present: Pulin (`tick`, asks the questions a beginner is too polite to ask) and Berwyn
   (`tock`, answers them, usually). When a card needs the bull and the bear, Pulin is the bull and
   Berwyn the bear (owner 2026-11-18). A card has `text` (may hold `[[terms]]`), or `lines` (a short
-  exchange), or `beats` (a cold open), plus a `presenter` or a real `photo` (with its `credit`).
+  exchange, never card 1: see "The opening"), or `beats` (a cold open), or `preview` (the sneak peek),
+  plus a `presenter` or a real `photo` (with its `credit`).
 - **A chat between Pulin and Berwyn doesn't name them every time** (owner 2026-11-19). Each guide
   already shows as a speaker (face and side), so don't open every line with "Pulin:" or "Berwyn:",
   and don't write "Pulin asks…" in the text. Say a name only when it helps: the first time a card
@@ -350,6 +352,40 @@ rewritten, and to quizzes, Whys, summaries and titles.
 - No hype, no price predictions; the honest answer is the praised one in "Your call"; paper trading
   only, no real money.
 - A worried mood only for a real warning (the lesson rules test checks it).
+
+## The opening: a sneak peek, not a chat (owner 2026-11-22)
+
+A lesson never opens with the guides' back-and-forth. Their chat told the learner little; what the
+learner wants first is **what they will know by the end**. So every lesson has one **sneak peek** card
+near the start, drawn from the lesson's own closing recap.
+
+- **The card:** `title: 'What you will learn'` (the same on every lesson, like the one label set),
+  `art` on top, then `preview: [...]`: **3 or 4 short numbered lines** (at most 16 words each),
+  rendered in the summary's style (purple numbers). No `text`, no `lines`, no `presenter`: the
+  learner reads the promise, not a performance. It counts toward the 80-word cap.
+- **Where it goes:**
+  - A lesson whose opening would be a chat: the peek **is card 1** and takes its picture (Lessons
+    5, 6 and 7).
+  - A lesson that opens with a strong hook (a photo, a headline, a counter, a text card): keep the
+    hook as card 1 and put the peek as **card 2** (Lessons 2, 3 and 4).
+  - Lesson 1's "Meet your guides" card already lists what you will learn, so it is its peek: no
+    second card.
+- **What goes in it:** each line is a topic in the plain words of the matching recap point, put
+  forward ("How to keep a recovery phrase safe"), never an answer ("Write it on paper") and never a
+  new fact: the promise and the summary must match. Write the recap first, then the peek from it, and
+  re-read both whenever one changes. A line that names a number or a claim goes through the fact check
+  like any card.
+- **The guides still appear** on the analogies, the math, the quizzes and the teaching cards. The
+  chat card (`lines`) stays a tool for a mid-lesson exchange where two voices help; it is never card 1.
+- **A peek added to a released lesson moves its screens:** raise `stepBase` by the SDK's
+  `LESSON_VERSION_SPAN` (40), record the replaced version in `EARLIER_LAST_STEPS`, raise the SDK's
+  `LESSON_FIRST_STEPS` and the server's `LESSON_FIRST_STEP`, shift `momentAfter` by one, and ship a
+  data migration that clears every learner's progress on the lesson (see "Tests and docs"). A lesson
+  not yet released only changes its card.
+- **Tests:** `lessons.test.ts` ("should open with a sneak peek, never the guides' chat") holds the
+  rule for every lesson; `LessonSheet.test.tsx` checks the card renders as a picture and a numbered
+  list with no guide.
+- **Outline:** list the peek's lines in the outline (Workflow step 2), next to the recap.
 
 ## Quiz formats
 

@@ -4705,6 +4705,30 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
   "coming soon" titles.
 
+### 2026-11-22 — A sneak peek opens every lesson, in place of the guides' chat
+
+Owner, 2026-11-22: the chat between the two guides on the first card told the learner little. A lesson now opens with what the
+learner will know by the end.
+
+- **The card:** `preview` on a `LessonCard`: title "What you will learn", the lesson's picture on top, then 3 or 4 short numbered
+  lines in the summary's style (visual Q&A, owner 2026-11-22: picture and list, no guide, no paragraph). Drawn from each lesson's own
+  recap, so the promise and the summary match. `LessonSheet` renders it; `lesson.preview` is a new guide anchor.
+- **Where:** card 1 in Lessons 5, 6 and 7 (it replaces their chat, keeping its picture; none of the three had been released). Card 2 in
+  Lessons 2, 3 and 4, after their cold open or opening text (owner's choice). Lesson 1's "Meet your guides" card already lists what the
+  learner will learn, so it is its peek and gets no second card.
+- **Released lessons 2 to 4 moved:** every screen after card 2 is one place on, so their `stepBase` went from 60 to 100 (the SDK's
+  `LESSON_FIRST_STEPS` and the server's `LESSON_FIRST_STEP` 61 to 101), `momentAfter` moved by one, and the replaced versions are
+  recorded in the lesson rules test. **Learner impact:** migration `20261122120000_reset_lessons_2_4` deletes every learner's progress
+  on Lessons 2, 3 and 4, begun and finished alike, as the 2026-11-16 rewrite did for Lessons 1 to 3. Lesson 1 and the checkpoint are
+  untouched, and a passed chapter 1 checkpoint still opens chapter 2. It reaches production with the next release.
+- **Rollback:** the API alone may be rolled back (an older API accepts the old steps; the new app's saves for Lessons 2 to 4 above step
+  100 are then refused as out of range and the app keeps them on the device). The web app alone may **not**: the new API refuses the
+  previous app's lesson saves for Lessons 2 to 4 (steps 61 to 100) as an earlier version, so roll back both, or the API only.
+- **Rule:** the lesson-authoring skill has a new section, "The opening: a sneak peek, not a chat", and the lesson rules test checks it
+  for every lesson. The chat (`lines`) stays for mid-lesson exchanges; it is never card 1.
+- **Tests that named screens:** the sheet tests that point at Lessons 2 and 3 by screen number moved one on; the progress-hook tests
+  that used those lessons for their own step maths now use Lessons 5 and 6, whose first step is unchanged.
+
 ### 2026-11-22 — Chapter 2, Lesson 7 "Your wallet, your keys: who holds them?"
 
 The third lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-wallets`, 10 min, 25 screens, step base 60; first step 61. Outline

@@ -364,6 +364,12 @@ export interface LessonCard {
   /** Bold-labelled points under the text ("**Print coins.** Write …") */
   points?: CardPoint[];
   /**
+   * The sneak peek (owner 2026-11-22): 3 or 4 short lines, what the lesson will teach, in place of the
+   * guides' chat. The card's `title` is always 'What you will learn'; its picture sits on top, no
+   * presenter. Drawn from the lesson's own recap, so the promise and the summary match
+   */
+  preview?: string[];
+  /**
    * A quick check between cards (owner 2026-11-16: quizzes can sit mid-lesson). The card is then a
    * question screen: its `title` is the heading, the question replaces the text, and Next waits for
    * an answer.
@@ -890,7 +896,7 @@ const lessonOwnership: Lesson = {
   minutes: LESSON_02_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on, past
   // its earlier versions' 1–20 and 21–40
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   tryWidget: 'block-chain',
   tryIntro:
     'Your turn: change a number in an old block and watch what happens to every block after it.',
@@ -920,6 +926,16 @@ const lessonOwnership: Lesson = {
           kind: 'fact',
           text: `In the next ${LESSON_02_MINUTES} minutes: why Bitcoin exists, how thousands of computers keep one record, and what makes it different.`,
         },
+      ],
+    },
+    {
+      title: 'What you will learn',
+      art: 'ledger',
+      preview: [
+        'Why Bitcoin exists: paying online without a bank in the middle',
+        'One ledger, copied on thousands of computers',
+        'How nodes and blocks check every payment',
+        'Why no one is in charge: the network agrees',
       ],
     },
     {
@@ -1061,7 +1077,7 @@ const lessonOwnership: Lesson = {
       },
     },
   ],
-  momentAfter: 15,
+  momentAfter: 16,
   moment: {
     context:
       'Your friend’s copy of the ledger says you paid Leo twice. Thousands of other copies say once.',
@@ -1193,7 +1209,7 @@ const lesson02: Lesson = {
   minutes: LESSON_03_MINUTES,
   // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
   // versions before used 1–40 and 41–60
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   tour: 'primer',
   tryIntro:
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
@@ -1220,6 +1236,16 @@ const lesson02: Lesson = {
           kind: 'fact',
           text: `In the next ${LESSON_03_MINUTES} minutes: why prices swing so hard, what moves them, and how to spot a trap.`,
         },
+      ],
+    },
+    {
+      title: 'What you will learn',
+      art: 'swings',
+      preview: [
+        'Why prices swing hard, both ways',
+        'How news, shocks and hype move a price',
+        'Thin and deep markets: why some jump and some absorb',
+        'How to check who runs a coin before you trust it',
       ],
     },
     {
@@ -1380,8 +1406,9 @@ const lesson02: Lesson = {
       },
     },
   ],
-  // Your call follows the halving card (owner-approved outline: screen 6)
-  momentAfter: 4,
+  // Your call follows the halving card (owner-approved outline: screen 6; screen 7 since the sneak
+  // peek became card 2, 2026-11-22)
+  momentAfter: 5,
   moment: {
     context:
       '10 January 2024: the US approves the first funds that hold Bitcoin directly, widely called the year’s biggest crypto news. The chart stops on that day.',
@@ -1471,7 +1498,7 @@ const lesson04: Lesson = {
   title: 'Trader or investor? Find your style',
   stage: 'Getting started',
   minutes: 8,
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   // No practice trade here, so no Try it screen (owner 2026-11-18)
   cards: [
     {
@@ -1479,6 +1506,15 @@ const lesson04: Lesson = {
       art: 'swings',
       presenter: { who: 'tick', mood: 'curious', pose: 'point' },
       text: 'Crypto can be fast and exciting, but people use it in two different ways. Some jump in and out of trades to catch short moves. Others buy and hold for a long time. Today you’ll see the difference and find the style that fits you.',
+    },
+    {
+      title: 'What you will learn',
+      art: 'friends',
+      preview: [
+        'What trading is, and what investing is',
+        'Why spreading money helps, but is not a shield',
+        'How to choose by your time, your nerves and your goals',
+      ],
     },
     {
       title: 'What trading is',
@@ -1703,14 +1739,13 @@ const lessonCoins: Lesson = {
   // No practice trade here: nothing in it teaches a buy or a sell (the stablecoin lesson offers one)
   cards: [
     {
-      title: 'Not all crypto is built the same',
+      title: 'What you will learn',
       art: 'twoRoads',
-      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
-      lines: [
-        { speaker: 'tick', text: 'Bitcoin, Ether, Solana, Chainlink… all “crypto”, right?' },
-        { speaker: 'tock', text: 'Right, but not built the same.' },
-        { speaker: 'tick', text: 'How so?' },
-        { speaker: 'tock', text: 'Some have their own road. Some use someone else’s.' },
+      preview: [
+        'A coin has its own road; a token uses one',
+        'Three common kinds of token: credits, shares and votes',
+        'What altcoin means, and why altcoins often swing more',
+        'Why a promise of fast gains is a reason to check first',
       ],
     },
     {
@@ -1897,15 +1932,13 @@ const lessonStablecoins: Lesson = {
   stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
   cards: [
     {
-      title: 'A coin that sits still',
+      title: 'What you will learn',
       art: 'wobbleSteady',
-      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
-      lines: [
-        {
-          speaker: 'tick',
-          text: 'Last week my coin lost a fifth of its value. Can I still pay my rent with it?',
-        },
-        { speaker: 'tock', text: 'Not safely. But some crypto is built to sit still.' },
+      preview: [
+        'What a stablecoin is built to do: hold one dollar',
+        'The three kinds, and what stands behind each',
+        'Why traders park money in them, and pay with them',
+        'Why “stable” is a goal, not a promise',
       ],
     },
     {
@@ -2089,20 +2122,13 @@ const lessonWallets: Lesson = {
   momentAfter: 10,
   cards: [
     {
-      title: 'Where is your crypto right now?',
+      title: 'What you will learn',
       art: 'mailboxWall',
-      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
-      lines: [
-        {
-          speaker: 'tick',
-          text: 'In practice mode I bought some bitcoin. Where is it, exactly? If it were real, I mean.',
-        },
-        { speaker: 'tock', text: 'Not in your phone.' },
-        { speaker: 'tick', text: 'Then where?' },
-        {
-          speaker: 'tock',
-          text: 'On the blockchain. What your phone holds is something else.',
-        },
+      preview: [
+        'Where your crypto really lives: a wallet holds keys, not coins',
+        'Custodial or non-custodial: who holds the key',
+        'How to keep a recovery phrase safe',
+        'Which wallet fits which job: hot for spending, cold for keeping',
       ],
     },
     {
@@ -2498,6 +2524,7 @@ export function cardWords(card: LessonCard): number {
     plainText(card.analogy?.text ?? ''),
     ...(card.meet ? [card.meet.tick, card.meet.tock, card.meet.lead, ...card.meet.list] : []),
     ...(card.points ?? []).flatMap((p) => [p.label, p.text]),
+    ...(card.preview ?? []),
     ...(card.beats ?? []).map((b) => b.text),
   ].join(' ');
   return text.split(/\s+/).filter((w) => /\w/.test(w)).length;
