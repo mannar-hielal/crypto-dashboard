@@ -15,7 +15,7 @@ const PHONE_ROW = '(max-width: 767px)';
 function useScrollingRow() {
   const supported = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
   const [scrolls, setScrolls] = useState(() =>
-    supported ? window.matchMedia(PHONE_ROW).matches : true
+    supported ? window.matchMedia(PHONE_ROW).matches : false
   );
   useEffect(() => {
     if (!supported) return;

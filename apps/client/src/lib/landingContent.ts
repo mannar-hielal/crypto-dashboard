@@ -426,7 +426,8 @@ export const TABLE_ROWS: readonly TableRow[] = [
     id: 'lessons',
     feature: 'Lessons that end in a practice trade',
     us: 'yes',
-    groups: ['no', 'no', 'no', 'no', 'no', 'no'],
+    // Exchange academies, chart-site courses and game tutorials exist, so a tilde; the rest teach no lessons
+    groups: ['some', 'some', 'some', 'no', 'no', 'no'],
   },
   {
     id: 'perps',

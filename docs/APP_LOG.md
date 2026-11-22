@@ -4722,7 +4722,7 @@ ribbon and the newsletter form only (no sign-up, chart, FAQ or table, because no
 **Features page:** learning first (how a lesson works, the lesson cards, what is covered today), then the chart, the practice desk,
 the account, real data, phone, and an accordion of six questions with FAQPage JSON-LD (`SeoHead` gained an optional `jsonLd` prop,
 escaped for `<`). Links to `/blog`, `/register`, `/chart`. Footer: Features, Live chart and Blog added beside the legal links.
-Titles: landing "Learn Crypto Trading Free: Lessons and a Live Chart", features "Features: Learn Crypto Trading on a Live Chart".
+Titles (about 35 characters, so the search result is not cut): landing "Learn Crypto Trading Free", features "Features: Learn Crypto by Doing". **Pre-launch indexing:** the features page is `noindex` with no FAQ data and says "launching soon" (production is live, so only a pre-launch build is affected); `sitemap.xml` stays as it is.
 
 **Decisions.** Competitors are groups, never brands, and the page names no brand (a test checks). The blurred "logos" are made-up
 CSS shapes with a heavy blur (`BrandMark`), no real logo files. The page's words live in `lib/landingContent.ts` (pages, tests and
@@ -4755,7 +4755,7 @@ app"), read November 2026. Our column, each verified here:
 
 **Refused claims:** a record that helps anyone get funded (the page says the opposite); free replay, a journal with R-multiples and
 prop-firm rehearsal (roadmap, not built); "works where exchange demos are blocked" (the Terms exclude some jurisdictions); "history is
-never wiped" (not verified); any price, profit or win-rate promise. The lessons row says "as far as we could find".
+never wiped" (not verified); any price, profit or win-rate promise. The lessons row says "as far as we could find": exchange, charting-site and game groups show a tilde (academies, courses and tutorials exist), the others a cross.
 
 **Tests:** `LandingPage.test` (both states), `FeaturesPage.test`, `Accordion.test` (ARIA wiring, keys), `landingParts.test` (table
 rows and marks, the three deliberate crosses, path-card links, FAQ buttons, ribbon, candles, timeline, screenshots),

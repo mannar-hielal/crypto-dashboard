@@ -262,6 +262,8 @@ export const GUIDE_ANCHORS = [
   'landing.hero.chart',
   'landing.hero.register',
   'landing.timeline.register',
+  /** The hero's animated candle drawing (decorative) */
+  'landing.candles',
   // The beginner FAQ's "Start here" buttons (key: the question), and the features page's two
   // hero buttons and its own FAQ's (key: the question)
   'landing.faq.start',

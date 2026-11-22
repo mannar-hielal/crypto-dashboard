@@ -5,8 +5,14 @@
   min-height: 320px; /* keeps the page from jumping when the cards load */
 }
 
+/* The marker a failed chunk leaves (an empty span) */
+.failed {
+  display: block;
+  height: 0;
+}
+
 /* A failed chunk leaves nothing to wait for: close the gap */
-.holder:has([data-previews-failed]) {
+.holder:has(.failed) {
   min-height: 0;
 }
 

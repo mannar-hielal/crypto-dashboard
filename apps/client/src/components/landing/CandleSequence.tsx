@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import styles from './CandleSequence.module.css';
 
 // ─── Shapes (a story, not data) ──────────────────────────────────────────────
@@ -62,7 +63,7 @@ export function CandleSequence() {
       preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
       focusable="false"
-      data-testid="candle-sequence"
+      {...guide('landing.candles')}
     >
       {[0.25, 0.5, 0.75].map((f) => (
         <line key={f} className={styles.grid} x1={0} x2={WIDTH} y1={HEIGHT * f} y2={HEIGHT * f} />

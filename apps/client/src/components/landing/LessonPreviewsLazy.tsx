@@ -31,7 +31,7 @@ export function LessonPreviewsLazy() {
     <div ref={holder} className={styles.holder}>
       {near && (
         // A failed chunk (offline, or a stale hashed file after a deploy) costs this section, never the page
-        <ErrorBoundary fallback={<span data-previews-failed="" />}>
+        <ErrorBoundary fallback={<span className={styles.failed} />}>
           <Suspense fallback={<div className={styles.placeholder} aria-hidden="true" />}>
             <LessonPreviews />
           </Suspense>

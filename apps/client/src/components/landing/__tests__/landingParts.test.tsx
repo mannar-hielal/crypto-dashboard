@@ -11,6 +11,7 @@ import {
   TABLE_ROWS,
   TIMELINE,
 } from '@/lib/landingContent';
+import { guideSelector } from '@/lib/guideAnchors';
 import { ComparisonTable } from '../ComparisonTable';
 import { CoinRibbon } from '../CoinRibbon';
 import { CandleSequence } from '../CandleSequence';
@@ -181,8 +182,8 @@ describe('CandleSequence', () => {
   afterEach(cleanup);
 
   it('should be decorative and draw 24 candles', () => {
-    render(React.createElement(CandleSequence));
-    const svg = screen.getByTestId('candle-sequence');
+    const { container } = render(React.createElement(CandleSequence));
+    const svg = container.querySelector(guideSelector('landing.candles'))!;
     expect(svg.getAttribute('aria-hidden')).toBe('true');
     expect(svg.querySelectorAll('rect')).toHaveLength(24);
   });
