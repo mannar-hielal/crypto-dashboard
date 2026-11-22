@@ -259,25 +259,25 @@ export const LESSON_PREVIEWS: readonly LessonPreview[] = [
   },
   {
     number: 4,
-    title: 'Trader or investor?',
+    title: 'Trader or investor? Find your style',
     blurb: 'Two people, two styles. Find the one that fits you.',
     art: 'friends',
   },
   {
     number: 5,
-    title: 'Coins and tokens',
+    title: 'Coins and tokens: who has their own road',
     blurb: 'A coin has its own road, a token uses one. What each is for.',
     art: 'twoRoads',
   },
   {
     number: 6,
-    title: 'Stablecoins',
+    title: 'Stablecoins: the coins that try to sit still',
     blurb: 'Coins that try to sit still, and why traders keep them.',
     art: 'cloakroom',
   },
   {
     number: 7,
-    title: 'Your wallet, your keys',
+    title: 'Your wallet, your keys: who holds them?',
     blurb: 'Who really holds your crypto, and how to keep it safe.',
     art: 'keyRing',
   },
@@ -317,20 +317,20 @@ export const SHOTS: readonly Shot[] = [
     id: 'chart',
     title: 'The live chart',
     caption: 'Candles, indicators and drawing tools. This one needs no account.',
-    alt: 'The live Bitcoin chart with green and red candles, three moving-average lines and a drawing toolbar on the left.',
+    alt: 'Screenshot of the chart page with a drawing toolbar on the left.',
   },
   {
     id: 'desk',
     title: 'The practice desk',
     caption: 'Pretend money to practise with. Buy, sell, and watch your balance below.',
-    alt: 'The trading screen: the chart in the middle, an order form on the right and an account panel below showing a $10,000 balance.',
+    alt: 'Screenshot of the trading screen: chart, order form and account panel.',
   },
   {
     id: 'lesson',
     title: 'A lesson',
     caption:
       'Short cards on top of the live chart, with a picture and a button to try it for real.',
-    alt: 'A lesson card called Buy and Sell, with a drawing of a coin and a dollar swapping places, floating over the live chart.',
+    alt: 'Screenshot of a lesson card with a drawing, floating over the chart.',
   },
 ] as const;
 

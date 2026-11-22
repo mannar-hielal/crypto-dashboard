@@ -236,7 +236,8 @@ describe('the lesson and chapter facts on the pages', () => {
     for (const p of LESSON_PREVIEWS) {
       const lesson = LESSONS.find((l) => l.number === p.number)!;
       expect(lesson, `lesson ${p.number}`).toBeDefined();
-      // A shortened title still starts the real one's words
+      expect(p.title, `lesson ${p.number} title`).toBe(lesson.title);
+      // (the next line is kept for the first word check)
       expect(lesson.title.toLowerCase(), p.title).toContain(
         p.title
           .toLowerCase()
@@ -289,5 +290,19 @@ describe('the figures on the pages come from the app', () => {
     const copy = JSON.stringify([DESK_FEATURES, FEATURES_FAQ, BEGINNER_FAQ]);
     expect(copy).toContain(`${MAX_LEVERAGE}x`);
     expect(copy).toContain(`$${STARTING_BALANCE.toLocaleString('en-US')}`);
+  });
+});
+
+describe('the table’s column order', () => {
+  it('should keep the competitor groups in one fixed order, which every row’s marks follow (review 2026-11-22)', () => {
+    expect(GROUPS.map((g) => g.id)).toEqual([
+      'exchange',
+      'charting',
+      'games',
+      'journals',
+      'bots',
+      'prop',
+    ]);
+    for (const row of TABLE_ROWS) expect(row.groups, row.id).toHaveLength(GROUPS.length);
   });
 });

@@ -21,6 +21,8 @@ export function LessonPreviewsLazy() {
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
   const [failed, setFailed] = useState(false);
   const markFailed = useCallback(() => setFailed(true), []);
+  const [ready, setReady] = useState(false);
+  const markReady = useCallback(() => setReady(true), []);
 
   useEffect(() => {
     const el = holder.current;
@@ -36,12 +38,15 @@ export function LessonPreviewsLazy() {
   }, [near]);
 
   return (
-    <div ref={holder} className={`${styles.holder}${failed ? ` ${styles.holderFailed}` : ''}`}>
+    <div
+      ref={holder}
+      className={`${styles.holder}${failed || ready ? ` ${styles.holderFailed}` : ''}`}
+    >
       {near && (
         // A failed chunk (offline, or a stale hashed file after a deploy) costs this section, never the page
         <ErrorBoundary fallback={<FailedMarker onFail={markFailed} />}>
           <Suspense fallback={<div className={styles.placeholder} aria-hidden="true" />}>
-            <LessonPreviews />
+            <LessonPreviews onReady={markReady} />
           </Suspense>
         </ErrorBoundary>
       )}

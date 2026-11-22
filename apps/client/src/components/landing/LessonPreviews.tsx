@@ -32,8 +32,10 @@ function useScrollingRow() {
  * number, title and one line. It proves the learning side exists. Heavy (the lessons' picture
  * module), so the page loads it late, through `LessonPreviewsLazy`.
  */
-export default function LessonPreviews() {
+export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
   const scrolls = useScrollingRow();
+  // Tells the holder the cards are in, so it can drop the height it reserved
+  useEffect(() => onReady?.(), [onReady]);
   return (
     // tabIndex: a row that scrolls sideways on a phone must be reachable by keyboard
     <ul className={styles.row} aria-label="A peek at the lessons" {...(scrolls && { tabIndex: 0 })}>

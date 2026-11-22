@@ -28,7 +28,19 @@ export function StartLink({ cta, live, variant = 'primary', anchor, anchorKey }:
       {cta.label}
     </Link>
   ) : (
-    <a href="#newsletter" className={CLASS[variant]} {...extra}>
+    <a
+      href="#newsletter"
+      className={CLASS[variant]}
+      // The jump alone leaves keyboard focus on the link: move it to the email field
+      onClick={() => {
+        setTimeout(() => {
+          document
+            .querySelector<HTMLInputElement>('#newsletter input')
+            ?.focus({ preventScroll: true });
+        }, 0);
+      }}
+      {...extra}
+    >
       {cta.preLabel}
     </a>
   );
