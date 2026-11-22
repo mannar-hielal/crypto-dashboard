@@ -23,7 +23,7 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
   }, [onReady]);
   return (
     // Where the row scrolls sideways (a phone) the scroller is a labelled region and a tab stop; on a
-    // wider screen it is a plain grid, so no landmark is added; the list always has its own name
+    // wider screen it is a plain grid, so no landmark is added. The region ("Lesson previews") and the list ("Lessons") are named apart on purpose: the region is the scrolling box, the list is its content
     <div
       className={styles.scroller}
       {...(scrolls && {
@@ -36,7 +36,7 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
         className={styles.row}
         // list-style: none drops list semantics in Safari: say it outright
         role="list"
-        aria-label={`Lessons, ${LESSON_PREVIEWS.length} cards`} // one stable name at every width
+        aria-label="Lessons" // one stable name at every width
       >
         {LESSON_PREVIEWS.map((l) => (
           <li key={l.number} className={styles.card}>
