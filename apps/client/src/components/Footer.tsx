@@ -13,7 +13,11 @@ const LINKS = [
   { to: '/aup', label: 'Acceptable Use Policy' },
 ] as const;
 
+const isLive = import.meta.env.VITE_IS_LIVE === 'true';
+
 export function Footer() {
+  // Before launch there is no chart to link to
+  const links = LINKS.filter((l) => isLive || l.to !== '/chart');
   return (
     <footer
       className="relative px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"
@@ -32,7 +36,7 @@ export function Footer() {
         className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5"
         aria-label="Footer"
       >
-        {LINKS.map((l) => (
+        {links.map((l) => (
           <Link
             key={l.to}
             to={l.to}

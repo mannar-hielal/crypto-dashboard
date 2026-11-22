@@ -125,12 +125,7 @@ export function LandingPage() {
                 />
                 <div className={styles.timelineRow}>
                   <Timeline />
-                  <StartLink
-                    cta={CTA_REGISTER}
-                    live={isLive}
-                    anchor="landing.hero.register"
-                    anchorKey="timeline"
-                  />
+                  <StartLink cta={CTA_REGISTER} live={isLive} anchor="landing.timeline.register" />
                 </div>
               </section>
 

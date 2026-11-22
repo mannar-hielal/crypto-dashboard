@@ -656,7 +656,7 @@ export const FEATURES_FAQ: readonly FaqItem[] = [
     id: 'lessons',
     question: 'Which lessons are there today?',
     answer:
-      'Eight lessons in two chapters: buy and sell, long and short, how money without a bank works, why prices swing, trader or investor, coins and tokens, stablecoins, wallets and keys, and fees. Each chapter ends with a checkpoint. More are on the way.',
+      'Eight lessons in two chapters: buy and sell, long and short, how money without a bank works, why prices swing, trader or investor, coins and tokens, stablecoins, wallets and keys, and fees. Chapter 1 ends with a checkpoint. More lessons are on the way.',
     cta: {
       to: '/register',
       label: 'Start here: open lesson 1',

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import styles from './LessonPreviews.module.css';
 
 const LessonPreviews = lazy(() => import('./LessonPreviews'));
@@ -29,9 +30,12 @@ export function LessonPreviewsLazy() {
   return (
     <div ref={holder} className={styles.holder}>
       {near && (
-        <Suspense fallback={<div className={styles.placeholder} aria-hidden="true" />}>
-          <LessonPreviews />
-        </Suspense>
+        // A failed chunk (offline, or a stale hashed file after a deploy) costs this section, never the page
+        <ErrorBoundary fallback={<></>}>
+          <Suspense fallback={<div className={styles.placeholder} aria-hidden="true" />}>
+            <LessonPreviews />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );

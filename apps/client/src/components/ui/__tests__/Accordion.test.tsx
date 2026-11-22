@@ -10,6 +10,9 @@ const ITEMS = [
   { id: 'c', question: 'Third?', content: React.createElement('p', null, 'Answer three') },
 ];
 
+// The panel is the element the button controls, found from its answer text
+const panelOf = (text: string) => screen.getByText(text).closest('[id]');
+
 describe('Accordion', () => {
   afterEach(cleanup);
 
@@ -18,17 +21,17 @@ describe('Accordion', () => {
     const first = screen.getByRole('button', { name: 'First?' });
     expect(first.closest('h3')).not.toBeNull();
     expect(first.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.getByText('Answer one').closest('[role="region"]')?.hasAttribute('hidden')).toBe(
-      true
-    );
+    expect(panelOf('Answer one')?.hasAttribute('hidden')).toBe(true);
   });
 
-  it('should link each button to its panel with aria-controls and aria-labelledby', () => {
+  it('should link each button to its panel with aria-controls, and add no landmark regions (review 2026-11-22)', () => {
     render(React.createElement(Accordion, { items: ITEMS, defaultOpen: ['a'] }));
     const button = screen.getByRole('button', { name: 'First?' });
-    const panel = screen.getByRole('region', { name: 'First?' });
+    const panel = panelOf('Answer one')!;
     expect(button.getAttribute('aria-controls')).toBe(panel.id);
-    expect(panel.getAttribute('aria-labelledby')).toBe(button.id);
+    // Many panels as landmark regions would crowd screen-reader navigation (WAI-ARIA: over about six)
+    expect(panel.getAttribute('role')).toBeNull();
+    expect(screen.queryAllByRole('region')).toHaveLength(0);
   });
 
   it('should toggle a row on click and keep the others as they were', () => {
@@ -36,17 +39,13 @@ describe('Accordion', () => {
     const first = screen.getByRole('button', { name: 'First?' });
     fireEvent.click(first);
     expect(first.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByText('Answer one').closest('[role="region"]')?.hasAttribute('hidden')).toBe(
-      false
-    );
+    expect(panelOf('Answer one')?.hasAttribute('hidden')).toBe(false);
     expect(screen.getByRole('button', { name: 'Second?' }).getAttribute('aria-expanded')).toBe(
       'true'
     );
     fireEvent.click(first);
     expect(first.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.getByText('Answer one').closest('[role="region"]')?.hasAttribute('hidden')).toBe(
-      true
-    );
+    expect(panelOf('Answer one')?.hasAttribute('hidden')).toBe(true);
   });
 
   it('should move focus with the arrow keys, Home and End, wrapping around', () => {

@@ -61,7 +61,8 @@ export function FeaturesPage() {
         title="Features: Learn Crypto Trading on a Live Chart"
         description="See what you get: step-by-step crypto lessons, a live chart with indicators and drawing tools, a $10,000 practice account and a saved history. Free, paper money only."
         path="/features"
-        jsonLd={FAQ_JSON_LD}
+        // Before launch the page says nothing that is not live yet: no index, no FAQ data
+        {...(isLive ? { jsonLd: FAQ_JSON_LD } : { noIndex: true })}
       />
       <TopBar marketing />
 

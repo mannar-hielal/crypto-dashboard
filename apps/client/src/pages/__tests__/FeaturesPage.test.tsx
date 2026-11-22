@@ -6,8 +6,12 @@ import React from 'react';
 // (ChartLayoutPicker.tsx), ALLOWED_SYMBOLS (server constants.ts), PaperOrderStatus (SDK).
 
 vi.mock('@/components/SeoHead', () => ({
-  SeoHead: ({ jsonLd }: { jsonLd?: unknown }) =>
-    React.createElement('script', { 'data-testid': 'seo', 'data-json': JSON.stringify(jsonLd) }),
+  SeoHead: ({ jsonLd, noIndex }: { jsonLd?: unknown; noIndex?: boolean }) =>
+    React.createElement('script', {
+      'data-testid': 'seo',
+      'data-json': JSON.stringify(jsonLd),
+      'data-noindex': String(!!noIndex),
+    }),
 }));
 vi.mock('@/components/dashboard/TopBar', () => ({ TopBar: () => null }));
 vi.mock('@/components/CtaSection', () => ({ CtaSection: () => null }));
@@ -115,5 +119,20 @@ describe('FeaturesPage', () => {
       const id = a.getAttribute('href')?.slice(1) ?? '';
       expect(container.querySelector(`#${id}`)).not.toBeNull();
     }
+  });
+
+  it('should stay out of the index and publish no FAQ data before launch (review 2026-11-22)', async () => {
+    vi.stubEnv('VITE_IS_LIVE', 'false');
+    await renderFeatures();
+    const seo = screen.getByTestId('seo');
+    expect(seo.getAttribute('data-noindex')).toBe('true');
+    expect(seo.getAttribute('data-json')).toBeNull();
+  });
+
+  it('should be indexable with its FAQ data when live', async () => {
+    await renderFeatures();
+    const seo = screen.getByTestId('seo');
+    expect(seo.getAttribute('data-noindex')).toBe('false');
+    expect(seo.getAttribute('data-json')).toContain('FAQPage');
   });
 });

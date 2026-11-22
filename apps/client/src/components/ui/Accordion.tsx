@@ -88,13 +88,7 @@ export function Accordion({ items, headingLevel = 3, defaultOpen = [] }: Accordi
                 <ChevronDown className={styles.chevron} aria-hidden="true" />
               </button>
             </Heading>
-            <div
-              id={panelId}
-              role="region"
-              aria-labelledby={buttonId}
-              className={styles.panel}
-              hidden={!isOpen}
-            >
+            <div id={panelId} className={styles.panel} hidden={!isOpen}>
               {item.content}
             </div>
           </div>
