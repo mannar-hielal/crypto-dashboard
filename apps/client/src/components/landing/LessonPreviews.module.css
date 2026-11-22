@@ -33,6 +33,7 @@
 /* Phones: a row you swipe, each card snapping into view (the region scrolls, the list lays out) */
 .scroller {
   overflow-x: auto;
+  padding: 4px 4px 12px; /* room for shadows and focus rings inside the clipping box */
   scroll-snap-type: x mandatory;
 }
 
@@ -41,7 +42,7 @@
   width: max-content;
   gap: 16px;
   margin: 0;
-  padding: 4px 4px 12px;
+  padding: 0;
   list-style: none;
 }
 
@@ -97,6 +98,7 @@
 @media (min-width: 768px) {
   .scroller {
     overflow: visible;
+    padding: 0;
     scroll-snap-type: none;
   }
 

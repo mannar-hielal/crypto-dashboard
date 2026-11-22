@@ -6,6 +6,20 @@ import styles from './LessonPreviews.module.css';
 type Previews = ComponentType<{ onReady?: () => void }>;
 
 /**
+ * Reload, after asking the service worker (the app's offline shell) to update first: an old worker
+ * would otherwise serve the old page and the same missing chunk again
+ */
+function reloadFresh() {
+  const reload = () => window.location.reload();
+  if (!('serviceWorker' in navigator)) return reload();
+  navigator.serviceWorker
+    .getRegistration()
+    .then((registration) => registration?.update())
+    .catch(() => undefined)
+    .finally(reload);
+}
+
+/**
  * What the failure fallbacks render: it tells the holder to close its gap, and offers a reload. A
  * reload, not a second import: after a deploy the old hashed file is gone, and asking for the same
  * URL again would fail the same way
@@ -13,7 +27,7 @@ type Previews = ComponentType<{ onReady?: () => void }>;
 function FailedNote({ onFail }: { onFail: () => void }) {
   useEffect(onFail, [onFail]);
   return (
-    <button type="button" className={styles.retry} onClick={() => window.location.reload()}>
+    <button type="button" className={styles.retry} onClick={reloadFresh}>
       The lesson previews did not load. Reload the page
     </button>
   );
@@ -54,10 +68,8 @@ export function LessonPreviewsLazy() {
       .then((m) => {
         if (live) setLoaded(() => m.default);
       })
-      .catch((err: unknown) => {
-        // A failed chunk (offline, or a stale hashed file after a deploy) costs this section only;
-        // logged like the error boundary does, since the app has no client error reporting
-        console.error('[LessonPreviews] chunk failed:', err instanceof Error ? err.message : err);
+      .catch(() => {
+        // A failed chunk (offline, or a stale hashed file after a deploy) costs this section only
         if (live) setFailed(true);
       });
     return () => {

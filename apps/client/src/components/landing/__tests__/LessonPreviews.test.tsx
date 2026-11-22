@@ -6,7 +6,10 @@ import { LESSON_PREVIEWS } from '@/lib/landingContent';
 import { LessonPreviewsLazy } from '../LessonPreviewsLazy';
 
 describe('LessonPreviewsLazy', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it('should load the lessons own pictures and titles when the row is near', async () => {
     const { container } = render(React.createElement(LessonPreviewsLazy));
@@ -37,6 +40,5 @@ describe('LessonPreviewsLazy', () => {
     );
     expect(region.getAttribute('tabindex')).toBe('0');
     expect(region.querySelectorAll('li')).toHaveLength(LESSON_PREVIEWS.length);
-    vi.unstubAllGlobals();
   }, 20000);
 });

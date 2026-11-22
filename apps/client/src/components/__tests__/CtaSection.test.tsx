@@ -70,6 +70,11 @@ describe('CtaSection', () => {
       expect(screen.getByTestId('newsletter-form')).not.toBeNull();
     });
 
+    it('is the #newsletter target the pre-launch get-notified links jump to (review 2026-11-22)', async () => {
+      await renderPreLaunch();
+      expect(document.getElementById('newsletter')).not.toBeNull();
+    });
+
     it('does not show the live trading CTA', async () => {
       await renderPreLaunch();
       expect(screen.queryByText(/create your free account/i)).toBeNull();
