@@ -4705,6 +4705,40 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
   "coming soon" titles.
 
+### 2026-11-22 — Chapter 2, Lesson 7 "Your wallet, your keys: who holds them?"
+
+The third lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-wallets`, 10 min, 25 screens, step base 60; first step 61. Outline
+and text approved by the owner 2026-11-22 (drafts in the git-ignored `guided-learning-topics/notes/`, files 20 to 22).
+
+- **One metaphor, the mailbox and its key** (Lesson 2 taught the private key and signing; the address and the mailbox are introduced here, a built-text review finding): a wallet is a key ring, a custodial wallet is a bank holding your key, a
+  hardware wallet is a signing room. Berwyn's analogies each say where they stop matching. Our own characters: **Mira** and
+  **Sneaky Sam** (flat pictures, no faces): Sam sees her address and balance but cannot spend without her signature; then her
+  phone falls in the sea with no backup of her recovery phrase. Lena and Zoe answer the two wallet-choice questions.
+- **Cards:** where your crypto is, a wallet holds keys, address and private key, **Match boxes** (address, private key, wallet,
+  signature), what a wallet is for, Mira and Sam, the phone in the sea, custodial and its trade-off (FTX, Lesson 3), non-custodial,
+  control and no reset button, then **Your call** (two people forgot their login: only the exchange user can reset), the recovery
+  phrase and its three rules, a **Pick the right ones** (where to keep it) and a **Drag and drop** (setting up safely), hot and cold
+  wallets, **Match boxes** (wallet for the job), Lena and Zoe, a purse and a safe, a phrase check (a "support" asking for the 12
+  words), summary, close. No practice trade: a wallet has no trade, and a card says the paper account is not a wallet.
+- **Caps:** this lesson asks eight questions (owner 2026-11-22; the lesson rules test allows eight for it, six elsewhere). Teaching
+  cards stay within 16 and 80 words.
+- **Pictures** (visual Q&A, owner 2026-11-22): flat shapes, 15 new `LessonArtId`s in `LessonArt.tsx`. Hot wallets are amber with
+  signal bars and an "online" tag, cold are purple with a padlock and an "offline" tag (the tags carry it, never colour alone). The
+  recovery phrase card shows twelve numbered slots, never real words. **The hardware wallet is generic** (a rounded slab with a
+  screen and two buttons): no licence covers a real maker's shape, name or logo (Ledger's marks are Ledger SAS's, its public brand
+  terms cover partners and resellers; Trezor's manual was only reached second-hand and its model names are registered). The owner
+  chose generic over asking the makers, 2026-11-22; written permission would allow a swap later.
+- **Text:** fact checked twice by a technical-writer agent (the draft, then the built lesson). Applied from the first: the
+  safe-deposit-box analogy replaced by a bank account (a real box needs the customer's own key and deposit insurance does not cover
+  its contents); "no company can stop you signing" plus the stablecoin-issuer freeze (ties to Lesson 6); the recovery phrase "rebuilds
+  that wallet's keys in a compatible wallet" and may be typed to restore your own wallet; cold wallets "keep the key away from the
+  internet, usually a hardware wallet"; FTX "froze withdrawals and went bankrupt"; balances are public and linkable.
+- **Concepts:** `wallet`, `recovery-phrase`, `hardware-wallet` (peeks, no article); the Pick quiz has six more tile icons.
+  Proposed Blog posts (not linked from the lesson): "Custodial or self-custody: choosing a wallet" and "Your recovery phrase, safely".
+- **Ids:** `lesson-wallets` in the client's `LESSON_IDS`, the server's `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP`
+  (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. It leaves the map's "coming soon" list: chapter 2 now shows two
+  stops and the checkpoint still to write.
+
 ### 2026-11-18 — The Blog: the articles leave the lessons, and the public header gets Product, Blog, About us, Support
 
 Plan: `docs/BLOG_PLAN.md`; built in one PR on `feat/knowledge-base`. The nine articles (the old knowledge base)

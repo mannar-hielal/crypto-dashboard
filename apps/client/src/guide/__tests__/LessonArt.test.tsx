@@ -46,6 +46,21 @@ const ARTS: LessonArtId[] = [
   'parkProfit',
   'pegDip',
   'tooSweet',
+  'mailboxWall',
+  'keyRing',
+  'slotAndKey',
+  'walletJobs',
+  'samGlass',
+  'phoneSea',
+  'bankHolds',
+  'lockedCounter',
+  'ownKeys',
+  'noReset',
+  'phraseCard',
+  'phraseNever',
+  'hotPhone',
+  'coldDevice',
+  'purseSafe',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -78,6 +93,17 @@ const TELLING: LessonArtId[] = [
   'usdtPair',
   'parkProfit',
   'pegDip',
+  'keyRing',
+  'slotAndKey',
+  'walletJobs',
+  'samGlass',
+  'phoneSea',
+  'lockedCounter',
+  'phraseCard',
+  'phraseNever',
+  'hotPhone',
+  'coldDevice',
+  'purseSafe',
 ];
 
 describe('the guides', () => {
@@ -192,6 +218,21 @@ describe('LessonArt', () => {
     expect(words('vaultRule')).toMatch(/counter.*just a rule/);
     expect(words('usdtPair')).toMatch(/BTC.*USDT.*priced in.*1 BTC costs/);
     expect(words('pegDip')).toMatch(/\$1\.00 peg.*about \$0\.87.*drawn example/);
+    // Chapter 2, Lesson 7: the wallet scenes carry their cards, and hot and cold have text tags
+    expect(words('keyRing')).toMatch(/wallet = key ring.*the coins stay on the blockchain/);
+    expect(words('slotAndKey')).toMatch(/address.*safe to share.*private key.*keep it secret/);
+    expect(words('walletJobs')).toMatch(/see.*receive.*sign/);
+    expect(words('samGlass')).toMatch(/Sam.*2 BTC.*he can look, not spend/);
+    expect(words('phoneSea')).toMatch(/2 BTC still here.*no key to spend them/);
+    expect(words('lockedCounter')).toMatch(/withdrawals frozen/);
+    expect(words('phraseCard')).toMatch(/12 words, in order/);
+    expect(words('phraseNever')).toMatch(/photo.*cloud.*email.*paper, offline, and no one else/);
+    expect(words('hotPhone')).toMatch(/online/);
+    expect(words('coldDevice')).toMatch(/offline.*the key never leaves/);
+    expect(words('purseSafe')).toMatch(/hot.*a little, for today.*cold.*the rest, for later/);
+    // The recovery phrase picture never shows real words: twelve numbers, no letters
+    const phrase = render(<LessonArt id="phraseCard" />).container.textContent ?? '';
+    expect(phrase.replace('12 words, in order', '')).toMatch(/^123456789101112$/);
     const badges = render(<LessonArt id="tickerBadges" />).container.textContent ?? '';
     expect(badges).toMatch(/BTC.*ETH.*SOL.*BNB.*XRP.*ADA.*AVAX.*DOGE.*LINK.*a token/);
     // The chain: each block's prev is the fingerprint of the block before it

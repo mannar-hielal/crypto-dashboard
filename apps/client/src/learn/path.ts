@@ -82,9 +82,9 @@ export const CHAPTERS: readonly Chapter[] = [
     nodes: [
       { kind: 'lesson', id: 'lesson-coins', access: FREE },
       { kind: 'lesson', id: 'lesson-stablecoins', access: FREE },
+      { kind: 'lesson', id: 'lesson-wallets', access: FREE },
     ],
     soon: [
-      { kind: 'lesson', title: 'Your wallet, your keys: who holds them?' },
       { kind: 'lesson', title: 'Why sending crypto costs a fee' },
       { kind: 'lesson', title: 'Trading without a middleman: DApps and pools' },
       { kind: 'checkpoint', title: 'Checkpoint: wallets, fees and the networks' },

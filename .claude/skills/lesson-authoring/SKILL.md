@@ -72,7 +72,7 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
    `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4), `lesson-coins` (Lesson 5,
-   chapter 2's first lesson), `lesson-stablecoins` (Lesson 6; the chapter's later lessons follow as numbered 7 onward). The chapter's
+   chapter 2's first lesson), `lesson-stablecoins` (Lesson 6), `lesson-wallets` (Lesson 7; the chapter's later lessons follow as numbered 8 onward). The chapter's
    checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
    a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
    `CHECKPOINT_VERSION` (server).
@@ -122,7 +122,7 @@ guided-learning-topics/
    - the practice trades offered: each card whose concept is a buy, sell, long or short, and the
      tour it starts (see "Practise it for real" below).
    - **Length vs the current caps.** `lessons.test.ts` allows at most 16 teaching cards of at most
-     80 words, up to six questions (at most three of them `checks`), at most two `[[terms]]` a card
+     80 words, up to six questions (at most three of them `checks`; Lesson 7 asks eight, owner 2026-11-22, a named exception in the lesson rules test), at most two `[[terms]]` a card
      (raised by the owner, 2026-11-16, to fit a benchmark-length lesson of ~23–25 screens).
      **Beyond that:** don't silently go past the caps: offer the owner the choice for that lesson
      — raise them, or split the topic into two lessons. A new lesson id must be added everywhere

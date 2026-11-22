@@ -51,6 +51,11 @@ const HYPE = [
   /easy money/i,
 ];
 
+// Lessons that may ask more than six questions, each with the owner's date
+const QUESTION_CAP_EXCEPTIONS: Partial<Record<string, number>> = {
+  'lesson-wallets': 8, // owner 2026-11-22: two persona questions and the phrase quizzes
+};
+
 describe('lessons', () => {
   it('should never use * as a times sign in lesson copy (× is; * marks emphasis)', () => {
     // Emphasis markers sit flush against their text: a * with spaces on both sides ("(2 + 3) * 4",
@@ -112,14 +117,15 @@ describe('lessons', () => {
       });
 
       it('should ask 2 to 6 questions (the moment, the checks, the quizzes between cards), each with a valid answer and a why', () => {
-        // Owner 2026-11-16: up to six, and the quizzes may sit between the cards
+        // Owner 2026-11-16: up to six, and the quizzes may sit between the cards. Lesson 7 may ask
+        // eight (owner 2026-11-22: the wallet lesson's two persona questions and its phrase quizzes)
         const questions = [
           lesson.moment,
           ...lesson.checks,
           ...lesson.cards.flatMap((c) => (c.quiz ? [c.quiz] : [])),
         ];
         expect(questions.length).toBeGreaterThanOrEqual(2);
-        expect(questions.length).toBeLessThanOrEqual(6);
+        expect(questions.length).toBeLessThanOrEqual(QUESTION_CAP_EXCEPTIONS[lesson.id] ?? 6);
         expect(lesson.checks.length).toBeLessThanOrEqual(3);
         for (const q of questions) {
           expect(q.explain.trim().length, q.question).toBeGreaterThan(0);
@@ -191,7 +197,8 @@ describe('lessons', () => {
         if (
           lesson.id === 'lesson-04' ||
           lesson.id === 'lesson-coins' ||
-          lesson.id === 'lesson-stablecoins'
+          lesson.id === 'lesson-stablecoins' ||
+          lesson.id === 'lesson-wallets'
         ) {
           expect([lesson.tour, lesson.tryWidget, lesson.tryIntro]).toEqual([
             undefined,
@@ -283,6 +290,7 @@ describe('lessons', () => {
       ['lesson-04', 4, 'Trader or investor? Find your style'],
       ['lesson-coins', 5, 'Coins and tokens: who has their own road'],
       ['lesson-stablecoins', 6, 'Stablecoins: the coins that try to sit still'],
+      ['lesson-wallets', 7, 'Your wallet, your keys: who holds them?'],
     ]);
   });
 
@@ -1051,6 +1059,77 @@ describe('lessons', () => {
       '0.5 × 100 = 50%',
     ]);
     expect(card.math?.answer).toMatch(/50% gain.*300 USDT.*Fees are left out/);
+  });
+
+  it('should teach wallets and keys in the approved order, with the mailbox metaphor (owner 2026-11-22)', () => {
+    const l = getLesson('lesson-wallets');
+    expect(l.cards.map((c) => c.title)).toEqual([
+      'Where is your crypto right now?',
+      'A wallet holds keys, not coins',
+      'Address and private key',
+      'Who is who?',
+      'What a wallet is for',
+      'Mira and Sneaky Sam',
+      'The phone in the sea',
+      'Custodial: a company keeps your key',
+      'The trade-off',
+      'Non-custodial: you keep the key',
+      'Control, privacy, no reset button',
+      'The recovery phrase',
+      'Three rules for the phrase',
+      'Where would you keep it?',
+      'Setting up safely, in order',
+      'Hot wallets',
+      'Cold wallets',
+      'Which wallet for which job?',
+      'Lena: a long-term holder',
+      'Zoe: trades every week',
+      'A purse and a safe',
+    ]);
+    // 25 screens: 21 cards, Your call, the phrase check, the summary and the close
+    expect(lessonScreens(l)).toHaveLength(25);
+    // Your call follows the card on the missing reset button
+    expect(l.cards[l.momentAfter!].title).toBe('Control, privacy, no reset button');
+    expect(l.moment.options[l.moment.correct]).toBe('Only the exchange user');
+    // Quiz formats: two Match boxes, a Pick, a Drag and drop, two persona questions
+    const quiz = (title: string) => l.cards.find((c) => c.title === title)!.quiz!;
+    expect(quiz('Who is who?').format).toBe('match');
+    expect(quiz('Who is who?').pairs).toHaveLength(4);
+    expect(quiz('Which wallet for which job?').format).toBe('match');
+    expect(quiz('Which wallet for which job?').pairs).toHaveLength(3);
+    const pick = quiz('Where would you keep it?');
+    expect(pick.format).toBe('pick');
+    expect(pick.tiles).toHaveLength(6);
+    expect(pick.tiles!.filter((t) => t.right)).toHaveLength(3);
+    expect(quiz('Setting up safely, in order').format).toBe('order');
+    expect(quiz('Setting up safely, in order').steps).toHaveLength(5);
+    // Lena's and Zoe's questions each have their picture and one right answer
+    expect(quiz('Lena: a long-term holder').art).toBe('lena');
+    expect(quiz('Lena: a long-term holder').options[1]).toMatch(/hardware wallet.*on paper/);
+    expect(quiz('Zoe: trades every week').art).toBe('zoe');
+    expect(quiz('Zoe: trades every week').options[1]).toMatch(/only what she trades/);
+    // The phrase check refuses to share, and its worried guide warns about support
+    expect(l.checks).toHaveLength(1);
+    expect(l.checks[0].options[l.checks[0].correct]).toMatch(/^Never share them/);
+    // No practice trade: a wallet has no trade, and card 11 says the paper account is not a wallet
+    expect(l.cards.filter((c) => c.practice)).toEqual([]);
+    expect(l.cards.find((c) => c.title === 'Control, privacy, no reset button')?.text).toMatch(
+      /practice money in an account we hold/
+    );
+    // The fact check (2026-11-22): the analogy is a bank account (a safe-deposit box teaches it wrong),
+    // the phrase may be typed to restore a wallet, FTX froze withdrawals and went bankrupt
+    expect(
+      l.cards.find((c) => c.title === 'Custodial: a company keeps your key')?.analogy?.text
+    ).toMatch(/bank account/);
+    expect(l.cards.find((c) => c.title === 'Three rules for the phrase')?.text).toMatch(
+      /type it only to restore your own wallet/
+    );
+    expect(l.cards.find((c) => c.title === 'The trade-off')?.text).toMatch(
+      /November 2022 FTX.*froze withdrawals and went bankrupt/
+    );
+    // Lesson 6 said wallets come next, and this one says fees do
+    expect(l.recap?.highlight?.text).toMatch(/Next up: why sending crypto costs a fee/);
+    expect(l.next).toBeUndefined();
   });
 
   it('should keep every funnel step id within the server’s pattern, past each earlier version', () => {

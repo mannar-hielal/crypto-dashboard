@@ -44,6 +44,10 @@ export const CONCEPT_IDS = [
   // Chapter 2, Lesson 6 (2026-11-19)
   'stablecoin',
   'peg',
+  // Chapter 2, Lesson 7 (2026-11-22)
+  'wallet',
+  'recovery-phrase',
+  'hardware-wallet',
 ] as const;
 
 export type ConceptId = (typeof CONCEPT_IDS)[number];
@@ -261,6 +265,28 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Peg',
     peek: 'The steady price a stablecoin aims for. If it slips off, the coin has lost its peg.',
     think: 'the line it is meant to stay on.',
+    access: FREE,
+  },
+  {
+    id: 'wallet',
+    term: 'Wallet',
+    peek: 'The app or device that keeps your keys. It does not hold coins: they are records on the blockchain.',
+    think: 'a key ring: the mailboxes stay in the building.',
+    access: FREE,
+  },
+  {
+    id: 'recovery-phrase',
+    term: 'Recovery phrase',
+    peek: 'A list of words, usually 12 or 24, that can rebuild a wallet’s keys. Whoever has it can take everything.',
+    think:
+      'the master key to every mailbox on the ring: keep it on paper, offline, and tell no one.',
+    access: FREE,
+  },
+  {
+    id: 'hardware-wallet',
+    term: 'Hardware wallet',
+    peek: 'A small device that keeps your key away from the internet and signs payments inside itself.',
+    think: 'signing a paper in a locked room and passing out only the signed page.',
     access: FREE,
   },
 ];
