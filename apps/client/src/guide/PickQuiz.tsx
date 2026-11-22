@@ -12,14 +12,20 @@ import {
   CalendarBlank,
   Certificate,
   ChartPieSlice,
+  Cloud,
   Coins,
+  EnvelopeSimple,
   Eye,
+  ImageSquare,
   Leaf,
   Lightning,
   LinkSimple,
   ListChecks,
+  MapPin,
+  Note,
   RoadHorizon,
   UsersThree,
+  Vault,
 } from '@phosphor-icons/react';
 import { Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
@@ -42,6 +48,13 @@ const ICONS = {
   people: UsersThree,
   vote: ListChecks,
   certificate: Certificate,
+  // Lesson 7's places for a recovery phrase (2026-11-22)
+  note: Note,
+  image: ImageSquare,
+  safe: Vault,
+  mail: EnvelopeSimple,
+  pin: MapPin,
+  cloud: Cloud,
 } satisfies Record<TileIcon, unknown>;
 
 export function PickQuiz({

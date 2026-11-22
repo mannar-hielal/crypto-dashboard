@@ -27,6 +27,7 @@ export const LESSON_IDS = [
   'lesson-04',
   'lesson-coins',
   'lesson-stablecoins',
+  'lesson-wallets',
 ] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
@@ -89,7 +90,23 @@ export type LessonArtId =
   | 'usdtPair'
   | 'parkProfit'
   | 'pegDip'
-  | 'tooSweet';
+  | 'tooSweet'
+  // Chapter 2, Lesson 7 (owner's visual Q&A 2026-11-22): the mailbox and its key, hot and cold
+  | 'mailboxWall'
+  | 'keyRing'
+  | 'slotAndKey'
+  | 'walletJobs'
+  | 'samGlass'
+  | 'phoneSea'
+  | 'bankHolds'
+  | 'lockedCounter'
+  | 'ownKeys'
+  | 'noReset'
+  | 'phraseCard'
+  | 'phraseNever'
+  | 'hotPhone'
+  | 'coldDevice'
+  | 'purseSafe';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -150,6 +167,28 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
   pegDip:
     'A drawn example: a stablecoin’s price falls from the $1.00 line to about $0.87, then climbs back.',
   tooSweet: null,
+  mailboxWall: null,
+  keyRing:
+    'A key ring holding keys, beside a row of mailboxes: the wallet holds the keys, and the coins stay on the blockchain.',
+  slotAndKey: 'Two panels: an address, safe to share, and a private key, to keep secret.',
+  walletJobs: 'A wallet’s three jobs: see what an address holds, receive, and sign a payment.',
+  samGlass:
+    'Sneaky Sam looks at a mailbox through glass: it shows 2 BTC and a lock, so he can look but not spend.',
+  phoneSea:
+    'A phone with the key sinks into the sea, while the mailbox with 2 BTC stays where it was, with no key to spend it.',
+  bankHolds: null,
+  lockedCounter: 'A company building holds your key behind a locked counter: withdrawals frozen.',
+  ownKeys: null,
+  noReset: null,
+  phraseCard: 'A card with twelve numbered slots, one word to write in each, in order.',
+  phraseNever:
+    'A camera, a cloud and an envelope, each crossed out: never a photo, a cloud or an email.',
+  hotPhone:
+    'A phone with the key on it and signal bars, tagged online: handy, but on a connected device.',
+  coldDevice:
+    'A small hardware wallet with a screen and two buttons, tagged offline: it signs inside, and the key never leaves.',
+  purseSafe:
+    'A purse tagged hot for a little today, and a safe tagged cold for the rest, for later.',
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -366,7 +405,14 @@ export type TileIcon =
   | 'coins'
   | 'people'
   | 'vote'
-  | 'certificate';
+  | 'certificate'
+  // Lesson 7 (2026-11-22): where to keep a recovery phrase
+  | 'note'
+  | 'image'
+  | 'safe'
+  | 'mail'
+  | 'pin'
+  | 'cloud';
 
 /** A day's close on the chart, where a drawn line should start or end */
 export interface DrawPoint {
@@ -2026,6 +2072,287 @@ const lessonStablecoins: Lesson = {
   access: FREE,
 };
 
+// ─── Lesson 7 — Your wallet, your keys: who holds them? ──────────────────────
+// Chapter 2, one PR a lesson (owner 2026-11-19). Outline and text approved 2026-11-22, fact checked
+// by a technical-writer agent. One metaphor: the mailbox and its key (Lesson 2 taught the private key and signing; the address is new here). Mira and Sneaky
+// Sam are our own characters (flat pictures, no faces). No practice trade: a wallet has no trade,
+// and the paper account is not a wallet (card 11 says so). The hardware wallet is drawn generic:
+// no maker's shape or logo (owner 2026-11-22).
+const lessonWallets: Lesson = {
+  id: 'lesson-wallets',
+  number: 7,
+  title: 'Your wallet, your keys: who holds them?',
+  stage: 'Your crypto toolbox',
+  minutes: 10,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // Your call follows the card on the missing reset button (index 10)
+  momentAfter: 10,
+  cards: [
+    {
+      title: 'Where is your crypto right now?',
+      art: 'mailboxWall',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      lines: [
+        {
+          speaker: 'tick',
+          text: 'In practice mode I bought some bitcoin. Where is it, exactly? If it were real, I mean.',
+        },
+        { speaker: 'tock', text: 'Not in your phone.' },
+        { speaker: 'tick', text: 'Then where?' },
+        {
+          speaker: 'tock',
+          text: 'On the blockchain. What your phone holds is something else.',
+        },
+      ],
+    },
+    {
+      title: 'A wallet holds keys, not coins',
+      art: 'keyRing',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'A [[wallet]] does not hold coins. Your coins are records on the blockchain. The wallet holds your keys, and the keys let you spend them.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a key ring. The mailboxes stay in the building; the ring holds the keys to yours. Where it stops matching: a mailbox holds real post, but a coin is only a line in the ledger.',
+      },
+    },
+    {
+      title: 'Address and private key',
+      art: 'slotAndKey',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Two words to know. Your **address** is like a mailbox slot: share it and anyone can pay in. Your [[private key|private-key]], from Lesson 2, is the only key that can spend: share it and anyone can empty the box. A **signature** is the proof, made with your key, that you approved a payment.',
+    },
+    {
+      title: 'Who is who?',
+      quiz: {
+        format: 'match',
+        question: 'Match each word to what it means.',
+        pairs: [
+          { term: 'Address', meaning: 'Safe to share: lets people pay you' },
+          { term: 'Private key', meaning: 'Secret: lets its holder spend' },
+          { term: 'Wallet', meaning: 'The app or device that keeps your keys' },
+          { term: 'Signature', meaning: 'Proof that the key holder approved a payment' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Share the address, guard the key. The wallet keeps the key, and a signature shows the key holder approved the payment.',
+      },
+    },
+    {
+      title: 'What a wallet is for',
+      art: 'walletJobs',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A wallet does three jobs. It shows what your address holds. It gives you an address to receive on. And it signs a payment with your key when you send. The key never has to leave it. Anyone who has your address can look up its balance: the blockchain is open.',
+    },
+    {
+      title: 'Mira and Sneaky Sam',
+      art: 'samGlass',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'point' },
+      text: 'Mira has 2 bitcoin at an address. Sneaky Sam finds the address. He can see that it holds 2 bitcoin, but he can only look. To spend it he needs a signature, and only her private key can make one. So he sends a fake “support” message asking for her key. Mira never answers. Her bitcoin stays hers.',
+    },
+    {
+      title: 'The phone in the sea',
+      art: 'phoneSea',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'Later, Mira’s phone falls in the sea. Her coins are fine: they were never in the phone. But her key was, and she had no backup. Nobody can reset a key, not the wallet’s maker and not the blockchain. Her 2 bitcoin stay visible and out of reach, for good. Next: what she could have done.',
+    },
+    {
+      title: 'Custodial: a company keeps your key',
+      art: 'bankHolds',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Many people start on an exchange. It holds your keys for you. That is a **custodial** wallet: you log in with a password, and the company signs for you.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a bank account. The bank holds the money, and you ask it to move some. Where it stops matching: bank deposits usually have legal protection, and crypto on an exchange often has none like it.',
+      },
+    },
+    {
+      title: 'The trade-off',
+      art: 'lockedCounter',
+      presenter: { who: 'tick', mood: 'frank', pose: 'point' },
+      text: 'Easy is the upside. Forgot your password? The company resets it. The downside: your coins are only as safe as the company. [[Custody|custody]] means someone else holds your key. An exchange can be hacked, or fail. In November 2022 FTX, from Lesson 3, froze withdrawals and went bankrupt, and many customers could not get their coins out.',
+    },
+    {
+      title: 'Non-custodial: you keep the key',
+      art: 'ownKeys',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'In a **non-custodial** wallet, you hold the key yourself. No company stands in the middle, so none can stop you signing a payment, and you need no sign-up or ID check to make one. (Buying crypto with cash usually does need ID.) One catch: the company behind a stablecoin can freeze that coin at an address. Your key is yours, but not every coin obeys only you.',
+    },
+    {
+      title: 'Control, privacy, no reset button',
+      art: 'noReset',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Control has a price. If you lose the key and the phrase, there is no “forgot password” and no support line. The blockchain is also public: every payment from your address can be seen, not under your name, but it can be linked to you, for example through an exchange. Here, your balance is practice money in an account we hold, so nothing real is at risk.',
+    },
+    {
+      title: 'The recovery phrase',
+      art: 'phraseCard',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'When you set up a non-custodial wallet it shows a list of words, usually 12 or 24. That is your [[recovery phrase|recovery-phrase]], also called a seed phrase. In a compatible wallet, the words rebuild that wallet’s keys. So the phrase is the real master key: whoever has it can take everything. Lose the phone but keep the words, and you are fine.',
+    },
+    {
+      title: 'Three rules for the phrase',
+      art: 'phraseNever',
+      presenter: { who: 'tock', mood: 'worried', pose: 'point' },
+      text: 'One: write it on paper (or metal) and keep it offline, somewhere safe. Two: never save it as a photo, in a cloud or in an email, and type it only to restore your own wallet, into the app or device itself, never a website. Three: never tell anyone. Real support never asks for it. Anyone who does is a scammer.',
+    },
+    {
+      title: 'Where would you keep it?',
+      quiz: {
+        format: 'pick',
+        question: 'Where should a recovery phrase live? Pick three.',
+        tiles: [
+          { label: 'Written on paper, in a locked drawer at home', icon: 'note', right: true },
+          { label: 'A photo in your phone’s gallery', icon: 'image', right: false },
+          { label: 'Stamped on metal, in a safe', icon: 'safe', right: true },
+          { label: 'An email to yourself', icon: 'mail', right: false },
+          {
+            label: 'A second paper copy, kept in a different safe place',
+            icon: 'pin',
+            right: true,
+          },
+          { label: 'A note in a cloud app', icon: 'cloud', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'The safe places are offline and only you can reach them. A photo, an email or a cloud note can be copied from far away.',
+      },
+    },
+    {
+      title: 'Setting up safely, in order',
+      quiz: {
+        format: 'order',
+        question: 'Put the steps of setting up a wallet safely in order.',
+        steps: [
+          'You make a new wallet',
+          'It shows the recovery phrase',
+          'You write the words on paper, offline',
+          'You check your copy against the screen',
+          'You put the paper in a safe place and tell no one',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Write it down before you rely on the wallet, check it, then store it safely. The paper is the backup of your key.',
+      },
+    },
+    {
+      title: 'Hot wallets',
+      art: 'hotPhone',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'A **hot wallet** lives on a device that is online: a phone app, a browser extension or a desktop program. It is quick and handy for everyday use. The downside is that the key sits on a connected device, so malware, a stolen phone or a fake app can reach it. Hot is for the coins you move.',
+    },
+    {
+      title: 'Cold wallets',
+      art: 'coldDevice',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'A **cold wallet** keeps the key away from the internet, usually on a small device called a [[hardware wallet|hardware-wallet]]. It signs payments inside itself, and you confirm each one on its own screen. The key never leaves it.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as signing a paper inside a locked room and passing out only the signed page. Where it stops matching: a hardware wallet can be lost or broken, so its recovery phrase still matters.',
+      },
+    },
+    {
+      title: 'Which wallet for which job?',
+      quiz: {
+        format: 'match',
+        question: 'Match each job to the wallet that fits it.',
+        pairs: [
+          { term: 'Coins you will not touch for years', meaning: 'Cold wallet' },
+          { term: 'A little for everyday payments', meaning: 'Hot wallet' },
+          { term: 'Coins you trade on an exchange', meaning: 'Custodial account' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Match the wallet to the job: cold for keeping, hot for spending, an exchange for trading.',
+      },
+    },
+    {
+      title: 'Lena: a long-term holder',
+      quiz: {
+        art: 'lena',
+        question:
+          'Lena adds to her bitcoin each month and means to hold it for years. She rarely looks at it. What fits her best?',
+        options: [
+          'Leave it all on an exchange and never think about it',
+          'A hardware wallet, with the recovery phrase written on paper',
+          'A hot wallet, with the phrase saved as a photo',
+        ],
+        correct: 1,
+        explain:
+          'She moves it rarely, so safe keeping matters more than speed. Cold storage with a paper backup keeps the key offline.',
+      },
+    },
+    {
+      title: 'Zoe: trades every week',
+      quiz: {
+        art: 'zoe',
+        question:
+          'Zoe trades on an exchange every week and needs fast access. What fits her best for the money she trades?',
+        options: [
+          'A hardware wallet she plugs in for every trade',
+          'An exchange account holding only what she trades',
+          'A hardware wallet left in a drawer',
+        ],
+        correct: 1,
+        explain:
+          'She needs speed, and her trading happens on the exchange. She keeps there only what she trades, and the rest elsewhere.',
+      },
+    },
+    {
+      title: 'A purse and a safe',
+      art: 'purseSafe',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Many people use both. A small hot wallet is a purse: a little cash for today. A cold wallet is the safe at home: the rest, for later. If the purse is lost, you lose a little. A simple habit: keep in the purse only what you can afford to lose.',
+    },
+  ],
+  // Your call, after the card on the missing reset button: the honest answer is the praised one
+  moment: {
+    art: 'noReset',
+    context:
+      'Two people forgot their login. One has an exchange account. The other has a non-custodial wallet and never saved a backup.',
+    question: 'Which of them can get back in with a reset?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: ['Both: support fixes it', 'Only the exchange user', 'Only the non-custodial user'],
+    correct: 1,
+    explain:
+      'An exchange holds the key, so it can reset your login. In a non-custodial wallet nobody else has the key, so without a backup there is nothing to reset.',
+  },
+  checks: [
+    {
+      question:
+        'Someone from “wallet support” writes: “Verify your wallet. Send your 12 words.” Their message has a logo and a badge. What do you do?',
+      // A warning, not a punishment: the only place a guide looks worried
+      presenter: { who: 'tock', mood: 'worried' },
+      options: [
+        'Send them, it looks official',
+        'Send them only if the badge looks real',
+        'Never share them: no real support asks',
+      ],
+      correct: 2,
+      explain:
+        'The words rebuild your keys. Whoever has them controls the coins. Logos and badges are easy to fake, and real support never asks.',
+    },
+  ],
+  notePrompt: 'Which wallet would you use for coins you plan to keep for years, and why?',
+  canDo: [],
+  recap: {
+    title: 'Wallets and keys',
+    points: [
+      { text: 'A wallet holds keys, not coins.' },
+      { text: 'Custodial: a company holds the key. Non-custodial: you do.' },
+      { text: 'Your recovery phrase rebuilds your keys: paper, offline, never shared.' },
+      { text: 'Hot for spending, cold for keeping.' },
+    ],
+    highlight: {
+      text: 'You can now say where your crypto really lives, what custodial and non-custodial mean, how to keep a recovery phrase safe, and choose a wallet for a job. Next up: why sending crypto costs a fee.',
+    },
+  },
+  access: FREE,
+};
+
 export const LESSONS: readonly Lesson[] = [
   lesson01,
   lessonOwnership,
@@ -2033,6 +2360,7 @@ export const LESSONS: readonly Lesson[] = [
   lesson04,
   lessonCoins,
   lessonStablecoins,
+  lessonWallets,
 ];
 
 export function getLesson(id: LessonId): Lesson {

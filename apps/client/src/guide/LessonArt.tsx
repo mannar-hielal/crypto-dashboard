@@ -10,19 +10,37 @@
 
 import type { JSX } from 'react';
 import {
+  Bank,
+  Camera,
   Certificate,
   Clock,
+  Cloud,
   Coins,
+  Detective,
+  DeviceMobile,
+  EnvelopeSimple,
+  Eye,
   GameController,
-  HardDrives,
   HandPalm,
+  Handbag,
+  HardDrives,
+  Key,
   ListChecks,
+  Lock,
+  LockKey,
   MagnifyingGlass,
+  Mailbox,
   Money,
   Note,
+  PencilSimple,
+  Prohibit,
   Storefront,
   Ticket,
+  Tray,
+  Usb,
   Vault,
+  Waves,
+  WifiHigh,
 } from '@phosphor-icons/react';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import lenaUrl from '@/assets/illustrations/open-peeps/lena.svg';
@@ -1379,6 +1397,389 @@ function TooSweet() {
   );
 }
 
+// ─── Chapter 2, Lesson 7 (owner's visual Q&A 2026-11-22): wallets, keys and who holds them ───
+// One metaphor: the mailbox and its key (Lesson 2). Flat shapes, no faces for Mira and Sam; hot is
+// amber with signal bars and an "online" tag, cold is purple with a padlock and an "offline" tag
+// (the tags carry the meaning, never colour alone). The hardware wallet is generic, with no maker's
+// shape, name or logo: no licence covers a real one (owner 2026-11-22).
+
+/** A small rounded tag: "online", "offline", "hot", "cold" */
+function Tag({
+  x,
+  y,
+  w,
+  cool,
+  children,
+}: {
+  x: number;
+  y: number;
+  w: number;
+  cool?: boolean;
+  children: string;
+}) {
+  return (
+    <>
+      <rect
+        x={x}
+        y={y}
+        width={w}
+        height="18"
+        rx="9"
+        className={cool ? styles.coolFill : styles.amberFill}
+      />
+      <text
+        x={x + w / 2}
+        y={y + 13}
+        textAnchor="middle"
+        className={cool ? styles.badgeText : styles.tagText}
+      >
+        {children}
+      </text>
+    </>
+  );
+}
+
+/** The cold open: a wall of mailboxes and one key */
+function MailboxWall() {
+  return (
+    <>
+      <Mailbox weight={DUO} x={100} y={64} size={44} className={styles.muted} />
+      <Mailbox weight={DUO} x={156} y={64} size={44} className={styles.white} />
+      <Mailbox weight={DUO} x={212} y={64} size={44} className={styles.muted} />
+      <Key weight={DUO} x={160} y={14} size={40} className={styles.amber} />
+      <text x="178" y="130" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        one key opens one mailbox
+      </text>
+    </>
+  );
+}
+
+/** A wallet is a key ring: the mailboxes stay in the building */
+function KeyRing() {
+  return (
+    <>
+      <circle cx="122" cy="62" r="22" className={`${styles.stroke} ${styles.amber}`} />
+      <Key weight={DUO} x={100} y={44} size={36} className={styles.amber} />
+      <Key weight={DUO} x={120} y={64} size={30} className={styles.amber} />
+      <text x="122" y="30" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        wallet = key ring
+      </text>
+      <PathArrow
+        points={[
+          [150, 70],
+          [190, 70],
+        ]}
+        className={styles.muted}
+      />
+      <Mailbox weight={DUO} x={196} y={50} size={32} className={styles.muted} />
+      <Mailbox weight={DUO} x={232} y={50} size={32} className={styles.white} />
+      <Mailbox weight={DUO} x={268} y={50} size={32} className={styles.muted} />
+      <text x="232" y="112" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        the coins stay on the blockchain
+      </text>
+    </>
+  );
+}
+
+/** Address: safe to share. Private key: keep it secret */
+function SlotAndKey() {
+  return (
+    <>
+      <rect x="96" y="30" width="96" height="90" rx="8" className={styles.panel} />
+      <Mailbox weight={DUO} x={122} y={40} size={44} className={styles.up} />
+      <text x="144" y="92" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        address
+      </text>
+      <text x="144" y="108" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        safe to share
+      </text>
+      <rect x="208" y="30" width="96" height="90" rx="8" className={styles.panel} />
+      <Key weight={DUO} x={234} y={40} size={44} className={styles.amber} />
+      <text x="256" y="92" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        private key
+      </text>
+      <text x="256" y="108" textAnchor="middle" className={`${styles.small} ${styles.down}`}>
+        keep it secret
+      </text>
+    </>
+  );
+}
+
+/** A wallet's three jobs */
+function WalletJobs() {
+  const jobs = [
+    { x: 100, label: 'see', Icon: Eye },
+    { x: 170, label: 'receive', Icon: Tray },
+    { x: 240, label: 'sign', Icon: PencilSimple },
+  ] as const;
+  return (
+    <>
+      {jobs.map(({ x, label, Icon }) => (
+        <g key={label}>
+          <rect x={x} y={34} width="64" height="76" rx="8" className={styles.panel} />
+          <Icon weight={DUO} x={x + 12} y={44} size={40} className={styles.white} />
+          <text
+            x={x + 32}
+            y={102}
+            textAnchor="middle"
+            className={`${styles.chipText} ${styles.white}`}
+          >
+            {label}
+          </text>
+        </g>
+      ))}
+    </>
+  );
+}
+
+/** Sam can see the address and what it holds, but can only look */
+function SamGlass() {
+  return (
+    <>
+      <Detective weight={DUO} x={92} y={34} size={52} className={styles.muted} />
+      <text x="118" y="104" textAnchor="middle" className={`${styles.small} ${styles.muted}`}>
+        Sam
+      </text>
+      <rect x="170" y="28" width="120" height="84" rx="8" className={styles.panel} />
+      <Mailbox weight={DUO} x={182} y={44} size={44} className={styles.white} />
+      <text x="254" y="66" textAnchor="middle" className={`${styles.bigNumber} ${styles.amber}`}>
+        2 BTC
+      </text>
+      <Lock weight={DUO} x={240} y={72} size={26} className={styles.down} />
+      <text x="230" y="128" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        he can look, not spend
+      </text>
+    </>
+  );
+}
+
+/** The phone is gone; the coins are still there, out of reach */
+function PhoneSea() {
+  return (
+    <>
+      <g transform="rotate(-25 116 70)">
+        <DeviceMobile weight={DUO} x={96} y={36} size={44} className={styles.white} />
+      </g>
+      <Waves weight={DUO} x={84} y={86} size={64} className={styles.coolText} />
+      <Waves weight={DUO} x={132} y={86} size={64} className={styles.coolText} />
+      <text x="124" y="30" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        key + phone
+      </text>
+      <PathArrow
+        points={[
+          [176, 70],
+          [206, 70],
+        ]}
+        className={styles.muted}
+      />
+      <Mailbox weight={DUO} x={214} y={44} size={48} className={styles.amber} />
+      <text x="254" y="108" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        2 BTC still here
+      </text>
+      <text x="254" y="122" textAnchor="middle" className={`${styles.small} ${styles.down}`}>
+        no key to spend them
+      </text>
+    </>
+  );
+}
+
+/** Custodial: the company holds the key and does the signing */
+function BankHolds() {
+  return (
+    <>
+      <Bank weight={DUO} x={96} y={34} size={64} className={styles.white} />
+      <Key weight={DUO} x={150} y={36} size={34} className={styles.amber} />
+      <text x="164" y="116" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        the company holds the key
+      </text>
+      <PathArrow
+        points={[
+          [194, 66],
+          [226, 66],
+        ]}
+        className={styles.muted}
+      />
+      <text x="266" y="62" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        you ask
+      </text>
+      <text x="266" y="76" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        it to sign
+      </text>
+    </>
+  );
+}
+
+/** The catch: a custodial company can freeze withdrawals */
+function LockedCounter() {
+  return (
+    <>
+      <Bank weight={DUO} x={100} y={32} size={72} className={styles.white} />
+      <Key weight={DUO} x={150} y={34} size={34} className={styles.amber} />
+      <Lock weight={DUO} x={184} y={54} size={40} className={styles.down} />
+      <text x="170" y="116" textAnchor="middle" className={`${styles.chipText} ${styles.down}`}>
+        withdrawals frozen
+      </text>
+      <text x="170" y="134" textAnchor="middle" className={`${styles.small} ${styles.muted}`}>
+        only as safe as the company
+      </text>
+    </>
+  );
+}
+
+/** Non-custodial: you hold the key */
+function OwnKeys() {
+  return (
+    <>
+      <circle cx="158" cy="68" r="26" className={`${styles.stroke} ${styles.amber}`} />
+      <Key weight={DUO} x={136} y={46} size={44} className={styles.amber} />
+      <text x="214" y="64" className={`${styles.chipText} ${styles.white}`}>
+        you hold
+      </text>
+      <text x="214" y="80" className={`${styles.chipText} ${styles.white}`}>
+        the key
+      </text>
+    </>
+  );
+}
+
+/** There is no reset button for a lost key */
+function NoReset() {
+  return (
+    <>
+      <rect x="120" y="50" width="100" height="40" rx="20" className={styles.panel} />
+      <text x="170" y="76" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Reset
+      </text>
+      <Prohibit weight={DUO} x={134} y={36} size={72} className={styles.down} />
+      <text x="170" y="124" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        no reset button for a key
+      </text>
+    </>
+  );
+}
+
+/** A recovery phrase: twelve numbered slots, never real words */
+function PhraseCard() {
+  const cells = Array.from({ length: 12 }, (_, i) => i);
+  return (
+    <>
+      <rect x="92" y="18" width="212" height="112" rx="8" className={styles.note} />
+      {cells.map((i) => {
+        const x = 100 + (i % 4) * 51;
+        const y = 28 + Math.floor(i / 4) * 32;
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width="46" height="26" rx="5" className={styles.panel} />
+            <text x={x + 5} y={y + 17} className={`${styles.small} ${styles.muted}`}>
+              {i + 1}
+            </text>
+            <line
+              x1={x + 16}
+              x2={x + 40}
+              y1={y + 13}
+              y2={y + 13}
+              className={`${styles.stroke} ${styles.white}`}
+            />
+          </g>
+        );
+      })}
+      <text x="198" y="146" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        12 words, in order
+      </text>
+    </>
+  );
+}
+
+/** Never a photo, a cloud or a website */
+function PhraseNever() {
+  const items = [
+    { x: 100, label: 'photo', Icon: Camera },
+    { x: 170, label: 'cloud', Icon: Cloud },
+    { x: 240, label: 'email', Icon: EnvelopeSimple },
+  ] as const;
+  return (
+    <>
+      {items.map(({ x, label, Icon }) => (
+        <g key={label}>
+          <Icon weight={DUO} x={x + 8} y={36} size={44} className={styles.muted} />
+          <Prohibit weight={DUO} x={x} y={28} size={60} className={styles.down} />
+          <text
+            x={x + 30}
+            y={110}
+            textAnchor="middle"
+            className={`${styles.chipText} ${styles.white}`}
+          >
+            {label}
+          </text>
+        </g>
+      ))}
+      <text x="200" y="136" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        paper, offline, and no one else
+      </text>
+    </>
+  );
+}
+
+/** A hot wallet: a phone that is online */
+function HotPhone() {
+  return (
+    <>
+      <DeviceMobile weight={DUO} x={110} y={30} size={72} className={styles.white} />
+      <Key weight={DUO} x={132} y={52} size={28} className={styles.amber} />
+      <WifiHigh weight={DUO} x={192} y={42} size={44} className={styles.amber} />
+      <Tag x={190} y={92} w={64}>
+        online
+      </Tag>
+      <text x="204" y="128" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        handy, but the key is online
+      </text>
+    </>
+  );
+}
+
+/** A cold wallet: a generic hardware wallet, no maker's shape or logo */
+function ColdDevice() {
+  return (
+    <>
+      <rect x="116" y="38" width="76" height="52" rx="10" className={styles.panel} />
+      <rect x="126" y="46" width="44" height="26" rx="4" className={styles.note} />
+      <path d="M140 60 l6 6 l12 -12" className={`${styles.stroke} ${styles.up}`} />
+      <circle cx="178" cy="54" r="4" className={styles.coolFill} />
+      <circle cx="178" cy="68" r="4" className={styles.coolFill} />
+      <Usb weight={DUO} x={192} y={50} size={26} className={styles.muted} />
+      <LockKey weight={DUO} x={232} y={36} size={44} className={styles.coolText} />
+      <Tag x={218} y={88} w={72} cool>
+        offline
+      </Tag>
+      <text x="204" y="128" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        it signs inside: the key never leaves
+      </text>
+    </>
+  );
+}
+
+/** A purse for today, a safe for later */
+function PurseSafe() {
+  return (
+    <>
+      <Handbag weight={DUO} x={104} y={32} size={56} className={styles.amber} />
+      <Tag x={104} y={92} w={56}>
+        hot
+      </Tag>
+      <text x="132" y="126" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        a little, for today
+      </text>
+      <Vault weight={DUO} x={200} y={28} size={64} className={styles.coolText} />
+      <Tag x={204} y={92} w={56} cool>
+        cold
+      </Tag>
+      <text x="232" y="126" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        the rest, for later
+      </text>
+    </>
+  );
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
   friends: Friends,
   lena: LenaAlone,
@@ -1420,6 +1821,21 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   parkProfit: ParkProfit,
   pegDip: PegDip,
   tooSweet: TooSweet,
+  mailboxWall: MailboxWall,
+  keyRing: KeyRing,
+  slotAndKey: SlotAndKey,
+  walletJobs: WalletJobs,
+  samGlass: SamGlass,
+  phoneSea: PhoneSea,
+  bankHolds: BankHolds,
+  lockedCounter: LockedCounter,
+  ownKeys: OwnKeys,
+  noReset: NoReset,
+  phraseCard: PhraseCard,
+  phraseNever: PhraseNever,
+  hotPhone: HotPhone,
+  coldDevice: ColdDevice,
+  purseSafe: PurseSafe,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */

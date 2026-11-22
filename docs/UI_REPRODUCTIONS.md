@@ -402,6 +402,31 @@ real feed for the practice buy.
    → **What stands behind it, and who checks** (the praised answer). Then the summary, the journal line and the rating.
 7. Phone (390 px): no sideways scroll; the counters and vaults sit inside the picture box.
 
+### Learning path — Chapter 2, Lesson 7 "Your wallet, your keys: who holds them?" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 6 (a new account, chapter 1 passed, Lessons 5 and 6 done: Lesson 7 opens after them). No practice
+trade: nothing here starts a tour.
+
+1. Open the map → Expect Lesson 7 next after Lesson 6, and "Why sending crypto costs a fee" still a locked "coming soon" stop.
+   [learn.card.start] it → Expect screen 1 of 25: a wall of mailboxes with one key, and the guides' four lines.
+2. **A wallet holds keys, not coins** (a key ring beside mailboxes; the word _wallet_ a tappable term; Berwyn in glasses: "Think of it
+   as a key ring…"), **Address and private key** (an address panel and a private key panel), **Who is who?** (Match boxes, four pairs).
+3. **What a wallet is for** (see, receive, sign), **Mira and Sneaky Sam** (Sam behind glass: 2 BTC and a lock), **The phone in the sea**.
+4. **Custodial** (a bank holding the key; analogy "a bank account"), **The trade-off** (a locked counter: withdrawals frozen; FTX),
+   **Non-custodial**, **Control, privacy, no reset button**. Then **Your call** (two people forgot their login) → **Only the exchange
+   user**.
+5. **The recovery phrase** (twelve numbered slots, no words), **Three rules for the phrase** (a camera, a cloud and an envelope crossed
+   out; the guide looks worried), **Where would you keep it?** (Pick, six tiles, pick three: the paper in a locked drawer, the metal in
+   a safe, a second paper copy in a different safe place), **Setting up safely, in order** (Drag and drop, five steps).
+6. **Hot wallets** (a phone with signal bars, tagged _online_), **Cold wallets** (a generic hardware wallet with a screen and two
+   buttons, tagged _offline_; a tappable _hardware wallet_ term), **Which wallet for which job?** (Match boxes, three pairs), **Lena**
+   → **A hardware wallet, with the recovery phrase written on paper**, **Zoe** → **An exchange account holding only what she trades**,
+   **A purse and a safe**.
+7. The phrase check (a "wallet support" asking for 12 words) → **Never share them: no real support asks**. Then the summary, the
+   journal line and the rating.
+8. After three wrong tries on any question the right answer is shown. Phone (390 px): no sideways scroll; the pictures and tags sit
+   inside the picture box.
+
 ### Learning path — the learning map (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`. The map is

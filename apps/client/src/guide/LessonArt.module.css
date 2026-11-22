@@ -371,3 +371,25 @@
   font-size: 11px;
   font-weight: 700;
 }
+
+/* ─── Chapter 2, Lesson 7 (owner's visual Q&A 2026-11-22): wallets and keys ───── */
+
+/* Cold: purple (color.purpleDark), always beside a padlock and an "offline" tag */
+.coolText {
+  color: var(--color-brand-purple-dark); /* color.purpleDark */
+}
+
+.coolFill {
+  fill: var(--color-brand-purple-dark); /* color.purpleDark */
+}
+
+/* Hot: amber (color.amber), always beside signal bars and an "online" tag */
+.amberFill {
+  fill: var(--color-brand-amber); /* color.amber */
+}
+
+.tagText {
+  fill: var(--color-bg-page); /* bg.page, dark text on the amber tag */
+  font-size: 11px;
+  font-weight: 700;
+}
