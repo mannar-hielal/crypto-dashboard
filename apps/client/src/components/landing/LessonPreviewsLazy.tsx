@@ -8,12 +8,26 @@ type Previews = ComponentType<{ onReady?: () => void }>;
 /** What the error boundary renders when the previews fail: it closes the holder's gap and offers a reload */
 function FailedNote({ onFail }: { onFail: () => void }) {
   useEffect(onFail, [onFail]);
+  const [reloading, setReloading] = useState(false);
+  // After a deploy the old service worker can serve the old page, and its removed chunk again: ask it
+  // to update first, but never wait more than a moment (a stalled network must not leave a dead button)
+  const reload = () => {
+    setReloading(true);
+    const update =
+      'serviceWorker' in navigator
+        ? navigator.serviceWorker.getRegistration().then((r) => r?.update())
+        : Promise.resolve();
+    Promise.race([
+      update.catch(() => undefined),
+      new Promise((done) => setTimeout(done, 2500)),
+    ]).then(() => window.location.reload());
+  };
   return (
-    // role="status": a screen-reader user hears that the previews did not load, wherever they are
-    <div role="status" className={styles.failed}>
+    // role="alert": a one-off failure a screen-reader user should hear when it appears
+    <div role="alert" className={styles.failed}>
       <span>The lesson previews did not load.</span>
-      <button type="button" className={styles.retry} onClick={() => window.location.reload()}>
-        Reload the page
+      <button type="button" className={styles.retry} disabled={reloading} onClick={reload}>
+        {reloading ? 'Reloading…' : 'Reload the page'}
       </button>
     </div>
   );

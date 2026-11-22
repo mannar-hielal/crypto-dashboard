@@ -33,6 +33,7 @@
 /* Phones: a row you swipe, each card snapping into view (the region scrolls, the list lays out) */
 .scroller {
   overflow-x: auto;
+  scroll-padding-inline: 4px; /* the snap stops keep the padding that shows shadows and rings */
   padding: 4px 4px 12px; /* room for shadows and focus rings inside the clipping box */
   scroll-snap-type: x mandatory;
 }

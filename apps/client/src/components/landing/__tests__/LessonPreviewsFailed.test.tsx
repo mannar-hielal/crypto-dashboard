@@ -17,7 +17,7 @@ describe('LessonPreviewsLazy when the chunk fails', () => {
     const reload = await screen.findByRole('button', { name: 'Reload the page' });
     expect(reload).not.toBeNull();
     // Announced to assistive technology
-    expect(screen.getByRole('status').textContent).toMatch(/did not load/);
+    expect(screen.getByRole('alert').textContent).toMatch(/did not load/);
     // The holder dropped the height it had reserved
     await waitFor(() => expect(container.firstElementChild?.className).toMatch(/holderSettled/));
   });

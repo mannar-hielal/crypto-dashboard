@@ -43,7 +43,12 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
       className={styles.scroller}
       {...(scrolls && { role: 'region', 'aria-label': 'A peek at the lessons', tabIndex: 0 })}
     >
-      <ul className={styles.row} {...(!scrolls && { 'aria-label': 'A peek at the lessons' })}>
+      <ul
+        className={styles.row}
+        // list-style: none drops list semantics in Safari: say it outright
+        role="list"
+        {...(!scrolls && { 'aria-label': 'A peek at the lessons' })}
+      >
         {LESSON_PREVIEWS.map((l) => (
           <li key={l.number} className={styles.card}>
             <div className={styles.art}>
