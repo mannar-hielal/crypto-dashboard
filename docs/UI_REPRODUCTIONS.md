@@ -427,6 +427,30 @@ trade: nothing here starts a tour.
 8. After three wrong tries on any question the right answer is shown. Phone (390 px): no sideways scroll; the pictures and tags sit
    inside the picture box.
 
+### Learning path — Chapter 2, Lesson 8 "Why sending crypto costs a fee" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 7 (a new account, chapter 1 passed, Lessons 5 to 7 done: Lesson 8 opens after them). No practice trade.
+
+1. Open the map → Expect Lesson 8 next after Lesson 7, and "Trading without a middleman: DApps and pools" still a locked "coming soon" stop.
+   [learn.card.start] it → Expect screen 1 of 20, **What you will learn**: a toll booth ("Fee", "paid in the coin") and four numbered
+   lines, no guide.
+2. **Sending has a price** (coins to a mailbox with a "+ fee" tag; the words _network fee_ a tappable term), **A block is a bus** (a bus
+   with six seats, five taken; Berwyn in glasses: "Think of it as a bus with limited seats…"), **Who picks the passengers?** (payments
+   in line, each with a "high", "mid" or "low" fee; the words _validator_ and _miners_ tappable), **From send to confirmed** (Drag and
+   drop, four steps).
+3. **Why a fee exists** (the toll booth again), **Why the fee moves** (five rising bars, "quiet" to "busy"), **Who is who?** (Match boxes,
+   four pairs).
+4. **A real fee spike** (a line: early April ≈ $5, 20 Apr ≈ $128, 21 Apr ≈ $35, "drawn from reported averages"), **Is it worth it?**
+   (Pulin in glasses, four steps: 5 ÷ 200 = 0.025, 0.025 × 100 = 2.5%, 128 ÷ 200 = 0.64, 0.64 × 100 = 64%).
+5. **Cheap chains and pricey chains** (two panels), **A plain send or a swap** (a plain send beside a swap), **What makes a fee higher?**
+   (Pick, six tiles, pick three: many people sending, a swap or complex action, asking to be faster), **Busy days** → **Seats in a block are
+   limited, so people offer more to get one**.
+6. **Plan before you send** (a $40 send with a $12 fee and a magnifying glass), then **Your call** → **Check whether waiting, or a cheaper
+   chain, would cost less**. **Two different fees**, **Which costs the most?** → **A swap, sent in a busy hour**. Then the
+   summary, the journal line and the rating.
+7. After three wrong tries on any question the right answer is shown. Phone (390 px): no sideways scroll; the pictures sit inside
+   the picture box.
+
 ### Learning path — the learning map (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`. The map is

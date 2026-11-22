@@ -77,6 +77,7 @@ export const LEARN_ITEM_IDS = [
   'lesson-coins',
   'lesson-stablecoins',
   'lesson-wallets',
+  'lesson-fees',
   // A chapter's checkpoint on the learning path: passed, it opens the next chapter
   'checkpoint-ch1',
 ] as const;
@@ -115,6 +116,7 @@ export const LESSON_FIRST_STEPS = {
   'lesson-coins': 61,
   'lesson-stablecoins': 61,
   'lesson-wallets': 61,
+  'lesson-fees': 61,
 } as const;
 
 /**

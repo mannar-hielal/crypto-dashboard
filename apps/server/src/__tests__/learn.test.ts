@@ -604,6 +604,7 @@ describe('/api/learn/progress', () => {
       'lesson-coins',
       'lesson-stablecoins',
       'lesson-wallets',
+      'lesson-fees',
     ]) {
       const url = `/api/learn/progress/${id}`;
       expect((await put(url, { status: 'started', step: 21 })).statusCode, id).toBe(409);

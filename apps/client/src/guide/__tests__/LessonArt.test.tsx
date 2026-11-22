@@ -61,6 +61,14 @@ const ARTS: LessonArtId[] = [
   'hotPhone',
   'coldDevice',
   'purseSafe',
+  'sendFee',
+  'busBlock',
+  'waitingLine',
+  'feeBids',
+  'feeSpike',
+  'chainsCompare',
+  'simpleComplex',
+  'feeCheck',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -104,6 +112,14 @@ const TELLING: LessonArtId[] = [
   'hotPhone',
   'coldDevice',
   'purseSafe',
+  'sendFee',
+  'busBlock',
+  'waitingLine',
+  'feeBids',
+  'feeSpike',
+  'chainsCompare',
+  'simpleComplex',
+  'feeCheck',
 ];
 
 describe('the guides', () => {
@@ -233,6 +249,19 @@ describe('LessonArt', () => {
     // The recovery phrase picture never shows real words: twelve numbers, no letters
     const phrase = render(<LessonArt id="phraseCard" />).container.textContent ?? '';
     expect(phrase.replace('12 words, in order', '')).toMatch(/^123456789101112$/);
+    // Chapter 2, Lesson 8: the fee scenes carry their cards
+    expect(words('sendFee')).toMatch(/\+ fee.*a small fee rides along/);
+    expect(words('busBlock')).toMatch(/a block.*1 seat left.*limited seats/);
+    expect(words('waitingLine')).toMatch(/high.*mid.*low.*low.*higher fees board first/);
+    expect(words('feeBids')).toMatch(/quiet.*busy.*the fee people offer/);
+    expect(words('feeSpike')).toMatch(
+      /20 Apr ≈ \$128.*early April ≈ \$5.*21 Apr ≈ \$35.*drawn from reported averages/
+    );
+    expect(words('chainsCompare')).toMatch(
+      /a cheap chain.*often cents.*a pricier chain.*dollars when busy/
+    );
+    expect(words('simpleComplex')).toMatch(/a plain send.*lower fee.*a swap.*higher fee/);
+    expect(words('feeCheck')).toMatch(/\$40.*\$12.*look at the fee before you confirm/);
     const badges = render(<LessonArt id="tickerBadges" />).container.textContent ?? '';
     expect(badges).toMatch(/BTC.*ETH.*SOL.*BNB.*XRP.*ADA.*AVAX.*DOGE.*LINK.*a token/);
     // The chain: each block's prev is the fingerprint of the block before it

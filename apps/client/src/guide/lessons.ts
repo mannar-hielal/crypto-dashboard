@@ -28,6 +28,7 @@ export const LESSON_IDS = [
   'lesson-coins',
   'lesson-stablecoins',
   'lesson-wallets',
+  'lesson-fees',
 ] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
@@ -106,7 +107,16 @@ export type LessonArtId =
   | 'phraseNever'
   | 'hotPhone'
   | 'coldDevice'
-  | 'purseSafe';
+  | 'purseSafe'
+  // Chapter 2, Lesson 8 (2026-11-22): a block is a bus, the fee is the offer for a seat
+  | 'sendFee'
+  | 'busBlock'
+  | 'waitingLine'
+  | 'feeBids'
+  | 'feeSpike'
+  | 'chainsCompare'
+  | 'simpleComplex'
+  | 'feeCheck';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -189,6 +199,18 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
     'A small hardware wallet with a screen and two buttons, tagged offline: it signs inside, and the key never leaves.',
   purseSafe:
     'A purse tagged hot for a little today, and a safe tagged cold for the rest, for later.',
+  sendFee: 'Coins travel to a mailbox, with a small fee tag riding along.',
+  busBlock: 'A bus with six seats, five taken and one left: a block has limited seats.',
+  waitingLine:
+    'Four payments wait in line, each showing the fee it offers; the higher fees board the next bus first.',
+  feeBids:
+    'Five bars rising from quiet to busy: the busier the network, the higher the fee people offer.',
+  feeSpike:
+    'A line through three reported averages, not to scale: bitcoin’s average fee, about $5 in early April 2024, about $128 on 20 April, about $35 on 21 April.',
+  chainsCompare: 'Two panels: a cheap chain, often cents, and a pricier chain, dollars when busy.',
+  simpleComplex: 'A plain send is less work and a lower fee; a swap is more work and a higher fee.',
+  feeCheck:
+    'A send of $40 showing a $12 network fee beside a magnifying glass: look before you confirm.',
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -418,6 +440,9 @@ export type TileIcon =
   | 'safe'
   | 'mail'
   | 'pin'
+  // Lesson 8 (2026-11-22): what makes a fee higher
+  | 'gear'
+  | 'moon'
   | 'cloud';
 
 /** A day's close on the chart, where a drawn line should start or end */
@@ -2379,6 +2404,234 @@ const lessonWallets: Lesson = {
   access: FREE,
 };
 
+// ─── Lesson 8 — Why sending crypto costs a fee ───────────────────────────────
+// Chapter 2, one PR a lesson (owner 2026-11-19). Built 2026-11-22 under the owner's goal ("lesson 8
+// implemented, reviewed, pushed to develop"): outline and draft in the git-ignored notes (files 23
+// and 24), fact checked by a technical-writer agent, to be read by the owner. One metaphor, carried
+// from Lesson 5's toll booth: a block is a bus with limited seats, and the fee is the offer for a
+// seat. Our own example: bitcoin's average fee in April 2024, a few dollars early in the month (The Block:
+// the 7-day average was $4.11 earlier in April; we say about $5), about $128
+// on 20 April (halving day and the launch of Runes) and about $35 on 21 April, from The Block and
+// YCharts reports (the sources differ by cents with the day's time base; the picture says "drawn
+// from reported averages"). The $200 payment is ours. No practice trade: the paper account has no
+// network fee, and card 15 says so.
+const lessonFees: Lesson = {
+  id: 'lesson-fees',
+  number: 8,
+  title: 'Why sending crypto costs a fee',
+  stage: 'Your crypto toolbox',
+  minutes: 8,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // Your call follows "Plan before you send" (index 14)
+  momentAfter: 14,
+  cards: [
+    {
+      title: 'What you will learn',
+      art: 'tollBooth',
+      preview: [
+        'What happens between “send” and “confirmed”',
+        'Why a fee exists, and why it moves',
+        'How a real fee spike hit a small payment',
+        'How to check the cost before you send',
+      ],
+    },
+    {
+      title: 'Sending has a price',
+      art: 'sendFee',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Sending crypto is not free. Each send carries a small [[network fee|network-fee]]. The fee itself does not go to us or to your wallet app. It goes toward the people and computers that keep the network running, and some chains burn part of it. A wallet or exchange may charge its own fee on top. In Lesson 5 you met the toll booth: this is that toll.',
+    },
+    {
+      title: 'A block is a bus',
+      art: 'busBlock',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Payments are not confirmed one by one. They travel in groups called blocks, and each block has room for only so many.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a bus with limited seats. A payment needs a seat, and the fee is what it offers for one. Where it stops matching: the bus leaves on the network’s schedule, so a payment may wait for the next one.',
+      },
+    },
+    {
+      title: 'Who picks the passengers?',
+      art: 'waitingLine',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Sent payments wait in line. A [[validator]] picks payments from the line and adds them to the next block. On Bitcoin, as Lesson 2 showed, [[miners|mining]] do the same job, while nodes check the payments. Payments that offer higher fees usually board first.',
+    },
+    {
+      title: 'From send to confirmed',
+      quiz: {
+        format: 'order',
+        question: 'Put the steps of a payment, from send to confirmed, in order.',
+        steps: [
+          'You send a payment',
+          'It waits in line with others',
+          'A validator picks it for the next block',
+          'The block joins the chain: confirmed',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'A payment counts as confirmed once its block is added to the chain. The fee decides how soon it is picked.',
+      },
+    },
+    {
+      title: 'Why a fee exists',
+      art: 'tollBooth',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Two reasons. First, it pays the people and computers who keep the network honest and running, as a toll pays for a road. Second, it stops abuse: if sending were free, anyone could flood the network with junk payments and push real ones out.',
+    },
+    {
+      title: 'Why the fee moves',
+      art: 'feeBids',
+      presenter: { who: 'tick', mood: 'frank', pose: 'point' },
+      text: 'There are only so many seats in a block, so when many people want one, they offer more. The fee is a price set by demand, not a fixed charge: quiet hours cost little, busy hours cost more. No company sets it.',
+    },
+    {
+      title: 'Who is who?',
+      quiz: {
+        format: 'match',
+        question: 'Match each word to what it means.',
+        pairs: [
+          { term: 'Block', meaning: 'A group of payments added to the chain together' },
+          { term: 'Validator', meaning: 'Picks waiting payments and adds the next block' },
+          { term: 'Network fee', meaning: 'What you offer for a seat in a block' },
+          { term: 'Confirmation', meaning: 'Your payment is in a block, so it counts' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'A fee buys a seat in a block, a validator fills the block, and a payment counts once its block is added.',
+      },
+    },
+    {
+      title: 'A real fee spike',
+      art: 'feeSpike',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'In early April 2024 the average fee to send bitcoin was a few dollars, about $5. On 20 April, halving day and the launch of Runes, a new way to make tokens on Bitcoin, it hit about $128. A day later it was about $35. Same network, same coin, a different price for a seat.',
+    },
+    {
+      title: 'Is it worth it?',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'You want to send $200. How much of it would the fee take?',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'A quiet day’s share', sum: '5 ÷ 200 = 0.025' },
+          { label: 'As a percent', sum: '0.025 × 100 = 2.5%' },
+          { label: 'The spike day’s share', sum: '128 ÷ 200 = 0.64' },
+          { label: 'As a percent', sum: '0.64 × 100 = 64%' },
+        ],
+        answer:
+          'On a quiet day the fee takes **2.5%** of the payment. On the spike day it took **64%**. The numbers are the rounded averages above. The same $200 can be fine to send one day and not worth sending the next.',
+      },
+    },
+    {
+      title: 'Cheap chains and pricey chains',
+      art: 'chainsCompare',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Fees depend on the chain too. Some chains are built to be cheap, often a few cents a send. Others cost dollars when busy. Cheap is not always better: chains also differ in how many people run them and how they are kept safe, so choose with your eyes open.',
+    },
+    {
+      title: 'A plain send or a swap',
+      art: 'simpleComplex',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'The fee also depends on the work. A plain send is one small step. A swap, or any action that runs a small program on the chain, does more work, so it costs more. Same network, same hour, a bigger fee.',
+    },
+    {
+      title: 'What makes a fee higher?',
+      quiz: {
+        format: 'pick',
+        question: 'What makes a fee higher? Pick three.',
+        tiles: [
+          { label: 'Many people sending at once', icon: 'people', right: true },
+          { label: 'A swap or other complex action', icon: 'gear', right: true },
+          { label: 'Asking to be confirmed faster', icon: 'lightning', right: true },
+          { label: 'Sending in a quiet hour', icon: 'moon', right: false },
+          { label: 'The amount you send', icon: 'coins', right: false },
+          { label: 'How long you held the coin', icon: 'calendar', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Fees follow demand and work: a busy network, a bigger job, or a higher offer for a seat. A quiet hour lowers them, and most chains charge for the work, not for how much you send.',
+      },
+    },
+    {
+      title: 'Busy days',
+      quiz: {
+        question: 'Why do fees rise on busy days?',
+        options: [
+          'The network adds a fixed surcharge every Friday',
+          'Validators charge more when the coin’s price falls',
+          'Seats in a block are limited, so people offer more to get one',
+          'Your wallet app quietly raises its own fee',
+        ],
+        correct: 2,
+        explain:
+          'Limited room and many senders mean the higher offers win the seats. Nobody sets the price by hand.',
+      },
+    },
+    {
+      title: 'Plan before you send',
+      art: 'feeCheck',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Before you confirm, look at the fee your wallet shows. If the network is busy, you can wait for a quieter time, or use a cheaper chain if both sides support it. Public fee trackers show today’s level. After a trade, subtract the fee before you call it profit: a $30 gain with a $4 fee leaves $26.',
+    },
+    {
+      title: 'Two different fees',
+      art: 'sendFee',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Here, practice orders pay a trading fee, shown as Commission in Order History. A real exchange charges it for matching your order; here it is simulated. A network fee is different: it is paid when crypto moves between wallets on a blockchain, and no practice trade has one.',
+    },
+    {
+      title: 'Which costs the most?',
+      quiz: {
+        question: 'Which of these will most likely cost the highest fee?',
+        options: [
+          'A plain send, in a quiet hour',
+          'A swap, sent in a busy hour',
+          'A plain send of a small amount, in a quiet hour',
+        ],
+        correct: 1,
+        explain:
+          'More work and more demand both push the fee up. A plain send in a quiet hour is the cheapest case, whatever the amount.',
+      },
+    },
+  ],
+  // Your call, after the planning card: the honest answer is the praised one
+  moment: {
+    art: 'feeCheck',
+    context:
+      'You want to send $40 of crypto to a friend. The wallet shows a $12 fee because the network is busy.',
+    question: 'What do you do first?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Confirm it: the fee is the fee',
+      'Check whether waiting, or a cheaper chain, would cost less',
+      'Ask your friend to pay the fee',
+    ],
+    correct: 1,
+    explain:
+      'A fee that big is a signal to look, not a rule. It moves with demand, so a quieter hour or another chain may cost far less.',
+  },
+  checks: [],
+  notePrompt: 'Which payment would you only send when the fee is low, and why?',
+  canDo: [],
+  recap: {
+    title: 'Network fees',
+    points: [
+      { text: 'A payment waits in line, then a validator puts it in a block.' },
+      { text: 'The fee pays for a seat in the block, and rises when many want one.' },
+      { text: 'A busy day can turn a $5 fee into $128 and swallow a small payment.' },
+      { text: 'Look at the fee before you confirm, and send when it is worth it.' },
+    ],
+    highlight: {
+      text: 'You can now say what happens between send and confirmed, why a fee exists and moves, and check the cost before you press confirm. Next up: trading without a middleman.',
+    },
+  },
+  access: FREE,
+};
+
 export const LESSONS: readonly Lesson[] = [
   lesson01,
   lessonOwnership,
@@ -2387,6 +2640,7 @@ export const LESSONS: readonly Lesson[] = [
   lessonCoins,
   lessonStablecoins,
   lessonWallets,
+  lessonFees,
 ];
 
 export function getLesson(id: LessonId): Lesson {

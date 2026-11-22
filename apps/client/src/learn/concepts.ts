@@ -48,6 +48,9 @@ export const CONCEPT_IDS = [
   'wallet',
   'recovery-phrase',
   'hardware-wallet',
+  // Chapter 2, Lesson 8 (2026-11-22)
+  'validator',
+  'network-fee',
 ] as const;
 
 export type ConceptId = (typeof CONCEPT_IDS)[number];
@@ -287,6 +290,20 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Hardware wallet',
     peek: 'A small device that keeps your key away from the internet and signs payments inside itself.',
     think: 'signing a paper in a locked room and passing out only the signed page.',
+    access: FREE,
+  },
+  {
+    id: 'validator',
+    term: 'Validator',
+    peek: 'A computer that picks waiting payments and adds them to the next block. On Bitcoin the same job is done by miners.',
+    think: 'the driver who picks the passengers for the next bus.',
+    access: FREE,
+  },
+  {
+    id: 'network-fee',
+    term: 'Network fee',
+    peek: 'A small fee paid when you send crypto, for a seat in the next block. It rises when many people send at once.',
+    think: 'the toll on a road, higher at rush hour.',
     access: FREE,
   },
 ];

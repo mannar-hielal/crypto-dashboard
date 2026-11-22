@@ -16,12 +16,14 @@ import {
   Coins,
   EnvelopeSimple,
   Eye,
+  Gear,
   ImageSquare,
   Leaf,
   Lightning,
   LinkSimple,
   ListChecks,
   MapPin,
+  Moon,
   Note,
   RoadHorizon,
   UsersThree,
@@ -54,6 +56,9 @@ const ICONS = {
   safe: Vault,
   mail: EnvelopeSimple,
   pin: MapPin,
+  // Lesson 8's fee makers (2026-11-22)
+  gear: Gear,
+  moon: Moon,
   cloud: Cloud,
 } satisfies Record<TileIcon, unknown>;
 
