@@ -7,7 +7,7 @@ import styles from './ShotShowcase.module.css';
 // Real captures of the running app (Playwright, 2026-11-22), a throwaway account, no personal data,
 // 1100 px wide WebP. Sizes are the images' own, so the page never jumps while they load.
 const IMAGES: Record<Shot['id'], { src: string; width: number; height: number }> = {
-  chart: { src: chartShot, width: 1100, height: 509 },
+  chart: { src: chartShot, width: 1100, height: 510 },
   desk: { src: deskShot, width: 1100, height: 657 },
   lesson: { src: lessonShot, width: 1100, height: 657 },
 };

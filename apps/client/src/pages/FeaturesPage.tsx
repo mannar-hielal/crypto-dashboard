@@ -221,7 +221,7 @@ export function FeaturesPage() {
             </p>
           </section>
 
-          <section className={shared.section} aria-label="Get started">
+          <section className={`${shared.section} ${styles.cta}`} aria-label="Get started">
             <CtaSection />
           </section>
         </div>

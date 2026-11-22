@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, within } from '@testing-library/react';
+import { render, screen, cleanup, within, fireEvent } from '@testing-library/react';
 import React from 'react';
 
 import {
@@ -251,5 +251,27 @@ describe('the lesson and chapter facts on the pages', () => {
     expect(answer).toContain(
       `${words[LESSONS.length - 1]} lessons in ${words[built - 1].toLowerCase()} chapters`
     );
+  });
+});
+
+describe('the ribbon and the table, accessibility (review 2026-11-22)', () => {
+  afterEach(cleanup);
+
+  it('should let a visitor pause the coin ticker, by keyboard or touch', () => {
+    render(React.createElement(CoinRibbon));
+    const pause = screen.getByRole('button', { name: 'Pause the coin ticker' });
+    expect(pause.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(pause);
+    expect(
+      screen.getByRole('button', { name: 'Play the coin ticker' }).getAttribute('aria-pressed')
+    ).toBe('true');
+  });
+
+  it('should name the table’s scroll region by its caption, once', () => {
+    render(React.createElement(ComparisonTable));
+    const region = screen.getByRole('region');
+    const caption = document.getElementById(region.getAttribute('aria-labelledby')!);
+    expect(caption?.tagName).toBe('CAPTION');
+    expect(region.getAttribute('aria-label')).toBeNull();
   });
 });

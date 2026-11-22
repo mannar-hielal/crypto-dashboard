@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Check, Minus, X } from 'lucide-react';
 
 import { GROUPS, SMALL_ON_PURPOSE, TABLE_NOTE, TABLE_ROWS, type Mark } from '@/lib/landingContent';
@@ -26,11 +27,12 @@ function Cell({ mark, us }: { mark: Mark; us?: boolean }) {
  * the feature column pinned.
  */
 export function ComparisonTable() {
+  const captionId = useId();
   return (
     <div className={styles.wrap}>
-      <div className={styles.scroller} tabIndex={0} role="region" aria-label="Comparison table">
+      <div className={styles.scroller} tabIndex={0} role="region" aria-labelledby={captionId}>
         <table className={styles.table}>
-          <caption className={styles.caption}>
+          <caption id={captionId} className={styles.caption}>
             What this app does, next to six kinds of practice tools
           </caption>
           <thead>

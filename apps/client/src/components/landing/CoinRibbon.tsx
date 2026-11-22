@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { COINS } from '@/lib/landingContent';
 import styles from './CoinRibbon.module.css';
@@ -31,8 +33,18 @@ function Coin({ symbol, name, twin }: { symbol: CoinSymbol; name: string; twin?:
  * stops and wraps into a still row, and the copy is dropped.
  */
 export function CoinRibbon() {
+  // WCAG 2.2.2: a loop that runs over five seconds needs a way to pause it, by keyboard and touch too
+  const [paused, setPaused] = useState(false);
   return (
-    <div className={styles.ribbon}>
+    <div className={`${styles.ribbon}${paused ? ` ${styles.paused}` : ''}`}>
+      <button
+        type="button"
+        className={styles.pause}
+        aria-pressed={paused}
+        onClick={() => setPaused((p) => !p)}
+      >
+        {paused ? 'Play the coin ticker' : 'Pause the coin ticker'}
+      </button>
       <ul className={styles.track} aria-label="The nine coins you can practise on">
         {COINS.map((c) => (
           <Coin key={c.symbol} {...c} />

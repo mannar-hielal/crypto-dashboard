@@ -51,7 +51,9 @@
     animation: slide 45s linear infinite;
   }
 
-  .ribbon:hover .track {
+  .ribbon:hover .track,
+  .ribbon:focus-within .track,
+  .paused .track {
     animation-play-state: paused;
   }
 }
@@ -78,5 +80,31 @@
 @keyframes slide {
   to {
     transform: translateX(-50%);
+  }
+}
+
+/* The pause control: a small text button above the ribbon's right end, focusable, never in the way */
+.pause {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  z-index: 1;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-brand-muted);
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+
+.pause:hover {
+  color: var(--color-brand-white);
+}
+
+/* With reduced motion the ribbon is already still: nothing to pause */
+@media (prefers-reduced-motion: reduce) {
+  .pause {
+    display: none;
   }
 }

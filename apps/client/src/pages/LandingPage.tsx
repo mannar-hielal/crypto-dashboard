@@ -57,7 +57,7 @@ export function LandingPage() {
             {isLive ? (
               <>
                 <h1 className={styles.h1}>
-                  <span className={shared.gradientText}>Learn crypto trading.</span>
+                  <span className={shared.gradientText}>Learn crypto trading.</span>{' '}
                   <span>Practise on a real chart.</span>
                 </h1>
                 <p className={styles.sub}>
@@ -71,8 +71,7 @@ export function LandingPage() {
             ) : (
               <>
                 <h1 className={styles.h1}>
-                  <span className={shared.gradientText}>Paper trade crypto,</span>
-                  <span>FREE</span>
+                  <span className={shared.gradientText}>Paper trade crypto,</span> <span>FREE</span>
                 </h1>
                 <p className={styles.sub}>
                   Learn on a real-data chart with $10K of pretend money. Stop paying. Start
@@ -153,7 +152,7 @@ export function LandingPage() {
                   id="screens-title"
                   eyebrow="See it for real"
                   title="This is what you will use"
-                  lead="Real screenshots from the app, not mock-ups."
+                  lead="Screens taken from the app itself, not mock-ups. Prices in a picture are just a snapshot."
                 />
                 <ShotShowcase />
               </section>

@@ -304,13 +304,13 @@ export const SHOTS: readonly Shot[] = [
   {
     id: 'chart',
     title: 'The live chart',
-    caption: 'Real candles, indicators and drawing tools. This one needs no account.',
+    caption: 'Candles, indicators and drawing tools. This one needs no account.',
     alt: 'The live Bitcoin chart with green and red candles, three moving-average lines and a drawing toolbar on the left.',
   },
   {
     id: 'desk',
     title: 'The practice desk',
-    caption: 'Pretend money, real prices. Buy, sell, and watch your balance below.',
+    caption: 'Pretend money to practise with. Buy, sell, and watch your balance below.',
     alt: 'The trading screen: the chart in the middle, an order form on the right and an account panel below showing a $10,000 balance.',
   },
   {
