@@ -8,9 +8,9 @@ vi.mock('react-router', () => ({
 }));
 vi.mock('@/components/TrustBadges', () => ({ TrustBadges: () => null }));
 
-async function renderFooter() {
+async function renderFooter(marketing = true) {
   const { Footer } = await import('@/components/Footer');
-  return render(React.createElement(Footer));
+  return render(React.createElement(Footer, { marketing }));
 }
 
 describe('Footer', () => {
@@ -33,5 +33,14 @@ describe('Footer', () => {
     const { container } = await renderFooter();
     expect(container.querySelector('a[href="/chart"]')).toBeNull();
     expect(container.querySelector('a[href="/features"]')).not.toBeNull();
+  });
+
+  it('should keep the plain footer on sign-in, register and the legal pages (review 2026-11-22)', async () => {
+    vi.stubEnv('VITE_IS_LIVE', 'true');
+    const { container } = await renderFooter(false);
+    for (const href of ['/features', '/chart', '/blog']) {
+      expect(container.querySelector(`a[href="${href}"]`), href).toBeNull();
+    }
+    expect(container.querySelector('a[href="/terms"]')).not.toBeNull();
   });
 });

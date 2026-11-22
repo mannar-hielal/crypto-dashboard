@@ -15,10 +15,15 @@ const LINKS = [
 
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
-export function Footer() {
-  // Before launch there is no chart to link to. /features stays on purpose (it says "launching soon" and
-  // is noindex before launch, and the pre-launch landing page links to it too) and /blog is public content
-  const links = LINKS.filter((l) => isLive || l.to !== '/chart');
+// The links only the landing and features pages carry: sign-in, register and the legal pages keep
+// the footer they had (the paper-trading line and the legal links, design.md on phones)
+const MARKETING = new Set<string>(['/features', '/chart', '/blog']);
+
+export function Footer({ marketing = false }: { marketing?: boolean }) {
+  // Before launch there is no chart to link to; /features says "launching soon" and is noindex then
+  const links = LINKS.filter(
+    (l) => (marketing || !MARKETING.has(l.to)) && (isLive || l.to !== '/chart')
+  );
   return (
     <footer
       className="relative px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"

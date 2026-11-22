@@ -39,7 +39,7 @@ export function LandingPage() {
         {...(!isLive && { noIndex: true })}
       />
       <TopBar marketing />
-      <AuthLayout>
+      <AuthLayout marketingFooter>
         {/* ─── Hero ─────────────────────────────────────────────────────── */}
         <header className={styles.hero}>
           <div className={styles.candles}>

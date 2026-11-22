@@ -13,13 +13,13 @@
 /* The loaded grid is taller than the phone row: reserve about its height, so nothing jumps */
 @media (min-width: 768px) {
   .holder {
-    min-height: 1200px; /* two columns, four rows: measured 1,266 px at 800 px wide */
+    min-height: 1300px; /* two columns, four rows: 1,266 px measured at 800 px wide, plus a margin */
   }
 }
 
 @media (min-width: 1024px) {
   .holder {
-    min-height: 560px; /* four columns, two rows: measured 582 px at 1,280 px wide */
+    min-height: 620px; /* four columns, two rows: 582 px measured at 1,280 px wide, plus a margin */
   }
 }
 

@@ -44,7 +44,7 @@
   .candle {
     transform-box: fill-box;
     transform-origin: center bottom;
-    animation: draw 0.45s ease-out both;
+    animation: draw 0.45s ease-out calc(var(--i) * 0.12s + 0.15s) both;
   }
 
   .candle.last {

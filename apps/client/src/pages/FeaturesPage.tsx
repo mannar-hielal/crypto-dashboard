@@ -78,7 +78,7 @@ export function FeaturesPage() {
         </div>
       </nav>
 
-      <AuthLayout>
+      <AuthLayout marketingFooter>
         <header className={styles.hero}>
           {!isLive && <p className={styles.soon}>Launching soon · this is what you will get</p>}
           <h1 className={styles.h1}>

@@ -445,7 +445,7 @@ export const TABLE_ROWS: readonly TableRow[] = [
     id: 'perps',
     feature: 'Crypto futures rules: funding, mark price, liquidation',
     us: 'yes',
-    groups: ['yes', 'no', 'no', 'no', 'some', 'some'],
+    groups: ['yes', 'some', 'no', 'no', 'some', 'some'],
   },
   {
     id: 'charts',
@@ -463,7 +463,7 @@ export const TABLE_ROWS: readonly TableRow[] = [
     id: 'no-ads',
     feature: 'No ads, no push to deposit real money',
     us: 'yes',
-    groups: ['no', 'some', 'no', 'yes', 'some', 'no'],
+    groups: ['some', 'some', 'no', 'yes', 'some', 'no'],
   },
   {
     id: 'big-balance',
