@@ -245,6 +245,8 @@ describe('the lesson and chapter facts on the pages', () => {
           .split(' ')[0]
       );
     }
+    // Every lesson has a preview card, so the next lesson fails this until its card is added
+    expect(LESSON_PREVIEWS.map((p) => p.number)).toEqual(LESSONS.map((l) => l.number));
     const built = CHAPTERS.filter((c) => c.status === 'open').length;
     const answer = FEATURES_FAQ.find((q) => q.id === 'lessons')!.answer;
     const words = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];

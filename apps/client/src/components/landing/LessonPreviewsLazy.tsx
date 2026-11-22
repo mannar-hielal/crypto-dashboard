@@ -5,17 +5,17 @@ import styles from './LessonPreviews.module.css';
 
 const LessonPreviews = lazy(() => import('./LessonPreviews'));
 
-/**
- * Loads the lesson previews only when they come near the screen: the lessons' picture module is
- * large, and most visitors read the top of the page first. Without `IntersectionObserver` it
- * loads at once.
- */
 /** What the error boundary renders: nothing, and it tells the holder to close its reserved gap */
 function FailedMarker({ onFail }: { onFail: () => void }) {
   useEffect(onFail, [onFail]);
   return null;
 }
 
+/**
+ * Loads the lesson previews only when they come near the screen: the lessons' picture module is
+ * large, and most visitors read the top of the page first. Without `IntersectionObserver` it
+ * loads at once.
+ */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');

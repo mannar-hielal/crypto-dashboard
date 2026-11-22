@@ -4714,7 +4714,7 @@ knowledge; no hype, no profit promises, paper trading only. Branch `feat/landing
 **Landing page (live), in order:** hero (one h1, two path cards: "Open the live chart", no sign up, and "Start learning", free
 account); "Questions every beginner asks" (accessible accordion, each answer ends in "Start here"); a coin ribbon of the 9 pairs;
 "From your first click to your first trade" (a timeline of 8 milestones, in place of the terminal band "The chart's free. So is the
-trading desk"); "Learn it. Then try it on real candles." (six lesson cards drawn with the lessons' own `LessonArt`, in place of
+trading desk"); "Learn it. Then try it on real candles." (eight lesson cards drawn with the lessons' own `LessonArt`, in place of
 "Advanced Charts"); three real screenshots in device frames; six "where we do better" sections, one per competitor group, each with
 an honest "where they are better"; one comparison table. **Pre-launch (`VITE_IS_LIVE` not true):** the Launching Soon hero, the coin
 ribbon and the newsletter form only (no sign-up, chart, FAQ or table, because none exists before launch); still `noindex`.

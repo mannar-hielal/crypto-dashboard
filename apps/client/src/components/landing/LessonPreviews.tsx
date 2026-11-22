@@ -4,11 +4,6 @@ import { LessonArt } from '@/guide/LessonArt';
 import { LESSON_PREVIEWS } from '@/lib/landingContent';
 import styles from './LessonPreviews.module.css';
 
-/**
- * A row of real lesson cards: each shows the lesson's own picture (the one in the lesson) with its
- * number, title and one line. It proves the learning side exists. Heavy (the lessons' picture
- * module), so the page loads it late, through `LessonPreviewsLazy`.
- */
 const PHONE_ROW = '(max-width: 767px)';
 
 /** The row scrolls sideways only on a phone: only there is it a stop for the keyboard */
@@ -32,6 +27,11 @@ function useScrollingRow() {
   return scrolls;
 }
 
+/**
+ * A row of real lesson cards: each shows the lesson's own picture (the one in the lesson) with its
+ * number, title and one line. It proves the learning side exists. Heavy (the lessons' picture
+ * module), so the page loads it late, through `LessonPreviewsLazy`.
+ */
 export default function LessonPreviews() {
   const scrolls = useScrollingRow();
   return (

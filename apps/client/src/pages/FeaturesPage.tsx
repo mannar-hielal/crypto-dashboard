@@ -112,7 +112,7 @@ export function FeaturesPage() {
             <FeatureGrid items={LEARN_STEPS} numbered />
             <LessonPreviewsLazy />
             <h3 className={styles.sub2}>What the lessons cover today</h3>
-            <FeatureGrid items={LEARN_TOPICS} />
+            <FeatureGrid items={LEARN_TOPICS} headingLevel={4} />
             <div className={styles.links}>
               <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
               <Link to="/blog" className={shared.ctaText}>

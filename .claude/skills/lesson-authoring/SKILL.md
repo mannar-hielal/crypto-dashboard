@@ -651,6 +651,9 @@ can-do line, no "Read more" in a peek.
   `apps/server/src/routes/learn/index.ts`), so `stepBase` + the lesson's screens must stay at 999 or
   below.
 - `minutes` (e.g. `LESSON_01_MINUTES`) to the new length.
+- **The public pages' lesson facts** (`apps/client/src/lib/landingContent.ts`): a new lesson gets its card in `LESSON_PREVIEWS`,
+  its topic in `LEARN_TOPICS` and the lessons FAQ answer (also published as FAQ structured data); a test fails until the
+  previews match the lessons.
 - Docs: a dated `docs/APP_LOG.md` entry; `docs/UI_REPRODUCTIONS.md` steps for the lesson;
   `docs/TRADING_TEST_PLAN.md` rows if a scenario changes (memory: keep test docs in step on release).
 - Phone screenshots of the changed screens to the owner before the PR (the screenshot scripts in the

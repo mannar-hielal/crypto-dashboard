@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import { guide } from '@/lib/guideAnchors';
 import styles from './CandleSequence.module.css';
 
@@ -72,6 +74,8 @@ export function CandleSequence() {
         <g
           key={c.x}
           className={`${styles.candle} ${c.up ? styles.up : styles.down}${i === CANDLES.length - 1 ? ` ${styles.last}` : ''}`}
+          // The candle's place in the run: its draw-in delay is worked out from it in the CSS
+          style={{ '--i': i } as CSSProperties}
         >
           <line className={styles.wick} x1={c.x} x2={c.x} y1={c.wickTop} y2={c.wickBottom} />
           <rect
