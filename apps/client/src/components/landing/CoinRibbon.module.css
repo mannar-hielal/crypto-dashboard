@@ -58,7 +58,6 @@
   }
 
   .ribbon:hover .track,
-  .wrap:focus-within .track,
   .paused .track {
     animation-play-state: paused;
   }
@@ -92,13 +91,14 @@
 /* The pause control: a small text button above the ribbon's right end, focusable, outside the mask */
 .pause {
   align-self: flex-end;
-  margin: 0 12px 6px 0;
-  padding: 4px 10px;
+  min-height: 44px; /* a comfortable touch target for the one control that stops the motion */
+  margin: 0 12px 2px 0;
+  padding: 0 14px;
   border: 0;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--color-brand-muted);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem; /* fontSize.xs11 */
   cursor: pointer;
 }
 

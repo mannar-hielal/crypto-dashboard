@@ -552,10 +552,6 @@ export const CHART_FEATURES: readonly Feature[] = [
     title: 'Live, not delayed',
     text: 'Candles update as the market moves, with no page refresh. A small light shows if the connection is healthy, and it reconnects by itself.',
   },
-  {
-    title: 'Full screen',
-    text: 'One click for a big, quiet chart. All the tools stay in reach.',
-  },
 ] as const;
 
 export const DESK_FEATURES: readonly Feature[] = [

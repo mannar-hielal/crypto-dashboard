@@ -62,8 +62,8 @@ export function ComparisonTable() {
                   {row.deliberate && <span className={styles.tag}>small on purpose</span>}
                 </th>
                 <Cell mark={row.us} us />
-                {row.groups.map((m, i) => (
-                  <Cell key={GROUPS[i]?.id ?? i} mark={m} />
+                {GROUPS.map((g, i) => (
+                  <Cell key={`${row.id}-${g.id}`} mark={row.groups[i]} />
                 ))}
               </tr>
             ))}
