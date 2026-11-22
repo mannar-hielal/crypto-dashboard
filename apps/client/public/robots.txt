@@ -1,7 +1,7 @@
 # Allow search engines to crawl public pages
 User-agent: *
 Allow: /
-Allow: /features
+Allow: /how-it-works
 Allow: /chart
 Allow: /login
 Allow: /register
@@ -13,6 +13,7 @@ Allow: /aup
 
 # Block private and token-based paths
 Disallow: /dashboard
+Disallow: /path
 Disallow: /unverified
 Disallow: /verify-email
 Disallow: /verify-email-change

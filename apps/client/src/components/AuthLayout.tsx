@@ -6,12 +6,15 @@ import homeBg from '@/assets/home-bg.svg';
 interface AuthLayoutProps {
   children: ReactNode;
   hideFooter?: boolean;
+  /** The landing and How it works pages add their own links (how it works, chart, blog) to the footer */
+  marketingFooter?: boolean;
   centerContent?: boolean;
 }
 
 export function AuthLayout({
   children,
   hideFooter = false,
+  marketingFooter = false,
   centerContent = false,
 }: AuthLayoutProps) {
   return (
@@ -49,7 +52,7 @@ export function AuthLayout({
       >
         {children}
       </main>
-      {!hideFooter && <Footer />}
+      {!hideFooter && <Footer marketing={marketingFooter} />}
     </div>
   );
 }

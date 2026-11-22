@@ -48,7 +48,7 @@ describe('pathState', () => {
       'open',
     ]);
     expect(view.chapters[0].done).toBe(1);
-    expect(view.percent).toBe(14);
+    expect(view.percent).toBe(9);
   });
 
   it('should let a tour skipped on a phone stop blocking the path, without counting it as done', () => {
@@ -67,7 +67,7 @@ describe('pathState', () => {
       'current',
       'open',
     ]);
-    expect(view.percent).toBe(43);
+    expect(view.percent).toBe(27);
   });
 
   it('should keep Sell locked until Buy is done, then make it the next step (owner 2026-11-17)', () => {
@@ -122,17 +122,43 @@ describe('pathState', () => {
       'done',
     ]);
     expect(view.chapters[0].done).toBe(1);
-    // Chapter 2 isn't written yet, so there is no next step
-    expect(view.current).toBeNull();
-    expect(view.percent).toBe(14);
+    // Passing the checkpoint opens chapter 2: its first lesson is the next step (owner 2026-11-19)
+    expect(view.current).toBe('lesson:lesson-coins');
+    expect(view.percent).toBe(9);
   });
 
   it('should keep a chapter that is coming soon inert', () => {
-    const soon = pathState(empty()).chapters[1];
+    const later: Chapter = {
+      id: 'ch3',
+      number: 3,
+      title: 'Later',
+      tone: 'green',
+      access: FREE,
+      status: 'soon',
+      preview: [{ kind: 'lesson', title: 'Someday' }],
+    };
+    const soon = pathState(empty(), [], [CHAPTERS[0], later]).chapters[1];
     expect(soon.chapter.status).toBe('soon');
     expect(soon.locked).toBe(true);
     expect(soon.nodes).toEqual([]);
     expect(soon.firstIndex).toBe(7);
+  });
+
+  it('should show chapter 2 as its built lessons, locked until chapter 1 is passed, then its unwritten stops as titles (owner 2026-11-19)', () => {
+    const view = pathState(empty());
+    const two = view.chapters[1];
+    expect(two.chapter.status).toBe('open');
+    expect(two.locked).toBe(true);
+    expect(two.nodes.map((n) => `${n.key}=${n.state}`)).toEqual([
+      'lesson:lesson-coins=locked',
+      'lesson:lesson-stablecoins=locked',
+      'lesson:lesson-wallets=locked',
+      'lesson:lesson-fees=locked',
+    ]);
+    expect(two.firstIndex).toBe(7);
+    const ch = two.chapter as Chapter & { status: 'open' };
+    // One lesson and the checkpoint are still to write, so the map shows them as titles only
+    expect(ch.soon?.map((n) => n.kind)).toEqual(['lesson', 'checkpoint']);
   });
 
   it('should lock a later chapter until the one before it has its checkpoint passed', () => {
@@ -183,8 +209,10 @@ describe('the map', () => {
   it('should end every open chapter with its checkpoint', () => {
     for (const c of CHAPTERS) {
       if (c.status !== 'open') continue;
-      expect(c.nodes.at(-1)?.kind).toBe('checkpoint');
-      expect(c.nodes.filter((n) => n.kind === 'checkpoint')).toHaveLength(1);
+      // A chapter built lesson by lesson ends on its checkpoint among the titles still to write
+      const stops: { kind: string }[] = [...c.nodes, ...(c.soon ?? [])];
+      expect(stops.at(-1)?.kind).toBe('checkpoint');
+      expect(stops.filter((n) => n.kind === 'checkpoint')).toHaveLength(1);
     }
   });
 

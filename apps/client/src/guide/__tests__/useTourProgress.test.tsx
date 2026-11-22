@@ -108,11 +108,11 @@ describe('useTourProgress', () => {
 
   it('should keep a finish this device still has to save shown when the progress cannot be read', async () => {
     localStorage.clear();
-    queueDone('u1', { itemId: 'lesson-02', step: 81 });
+    queueDone('u1', { itemId: 'lesson-coins', step: 78 });
     getProgress.mockRejectedValue(new Error('network'));
     renderHook(() => useTourProgress());
     await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-    expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
+    expect(useLessonStore.getState().completed['lesson-coins']).toBe(true);
     localStorage.clear();
   });
 
@@ -603,8 +603,8 @@ describe('useTourProgress', () => {
 
     it('should check the progress once for kept finishes refused together', async () => {
       queueDone('u1', { itemId: 'lesson-01', step: LESSON_01_LAST_STEP });
-      const ownershipLast = 60 + lessonScreens(getLesson('lesson-ownership')).length;
-      queueDone('u1', { itemId: 'lesson-ownership', step: ownershipLast });
+      const ownershipLast = 60 + lessonScreens(getLesson('lesson-stablecoins')).length;
+      queueDone('u1', { itemId: 'lesson-stablecoins', step: ownershipLast });
       setProgress.mockRejectedValue(Object.assign(new Error('x'), { status: 409 }));
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
@@ -631,12 +631,12 @@ describe('useTourProgress', () => {
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
       await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-      act(() => useLessonStore.getState().start('lesson-02', 3));
+      act(() => useLessonStore.getState().start('lesson-coins', 3));
       act(() => useLessonStore.getState().markFinished());
       // A look back from it ("From Lesson 1"), then another lesson started from there
       act(() => useLessonStore.getState().visit('lesson-01', 0));
       trackEvent.mockClear();
-      act(() => useLessonStore.getState().start('lesson-ownership'));
+      act(() => useLessonStore.getState().start('lesson-stablecoins'));
       const sent = trackEvent.mock.calls.map((c) => c[0] as { name: string; itemId: string });
       expect(sent).not.toContainEqual(expect.objectContaining({ name: 'tour_closed' }));
     });
@@ -702,7 +702,7 @@ describe('useTourProgress', () => {
 
     it('should drop a kept finish the server refuses as an earlier version', async () => {
       localStorage.clear();
-      queueDone('u1', { itemId: 'lesson-02', step: 30 });
+      queueDone('u1', { itemId: 'lesson-coins', step: 30 });
       // Told apart by its status, never its words
       setProgress.mockRejectedValueOnce(
         Object.assign(new Error('reworded, whatever it says'), { status: 409 })
@@ -713,29 +713,29 @@ describe('useTourProgress', () => {
 
     it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {
       await loaded([
-        { ...item('lesson-02', 'started'), step: 66 },
+        { ...item('lesson-coins', 'started'), step: 66 },
         // Lesson 1's steps 1–60 were its earlier versions': no screen today
         { ...item('lesson-01', 'started'), step: 5 },
       ]);
-      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-coins': 5 });
       // The server's own answer is never written back
       expect(setProgress).not.toHaveBeenCalled();
     });
 
     it('should send screens reached before the server answered, then nothing twice', async () => {
       // Begun before the progress loaded (or before signing in): nothing rises past it later
-      act(() => useLessonStore.getState().start('lesson-02', 3));
+      act(() => useLessonStore.getState().start('lesson-coins', 3));
       getProgress.mockResolvedValue({ items: [] });
       renderHook(() => useTourProgress());
       await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
-      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 64]]);
+      expect(setProgress.mock.calls).toEqual([['lesson-coins', 'started', 'tok', 64]]);
       // The server's answer doesn't send it again
-      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 3 });
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-coins': 3 });
     });
 
     it('should forget the furthest screens on sign-out, so the next account starts clean', async () => {
-      await loaded([{ ...item('lesson-02', 'started'), step: 66 }]);
-      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
+      await loaded([{ ...item('lesson-coins', 'started'), step: 66 }]);
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-coins': 5 });
       token = null; // signed out
       renderHook(() => useTourProgress());
       expect(useLessonStore.getState().reached).toEqual({});
@@ -744,20 +744,20 @@ describe('useTourProgress', () => {
 
     it('should not echo the server’s furthest screen back while a lesson is open (review on #280)', async () => {
       // Lesson 3 open at screen 1 when the answer arrives with screen 5: nothing to send
-      act(() => useLessonStore.getState().start('lesson-02', 1));
-      getProgress.mockResolvedValue({ items: [{ ...item('lesson-02', 'started'), step: 66 }] });
+      act(() => useLessonStore.getState().start('lesson-coins', 1));
+      getProgress.mockResolvedValue({ items: [{ ...item('lesson-coins', 'started'), step: 66 }] });
       renderHook(() => useTourProgress());
-      await waitFor(() => expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 }));
+      await waitFor(() => expect(useLessonStore.getState().reached).toEqual({ 'lesson-coins': 5 }));
       expect(setProgress).not.toHaveBeenCalled();
     });
 
     it('should never send a lower screen than the furthest one', async () => {
-      await loaded([{ ...item('lesson-02', 'started'), step: 66 }]);
-      act(() => useLessonStore.getState().start('lesson-02', 2));
+      await loaded([{ ...item('lesson-coins', 'started'), step: 66 }]);
+      act(() => useLessonStore.getState().start('lesson-coins', 2));
       act(() => useLessonStore.getState().next());
       expect(setProgress).not.toHaveBeenCalled();
-      act(() => useLessonStore.getState().start('lesson-02', 6));
-      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 67]]);
+      act(() => useLessonStore.getState().start('lesson-coins', 6));
+      expect(setProgress.mock.calls).toEqual([['lesson-coins', 'started', 'tok', 67]]);
     });
 
     it('should load finished lessons, and treat Lesson 1 as the offer being done with', async () => {
@@ -807,7 +807,7 @@ describe('useTourProgress', () => {
 
     it('should send nothing for a look back at an earlier lesson, nor for the way back from it', async () => {
       await loaded();
-      act(() => useLessonStore.getState().start('lesson-ownership'));
+      act(() => useLessonStore.getState().start('lesson-stablecoins'));
       act(() => useLessonStore.getState().next());
       trackEvent.mockClear();
 
@@ -820,19 +820,21 @@ describe('useTourProgress', () => {
 
       act(() => useLessonStore.getState().next());
       expect(calls()).toEqual([
-        { name: 'tour_step', itemId: 'lesson-ownership', stepId: 'lesson-ownership.63' },
+        { name: 'tour_step', itemId: 'lesson-stablecoins', stepId: 'lesson-stablecoins.63' },
       ]);
     });
 
     it('should not count opening the lesson already on screen as a drop-off, nor a reset as a finish', async () => {
       await loaded();
-      act(() => useLessonStore.getState().start('lesson-02', 2));
+      act(() => useLessonStore.getState().start('lesson-coins', 2));
       act(() => useLessonStore.getState().finish());
-      act(() => useLessonStore.getState().start('lesson-02', 2));
+      act(() => useLessonStore.getState().start('lesson-coins', 2));
       trackEvent.mockClear();
       setProgress.mockClear();
-      act(() => useLessonStore.getState().start('lesson-02', 4));
-      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.65' }]);
+      act(() => useLessonStore.getState().start('lesson-coins', 4));
+      expect(calls()).toEqual([
+        { name: 'tour_step', itemId: 'lesson-coins', stepId: 'lesson-coins.65' },
+      ]);
 
       act(() => useLessonStore.getState().reset());
       expect(calls().some((c) => c.name === 'tour_completed')).toBe(false);
@@ -840,21 +842,21 @@ describe('useTourProgress', () => {
       expect(setProgress).not.toHaveBeenCalled();
       expect(calls().at(-1)).toEqual({
         name: 'tour_closed',
-        itemId: 'lesson-02',
-        stepId: 'lesson-02.65',
+        itemId: 'lesson-coins',
+        stepId: 'lesson-coins.65',
       });
     });
 
     it('should close the lesson a start replaces, a look back’s home included, and a reset during one', async () => {
       await loaded();
-      act(() => useLessonStore.getState().start('lesson-ownership', 1));
+      act(() => useLessonStore.getState().start('lesson-stablecoins', 1));
       act(() => useLessonStore.getState().visit('lesson-01', 3));
       trackEvent.mockClear();
-      act(() => useLessonStore.getState().start('lesson-02', 4));
+      act(() => useLessonStore.getState().start('lesson-coins', 4));
       expect(calls()).toEqual([
-        { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.62' },
-        { name: 'tour_started', itemId: 'lesson-02' },
-        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.65' },
+        { name: 'tour_closed', itemId: 'lesson-stablecoins', stepId: 'lesson-stablecoins.62' },
+        { name: 'tour_started', itemId: 'lesson-coins' },
+        { name: 'tour_step', itemId: 'lesson-coins', stepId: 'lesson-coins.65' },
       ]);
 
       // A start outside a look back closes the lesson it replaces too
@@ -862,16 +864,16 @@ describe('useTourProgress', () => {
       act(() => useLessonStore.getState().start('lesson-01'));
       expect(calls()[0]).toEqual({
         name: 'tour_closed',
-        itemId: 'lesson-02',
-        stepId: 'lesson-02.65',
+        itemId: 'lesson-coins',
+        stepId: 'lesson-coins.65',
       });
 
-      act(() => useLessonStore.getState().start('lesson-02', 4));
+      act(() => useLessonStore.getState().start('lesson-coins', 4));
       act(() => useLessonStore.getState().visit('lesson-01', 3));
       trackEvent.mockClear();
       act(() => useLessonStore.getState().reset());
       expect(calls()).toEqual([
-        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.65' },
+        { name: 'tour_closed', itemId: 'lesson-coins', stepId: 'lesson-coins.65' },
       ]);
     });
   });

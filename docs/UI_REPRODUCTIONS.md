@@ -292,9 +292,8 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      [lesson.next-lesson] **Lesson 2: Money nobody controls** with "Finish for now". Signed in, either button → Expect
      the streak screen first ([lesson.streak]: the flame, "N-day streak" counting up, this week's dots, "Come back
      tomorrow to keep it going"), then [lesson.streak.continue] does what was pressed (M). A guest goes straight on.
-2. Lesson 2 · **Money nobody controls** (rewritten 2026-11-16), 21 screens → Expect the cold open drawn, no photo
-   and no guide: the Bitcoin mark and the beats ("3 January 2009 · The first block" … the Times headline … "In the
-   next 9 minutes: why Bitcoin exists…"), then **Continue →**. Then **From the price to the
+2. Lesson 2 · **Money nobody controls** (rewritten 2026-11-16; a sneak peek card added 2026-11-22), 22 screens → Expect the cold open drawn, no photo
+   and no guide: the Bitcoin mark and the beats ("3 January 2009 · The first block" … the Times headline … "Someone wrote it into the record on purpose. Why?"; it no longer announces the lesson, 2026-11-22), then **Continue →**. Then **What you will learn** (a numbered path of four stops: Why it exists, One ledger copied, Nodes and blocks, No one in charge, Berwyn pointing; then four numbered lines), then **From the price to the
    thing** (Pulin and Berwyn), **2008: trust broke**, **A paper, then a block**, **One record, many copies** (the dotted world map; [lesson.term `ledger`] → a peek with no
    "From" line; [lesson.term `node`] → "A computer that keeps a full copy…", no Read more: since 2026-11-18 a peek has
    no article behind it), **Sending bitcoin**, **Two checks, then a block**, **Sealed by hard
@@ -326,8 +325,8 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    [`sam`] → ✗; [article.chain.change] → the later blocks break; [article.answer.tile `lose`] → its answer shown. In
    _Mailboxes and keys_ (now "practised in a later lesson on keys and custody"): [article.mailbox.step `2`] → the
    stamp seated, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…".
-4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16), 21 screens → Expect the cold open **One Bitcoin for
-   $8,200** (kept) and **Continue →**; **Why so much?**; **Big swings, both ways** (May 2021, "as low as $28,800 on Bybit's perpetual chart", "It can swing up just as
+4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16; a sneak peek card added 2026-11-22), 22 screens → Expect the cold open **One Bitcoin for
+   $8,200** (kept) and **Continue →**; **What you will learn** (a numbered path of four stops: Swings both ways, News and hype, Thin or deep, Check the coin, Pulin pointing; then four numbered lines); **Why so much?**; **Big swings, both ways** (May 2021, "as low as $28,800 on Bybit's perpetual chart", "It can swing up just as
    hard, often without warning, so no one can reliably time it.", then Berwyn's math in
    glasses, "42,900 − 28,800 = 14,100" … "32.9%", "➜ … about **33%**: a third.", Read more → `price-swings#size`); **News moves it, fast**; **Same news, either way** (the halving chart: "Halving"
    20 Apr 2024, "$58,299", "$71,437"); then **Your call**: the ETF chart stopping on 10 Jan 2024, answer → it plays on
@@ -355,6 +354,98 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
 **Manual check (M).** The pictures and the guides' faces at 375, 412, 820 and 1440 px (nothing clipped, the
 presenter never over the scene); every picture above its card's text; the guides' round glasses on the math and
 the analogy, and the math's steps (a sum wraps under its label on a narrow phone, never a sideways scroll). Frequency: per release touching `guide/LessonArt.tsx`, `guide/art/` or the lessons.
+
+### Learning path — Chapter 2, Lesson 5 "Coins and tokens: who has their own road" (no Part B rows yet)
+
+**UI reproduction** — as for Lessons 1–3 (a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`, local dev with the real
+Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the map's chapter 2 after testing out.
+
+1. Open the map ([nav.learn]) → Expect chapter 2 **Your crypto toolbox: coins, wallets and the networks behind them**: the
+   lessons **Coins and tokens: who has their own road** and **Stablecoins: the coins that try to sit still** (open after the
+   checkpoint, one after the other), then three lesson titles and a checkpoint title as grey "coming soon" stops that can't be focused.
+2. [learn.card.start] the lesson → Expect screen 1 of 18, **What you will learn**: a numbered path of four stops (Coin or token, Token kinds, Altcoins and swings, Check fast gains), Pulin pointing, and four numbered lines (since 2026-11-22; it was the guides' chat). Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
+   word _coin_ is a tappable term opening a peek), **The road needs upkeep** (a coin at a toll booth, "paid in the coin"),
+   **The coins in our market** (eight purple ticker badges BTC ETH SOL BNB XRP ADA AVAX DOGE; LINK in an amber ring, "a token").
+3. **What does a coin have?** (Pick the right ones, six tiles): pick the three right ones (**Its own blockchain**, **Pays for its
+   road's upkeep**, **Pays the people who keep the road running**) → Check → "Right." Picking a wrong tile → ✕ on it, "Not quite.",
+   Try again.
+4. **A token uses a road that exists** (Berwyn in glasses, "Think of it as a shop built along an existing road…"), **A token you
+   can trade here** (LINK's daily candles), the three jobs (**utility** arcade credits, **security** a share certificate,
+   **governance** a vote), then **Match each token to its job** (Match boxes, three pairs).
+5. **Altcoins** (a steady green line and a swinging red one), **Two assets, one week** (LINK's candles 29 Jul to 5 Aug 2024 with
+   "$13.524" and "−29.9%"; Pulin's six numbered steps ending "LINK fell more than bitcoin. One week is only one example.").
+6. **What is LINK?** → **A token**. **Who pays the fee?** → **In ETH, the road's own coin**. **Your call** (a hand-and-coins
+   picture) → **Find out who made it and what it is for** (the praised answer); the other two answers give "Not quite." and a
+   Why. Then the summary ("Coins and tokens", four points and "You can now…"), the journal line, the rating.
+7. Phone (390 px): no sideways scroll; the badges and roads sit inside the picture box.
+
+### Learning path — Chapter 2, Lesson 6 "Stablecoins: the coins that try to sit still" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 5 (a new account, chapter 1 passed, Lesson 5 done: Lesson 6 opens after it). Local dev with the
+real feed for the practice buy.
+
+1. Open the map → Expect Lesson 6 next after Lesson 5. [learn.card.start] it → Expect screen 1 of 17, **What you will learn**: a numbered path of four stops (Steady coins, Three kinds, Park and pay, Not a promise), Berwyn pointing, and four numbered lines (since 2026-11-22).
+2. **The steady coin** (a line on a dashed $1.00, the word _stablecoin_ a tappable term), **A ticket for a dollar** (a dollar
+   becoming a ticket at a cloakroom counter; Berwyn in glasses: "Think of it as a cloakroom ticket…").
+3. The three kinds, one counter each: **Kind 1: dollar-backed** (a vault of money), **Kind 2: crypto-backed** (a vault of coins),
+   **Kind 3: rule-based** (an empty shelf and a note), then **What stands behind the ticket?** (Match boxes, three pairs).
+4. **Why traders keep them** (a **BTC / USDT** tag with USDT lit up) → the button **Try a buy, paid in USDT, on the real chart** starts the
+   spot buy tour; the lesson comes back on the next screen after the review ("Back to the lesson"). **Skip** moves on.
+5. **Park your profit** (Pulin in glasses, three numbered steps: 300 − 200 = 100, 100 ÷ 200 = 0.5, 0.5 × 100 = 50%), then
+   **Parking a profit, in order** (Drag and drop, four steps: gone up, sold for USDT, price moves, USDT steady).
+6. **The catch: the peg can slip** (a drawn line dipping from the $1.00 peg to about $0.87 and back, labelled "drawn example"),
+   **"Stable" is a goal** (a vault under a magnifying glass), **A stablecoin at $0.92** → **People doubt it is fully backed**,
+   **A key advantage** → **Its value stays steady while you wait for your next move**. **Your call** (a ticket with "+20% a year")
+   → **What stands behind it, and who checks** (the praised answer). Then the summary, the journal line and the rating.
+7. Phone (390 px): no sideways scroll; the counters and vaults sit inside the picture box.
+
+### Learning path — Chapter 2, Lesson 7 "Your wallet, your keys: who holds them?" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 6 (a new account, chapter 1 passed, Lessons 5 and 6 done: Lesson 7 opens after them). No practice
+trade: nothing here starts a tour.
+
+1. Open the map → Expect Lesson 7 next after Lesson 6, and "Why sending crypto costs a fee" still a locked "coming soon" stop.
+   [learn.card.start] it → Expect screen 1 of 25, **What you will learn**: a numbered path of four stops (Keys not coins, Who holds the key, Recovery phrase, Hot and cold), Pulin pointing, and four numbered lines.
+2. **A wallet holds keys, not coins** (a key ring beside mailboxes; the word _wallet_ a tappable term; Berwyn in glasses: "Think of it
+   as a key ring…"), **Address and private key** (an address panel and a private key panel), **Who is who?** (Match boxes, four pairs).
+3. **What a wallet is for** (see, receive, sign), **Mira and Sneaky Sam** (Sam behind glass: 2 BTC and a lock), **The phone in the sea**.
+4. **Custodial** (a bank holding the key; analogy "a bank account"), **The trade-off** (a locked counter: withdrawals frozen; FTX),
+   **Non-custodial**, **Control, privacy, no reset button**. Then **Your call** (two people forgot their login) → **Only the exchange
+   user**.
+5. **The recovery phrase** (twelve numbered slots, no words), **Three rules for the phrase** (a camera, a cloud and an envelope crossed
+   out; the guide looks worried), **Where would you keep it?** (Pick, six tiles, pick three: the paper in a locked drawer, the metal in
+   a safe, a second paper copy in a different safe place), **Setting up safely, in order** (Drag and drop, five steps).
+6. **Hot wallets** (a phone with signal bars, tagged _online_), **Cold wallets** (a generic hardware wallet with a screen and two
+   buttons, tagged _offline_; a tappable _hardware wallet_ term), **Which wallet for which job?** (Match boxes, three pairs), **Lena**
+   → **A hardware wallet, with the recovery phrase written on paper**, **Zoe** → **An exchange account holding only what she trades**,
+   **A purse and a safe**.
+7. The phrase check (a "wallet support" asking for 12 words) → **Never share them: no real support asks**. Then the summary, the
+   journal line and the rating.
+8. After three wrong tries on any question the right answer is shown. Phone (390 px): no sideways scroll; the pictures and tags sit
+   inside the picture box.
+
+### Learning path — Chapter 2, Lesson 8 "Why sending crypto costs a fee" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 7 (a new account, chapter 1 passed, Lessons 5 to 7 done: Lesson 8 opens after them). No practice trade.
+
+1. Open the map → Expect Lesson 8 next after Lesson 7, and "Trading without a middleman: DApps and pools" still a locked "coming soon" stop.
+   [learn.card.start] it → Expect screen 1 of 20, **What you will learn**: a numbered path of four stops (Send to confirmed, Why fees move, A real fee spike, Check the fee), Berwyn pointing, and four numbered lines.
+2. **Sending has a price** (coins to a mailbox with a "+ fee" tag; the words _network fee_ a tappable term), **A block is a bus** (a bus
+   with six seats, five taken; Berwyn in glasses: "Think of it as a bus with limited seats…"), **Who picks the passengers?** (payments
+   in line, each with a "high", "mid" or "low" fee; the words _validator_ and _miners_ tappable), **From send to confirmed** (Drag and
+   drop, four steps).
+3. **Why a fee exists** (the toll booth again), **Why the fee moves** (five rising bars, "quiet" to "busy"), **Who is who?** (Match boxes,
+   four pairs).
+4. **A real fee spike** (a line: early April ≈ $4, 20 Apr ≈ $128, 21 Apr ≈ $35, "drawn from reported averages"), **Is it worth it?**
+   (Pulin in glasses, four steps: 4 ÷ 200 = 0.02, 0.02 × 100 = 2%, 128 ÷ 200 = 0.64, 0.64 × 100 = 64%).
+5. **Cheap chains and pricey chains** (two panels), **A plain send or a swap** (a plain send beside a swap), **What makes a fee higher?**
+   (Pick, six tiles, pick three: many people sending, a swap or complex action, asking to be faster), **Busy days** → **Seats in a block are
+   limited, so people offer more to get one**.
+6. **Plan before you send** (a $40 send with a $12 fee and a magnifying glass), then **Your call** → **Check whether waiting, or a cheaper
+   chain, would cost less**. **Two different fees**, **Which costs the most?** → **A swap, sent in a busy hour**. Then the
+   summary, the journal line and the rating.
+7. After three wrong tries on any question the right answer is shown. Phone (390 px): no sideways scroll; the pictures sit inside
+   the picture box.
 
 ### Learning path — the learning map (no Part B rows yet)
 
@@ -398,8 +489,33 @@ the analogy, and the math's steps (a sum wraps under its label on a narrow phone
 8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen), **Back to the path** full width and **Try again** under it.
 
-**Manual check (M).** The public header (2026-11-18): on `/`, `/features`, `/blog` and `/about` at 1440 px [nav.product]
-opens Chart and Features (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
+**Manual check (M).** The landing and features pages (rewrite, 2026-11-22), signed out, at 375, 412, 820 and 1440 px, no
+sideways scroll at any width:
+
+1. `/` → Expect one h1 ("Learn crypto trading. Practise on a real chart."), then two path cards side by side from 768 px (stacked
+   below): [landing.hero.chart] → `/chart`, [landing.hero.register] → `/register`; the candles draw themselves once behind the
+   headline, then the last one breathes.
+2. Under the cards, "Questions every beginner asks": Tab to a question, Enter or Space opens it, Up / Down / Home / End move between
+   questions; each answer ends in a [landing.faq.start] "Start here" link. Expect a visible focus ring on each.
+3. The coin ribbon slides slowly and pauses on hover; with the system's reduced-motion setting on, the candles are drawn still and
+   the ribbon is a still, wrapped row.
+4. Scroll down: the timeline (8 steps), "Learn it. Then try it on real candles." (six lesson cards load as they near the screen; a
+   row you swipe on a phone), three screenshots in frames, six "where we do better" sections, and the table. The table scrolls inside
+   its own box on a phone with the feature column pinned; every cell is a tick, a tilde or a cross with a word for screen readers; the
+   three "small on purpose" rows show our crosses; the competitor columns carry blurred shapes, never a logo.
+5. `/how-it-works` → h1 "How cryptopapertrade.com works", the sticky anchor nav from 768 px (each link scrolls to its section, the
+   heading clear of the bars), nine numbered sections, the questions as an accordion (live), and the links to `/blog`, `/register` and
+   `/chart`; no sideways scroll at 375 px. `/features` no longer exists (it lands on the landing page).
+   **Crypto path (a check):** Product ▾ → Crypto path signed in opens the dashboard with the learning map open at the side (a full
+   screen sheet on a phone); signed out it goes to the login page and, after signing in, lands on the same place.
+   **Lesson previews (a check):** on a phone width the eight cards are one row you swipe (the row is a labelled region and a tab stop; arrow
+   keys scroll it); from 768 px they are a grid (two columns, then four) and no landmark is added. With the network offline before the row
+   nears the screen, the section shows "The lesson previews did not load. Refresh the page to try again." (announced politely) and no gap.
+6. With `VITE_IS_LIVE=false` the landing page is the Launching Soon hero, the coin ribbon and the newsletter form: no sign-up, chart,
+   questions or table.
+
+**Manual check (M).** The public header (2026-11-18): on `/`, `/how-it-works`, `/blog` and `/about` at 1440 px [nav.product]
+opens Chart and Crypto path ([nav.how] sits between Product and Blog) (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
 their pages, the current one underlined; at 375 px [nav.menu] opens a full-width sheet of 44 px rows with Product
 expanding. `/about` and `/support` say "Coming soon." and are not indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the

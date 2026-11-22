@@ -71,7 +71,8 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
      and ask.
 2. The tone: the beginner tone in "Writing the cards" below (owner 2026-11-16).
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
-   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4). The chapter's
+   `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4), `lesson-coins` (Lesson 5,
+   chapter 2's first lesson), `lesson-stablecoins` (Lesson 6), `lesson-wallets` (Lesson 7), `lesson-fees` (Lesson 8; the chapter's later lessons follow as numbered 9 onward). The chapter's
    checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
    a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
    `CHECKPOINT_VERSION` (server).
@@ -121,7 +122,7 @@ guided-learning-topics/
    - the practice trades offered: each card whose concept is a buy, sell, long or short, and the
      tour it starts (see "Practise it for real" below).
    - **Length vs the current caps.** `lessons.test.ts` allows at most 16 teaching cards of at most
-     80 words, up to six questions (at most three of them `checks`), at most two `[[terms]]` a card
+     80 words, up to six questions (at most three of them `checks`; Lesson 7 asks eight, owner 2026-11-22, a named exception in the lesson rules test), at most two `[[terms]]` a card
      (raised by the owner, 2026-11-16, to fit a benchmark-length lesson of ~23–25 screens).
      **Beyond that:** don't silently go past the caps: offer the owner the choice for that lesson
      — raise them, or split the topic into two lessons. A new lesson id must be added everywhere
@@ -133,6 +134,7 @@ guided-learning-topics/
      and the SDK contract fixtures. A lesson id the server doesn't know gets a 400 on every event and
      progress write, so its rings never sync and it's missing from the funnel.
    - the pictures each screen uses (see "Illustrations").
+   - the sneak peek card and its 3 or 4 lines (see "The opening"), taken from the recap.
 3. **Draft the text** in the outline's order, in our voice (rules below).
 4. **Fact check by a technical-writer agent** (owner 2026-11-14), on every freshly written screen,
    before the owner sees the draft. See "Fact check" below. Apply its corrections, then show the
@@ -144,12 +146,25 @@ guided-learning-topics/
 6. **Implement** in `lessons.ts` (and new widgets), then tests and docs (below).
    **Progress on a rewritten lesson** (owner 2026-11-16): every learner's progress on it is reset,
    part-way through and completed alike; its `stepBase` moves; the lesson id stays.
-7. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
-   with the screen that teaches it. Report any gap.
+7. **Code review and a second fact check once the lesson is built** (owner 2026-11-19), before the
+   coverage check and the PR:
+   - **Code review:** run `/code-review high` on the lesson's changes: the working tree, or the
+     lesson's commits against its base when they are already committed (never commit just to get a
+     diff; commits wait for the owner's ask). It covers `lessons.ts`, new art or widgets, ids, tests,
+     docs. Fix what holds up, and report what was declined and why.
+   - **Fact check of the built text:** the step-4 check saw the draft; the text changes while it is
+     built and edited. Run the technical-writer check again (see "Fact check") on the lesson as it
+     now stands in `lessons.ts`, so the shipped cards, quiz options and Whys are what was checked.
+   - Each fix gets its test where it can. Show the owner the findings and what changed with the
+     built lesson (screenshots), then go on.
+8. **Coverage check before the PR:** go down the step-1 checklist; every _take_ concept is ticked
+   with the screen that teaches it. Report any gap. It comes last so that the fixes from step 7
+   can't drop a concept unnoticed.
 
 ## Fact check (technical-writer agent)
 
-After drafting and before the owner sees anything, spawn one subagent (the Agent tool,
+It runs twice: on the draft (workflow step 4) and again on the built text (step 7). After drafting
+and before the owner sees anything, spawn one subagent (the Agent tool,
 `general-purpose`) as a **technical writer and fact checker**. Give it the drafted screens (text,
 quizzes with options and Whys, linked terms) and ask it to:
 
@@ -175,6 +190,12 @@ trust), and list in the report to the owner which were applied and which decline
 - **Let the picture carry the text** (owner 2026-11-17): when a picture makes sense, choose or draw
   it so the learner understands most of the card by looking at it (the chart with its dated markers,
   the worked sum, the queue running thin). A picture that only decorates isn't enough.
+- **Show the real thing, not a stand-in** (owner 2026-11-20): when a card demonstrates a coin, a token, an
+  exchange or any other known symbol, use as close a match to its real logo or symbol as we may use, never
+  just a plain circle with its ticker text. The learner should recognise it from the picture. The logo's
+  licence and trademark terms are read at the time of use, and the source is recorded, like any other
+  third-party art (steps 1–5 below). Where no logo may be used, say so to the owner and propose the closest
+  honest option, rather than falling back silently to circles and text.
 - First reuse what we have: `LessonArt` drawings (`LessonArtId` in `lessons.ts`), the guides, real
   photos with a stated `credit`, charts from real market history.
 - When a screen needs an illustration we don't have (owner 2026-11-14), take it from a **free
@@ -287,7 +308,13 @@ rewritten, and to quizzes, Whys, summaries and titles.
 - Two guides present: Pulin (`tick`, asks the questions a beginner is too polite to ask) and Berwyn
   (`tock`, answers them, usually). When a card needs the bull and the bear, Pulin is the bull and
   Berwyn the bear (owner 2026-11-18). A card has `text` (may hold `[[terms]]`), or `lines` (a short
-  exchange), or `beats` (a cold open), plus a `presenter` or a real `photo` (with its `credit`).
+  exchange, never card 1: see "The opening"), or `beats` (a cold open), or `preview` (the sneak peek),
+  plus a `presenter` or a real `photo` (with its `credit`).
+- **A chat between Pulin and Berwyn doesn't name them every time** (owner 2026-11-19). Each guide
+  already shows as a speaker (face and side), so don't open every line with "Pulin:" or "Berwyn:",
+  and don't write "Pulin asks…" in the text. Say a name only when it helps: the first time a card
+  introduces one, or when the text talks about them. The sheet shows a chat line with the avatar
+  alone (no bold name; the name stays as screen-reader text), owner 2026-11-20.
 - Short: one idea per card.
 - **One label set** (owner 2026-11-17): the main button always says **Continue**, the back link
   **← Back**, and the summary's button (the last screen that teaches) **Finish lesson**, in every
@@ -326,16 +353,62 @@ rewritten, and to quizzes, Whys, summaries and titles.
   only, no real money.
 - A worried mood only for a real warning (the lesson rules test checks it).
 
+## The opening: a sneak peek, not a chat (owner 2026-11-22)
+
+A lesson never opens with the guides' back-and-forth. Their chat told the learner little; what the
+learner wants first is **what they will know by the end**. So every lesson has one **sneak peek** card
+near the start, drawn from the lesson's own closing recap.
+
+- **The card:** `title: 'What you will learn'` (the same on every lesson, like the one label set),
+  its **own graphic** on top, then `preview: [...]`: **3 or 4 short numbered lines** (at most 16
+  words each), rendered in the summary's style (purple numbers). It counts toward the 80-word cap.
+  - **The graphic is derived from the lesson's topics, never borrowed** (owner 2026-11-22: a road
+    scene or the friends, drawn for another card, said little at this moment). It is a numbered path
+    through the same 3 or 4 topics as the lines below, one icon and a two-line label each
+    (`PeekMap` in `LessonArt.tsx`, one `peek…` art id per lesson, e.g. `peekCoins`), the same
+    template every time so every opening looks alike. A new lesson adds its own `peek…` id (type,
+    `ART`, `ART_LABELS`, the art test), with labels of at most 10 characters a line (13 for three
+    stops) and the stops in the order of the lines.
+  - **A guide points at it:** Pulin or Berwyn stands in the picture with `pose: 'point'` (alternate
+    them from lesson to lesson). They only point; there is no chat and no text from them.
+- **Where it goes:**
+  - A lesson whose opening would be a chat: the peek **is card 1** and takes its picture (Lessons
+    5, 6 and 7).
+  - A lesson that opens with a strong hook (a photo, a headline, a counter, a text card): keep the
+    hook as card 1 and put the peek as **card 2** (Lessons 2, 3 and 4).
+  - Lesson 1's "Meet your guides" card already lists what you will learn, so it is its peek: no
+    second card.
+- **What goes in it:** each line is a topic in the plain words of the matching recap point, put
+  forward ("How to keep a recovery phrase safe"), never an answer ("Write it on paper") and never a
+  new fact: the promise and the summary must match. Write the recap first, then the peek from it, and
+  re-read both whenever one changes. A line that names a number or a claim goes through the fact check
+  like any card.
+- **The first card never repeats the peek** (owner 2026-11-22): a cold open, a hook or an opening
+  text card does not announce what the lesson will teach ("In the next 9 minutes: …", "Today you
+  will see …"). The peek, right after it, says it once. A hook ends on its own question or fact.
+- **The guides still appear** on the analogies, the math, the quizzes and the teaching cards. The
+  chat card (`lines`) stays a tool for a mid-lesson exchange where two voices help; it is never card 1.
+- **A peek added to a released lesson moves its screens:** raise `stepBase` by the SDK's
+  `LESSON_VERSION_SPAN` (40), record the replaced version in `EARLIER_LAST_STEPS`, raise the SDK's
+  `LESSON_FIRST_STEPS` and the server's `LESSON_FIRST_STEP`, shift `momentAfter` by one, and ship a
+  data migration that clears every learner's progress on the lesson (see "Tests and docs"). A lesson
+  not yet released only changes its card.
+- **Tests:** `lessons.test.ts` ("should open with a sneak peek, never the guides' chat") holds the
+  rule for every lesson (its own `peek…` graphic, a pointing guide, no announcement in a cold open);
+  `LessonSheet.test.tsx` checks the card renders as a graphic with a pointing guide and a numbered
+  list; `LessonArt.test.tsx` checks each graphic's stops.
+- **Outline:** list the peek's lines in the outline (Workflow step 2), next to the recap.
+
 ## Quiz formats
 
-| Format              | Use for                                                     | Status                                             |
-| ------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
-| Multiple choice     | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)      |
-| Choose buy or sell  | read a situation or a chart, pick Buy or Sell, then the Why | designed 2026-11-16 (visual Q&A done); being built |
-| Drag and drop       | put steps in order, or items into the right slot            | new widget                                         |
-| Match boxes         | connect terms to meanings, two columns                      | new widget                                         |
-| Draw a line         | trace a path, trend or level with one freehand line         | built 2026-11-18: `DrawQuiz` (`format: 'draw'`)    |
-| Pick the right ones | choose exactly N of 6 icon tiles                            | built 2026-11-18: `PickQuiz` (`format: 'pick'`)    |
+| Format              | Use for                                                     | Status                                                     |
+| ------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
+| Multiple choice     | a fact or a judgement with one best answer, and a Why       | exists: `LessonQuestion` (`checks`, `moment`)              |
+| Choose buy or sell  | read a situation or a chart, pick Buy or Sell, then the Why | built: `BuySellView` (`format: 'buy-sell'`)                |
+| Drag and drop       | put steps in order, or items into the right slot            | built 2026-11-16: `OrderQuiz` (`format: 'order'`, `steps`) |
+| Match boxes         | connect terms to meanings, two columns                      | built 2026-11-16: `MatchQuiz` (`format: 'match'`, `pairs`) |
+| Draw a line         | trace a path, trend or level with one freehand line         | built 2026-11-18: `DrawQuiz` (`format: 'draw'`)            |
+| Pick the right ones | choose exactly N of 6 icon tiles                            | built 2026-11-18: `PickQuiz` (`format: 'pick'`)            |
 
 - Every quiz shows **Right.** or **Not quite.** then the Why, never repeating the pick (owner
   2026-11-13); the chosen option is already marked.
@@ -578,6 +651,9 @@ can-do line, no "Read more" in a peek.
   `apps/server/src/routes/learn/index.ts`), so `stepBase` + the lesson's screens must stay at 999 or
   below.
 - `minutes` (e.g. `LESSON_01_MINUTES`) to the new length.
+- **The public pages' lesson facts** (`apps/client/src/lib/landingContent.ts`): a new lesson gets its card in `LESSON_PREVIEWS`,
+  its topic in `LEARN_TOPICS` and the lessons FAQ answer (also published as FAQ structured data); a test fails until the
+  previews match the lessons.
 - Docs: a dated `docs/APP_LOG.md` entry; `docs/UI_REPRODUCTIONS.md` steps for the lesson;
   `docs/TRADING_TEST_PLAN.md` rows if a scenario changes (memory: keep test docs in step on release).
 - Phone screenshots of the changed screens to the owner before the PR (the screenshot scripts in the

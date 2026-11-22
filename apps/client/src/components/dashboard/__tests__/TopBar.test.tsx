@@ -1,6 +1,6 @@
 /**
  * The top bar's signed-out action: the dashboard / /chart offer "Sign in" back to the market on screen;
- * the marketing pages (Landing, Features) offer the Live Chart link instead and no "Sign in" at all.
+ * the marketing pages (Landing, How it works) offer the Live Chart link instead and no "Sign in" at all.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -46,8 +46,8 @@ describe('TopBar signed out', () => {
   });
 
   it('should stack the marketing bar above a page’s own sticky bar (z-index 50), so the Product dropdown opens over it', () => {
-    // The Features page's anchor nav sits at z-index 50; at 50 too, the later one covered the dropdown
-    renderAt('/features', true);
+    // The How it works page's anchor nav sits at z-index 50; at 50 too, the later one covered the dropdown
+    renderAt('/how-it-works', true);
     const header = document.querySelector('header') as HTMLElement;
     expect(Number(header.style.zIndex)).toBeGreaterThan(50);
     cleanup();

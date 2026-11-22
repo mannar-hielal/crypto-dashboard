@@ -4643,6 +4643,238 @@ The `develop → main` release #289 deployed on 2026-11-14, and the prod smoke p
   out on a slow WebKit runner (#294).
 - **Dependencies:** minor and patch updates, and most majors; TypeScript 7 and Prisma 8 held back (#295).
 
+### 2026-11-19 — Chapter 2 starts: "Your crypto toolbox", and Lesson 5 "Coins and tokens: who has their own road"
+
+The learning map's chapter 2 stops being the "Trade with a plan" placeholder (owner, 2026-11-19: follow the benchmark course's topic
+order, even where that rewrites an earlier plan of ours; its topics, limit orders, stop-loss and take-profit, risk and scams, move to
+a later chapter). Chapter 2 is **Your crypto toolbox: coins, wallets and the networks behind them**, built lesson by lesson, one PR
+each (owner 2026-11-19); the five lessons and the checkpoint, with our own titles: Coins and tokens, Stablecoins, Your wallet your
+keys, Why sending crypto costs a fee, Trading without a middleman, and the checkpoint. This PR is the first.
+
+- **The map:** an open chapter may now carry `soon`, the titles of its stops still to write, shown after the built ones as the same
+  locked "coming soon" stops (`learn/path.ts`, `PathDrawer.tsx`). Chapter 2 opens once chapter 1's checkpoint is passed.
+- **Lesson 5, `lesson-coins`** (8 min, 18 screens, step base 60 like the other lessons' current versions): one metaphor, roads. A coin
+  has its own road (its own blockchain); a token is a shop built along someone else's road (Berwyn's analogy, with where it stops
+  matching). Cards: the cold open, the coin and its road, the road's upkeep (fees, staking), the eight coins of our market as ticker
+  badges (LINK set apart as the token), a **Pick the right ones** (a coin's three traits), the token and a real LINK chart, the three
+  common token jobs (utility, security, governance) with a **Match boxes** quiz, altcoins with the calm and stormy lines, a **Do the
+  math** card on real closes (bitcoin −19.1%, LINK −29.9%, 29 Jul to 5 Aug 2024, Bybit USDT perpetual), two multiple-choice questions,
+  **Your call** (a token that promises "triple in a week": find out who made it), the summary and the journal. No practice trade (the
+  stablecoin lesson offers the USDT buy).
+- **Text:** fact checked by a technical-writer agent (2026-11-19): the regulation wording softened, the altcoin and stablecoin
+  contradiction removed, "no owner" dropped from the road analogy, the van replaced by a shop (a token is a record of balances, not
+  something that moves), a quiz option made unambiguous. Still to re-check before a release: LINK's other chains (Chainlink docs) and
+  BNB Chain's history.
+- **Process rules added to the lesson-authoring skill** (owner, 2026-11-19): after a lesson is built it gets a `/code-review` and a
+  second technical-writer fact check on the built text, before the coverage check and the PR; a Pulin and Berwyn chat doesn't name
+  them on every line.
+- **Pictures** (visual Q&A, owner): flat side-view road scenes, plain ticker badges (one colour, LINK in an amber ring, never a
+  project's logo), Phosphor duotone icons for the token jobs (`LessonArt.tsx`, ten new `LessonArtId`s).
+- **Concepts:** `coin`, `staking`, `token`, `altcoin` (peeks, no article). **Ids:** `lesson-coins` in the client's `LESSON_IDS`, the server's
+  `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`.
+  `ChartScene.symbol` accepts `LINKUSDT`; the Pick quiz has five more tile icons.
+
+### 2026-11-19 — Chapter 2, Lesson 6 "Stablecoins: the coins that try to sit still"
+
+The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoins`, 8 min, 17 screens, step base 60; first step 61.
+
+- **One metaphor, the cloakroom ticket:** you hand in a dollar, you get a ticket. One flat counter, a different vault behind it for
+  each kind: dollar-backed (real money), crypto-backed (extra crypto), rule-based (a rule only). Berwyn's analogy says where it stops
+  matching (most people sell the ticket on an exchange instead of handing it back).
+- **Cards:** the cold open, what a stablecoin is, the ticket, the three kinds, **Match boxes** on what stands behind each, why
+  traders keep them (a BTC / USDT tag; **one practice buy**, the Lesson 1 spot buy paid in USDT, with its review), a **Do the math**
+  card (a $200 coin now $300: 50%, parked in USDT), **Drag and drop** (the steps of parking a profit), the peg slipping (a **drawn**
+  dip to about $0.87, never a chart: a stablecoin priced in another would confuse a beginner), "stable is a goal, not a promise",
+  two multiple-choice questions, **Your call** (a "stablecoin" paying 20% a year: check what stands behind it), summary, close.
+- **Text:** fact checked by a technical-writer agent (2026-11-19). Applied: "mostly cash and short-term US government debt"
+  instead of "very safe" (Tether also holds gold and bitcoin); the rule-based kind is "no vault of dollars" and "also called
+  algorithmic"; the March 2023 USDC dip is about 87 cents over a weekend after a bank holding part of its cash failed, and it
+  recovered when the US government protected that bank's depositors; stablecoins are tokens on someone else's road (consistent with
+  Lesson 5). To re-check before a release: Tether's reserves on its own site, the Sky/Maker docs on crypto-backed rules, Bybit's own
+  page on USDT-quoted markets.
+- **Real coin logos in the lessons** (owner 2026-11-20): the market card (Lesson 5: eight coins, each with its ticker, LINK in an amber
+  ring as the token), the BTC / USDT tag and the parked profit (Lesson 6) draw the real logos from `cryptocurrency-icons` (CC0, already
+  used by `CryptoIcon`; `USDC` added to `lib/cryptoIcons.ts`), through `CoinLogo` in `LessonArt.tsx`. The lesson-authoring skill says: a
+  demo of a coin, token or exchange uses as close a symbol as we may use, never a plain circle with text.
+- **Chat lines show no speaker name** (owner 2026-11-20, all lessons): `LessonSheet` shows a guide's line by the avatar alone; the
+  name stays as visually hidden text for screen readers (`.srOnly`).
+- **Drag and drop was already built** (`OrderQuiz`, 2026-11-16): the lesson-authoring skill's format table now says so (Match boxes
+  and Choose buy or sell too).
+- **Concepts:** `stablecoin`, `peg` (peeks, no article). **Pictures:** eleven new `LessonArtId`s (`LessonArt.tsx`). **Ids:**
+  `lesson-stablecoins` in the client's `LESSON_IDS`, the server's `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP`, the
+  SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
+  "coming soon" titles.
+
+### 2026-11-22 — About us page (first person, with the photo and the contact line)
+
+Owner: "use I", the name Mannar Hielal, the contact info@cryptopapertrade.com, the LinkedIn photo (`assets/landing/about-photo.webp`, 480 px square crop, 14 KB, sized, lazy, round on the page). `AboutPage` replaces the "coming soon" placeholder (`ComingSoonPage` is Support only now); copy in `lib/aboutContent.ts` states only what the project itself says (no personal history invented; no ads, no push to real money, independent of Bybit). Sections: why I built it, four promises, who is behind it, sign-up and chart links. **`noindex` and out of the sitemap** until the owner says otherwise. Anchors `about.register`, `about.chart`. Tests: `AboutPage.test` (one h1, first person and no "we", the mailto, photo size and alt, noindex, links), `BlogPages.test` (Support only).
+
+### 2026-11-22 — "How it works" replaces the Features page; the Crypto path menu item; the path in the screenshots
+
+Owner requests (visual Q&A answers: "rebuild as a real React page", "remove Features from the menu and completely, How it works serves the features page's purpose", "dashboard with the path drawer open"). **Page** `/how-it-works` (`HowItWorksPage`, copy in `lib/howItWorksContent.ts`), built from his tour page `CPT-how-it-works.html`: nine sections (why; one picture; a day in the life; behind the scenes with the restaurant picture, the words in pictures, the candle and three words; four flows step by step; what you can do on the chart, with the desk, the account and the phone; the learning path; what it is not; remember 5 things with the word list and the eight self-check questions) plus the FAQ accordion with FAQPage data (live only). It keeps what the Features page had (chart cards with screenshots, `PretendMoney`, the desk, account and phone cards, the coin ribbon) and drops the tour page's pause-animation and animated dot (nothing moves). Indexable only when live (`noIndex` and a "launching soon" line before). **Removed with it:** the `/features` route, `FeaturesPage` and its test, the footer and landing links, the sitemap and robots entries, the `features.*` guide anchors (now `how.*`) and `LEARN_TOPICS` (the chapter list replaced it). An old `/features` link falls to the catch-all, the landing page. **Menu:** Product ▾ is Chart, then Crypto path; "How it works" sits between Product and Blog (`nav.how`). **Crypto path** (`/path`, `OpenPathPage`, behind the sign-in guard): signed in it opens the learning map (`useTourStore.openPanel()`) and goes to the dashboard; signed out it goes to `/login` remembering `/path`, and `safeReturnPath` allows exactly `/path` (no query, no sub-path), so after sign-in the visitor lands on the dashboard with the map open. `/path` is `Disallow`ed in robots. **Screenshots** ("See it for real"): the Crypto path open at the side of the chart (desktop, 1100 px) and on a phone (390 px wide capture, shown narrow in a phone frame), real captures of a throwaway account (no name shown). Delete-account button label fixed in the same PR (white on the red button, `SettingsModal`). Tests: `HowItWorksPage`, `OpenPathPage` (signed in and out), `howItWorksContent` (counts and lessons pinned to the app), `SiteNav`, `Footer`, `marketRoutes`, `landingParts`, `SettingsModalDelete`. Review items kept from the draft below.
+
+#### Earlier the same day: Features page extras (now part of How it works)
+
+Owner requests, visual Q&A answers "faded background on the right" and "the five chart cards". **Learn steps** (`StepFlow`): four boxes in one row from 768 px with an arrow between each; two rows of two on a phone, with an arrow after the first box of a row and a bend where row one ends (arrows are `aria-hidden`; the ordered list and numbers carry the sequence). **Chart cards:** `Feature.shot` puts a cropped real capture (Playwright, signed in, 720 px WebP, 11–19 KB, sized, lazy, `alt=""`) behind the card's right side at low opacity fading toward the text; on a phone it sits behind the lower half. **Practice desk** (`PretendMoney`): a coin stamped PRETEND, the Order & Account panel crop with a "Your $10,000 of pretend money" callout (a narrower crop on a phone via `<picture>`), and the Account Settings dialog crop with the two-step Reset account. The dialog capture's account name was replaced with "trader" in the image (the field is read-only). Tests: `landingParts.test.tsx`.
+
+### 2026-11-22 — The landing and features pages rewritten for a beginner: learning app and real chart
+
+Owner's brief: whoever lands should see within seconds that this is BOTH a learning app (lessons on a real-data chart) and an
+advanced real-data chart with account management, drawing tools and virtual money. Plain, fun English for people with zero trading
+knowledge; no hype, no profit promises, paper trading only. Branch `feat/landing-features-rewrite`.
+
+**Landing page (live), in order:** hero (one h1, two path cards: "Open the live chart", no sign up, and "Start learning", free
+account); "Questions every beginner asks" (accessible accordion, each answer ends in "Start here"); a coin ribbon of the 9 pairs;
+"From your first click to your first trade" (a timeline of 8 milestones, in place of the terminal band "The chart's free. So is the
+trading desk"); "Learn it. Then try it on real candles." (eight lesson cards drawn with the lessons' own `LessonArt`, in place of
+"Advanced Charts"); three real screenshots in device frames; six "where we do better" sections, one per competitor group, each with
+an honest "where they are better"; one comparison table. **Pre-launch (`VITE_IS_LIVE` not true):** the Launching Soon hero, the coin
+ribbon and the newsletter form only (no sign-up, chart, FAQ or table, because none exists before launch); still `noindex`.
+
+**Features page:** learning first (how a lesson works, the lesson cards, what is covered today), then the chart, the practice desk,
+the account, real data, phone, and an accordion of six questions with FAQPage JSON-LD (`SeoHead` gained an optional `jsonLd` prop,
+escaped for `<`). Links to `/blog`, `/register`, `/chart`. Footer: Features, Live chart and Blog added beside the legal links, **on the landing and features pages only** (`AuthLayout marketingFooter`); sign-in, register and the legal pages keep their footer.
+Titles (about 35 characters, so the search result is not cut): landing "Learn Crypto Trading Free", features "Features: Learn Crypto by Doing". **Pre-launch indexing:** the features page is `noindex` with no FAQ data and says "launching soon" (production is live, so only a pre-launch build is affected); its questions section is hidden then, as on the landing page. `sitemap.xml` deliberately lists `/features` and `/`: a pre-launch build is never deployed to the production domain, so the mismatch exists only in a preview. **CSS tokens (a review finding, fixed 2026-11-22):** the landing, features, accordion and site-nav modules carry no raw colour: borders use the theme variables `--color-border-divider`, `--color-border-card`, `--color-border-hover` (mirrors of `border.*` in `tokens.ts`, added to `index.css` in this change) and `--color-border-input` (already there), and tints are `color-mix` on the brand variables. **Lesson previews:** a failed import or a render error shows one plain, polite status message, "Refresh the page to try again" (no button: a second import of a file a deploy removed would fail the same way, and a reload is the visitor's to do; the error boundary logs both to the console; a failed load stays failed until a refresh, a deliberate trade-off); the new `color-mix` and `--color-border-*` variables follow Tailwind v4's own baseline (Safari 16.4+), which already needs `color-mix`; **supported floor, decided:** Safari 16.4 / Chrome 111 / Firefox 128, with no `rgba()` fallback lines (the app itself already needs them: Tailwind v4's utilities fail below that floor, so a fallback on these pages alone would protect nothing); the scroller is a labelled region only where it scrolls (a phone), and the list carries the name elsewhere. Shadows stay pure black via `color-mix(... black ...)`. **Group cells and their sources:** exchange demos, charting sites, simulator games, journals, bot platforms and prop-firm sims each come from the matching section of the business-strategy report ("Competitive landscape": the group's own heading), read against public pages in November 2026; where a counter-example is likely the cell is a tilde, not a cross. **One inline style, on purpose:** each hero candle carries `style={{ '--i': index }}`, the index its draw-in delay is worked out from in the CSS (a per-element count, not a token value, and fewer lines than 24 `nth-of-type` rules): a documented exception to the inline-style rule. **Comparison table:** each cell rests on the business-strategy report's group-level findings and a read of public pages in November 2026; the owner signs it off before launch and re-reads it each quarter.
+
+**Decisions.** Competitors are groups, never brands, and the page names no brand (a test checks). The blurred "logos" are made-up
+CSS shapes with a heavy blur (`BrandMark`), no real logo files. The page's words live in `lib/landingContent.ts` (pages, tests and
+JSON-LD read the same text). Graphics: the candle sequence is plain SVG + CSS, drawn once, then the last candle breathes (the motion
+sits inside `prefers-reduced-motion: no-preference`); the coin ribbon uses the bundled cryptocurrency-icons (CC0) already in
+`lib/cryptoIcons.ts`; screenshots are real Playwright captures of a throwaway account (name scrubbed), 1100 px WebP of 30-48 KB in
+`assets/landing/`, lazy with width and height; the lesson row loads late (`LessonPreviewsLazy`: IntersectionObserver plus
+`React.lazy`, so the lessons' picture module is off the first load). No third-party illustration library was added and no npm
+dependency. Removed with the old page: `AccountUnlocksTerminal` (+ test, + anchor `landing.unlocks.register`) and the unused
+`chart.svg`, `papertrading.svg`, `9crypto.svg`, `realtime-data.svg`, `visual-balance.svg`, `hero-mac-app.png`, `hero.png`. New anchors:
+`landing.faq.start`, `features.hero.chart`, `features.hero.register`, `features.faq.start`.
+
+**The claims table (what each tick, tilde or cross rests on).** A cell is what most of the group does ("some" = it varies); the
+groups' columns come from `reports/Paper trading app business strategy.md` ("Competitive landscape", "Why a user would pick this
+app"), read November 2026. Our column, each verified here:
+
+| Row                                  | Us  | Verified against                                                                                    |
+| ------------------------------------ | --- | --------------------------------------------------------------------------------------------------- |
+| Open the chart with no sign up       | yes | `/chart` is a public route (`App.tsx`); trading there asks to sign in                               |
+| No exchange account or ID needed     | yes | Sign-up is email + password only (`RegisterPage.tsx`)                                               |
+| Free to practise, no card            | yes | No payment code; Terms: free service                                                                |
+| Lessons that end in a practice trade | yes | `learn/path.ts`: lesson 1 ends on the buy practice, then Buy / Sell stops with "what just happened" |
+| Crypto futures rules                 | yes | Bybit Parity BP-3 (mark price, liquidation), BP-4 (funding), BP-5 (cross / isolated), this log      |
+| Drawing tools and indicators         | yes | `lib/libraryTools.ts`, `lib/indicators/catalog.ts` (9), `INTERVALS` (10)                            |
+| Saved record with notes              | yes | Account tabs: Order History, Balance History, Journal (`isUserNote` notes)                          |
+| No ads, no push to deposit           | yes | No ad code or affiliate link anywhere in `apps/client`                                              |
+| Balance above $10,000 (we: no)       | no  | `STARTING_BALANCE = 10_000` (`engine/types.ts`)                                                     |
+| Hundreds of coins (we: no)           | no  | `ALLOWED_SYMBOLS`: 9                                                                                |
+| Leverage above 10x (we: no)          | no  | `MAX_LEVERAGE` 10 (2026-05-04 entry)                                                                |
+
+**Refused claims:** a record that helps anyone get funded (the page says the opposite); free replay, a journal with R-multiples and
+prop-firm rehearsal (roadmap, not built); "works where exchange demos are blocked" (the Terms exclude some jurisdictions); "history is
+never wiped" (not verified); any price, profit or win-rate promise. The lessons row says "as far as we could find": exchange, charting-site and game groups show a tilde (academies, courses and tutorials exist), the others a cross.
+
+**Tests:** `LandingPage.test` (both states), `FeaturesPage.test`, `Accordion.test` (ARIA wiring, keys), `landingParts.test` (table
+rows and marks, the three deliberate crosses, path-card links, FAQ buttons, ribbon, candles, timeline, screenshots),
+`LessonPreviews.test`, `SeoHead.test`. Checked at 375 / 412 / 820 / 1440 px: no sideways scroll.
+
+### 2026-11-22 — The sneak peek gets its own graphic, and the first cards stop announcing it
+
+Owner, 2026-11-22: the picture on a "What you will learn" card (a road scene, the friends) was drawn for another card and says little
+there. Each peek now has **its own graphic, derived from the lesson's topics**, with Pulin or Berwyn pointing at it.
+
+- **The graphic:** `PeekMap` in `LessonArt.tsx`: a numbered path through the lesson's 3 or 4 topics, an icon and a two-line label each,
+  in the order of the lines below it. One template, seven art ids (`peekOwnership`, `peekSwings`, `peekStyle`, `peekCoins`,
+  `peekStable`, `peekWallets`, `peekFees`); a guide stands in the picture, pointing (they alternate by lesson). Lesson 1's "Meet your
+  guides" card is its own peek and is unchanged.
+- **The sweep:** the first cards of Lessons 2 and 3 ended on "In the next 9 minutes: …", and Lesson 4's opening text on "Today you'll
+  see the difference and find the style that fits you": all three said what the peek says next, so they are gone. Lessons 5 to 8 open
+  on the peek itself.
+- **Rule:** the lesson-authoring skill's "The opening" section says it; the lesson rules test checks the `peek…` graphic, the pointing
+  guide and that no cold open announces the lesson.
+
+### 2026-11-22 — Chapter 2, Lesson 8 "Why sending crypto costs a fee"
+
+The fourth lesson of chapter 2 (its own PR, owner 2026-11-19), built on the owner's goal of 2026-11-22 ("implemented, code-reviewed,
+committed and pushed to develop"): the outline, the text and the pictures were drafted and fact checked without a round of owner
+approvals, so the owner reads them on the PR. `lesson-fees`, 8 min, 20 screens, step base 60; first step 61.
+
+- **One metaphor, carried from Lesson 5's toll booth:** a block is a bus with limited seats, and the fee is what a payment offers for a
+  seat. Berwyn's analogy says where it stops matching (the bus leaves on the network's schedule).
+- **Cards:** the sneak peek (card 1), sending has a price, a block is a bus, who picks the passengers (validators; miners on Bitcoin,
+  Lesson 2), **Drag and drop** (send to confirmed), why a fee exists (pay for upkeep, stop spam), why it moves (limited seats, demand),
+  **Match boxes**, **a real fee spike** (our example: bitcoin's average fee, April 2024), **Do the math** (a $200 send: 2% on a quiet
+  day, 64% on the spike day), cheap and pricey chains, a plain send or a swap, **Pick the right ones** (what makes a fee higher), a
+  multiple-choice question, plan before you send, then **Your call** ($40 to a friend, a $12 fee: check whether waiting or a cheaper
+  chain costs less), two different fees (the practice account's Commission is the exchange's; no practice trade has a network fee), a
+  multiple-choice question (which costs the most), summary, close. No practice trade.
+- **Text:** fact checked by a technical-writer agent (2026-11-22). Applied: early April's fee is "a few dollars, about $4" (The Block
+  gives a 7-day average of $4.11 earlier in April, and a review caught the card rounding it up to $5; the $128 and $35 figures are confirmed); the validator "picks and adds" payments,
+  and Bitcoin's nodes check them (Lesson 2); the Commission is simulated here, a real exchange charges it; the second "big fee on a
+  small send" question became "which costs the most?", so it no longer repeats Your call. To re-check before a release: the
+  "often a few cents a send" line on cheap chains.
+- **Our example:** bitcoin's average transaction fee was about $4 in early April 2024, about $128 on 20 April (halving day and the
+  launch of Runes) and about $35 on 21 April (The Block and YCharts reports; sources differ by cents with the day's time base). Drawn,
+  never a chart, and labelled "drawn from reported averages". The $200 payment is ours.
+- **Pictures:** eight new flat drawings in the Lesson 7 style (`LessonArt.tsx`), and two Pick tile icons (`gear`, `moon`). The visual
+  Q&A of Lesson 7 stands: no new widget, no new layout.
+- **Concepts:** `validator`, `network-fee` (peeks, no article). **Ids:** `lesson-fees` in the client's `LESSON_IDS`, the server's
+  `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. It leaves
+  the map's "coming soon" list: chapter 2 now shows one lesson and the checkpoint still to write.
+
+### 2026-11-22 — A sneak peek opens every lesson, in place of the guides' chat
+
+Owner, 2026-11-22: the chat between the two guides on the first card told the learner little. A lesson now opens with what the
+learner will know by the end.
+
+- **The card:** `preview` on a `LessonCard`: title "What you will learn", the lesson's picture on top, then 3 or 4 short numbered
+  lines in the summary's style (visual Q&A, owner 2026-11-22: picture and list, no guide, no paragraph). Drawn from each lesson's own
+  recap, so the promise and the summary match. `LessonSheet` renders it; `lesson.preview` is a new guide anchor.
+- **Where:** card 1 in Lessons 5, 6 and 7 (it replaces their chat, keeping its picture; none of the three had been released). Card 2 in
+  Lessons 2, 3 and 4, after their cold open or opening text (owner's choice). Lesson 1's "Meet your guides" card already lists what the
+  learner will learn, so it is its peek and gets no second card.
+- **Released lessons 2 to 4 moved:** every screen after card 2 is one place on, so their `stepBase` went from 60 to 100 (the SDK's
+  `LESSON_FIRST_STEPS` and the server's `LESSON_FIRST_STEP` 61 to 101), `momentAfter` moved by one, and the replaced versions are
+  recorded in the lesson rules test. **Learner impact:** migration `20261122120000_reset_lessons_2_4` deletes every learner's progress
+  on Lessons 2, 3 and 4, begun and finished alike, as the 2026-11-16 rewrite did for Lessons 1 to 3. Lesson 1 and the checkpoint are
+  untouched, and a passed chapter 1 checkpoint still opens chapter 2. It reaches production with the next release.
+- **Rollback:** the API alone may be rolled back (an older API accepts the old steps; the new app's saves for Lessons 2 to 4 above step
+  100 are then refused as out of range and the app keeps them on the device). The web app alone may **not**: the new API refuses the
+  previous app's lesson saves for Lessons 2 to 4 (steps 61 to 100) as an earlier version, so roll back both, or the API only.
+- **Rule:** the lesson-authoring skill has a new section, "The opening: a sneak peek, not a chat", and the lesson rules test checks it
+  for every lesson. The chat (`lines`) stays for mid-lesson exchanges; it is never card 1.
+- **Tests that named screens:** the sheet tests that point at Lessons 2 and 3 by screen number moved one on; the progress-hook tests
+  that used those lessons for their own step maths now use Lessons 5 and 6, whose first step is unchanged.
+
+### 2026-11-22 — Chapter 2, Lesson 7 "Your wallet, your keys: who holds them?"
+
+The third lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-wallets`, 10 min, 25 screens, step base 60; first step 61. Outline
+and text approved by the owner 2026-11-22 (drafts in the git-ignored `guided-learning-topics/notes/`, files 20 to 22).
+
+- **One metaphor, the mailbox and its key** (Lesson 2 taught the private key and signing; the address and the mailbox are introduced here, a built-text review finding): a wallet is a key ring, a custodial wallet is a bank holding your key, a
+  hardware wallet is a signing room. Berwyn's analogies each say where they stop matching. Our own characters: **Mira** and
+  **Sneaky Sam** (flat pictures, no faces): Sam sees her address and balance but cannot spend without her signature; then her
+  phone falls in the sea with no backup of her recovery phrase. Lena and Zoe answer the two wallet-choice questions.
+- **Cards:** where your crypto is, a wallet holds keys, address and private key, **Match boxes** (address, private key, wallet,
+  signature), what a wallet is for, Mira and Sam, the phone in the sea, custodial and its trade-off (FTX, Lesson 3), non-custodial,
+  control and no reset button, then **Your call** (two people forgot their login: only the exchange user can reset), the recovery
+  phrase and its three rules, a **Pick the right ones** (where to keep it) and a **Drag and drop** (setting up safely), hot and cold
+  wallets, **Match boxes** (wallet for the job), Lena and Zoe, a purse and a safe, a phrase check (a "support" asking for the 12
+  words), summary, close. No practice trade: a wallet has no trade, and a card says the paper account is not a wallet.
+- **Caps:** this lesson asks eight questions (owner 2026-11-22; the lesson rules test allows eight for it, six elsewhere). Teaching
+  cards stay within 16 and 80 words.
+- **Pictures** (visual Q&A, owner 2026-11-22): flat shapes, 15 new `LessonArtId`s in `LessonArt.tsx`. Hot wallets are amber with
+  signal bars and an "online" tag, cold are purple with a padlock and an "offline" tag (the tags carry it, never colour alone). The
+  recovery phrase card shows twelve numbered slots, never real words. **The hardware wallet is generic** (a rounded slab with a
+  screen and two buttons): no licence covers a real maker's shape, name or logo (Ledger's marks are Ledger SAS's, its public brand
+  terms cover partners and resellers; Trezor's manual was only reached second-hand and its model names are registered). The owner
+  chose generic over asking the makers, 2026-11-22; written permission would allow a swap later.
+- **Text:** fact checked twice by a technical-writer agent (the draft, then the built lesson). Applied from the first: the
+  safe-deposit-box analogy replaced by a bank account (a real box needs the customer's own key and deposit insurance does not cover
+  its contents); "no company can stop you signing" plus the stablecoin-issuer freeze (ties to Lesson 6); the recovery phrase "rebuilds
+  that wallet's keys in a compatible wallet" and may be typed to restore your own wallet; cold wallets "keep the key away from the
+  internet, usually a hardware wallet"; FTX "froze withdrawals and went bankrupt"; balances are public and linkable.
+- **Concepts:** `wallet`, `recovery-phrase`, `hardware-wallet` (peeks, no article); the Pick quiz has six more tile icons.
+  Proposed Blog posts (not linked from the lesson): "Custodial or self-custody: choosing a wallet" and "Your recovery phrase, safely".
+- **Ids:** `lesson-wallets` in the client's `LESSON_IDS`, the server's `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP`
+  (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. It leaves the map's "coming soon" list: chapter 2 now shows two
+  stops and the checkpoint still to write.
+
 ### 2026-11-18 — The Blog: the articles leave the lessons, and the public header gets Product, Blog, About us, Support
 
 Plan: `docs/BLOG_PLAN.md`; built in one PR on `feat/knowledge-base`. The nine articles (the old knowledge base)

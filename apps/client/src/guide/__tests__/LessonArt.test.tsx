@@ -25,6 +25,57 @@ const ARTS: LessonArtId[] = [
   'friends',
   'lena',
   'zoe',
+  'twoRoads',
+  'coinRoad',
+  'tollBooth',
+  'tickerBadges',
+  'shopRoad',
+  'arcadeCredits',
+  'shareCertificate',
+  'ballotBox',
+  'calmStormy',
+  'stopCoin',
+  'wobbleSteady',
+  'steadyPeg',
+  'cloakroom',
+  'vaultDollar',
+  'vaultCrypto',
+  'vaultRule',
+  'vaultCheck',
+  'usdtPair',
+  'parkProfit',
+  'pegDip',
+  'tooSweet',
+  'mailboxWall',
+  'keyRing',
+  'slotAndKey',
+  'walletJobs',
+  'samGlass',
+  'phoneSea',
+  'bankHolds',
+  'lockedCounter',
+  'ownKeys',
+  'noReset',
+  'phraseCard',
+  'phraseNever',
+  'hotPhone',
+  'coldDevice',
+  'purseSafe',
+  'sendFee',
+  'busBlock',
+  'waitingLine',
+  'feeBids',
+  'feeSpike',
+  'chainsCompare',
+  'simpleComplex',
+  'feeCheck',
+  'peekOwnership',
+  'peekSwings',
+  'peekStyle',
+  'peekCoins',
+  'peekStable',
+  'peekWallets',
+  'peekFees',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -41,6 +92,48 @@ const TELLING: LessonArtId[] = [
   'friends',
   'lena',
   'zoe',
+  'twoRoads',
+  'coinRoad',
+  'tollBooth',
+  'tickerBadges',
+  'shopRoad',
+  'calmStormy',
+  'wobbleSteady',
+  'steadyPeg',
+  'cloakroom',
+  'vaultDollar',
+  'vaultCrypto',
+  'vaultRule',
+  'vaultCheck',
+  'usdtPair',
+  'parkProfit',
+  'pegDip',
+  'keyRing',
+  'slotAndKey',
+  'walletJobs',
+  'samGlass',
+  'phoneSea',
+  'lockedCounter',
+  'phraseCard',
+  'phraseNever',
+  'hotPhone',
+  'coldDevice',
+  'purseSafe',
+  'sendFee',
+  'busBlock',
+  'waitingLine',
+  'feeBids',
+  'feeSpike',
+  'chainsCompare',
+  'simpleComplex',
+  'feeCheck',
+  'peekOwnership',
+  'peekSwings',
+  'peekStyle',
+  'peekCoins',
+  'peekStable',
+  'peekWallets',
+  'peekFees',
 ];
 
 describe('the guides', () => {
@@ -142,6 +235,63 @@ describe('LessonArt', () => {
     expect(words('closeToKeep')).toMatch(/on paper.*\+\$120\?.*Close.*\+\$120.*yours to keep/);
     expect(words('shortGame')).toMatch(/\$60.*\$40.*keep \$20/);
     expect(words('alwaysOpen')).toMatch(/Shop.*Crypto.*open 24\/7/);
+    // Chapter 2, Lesson 5: the road scenes say who has their own road, and LINK is set apart
+    expect(words('twoRoads')).toMatch(/Its own road.*Someone else’s road/);
+    expect(words('coinRoad')).toMatch(/Its blockchain/);
+    expect(words('tollBooth')).toMatch(/Fee.*paid in the coin/);
+    expect(words('shopRoad')).toMatch(/Token.*house.*rules/);
+    expect(words('calmStormy')).toMatch(/steady.*swings/);
+    // Chapter 2, Lesson 6: the cloakroom scenes say what stands behind each ticket
+    expect(words('cloakroom')).toMatch(/\$1 in.*ticket out.*cloakroom/);
+    expect(words('vaultDollar')).toMatch(/counter.*real money/);
+    expect(words('vaultCrypto')).toMatch(/counter.*extra crypto/);
+    expect(words('vaultRule')).toMatch(/counter.*just a rule/);
+    expect(words('usdtPair')).toMatch(/BTC.*USDT.*priced in.*1 BTC costs/);
+    expect(words('pegDip')).toMatch(/\$1\.00 peg.*about \$0\.87.*drawn example/);
+    // Chapter 2, Lesson 7: the wallet scenes carry their cards, and hot and cold have text tags
+    expect(words('keyRing')).toMatch(/wallet = key ring.*the coins stay on the blockchain/);
+    expect(words('slotAndKey')).toMatch(/address.*safe to share.*private key.*keep it secret/);
+    expect(words('walletJobs')).toMatch(/see.*receive.*sign/);
+    expect(words('samGlass')).toMatch(/Sam.*2 BTC.*he can look, not spend/);
+    expect(words('phoneSea')).toMatch(/2 BTC still here.*no key to spend them/);
+    expect(words('lockedCounter')).toMatch(/withdrawals frozen/);
+    expect(words('phraseCard')).toMatch(/12 words, in order/);
+    expect(words('phraseNever')).toMatch(/photo.*cloud.*email.*paper, offline, and no one else/);
+    expect(words('hotPhone')).toMatch(/online/);
+    expect(words('coldDevice')).toMatch(/offline.*the key never leaves/);
+    expect(words('purseSafe')).toMatch(/hot.*a little, for today.*cold.*the rest, for later/);
+    // The recovery phrase picture never shows real words: twelve numbers, no letters
+    const phrase = render(<LessonArt id="phraseCard" />).container.textContent ?? '';
+    expect(phrase.replace('12 words, in order', '')).toMatch(/^123456789101112$/);
+    // Chapter 2, Lesson 8: the fee scenes carry their cards
+    expect(words('sendFee')).toMatch(/\+ fee.*a small fee rides along/);
+    expect(words('busBlock')).toMatch(/a block.*1 seat left.*limited seats/);
+    expect(words('waitingLine')).toMatch(/high.*mid.*low.*low.*higher fees board first/);
+    expect(words('feeBids')).toMatch(/quiet.*busy.*the fee people offer/);
+    expect(words('feeSpike')).toMatch(
+      /20 Apr ≈ \$128.*early April ≈ \$4.*21 Apr ≈ \$35.*drawn from reported averages/
+    );
+    expect(words('chainsCompare')).toMatch(
+      /a cheap chain.*often cents.*a pricier chain.*dollars when busy/
+    );
+    expect(words('simpleComplex')).toMatch(/a plain send.*lower fee.*a swap.*higher fee/);
+    expect(words('feeCheck')).toMatch(/\$40.*\$12.*look at the fee before you confirm/);
+    // The sneak peek graphics: a numbered path, one stop per line of the card below it
+    expect(words('peekCoins')).toMatch(
+      /in this lesson.*1.*Coin or.*token.*2.*Token.*kinds.*3.*Altcoin.*swings.*4.*Check fast.*gains/
+    );
+    expect(words('peekStyle')).toMatch(/1.*Trading or.*2.*Spreading.*3.*Your time/);
+    for (const id of [
+      'peekOwnership',
+      'peekSwings',
+      'peekStable',
+      'peekWallets',
+      'peekFees',
+    ] as const) {
+      expect(words(id), id).toMatch(/in this lesson.*1.*2.*3.*4/);
+    }
+    const badges = render(<LessonArt id="tickerBadges" />).container.textContent ?? '';
+    expect(badges).toMatch(/BTC.*ETH.*SOL.*BNB.*XRP.*ADA.*AVAX.*DOGE.*LINK.*a token/);
     // The chain: each block's prev is the fingerprint of the block before it
     const chain = render(<LessonArt id="hashChain" />).container.textContent ?? '';
     expect(chain).toMatch(/#k7q2.*#k7q2.*#m4x9.*#m4x9/);
@@ -149,6 +299,14 @@ describe('LessonArt', () => {
     const seal = render(<LessonArt id="sealBroken" />).container;
     expect(seal.textContent).toMatch(/pays 5 → 9.*redo every block after/);
     expect([...seal.querySelectorAll('text')].filter((t) => t.textContent === '✕')).toHaveLength(2);
+  });
+
+  it('should show real coin logos, not plain ticker circles (owner 2026-11-20)', () => {
+    const logos = (id: LessonArtId) =>
+      render(<LessonArt id={id} />).container.querySelectorAll('image').length;
+    expect(logos('tickerBadges')).toBe(9); // the eight coins and LINK
+    expect(logos('usdtPair')).toBe(2); // BTC and USDT
+    expect(logos('parkProfit')).toBe(1); // USDT
   });
 
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {

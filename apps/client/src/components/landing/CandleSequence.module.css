@@ -1,0 +1,88 @@
+/* The hero's animated candles. Plain SVG + CSS, drawn once, then the last candle breathes. Colours
+   from tokens.ts via the @theme mirror in index.css. */
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.grid {
+  stroke: var(--color-border-divider); /* border.divider */
+  stroke-width: 1;
+}
+
+.up {
+  color: var(--color-brand-green);
+}
+
+.down {
+  color: var(--color-brand-red);
+}
+
+.wick {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.body {
+  fill: currentColor;
+}
+
+.average {
+  fill: none;
+  stroke: var(--color-brand-purple);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+}
+
+/* Motion only for visitors who have not asked for less of it */
+@media (prefers-reduced-motion: no-preference) {
+  .candle {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: draw 0.45s ease-out calc(var(--i) * 0.12s + 0.15s) both;
+  }
+
+  .candle.last {
+    animation:
+      draw 0.45s ease-out calc(var(--i) * 0.12s + 0.44s) both,
+      breathe 2.4s ease-in-out calc(var(--i) * 0.12s + 0.94s) 3;
+  }
+
+  .average {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trace 3s ease-out 0.4s forwards;
+  }
+}
+
+@keyframes draw {
+  from {
+    opacity: 0;
+    transform: scaleY(0.15);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.88);
+  }
+}
+
+@keyframes trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

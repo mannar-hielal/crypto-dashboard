@@ -341,3 +341,55 @@
 .haloAmber {
   fill: color-mix(in srgb, var(--color-brand-amber) 28%, white); /* color.amber */
 }
+
+/* ─── Chapter 2, Lesson 5 (owner's visual Q&A 2026-11-19): the road scenes and ticker badges ─── */
+
+/* A road: a dark band (bg.surface) with a dashed middle line in the muted colour */
+.road {
+  fill: var(--color-bg-surface); /* bg.surface */
+}
+
+.roadLine {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 8 6;
+}
+
+/* A coin's ticker: white letters under (or beside) its real logo; the token's logo sits in an amber ring */
+.badge {
+  fill: var(--color-brand-purple-dark); /* color.purpleDark */
+}
+
+.tokenRing {
+  fill: none;
+  stroke: var(--color-brand-amber); /* color.amber */
+  stroke-width: 3;
+}
+
+.badgeText {
+  fill: var(--color-brand-white); /* color.white */
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ─── Chapter 2, Lesson 7 (owner's visual Q&A 2026-11-22): wallets and keys ───── */
+
+/* Cold: purple (color.purpleDark), always beside a padlock and an "offline" tag */
+.coolText {
+  color: var(--color-brand-purple-dark); /* color.purpleDark */
+}
+
+.coolFill {
+  fill: var(--color-brand-purple-dark); /* color.purpleDark */
+}
+
+/* Hot: amber (color.amber), always beside signal bars and an "online" tag */
+.amberFill {
+  fill: var(--color-brand-amber); /* color.amber */
+}
+
+.tagText {
+  fill: var(--color-bg-page); /* bg.page, dark text on the amber tag */
+  font-size: 11px;
+  font-weight: 700;
+}

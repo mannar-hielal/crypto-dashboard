@@ -1,1 +1,4 @@
+# A removed page keeps its address alive: a 301 to where it went (a soft 404 loses the ranking).
+# These go above the SPA fallback, which would otherwise answer every path with 200.
+/features  /how-it-works  301
 /*  /index.html  200

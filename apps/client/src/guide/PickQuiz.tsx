@@ -10,10 +10,24 @@ import { useState } from 'react';
 import {
   ArrowsClockwise,
   CalendarBlank,
+  Certificate,
   ChartPieSlice,
+  Cloud,
+  Coins,
+  EnvelopeSimple,
   Eye,
+  Gear,
+  ImageSquare,
   Leaf,
   Lightning,
+  LinkSimple,
+  ListChecks,
+  MapPin,
+  Moon,
+  Note,
+  RoadHorizon,
+  UsersThree,
+  Vault,
 } from '@phosphor-icons/react';
 import { Check, X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
@@ -29,6 +43,23 @@ const ICONS = {
   repeat: ArrowsClockwise,
   lightning: Lightning,
   eye: Eye,
+  // Lesson 5's coin traits (2026-11-19)
+  road: RoadHorizon,
+  link: LinkSimple,
+  coins: Coins,
+  people: UsersThree,
+  vote: ListChecks,
+  certificate: Certificate,
+  // Lesson 7's places for a recovery phrase (2026-11-22)
+  note: Note,
+  image: ImageSquare,
+  safe: Vault,
+  mail: EnvelopeSimple,
+  pin: MapPin,
+  // Lesson 8's fee makers (2026-11-22)
+  gear: Gear,
+  moon: Moon,
+  cloud: Cloud,
 } satisfies Record<TileIcon, unknown>;
 
 export function PickQuiz({

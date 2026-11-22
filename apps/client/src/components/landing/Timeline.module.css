@@ -1,0 +1,68 @@
+/* The milestones timeline: a vertical line with numbered dots. Colours from tokens.ts via the
+   @theme mirror in index.css. */
+
+.list {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 44rem;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The line runs behind the dots */
+.list::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 19px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--color-brand-grad-from), var(--color-brand-grad-to));
+  content: '';
+  opacity: 0.5;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.dot {
+  z-index: 1;
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-brand-purple);
+  border-radius: 9999px;
+  background: var(--color-bg-page);
+  color: var(--color-brand-white);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.body {
+  padding-top: 4px;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.375; /* lineHeight.snug */
+}
+
+.text {
+  margin: 4px 0 0;
+  color: var(--color-brand-muted);
+  font-size: 1rem;
+  line-height: 1.5; /* lineHeight.normal */
+}

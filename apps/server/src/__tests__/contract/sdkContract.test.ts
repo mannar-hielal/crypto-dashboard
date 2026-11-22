@@ -376,7 +376,7 @@ const CALLS: Call[] = [
   },
   {
     name: 'learnApi.setProgress (a lesson begun, with its step)',
-    run: () => learnApi.setProgress('lesson-02', 'started', T, 76),
+    run: () => learnApi.setProgress('lesson-02', 'started', T, 116),
     status: 200,
     response: f.learnProgressStarted,
   },
@@ -388,7 +388,7 @@ const CALLS: Call[] = [
   },
   {
     name: 'learnApi.setProgress (a lesson finished, with its last step)',
-    run: () => learnApi.setProgress('lesson-02', 'completed', T, 81),
+    run: () => learnApi.setProgress('lesson-02', 'completed', T, 121),
     status: 200,
     response: f.learnProgressLessonDone,
   },

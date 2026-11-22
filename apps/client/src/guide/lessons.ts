@@ -20,7 +20,16 @@ import { plainText, termIds } from '@/learn/terms';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId, PracticeTourId } from './tours';
 
-export const LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02', 'lesson-04'] as const;
+export const LESSON_IDS = [
+  'lesson-01',
+  'lesson-ownership',
+  'lesson-02',
+  'lesson-04',
+  'lesson-coins',
+  'lesson-stablecoins',
+  'lesson-wallets',
+  'lesson-fees',
+] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
 export function isLessonId(value: string): value is LessonId {
@@ -59,7 +68,63 @@ export type LessonArtId =
   /** Lesson 4 (owner 2026-11-18): Lena the calm investor and Zoe the active trader (Open Peeps, CC0) */
   | 'friends'
   | 'lena'
-  | 'zoe';
+  | 'zoe'
+  // Chapter 2, Lesson 5 (owner's visual Q&A 2026-11-19): coins are roads, tokens are shops on them
+  | 'twoRoads'
+  | 'coinRoad'
+  | 'tollBooth'
+  | 'tickerBadges'
+  | 'shopRoad'
+  | 'arcadeCredits'
+  | 'shareCertificate'
+  | 'ballotBox'
+  | 'calmStormy'
+  | 'stopCoin'
+  // Chapter 2, Lesson 6 (owner's visual Q&A 2026-11-19): stablecoins as a cloakroom ticket
+  | 'wobbleSteady'
+  | 'steadyPeg'
+  | 'cloakroom'
+  | 'vaultDollar'
+  | 'vaultCrypto'
+  | 'vaultRule'
+  | 'vaultCheck'
+  | 'usdtPair'
+  | 'parkProfit'
+  | 'pegDip'
+  | 'tooSweet'
+  // Chapter 2, Lesson 7 (owner's visual Q&A 2026-11-22): the mailbox and its key, hot and cold
+  | 'mailboxWall'
+  | 'keyRing'
+  | 'slotAndKey'
+  | 'walletJobs'
+  | 'samGlass'
+  | 'phoneSea'
+  | 'bankHolds'
+  | 'lockedCounter'
+  | 'ownKeys'
+  | 'noReset'
+  | 'phraseCard'
+  | 'phraseNever'
+  | 'hotPhone'
+  | 'coldDevice'
+  | 'purseSafe'
+  // Chapter 2, Lesson 8 (2026-11-22): a block is a bus, the fee is the offer for a seat
+  | 'sendFee'
+  | 'busBlock'
+  | 'waitingLine'
+  | 'feeBids'
+  | 'feeSpike'
+  | 'chainsCompare'
+  | 'simpleComplex'
+  | 'feeCheck'
+  // The sneak peek's own graphic, one per lesson (owner 2026-11-22)
+  | 'peekOwnership'
+  | 'peekSwings'
+  | 'peekStyle'
+  | 'peekCoins'
+  | 'peekStable'
+  | 'peekWallets'
+  | 'peekFees';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -95,6 +160,79 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
     'Lena, a calm long-term investor, holding a mug; Zoe, an active trader, looking at her phone.',
   lena: 'Lena, a calm long-term investor, holding a mug.',
   zoe: 'Zoe, an active trader, looking at her phone.',
+  twoRoads:
+    'Two roads: one is a coin’s own road, the other belongs to someone else, with a shop built beside it.',
+  coinRoad: 'A coin on its own road, with a signpost naming its blockchain.',
+  tollBooth:
+    'A coin pays a fee at a toll booth on its road, and the people who keep the road running are paid in the same coin.',
+  tickerBadges:
+    'Eight round badges for the coins BTC, ETH, SOL, BNB, XRP, ADA, AVAX and DOGE, and a ninth, LINK, set apart in an amber ring: a token.',
+  shopRoad: 'A token is like a shop built beside someone else’s road, with its own house rules.',
+  arcadeCredits: null,
+  shareCertificate: null,
+  ballotBox: null,
+  calmStormy: 'A steady line and a line that swings up and down.',
+  stopCoin: null,
+  wobbleSteady: 'A coin whose line swings up and down beside a stablecoin’s line that sits still.',
+  steadyPeg: 'A stablecoin’s price line staying on the dashed $1.00 line.',
+  cloakroom: 'You hand in one dollar at the cloakroom counter and get a ticket.',
+  vaultDollar: 'Behind the counter, a vault holds real money for the tickets.',
+  vaultCrypto: 'Behind the counter, a vault holds more crypto than the tickets are worth.',
+  vaultRule: 'Behind the counter there is no vault of money, only a note with a rule on it.',
+  vaultCheck: 'A vault under a magnifying glass: who checks what is inside?',
+  usdtPair: 'The pair BTC / USDT, with USDT lit up: the price of one bitcoin is quoted in USDT.',
+  parkProfit: 'A coin now worth $300 is sold for 300 USDT, which stays steady.',
+  pegDip:
+    'A drawn example: a stablecoin’s price falls from the $1.00 line to about $0.87, then climbs back.',
+  tooSweet: null,
+  mailboxWall: null,
+  keyRing:
+    'A key ring holding keys, beside a row of mailboxes: the wallet holds the keys, and the coins stay on the blockchain.',
+  slotAndKey: 'Two panels: an address, safe to share, and a private key, to keep secret.',
+  walletJobs: 'A wallet’s three jobs: see what an address holds, receive, and sign a payment.',
+  samGlass:
+    'Sneaky Sam looks at a mailbox through glass: it shows 2 BTC and a lock, so he can look but not spend.',
+  phoneSea:
+    'A phone with the key sinks into the sea, while the mailbox with 2 BTC stays where it was, with no key to spend it.',
+  bankHolds: null,
+  lockedCounter: 'A company building holds your key behind a locked counter: withdrawals frozen.',
+  ownKeys: null,
+  noReset: null,
+  phraseCard: 'A card with twelve numbered slots, one word to write in each, in order.',
+  phraseNever:
+    'A camera, a cloud and an envelope, each crossed out: never a photo, a cloud or an email.',
+  hotPhone:
+    'A phone with the key on it and signal bars, tagged online: handy, but on a connected device.',
+  coldDevice:
+    'A small hardware wallet with a screen and two buttons, tagged offline: it signs inside, and the key never leaves.',
+  purseSafe:
+    'A purse tagged hot for a little today, and a safe tagged cold for the rest, for later.',
+  sendFee: 'Coins travel to a mailbox, with a small fee tag riding along.',
+  busBlock: 'A bus with six seats, five taken and one left: a block has limited seats.',
+  waitingLine:
+    'Four payments wait in line, each showing the fee it offers; the higher fees board the next bus first.',
+  feeBids:
+    'Five bars rising from quiet to busy: the busier the network, the higher the fee people offer.',
+  feeSpike:
+    'A line through three reported averages, not to scale: bitcoin’s average fee, about $4 in early April 2024, about $128 on 20 April, about $35 on 21 April.',
+  chainsCompare: 'Two panels: a cheap chain, often cents, and a pricier chain, dollars when busy.',
+  simpleComplex: 'A plain send is less work and a lower fee; a swap is more work and a higher fee.',
+  feeCheck:
+    'A send of $40 showing a $12 network fee beside a magnifying glass: look before you confirm.',
+  peekOwnership:
+    'The lesson’s four topics as a numbered path: why Bitcoin exists, one ledger copied, nodes and blocks, no one in charge.',
+  peekSwings:
+    'The lesson’s four topics as a numbered path: swings both ways, news and hype, thin or deep markets, check the coin.',
+  peekStyle:
+    'The lesson’s three topics as a numbered path: trading or investing, spreading money, your time, nerves and goals.',
+  peekCoins:
+    'The lesson’s four topics as a numbered path: coin or token, kinds of token, altcoins and swings, check fast gains.',
+  peekStable:
+    'The lesson’s four topics as a numbered path: steady coins, three kinds, park and pay, not a promise.',
+  peekWallets:
+    'The lesson’s four topics as a numbered path: keys not coins, who holds the key, the recovery phrase, hot and cold.',
+  peekFees:
+    'The lesson’s four topics as a numbered path: send to confirmed, why fees move, a real fee spike, check the fee.',
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -153,7 +291,7 @@ export interface ChartMarker {
  */
 export interface ChartScene {
   /** Bitcoin, or Solana for the "smaller coins swing harder" comparison (Lesson 1, owner 2026-11-16) */
-  symbol: 'BTCUSDT' | 'SOLUSDT';
+  symbol: 'BTCUSDT' | 'SOLUSDT' | 'LINKUSDT';
   /**
    * Which Bybit market the candles come from: `linear` (the USDT perpetual, the default) or `spot`,
    * when the card's text is about a spot trade and its prices must match (Lesson 1's worked long,
@@ -270,6 +408,12 @@ export interface LessonCard {
   /** Bold-labelled points under the text ("**Print coins.** Write …") */
   points?: CardPoint[];
   /**
+   * The sneak peek (owner 2026-11-22): 3 or 4 short lines, what the lesson will teach, in place of the
+   * guides' chat. The card's `title` is always 'What you will learn'; its picture sits on top, no
+   * presenter. Drawn from the lesson's own recap, so the promise and the summary match
+   */
+  preview?: string[];
+  /**
    * A quick check between cards (owner 2026-11-16: quizzes can sit mid-lesson). The card is then a
    * question screen: its `title` is the heading, the question replaces the text, and Next waits for
    * an answer.
@@ -298,7 +442,30 @@ export interface CanDo {
 export type QuestionFormat = 'choice' | 'buy-sell' | 'order' | 'match' | 'pick' | 'draw';
 
 /** The icons a Pick-the-right tile can carry (Phosphor duotone, mapped in `PickQuiz.tsx`) */
-export type TileIcon = 'calendar' | 'pie' | 'calm' | 'repeat' | 'lightning' | 'eye';
+export type TileIcon =
+  | 'calendar'
+  | 'pie'
+  | 'calm'
+  | 'repeat'
+  | 'lightning'
+  | 'eye'
+  // Lesson 5 (2026-11-19)
+  | 'road'
+  | 'link'
+  | 'coins'
+  | 'people'
+  | 'vote'
+  | 'certificate'
+  // Lesson 7 (2026-11-22): where to keep a recovery phrase
+  | 'note'
+  | 'image'
+  | 'safe'
+  | 'mail'
+  | 'pin'
+  // Lesson 8 (2026-11-22): what makes a fee higher
+  | 'gear'
+  | 'moon'
+  | 'cloud';
 
 /** A day's close on the chart, where a drawn line should start or end */
 export interface DrawPoint {
@@ -774,9 +941,10 @@ const lessonOwnership: Lesson = {
   title: 'Money nobody controls',
   stage: 'Getting started',
   minutes: LESSON_02_MINUTES,
-  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on, past
-  // its earlier versions' 1–20 and 21–40
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // Rewritten 2026-11-16, then moved again by the sneak peek card (2026-11-22), each time with
+  // everyone's progress reset: today's screens are steps 101 on, past its earlier versions' 1–20,
+  // 21–40 and 61–100
+  stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   tryWidget: 'block-chain',
   tryIntro:
     'Your turn: change a number in an old block and watch what happens to every block after it.',
@@ -802,10 +970,17 @@ const lessonOwnership: Lesson = {
           text: 'Someone wrote it into the record on purpose. Why?',
           emphasis: 'Why?',
         },
-        {
-          kind: 'fact',
-          text: `In the next ${LESSON_02_MINUTES} minutes: why Bitcoin exists, how thousands of computers keep one record, and what makes it different.`,
-        },
+      ],
+    },
+    {
+      title: 'What you will learn',
+      art: 'peekOwnership',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      preview: [
+        'Why Bitcoin exists: paying online without a bank in the middle',
+        'One ledger, copied on thousands of computers',
+        'How nodes and blocks check every payment',
+        'Why no one is in charge: the network agrees',
       ],
     },
     {
@@ -947,7 +1122,7 @@ const lessonOwnership: Lesson = {
       },
     },
   ],
-  momentAfter: 15,
+  momentAfter: 16,
   moment: {
     context:
       'Your friend’s copy of the ledger says you paid Leo twice. Thousands of other copies say once.',
@@ -1077,9 +1252,10 @@ const lesson02: Lesson = {
   title: 'News, swings and traps',
   stage: 'Getting started',
   minutes: LESSON_03_MINUTES,
-  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
-  // versions before used 1–40 and 41–60
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // Rewritten 2026-11-16, then moved again by the sneak peek card (2026-11-22), each time with
+  // everyone's progress reset: today's screens are steps 101 on; the versions before used 1–40,
+  // 41–60 and 61–100
+  stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   tour: 'primer',
   tryIntro:
     'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
@@ -1102,10 +1278,17 @@ const lesson02: Lesson = {
           kind: 'headline',
           text: 'Nothing was hacked. One trader’s program sold far too much, far too fast.',
         },
-        {
-          kind: 'fact',
-          text: `In the next ${LESSON_03_MINUTES} minutes: why prices swing so hard, what moves them, and how to spot a trap.`,
-        },
+      ],
+    },
+    {
+      title: 'What you will learn',
+      art: 'peekSwings',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      preview: [
+        'Why prices swing hard, both ways',
+        'How news, shocks and hype move a price',
+        'Thin and deep markets: why some jump and some absorb',
+        'How to check who runs a coin before you trust it',
       ],
     },
     {
@@ -1266,8 +1449,9 @@ const lesson02: Lesson = {
       },
     },
   ],
-  // Your call follows the halving card (owner-approved outline: screen 6)
-  momentAfter: 4,
+  // Your call follows the halving card (owner-approved outline: screen 6; screen 7 since the sneak
+  // peek became card 2, 2026-11-22)
+  momentAfter: 5,
   moment: {
     context:
       '10 January 2024: the US approves the first funds that hold Bitcoin directly, widely called the year’s biggest crypto news. The chart stops on that day.',
@@ -1357,14 +1541,24 @@ const lesson04: Lesson = {
   title: 'Trader or investor? Find your style',
   stage: 'Getting started',
   minutes: 8,
-  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   // No practice trade here, so no Try it screen (owner 2026-11-18)
   cards: [
     {
       title: 'Two paths, one goal',
       art: 'swings',
       presenter: { who: 'tick', mood: 'curious', pose: 'point' },
-      text: 'Crypto can be fast and exciting, but people use it in two different ways. Some jump in and out of trades to catch short moves. Others buy and hold for a long time. Today you’ll see the difference and find the style that fits you.',
+      text: 'Crypto can be fast and exciting, but people use it in two different ways. Some jump in and out of trades to catch short moves. Others buy and hold for a long time.',
+    },
+    {
+      title: 'What you will learn',
+      art: 'peekStyle',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      preview: [
+        'What trading is, and what investing is',
+        'Why spreading money helps, but is not a shield',
+        'How to choose by your time, your nerves and your goals',
+      ],
     },
     {
       title: 'What trading is',
@@ -1550,7 +1744,927 @@ const lesson04: Lesson = {
   access: FREE,
 };
 
-export const LESSONS: readonly Lesson[] = [lesson01, lessonOwnership, lesson02, lesson04];
+// ─── Chapter 2, Lesson 5 — Coins and tokens: who has their own road ──────────────────────────────
+// Owner 2026-11-19: the benchmark's topic order, our own words, our own road-and-shop metaphor. Text
+// fact checked by a technical-writer agent 2026-11-19 (guided-learning-topics notes 15).
+
+// A token you can trade here: LINK's daily candles (Bybit USDT perpetual), the last 120 days to 1 Nov 2025
+const LINK_NOW: ChartScene = {
+  symbol: 'LINKUSDT',
+  end: '2025-11-01',
+  bars: 120,
+  markers: [],
+  label: 'Chainlink’s LINK token: daily candles for the four months to 1 November 2025.',
+  fallback: 'swings',
+};
+
+// Bitcoin and LINK, 29 Jul → 5 Aug 2024 (Bybit USDT perpetual daily closes, UTC, checked 2026-11-19):
+// BTC 66,757.7 → 53,988.2 (−12,769.5, −0.191, −19.1%); LINK 13.524 → 9.475 (−4.049, −0.299, −29.9%)
+const LINK_2024: ChartScene = {
+  symbol: 'LINKUSDT',
+  end: '2024-08-12',
+  bars: 28,
+  markers: [
+    { date: '2024-07-29', text: '$13.524', position: 'above' },
+    { date: '2024-08-05', text: '−29.9%', position: 'below' },
+  ],
+  label:
+    'LINK daily candles from mid July to mid August 2024: from $13.524 on 29 July down 29.9% to $9.475 on 5 August.',
+  fallback: 'swings',
+};
+
+const lessonCoins: Lesson = {
+  id: 'lesson-coins',
+  number: 5,
+  title: 'Coins and tokens: who has their own road',
+  stage: 'Your crypto toolbox',
+  minutes: 8,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // No practice trade here: nothing in it teaches a buy or a sell (the stablecoin lesson offers one)
+  cards: [
+    {
+      title: 'What you will learn',
+      art: 'peekCoins',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      preview: [
+        'A coin has its own road; a token uses one',
+        'Three common kinds of token: credits, shares and votes',
+        'What altcoin means, and why altcoins often swing more',
+        'Why a promise of fast gains is a reason to check first',
+      ],
+    },
+    {
+      title: 'A coin has its own road',
+      art: 'coinRoad',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A [[coin]] has its own road. The road is a blockchain, and it belongs to that coin alone. Bitcoin runs on the Bitcoin blockchain. Ether runs on the Ethereum blockchain. The coin is that road’s own money. “Coin” and “token” are everyday words. The law mostly looks at what a thing does, not what it is called.',
+    },
+    {
+      title: 'The road needs upkeep',
+      art: 'tollBooth',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'A road needs upkeep, so its coin pays for it. You pay a little of the coin to use the road. The people who keep the road running are paid in it too. On some roads, part of the fee is even destroyed. Some roads also let you put coins aside to help keep them safe, and earn a reward. That is called [[staking]]. Rewards are not promised.',
+    },
+    {
+      title: 'The coins in our market',
+      art: 'tickerBadges',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      text: 'Our practice market lists eight coins. Each has its own blockchain: BTC (Bitcoin), ETH (Ethereum), SOL (Solana), BNB (BNB Chain), XRP (XRP Ledger), ADA (Cardano), AVAX (Avalanche) and DOGE (Dogecoin). Eight coins, eight roads. LINK, one more name on the list, is not a coin. Tokens come next.',
+    },
+    {
+      title: 'What does a coin have?',
+      quiz: {
+        format: 'pick',
+        question: 'What does a coin have? Pick three.',
+        tiles: [
+          { label: 'Its own blockchain', icon: 'road', right: true },
+          { label: 'Lives on another blockchain', icon: 'link', right: false },
+          { label: 'Pays for its road’s upkeep', icon: 'coins', right: true },
+          { label: 'A vote on how a project changes', icon: 'vote', right: false },
+          { label: 'Pays the people who keep the road running', icon: 'people', right: true },
+          { label: 'Is a digital share', icon: 'certificate', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'A coin and its road go together: its own blockchain, paid for and kept running in the coin. The other three describe tokens.',
+      },
+    },
+    {
+      title: 'A token uses a road that exists',
+      art: 'shopRoad',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'A [[token]] has no road of its own. It uses a road that already exists, often Ethereum’s.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a shop built along an existing road. It uses the road and follows its traffic rules, and it adds its own house rules. Where it stops matching: a token is not a building but a record of balances, kept in a program on that road.',
+      },
+    },
+    {
+      title: 'A token you can trade here',
+      chart: LINK_NOW,
+      presenter: { who: 'tick', mood: 'smile', pose: 'stand' },
+      text: 'LINK is a token. It began on Ethereum and is also available on other blockchains. You can trade it here. The chart looks like any other. You only learn it is a token from where it lives.',
+    },
+    {
+      title: 'Token job 1: utility',
+      art: 'arcadeCredits',
+      presenter: { who: 'tick', mood: 'grin', pose: 'point' },
+      text: 'Tokens come in many kinds. Three common ones are next. First, **utility** tokens. They work like credits in an arcade: you spend them inside one app or game to get something.',
+    },
+    {
+      title: 'Token job 2: security',
+      art: 'shareCertificate',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Second, **security** tokens. They stand for a share in something real, like a piece of a company. In many places, securities law applies to them.',
+    },
+    {
+      title: 'Token job 3: governance',
+      art: 'ballotBox',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Third, **governance** tokens. Holding one gives you a vote on how a project changes, such as its fees or its next feature. In most projects, more tokens mean more voting power.',
+    },
+    {
+      title: 'Match each token to its job',
+      quiz: {
+        format: 'match',
+        question: 'Match each token to its job.',
+        pairs: [
+          { term: 'Utility', meaning: 'Credits inside an app or game' },
+          { term: 'Security', meaning: 'A share in something real' },
+          { term: 'Governance', meaning: 'A vote on how a project changes' },
+        ],
+        options: [],
+        correct: 0,
+        explain: 'Ask what the token is for. Use it, own a share, or vote.',
+      },
+    },
+    {
+      title: 'Altcoins',
+      art: 'calmStormy',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'Every crypto except bitcoin is called an [[altcoin]], short for “alternative coin”. Most altcoins are smaller than bitcoin. Smaller here means a smaller total value, not a lower price. Smaller things often move more, so the swings can be bigger. Stablecoins are altcoins that try not to swing. We meet them next.',
+    },
+    {
+      title: 'Two assets, one week',
+      chart: LINK_2024,
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'Same two days, two assets. We use each day’s closing price in USDT, from the USDT perpetual market, for bitcoin and for LINK, from 29 July to 5 August 2024. The chart shows LINK.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Bitcoin: the change', sum: '53,988.2 − 66,757.7 = −12,769.5' },
+          { label: 'Bitcoin: divide', sum: '−12,769.5 ÷ 66,757.7 = −0.191' },
+          { label: 'Bitcoin: as a percent', sum: '−0.191 × 100 = −19.1%' },
+          { label: 'LINK: the change', sum: '9.475 − 13.524 = −4.049' },
+          { label: 'LINK: divide', sum: '−4.049 ÷ 13.524 = −0.299' },
+          { label: 'LINK: as a percent', sum: '−0.299 × 100 = −29.9%' },
+        ],
+        answer:
+          'From 29 July to 5 August 2024, **LINK** fell more than bitcoin. One week is only one example.',
+      },
+    },
+    {
+      title: 'What is LINK?',
+      quiz: {
+        art: 'zoe',
+        context: 'Zoe holds LINK.',
+        question: 'What is LINK?',
+        options: ['A coin', 'A token', 'A wallet', 'An exchange'],
+        correct: 1,
+        explain:
+          'LINK has no blockchain of its own. It lives on existing ones, such as Ethereum, so it is a token.',
+      },
+    },
+    {
+      title: 'Who pays the fee?',
+      quiz: {
+        question: 'You send a token on Ethereum from your own wallet. In what do you pay the fee?',
+        options: [
+          'In the token you sent',
+          'In ETH, the road’s own coin',
+          'In dollars to a bank',
+          'You pay no fee',
+        ],
+        correct: 1,
+        explain:
+          'The road’s upkeep is paid in the road’s coin. The lesson on network fees goes deeper.',
+      },
+    },
+  ],
+  // Your call follows the last quiz: the honest answer is the praised one
+  moment: {
+    art: 'stopCoin',
+    context: 'A brand-new token you have never heard of promises “triple in a week”.',
+    question: 'What do you do first?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Buy a small amount with real money, to see',
+      'Find out who made it and what it is for',
+      'Ask a friend if they are in',
+    ],
+    correct: 1,
+    explain:
+      'Find out who made it and what it is for. A token’s rules are code that someone wrote. A promise of fast gains is a reason to slow down.',
+  },
+  checks: [],
+  notePrompt: 'Name one coin or token you have heard of. Which road does it use?',
+  canDo: [],
+  recap: {
+    title: 'Coins and tokens',
+    points: [
+      { text: 'A coin has its own road. A token uses one.' },
+      { text: 'Three common kinds of token: credits, shares and votes.' },
+      { text: 'Altcoin means any crypto that is not bitcoin.' },
+      { text: 'A promise of fast gains is a reason to check first.' },
+    ],
+    highlight: {
+      text: 'You can now tell a coin from a token, name three common kinds of token, and say why altcoins often swing more. Next up: stablecoins, crypto that tries to sit still.',
+    },
+  },
+  access: FREE,
+};
+
+// ─── Chapter 2, Lesson 6: stablecoins (owner 2026-11-19: text approved after the fact check) ─────
+// One metaphor all lesson: the cloakroom ticket. Practice trade: the Lesson 1 spot buy, paid in USDT.
+
+const lessonStablecoins: Lesson = {
+  id: 'lesson-stablecoins',
+  number: 6,
+  title: 'Stablecoins: the coins that try to sit still',
+  stage: 'Your crypto toolbox',
+  minutes: 8,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  cards: [
+    {
+      title: 'What you will learn',
+      art: 'peekStable',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      preview: [
+        'What a stablecoin is built to do: hold one dollar',
+        'The three kinds, and what stands behind each',
+        'Why traders park money in them, and pay with them',
+        'Why “stable” is a goal, not a promise',
+      ],
+    },
+    {
+      title: 'The steady coin',
+      art: 'steadyPeg',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A [[stablecoin]] aims to keep one steady price, almost always one US dollar. It should be worth about $1 today, next week and next year. That makes it a calm place to park money. Most stablecoins are tokens that live on someone else’s road, such as Ethereum.',
+    },
+    {
+      title: 'A ticket for a dollar',
+      art: 'cloakroom',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Why should a coin stay at $1? Because of what stands behind it.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a cloakroom ticket. You hand in one dollar and get a ticket. Give the ticket back and you get your dollar. The ticket holds its value because the dollar is kept safe. Where it stops matching: only the first kind works exactly like this, and most people sell the ticket on an exchange instead. The three kinds of counter come next.',
+      },
+    },
+    {
+      title: 'Kind 1: dollar-backed',
+      art: 'vaultDollar',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Kind one is **dollar-backed**. The company behind it holds reserves, mostly cash and short-term US government debt, to cover its tickets. It is the most common kind. USDT and USDC are both called dollar-backed, but USDT also holds other assets, and companies differ in how often and how well they show their reserves.',
+    },
+    {
+      title: 'Kind 2: crypto-backed',
+      art: 'vaultCrypto',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Kind two is **crypto-backed**. Other crypto is locked away as a deposit, and there is more in the deposit than the tickets are worth, because crypto prices swing. The rules run as code on a blockchain, not on a company’s promise.',
+    },
+    {
+      title: 'Kind 3: rule-based',
+      art: 'vaultRule',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Kind three is **rule-based**, also called algorithmic. There is no vault of dollars, only a rule meant to steer the price back to $1. It is the riskiest of the three: if people stop believing the rule, nothing solid stands behind the ticket. In May 2022 one of these, TerraUSD, lost its dollar price and collapsed.',
+    },
+    {
+      title: 'What stands behind the ticket?',
+      quiz: {
+        format: 'match',
+        question: 'Match each kind to what stands behind it.',
+        pairs: [
+          { term: 'Dollar-backed', meaning: 'Real money and short-term assets in a bank or fund' },
+          { term: 'Crypto-backed', meaning: 'Extra crypto locked as a deposit' },
+          { term: 'Rule-based', meaning: 'Only a rule, no vault' },
+        ],
+        options: [],
+        correct: 0,
+        explain: 'Ask what is behind the ticket: money, a crypto deposit, or only a rule.',
+      },
+    },
+    {
+      title: 'Why traders keep them',
+      art: 'usdtPair',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      text: 'Traders keep stablecoins for three reasons. They are a calm place to park money. They can usually move at any hour. And they are what you trade with: our markets are priced in USDT, so a BTC/USDT price tells you how many USDT one bitcoin costs.',
+      practice: { tour: 'practice-buy', label: 'Try a buy, paid in USDT, on the real chart' },
+    },
+    {
+      title: 'Park your profit',
+      art: 'parkProfit',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'You bought a coin at $200 and it is now $300. You sell it for USDT.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'The gain', sum: '300 − 200 = 100' },
+          { label: 'Divide', sum: '100 ÷ 200 = 0.5' },
+          { label: 'As a percent', sum: '0.5 × 100 = 50%' },
+        ],
+        answer:
+          'You lock in a **50% gain**, held as 300 USDT, and the coin’s next swing can’t touch it. You also miss its next rise, and the stablecoin has risks of its own: the next cards. Fees are left out to keep the sum simple.',
+      },
+    },
+    {
+      title: 'Parking a profit, in order',
+      quiz: {
+        format: 'order',
+        question: 'Put the steps of parking a profit in order.',
+        steps: [
+          'Your coin has gone up',
+          'You sell it for USDT',
+          'Later, the coin’s price moves again',
+          'Your USDT is still worth about the same, whichever way the coin went',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'You left the swinging coin before it moved, and your USDT keeps its value as long as the stablecoin holds its peg.',
+      },
+    },
+    {
+      title: 'The catch: the peg can slip',
+      art: 'pegDip',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'The catch: a stablecoin can lose its [[peg]], its link to $1. In March 2023 USDC, a dollar-backed coin, fell to about 87 cents over a weekend. A bank holding part of its cash had failed, and holders got scared. The money was not gone: when the US government protected the bank’s depositors, the price came back.',
+    },
+    {
+      title: '“Stable” is a goal',
+      art: 'vaultCheck',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: '“Stable” is a goal, not a promise. Not every stablecoin has a full vault, and not every vault is checked by someone independent. A useful question is: what is behind it, and who checks the reserves? A big reward just for holding one is often a warning sign, not a bonus.',
+    },
+    {
+      title: 'A stablecoin at $0.92',
+      quiz: {
+        question: 'A stablecoin trades at $0.92. What is the most likely reason?',
+        options: [
+          'People doubt it is fully backed',
+          'The dollar lost 8% in one day',
+          'Stablecoins are meant to trade at 92 cents',
+          'Its company had a good year',
+        ],
+        correct: 0,
+        explain:
+          'Below $1 usually means holders are rushing out because they doubt the backing, or the rule that steers the price.',
+      },
+    },
+    {
+      title: 'A key advantage',
+      quiz: {
+        question: 'What is a key advantage of holding a stablecoin while you trade?',
+        options: [
+          'It always rises in a bull market',
+          'Its value is meant to stay steady while you wait for your next move',
+          'It pays a profit for sure',
+          'It can never lose its peg',
+        ],
+        correct: 1,
+        explain: 'Steady is the point. The other three are promises no stablecoin can make.',
+      },
+    },
+  ],
+  // Your call follows the last quiz: the honest answer is the praised one
+  moment: {
+    art: 'tooSweet',
+    context: 'A new “stablecoin” you have never heard of pays 20% a year just for holding it.',
+    question: 'What do you check first?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Put in a small amount with real money, to see',
+      'What stands behind it, and who checks',
+      'Ask a friend if they hold it',
+    ],
+    correct: 1,
+    explain:
+      'What stands behind it, and who checks. A reward that big has to come from somewhere: find out where before anything else.',
+  },
+  checks: [],
+  notePrompt: 'Which stablecoin have you heard of? Which kind do you think it is?',
+  canDo: [],
+  recap: {
+    title: 'Stablecoins',
+    points: [
+      { text: 'A stablecoin is a ticket meant to hold one dollar.' },
+      { text: 'Three kinds: dollar-backed, crypto-backed and rule-based.' },
+      { text: 'Traders park money in them, and pay with them.' },
+      { text: 'A stablecoin can sometimes lose its peg.' },
+    ],
+    highlight: {
+      text: 'You can now say what a stablecoin is built to do, name the three kinds and what stands behind each, and explain why “stable” is a goal, not a promise. Next up: wallets, and who holds your keys.',
+    },
+  },
+  access: FREE,
+};
+
+// ─── Lesson 7 — Your wallet, your keys: who holds them? ──────────────────────
+// Chapter 2, one PR a lesson (owner 2026-11-19). Outline and text approved 2026-11-22, fact checked
+// by a technical-writer agent. One metaphor: the mailbox and its key (Lesson 2 taught the private key and signing; the address is new here). Mira and Sneaky
+// Sam are our own characters (flat pictures, no faces). No practice trade: a wallet has no trade,
+// and the paper account is not a wallet (card 11 says so). The hardware wallet is drawn generic:
+// no maker's shape or logo (owner 2026-11-22).
+const lessonWallets: Lesson = {
+  id: 'lesson-wallets',
+  number: 7,
+  title: 'Your wallet, your keys: who holds them?',
+  stage: 'Your crypto toolbox',
+  minutes: 10,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // Your call follows the card on the missing reset button (index 10)
+  momentAfter: 10,
+  cards: [
+    {
+      title: 'What you will learn',
+      art: 'peekWallets',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      preview: [
+        'Where your crypto really lives: a wallet holds keys, not coins',
+        'Custodial or non-custodial: who holds the key',
+        'How to keep a recovery phrase safe',
+        'Which wallet fits which job: hot for spending, cold for keeping',
+      ],
+    },
+    {
+      title: 'A wallet holds keys, not coins',
+      art: 'keyRing',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'A [[wallet]] does not hold coins. Your coins are records on the blockchain. The wallet holds your keys, and the keys let you spend them.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a key ring. The mailboxes stay in the building; the ring holds the keys to yours. Where it stops matching: a mailbox holds real post, but a coin is only a line in the ledger.',
+      },
+    },
+    {
+      title: 'Address and private key',
+      art: 'slotAndKey',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Two words to know. Your **address** is like a mailbox slot: share it and anyone can pay in. Your [[private key|private-key]], from Lesson 2, is the only key that can spend: share it and anyone can empty the box. A **signature** is the proof, made with your key, that you approved a payment.',
+    },
+    {
+      title: 'Who is who?',
+      quiz: {
+        format: 'match',
+        question: 'Match each word to what it means.',
+        pairs: [
+          { term: 'Address', meaning: 'Safe to share: lets people pay you' },
+          { term: 'Private key', meaning: 'Secret: lets its holder spend' },
+          { term: 'Wallet', meaning: 'The app or device that keeps your keys' },
+          { term: 'Signature', meaning: 'Proof that the key holder approved a payment' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Share the address, guard the key. The wallet keeps the key, and a signature shows the key holder approved the payment.',
+      },
+    },
+    {
+      title: 'What a wallet is for',
+      art: 'walletJobs',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A wallet does three jobs. It shows what your address holds. It gives you an address to receive on. And it signs a payment with your key when you send. The key never has to leave it. Anyone who has your address can look up its balance: the blockchain is open.',
+    },
+    {
+      title: 'Mira and Sneaky Sam',
+      art: 'samGlass',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'point' },
+      text: 'Mira has 2 bitcoin at an address. Sneaky Sam finds the address. He can see that it holds 2 bitcoin, but he can only look. To spend it he needs a signature, and only her private key can make one. So he sends a fake “support” message asking for her key. Mira never answers. Her bitcoin stays hers.',
+    },
+    {
+      title: 'The phone in the sea',
+      art: 'phoneSea',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'Later, Mira’s phone falls in the sea. Her coins are fine: they were never in the phone. But her key was, and she had no backup. Nobody can reset a key, not the wallet’s maker and not the blockchain. Her 2 bitcoin stay visible and out of reach, for good. Next: what she could have done.',
+    },
+    {
+      title: 'Custodial: a company keeps your key',
+      art: 'bankHolds',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Many people start on an exchange. It holds your keys for you. That is a **custodial** wallet: you log in with a password, and the company signs for you.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a bank account. The bank holds the money, and you ask it to move some. Where it stops matching: bank deposits usually have legal protection, and crypto on an exchange often has none like it.',
+      },
+    },
+    {
+      title: 'The trade-off',
+      art: 'lockedCounter',
+      presenter: { who: 'tick', mood: 'frank', pose: 'point' },
+      text: 'Easy is the upside. Forgot your password? The company resets it. The downside: your coins are only as safe as the company. [[Custody|custody]] means someone else holds your key. An exchange can be hacked, or fail. In November 2022 FTX, from Lesson 3, froze withdrawals and went bankrupt, and many customers could not get their coins out.',
+    },
+    {
+      title: 'Non-custodial: you keep the key',
+      art: 'ownKeys',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'In a **non-custodial** wallet, you hold the key yourself. No company stands in the middle, so none can stop you signing a payment, and you need no sign-up or ID check to make one. (Buying crypto with cash usually does need ID.) One catch: the company behind a stablecoin can freeze that coin at an address. Your key is yours, but not every coin obeys only you.',
+    },
+    {
+      title: 'Control, privacy, no reset button',
+      art: 'noReset',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Control has a price. If you lose the key and the phrase, there is no “forgot password” and no support line. The blockchain is also public: every payment from your address can be seen, not under your name, but it can be linked to you, for example through an exchange. Here, your balance is practice money in an account we hold, so nothing real is at risk.',
+    },
+    {
+      title: 'The recovery phrase',
+      art: 'phraseCard',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'When you set up a non-custodial wallet it shows a list of words, usually 12 or 24. That is your [[recovery phrase|recovery-phrase]], also called a seed phrase. In a compatible wallet, the words rebuild that wallet’s keys. So the phrase is the real master key: whoever has it can take everything. Lose the phone but keep the words, and you are fine.',
+    },
+    {
+      title: 'Three rules for the phrase',
+      art: 'phraseNever',
+      presenter: { who: 'tock', mood: 'worried', pose: 'point' },
+      text: 'One: write it on paper (or metal) and keep it offline, somewhere safe. Two: never save it as a photo, in a cloud or in an email, and type it only to restore your own wallet, into the app or device itself, never a website. Three: never tell anyone. Real support never asks for it. Anyone who does is a scammer.',
+    },
+    {
+      title: 'Where would you keep it?',
+      quiz: {
+        format: 'pick',
+        question: 'Where should a recovery phrase live? Pick three.',
+        tiles: [
+          { label: 'Written on paper, in a locked drawer at home', icon: 'note', right: true },
+          { label: 'A photo in your phone’s gallery', icon: 'image', right: false },
+          { label: 'Stamped on metal, in a safe', icon: 'safe', right: true },
+          { label: 'An email to yourself', icon: 'mail', right: false },
+          {
+            label: 'A second paper copy, kept in a different safe place',
+            icon: 'pin',
+            right: true,
+          },
+          { label: 'A note in a cloud app', icon: 'cloud', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'The safe places are offline and only you can reach them. A photo, an email or a cloud note can be copied from far away.',
+      },
+    },
+    {
+      title: 'Setting up safely, in order',
+      quiz: {
+        format: 'order',
+        question: 'Put the steps of setting up a wallet safely in order.',
+        steps: [
+          'You make a new wallet',
+          'It shows the recovery phrase',
+          'You write the words on paper, offline',
+          'You check your copy against the screen',
+          'You put the paper in a safe place and tell no one',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Write it down before you rely on the wallet, check it, then store it safely. The paper is the backup of your key.',
+      },
+    },
+    {
+      title: 'Hot wallets',
+      art: 'hotPhone',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'A **hot wallet** lives on a device that is online: a phone app, a browser extension or a desktop program. It is quick and handy for everyday use. The downside is that the key sits on a connected device, so malware, a stolen phone or a fake app can reach it. Hot is for the coins you move.',
+    },
+    {
+      title: 'Cold wallets',
+      art: 'coldDevice',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'A **cold wallet** keeps the key away from the internet, usually on a small device called a [[hardware wallet|hardware-wallet]]. It signs payments inside itself, and you confirm each one on its own screen. The key never leaves it.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as signing a paper inside a locked room and passing out only the signed page. Where it stops matching: a hardware wallet can be lost or broken, so its recovery phrase still matters.',
+      },
+    },
+    {
+      title: 'Which wallet for which job?',
+      quiz: {
+        format: 'match',
+        question: 'Match each job to the wallet that fits it.',
+        pairs: [
+          { term: 'Coins you will not touch for years', meaning: 'Cold wallet' },
+          { term: 'A little for everyday payments', meaning: 'Hot wallet' },
+          { term: 'Coins you trade on an exchange', meaning: 'Custodial account' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Match the wallet to the job: cold for keeping, hot for spending, an exchange for trading.',
+      },
+    },
+    {
+      title: 'Lena: a long-term holder',
+      quiz: {
+        art: 'lena',
+        question:
+          'Lena adds to her bitcoin each month and means to hold it for years. She rarely looks at it. What fits her best?',
+        options: [
+          'Leave it all on an exchange and never think about it',
+          'A hardware wallet, with the recovery phrase written on paper',
+          'A hot wallet, with the phrase saved as a photo',
+        ],
+        correct: 1,
+        explain:
+          'She moves it rarely, so safe keeping matters more than speed. Cold storage with a paper backup keeps the key offline.',
+      },
+    },
+    {
+      title: 'Zoe: trades every week',
+      quiz: {
+        art: 'zoe',
+        question:
+          'Zoe trades on an exchange every week and needs fast access. What fits her best for the money she trades?',
+        options: [
+          'A hardware wallet she plugs in for every trade',
+          'An exchange account holding only what she trades',
+          'A hardware wallet left in a drawer',
+        ],
+        correct: 1,
+        explain:
+          'She needs speed, and her trading happens on the exchange. She keeps there only what she trades, and the rest elsewhere.',
+      },
+    },
+    {
+      title: 'A purse and a safe',
+      art: 'purseSafe',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Many people use both. A small hot wallet is a purse: a little cash for today. A cold wallet is the safe at home: the rest, for later. If the purse is lost, you lose a little. A simple habit: keep in the purse only what you can afford to lose.',
+    },
+  ],
+  // Your call, after the card on the missing reset button: the honest answer is the praised one
+  moment: {
+    art: 'noReset',
+    context:
+      'Two people forgot their login. One has an exchange account. The other has a non-custodial wallet and never saved a backup.',
+    question: 'Which of them can get back in with a reset?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: ['Both: support fixes it', 'Only the exchange user', 'Only the non-custodial user'],
+    correct: 1,
+    explain:
+      'An exchange holds the key, so it can reset your login. In a non-custodial wallet nobody else has the key, so without a backup there is nothing to reset.',
+  },
+  checks: [
+    {
+      question:
+        'Someone from “wallet support” writes: “Verify your wallet. Send your 12 words.” Their message has a logo and a badge. What do you do?',
+      // A warning, not a punishment: the only place a guide looks worried
+      presenter: { who: 'tock', mood: 'worried' },
+      options: [
+        'Send them, it looks official',
+        'Send them only if the badge looks real',
+        'Never share them: no real support asks',
+      ],
+      correct: 2,
+      explain:
+        'The words rebuild your keys. Whoever has them controls the coins. Logos and badges are easy to fake, and real support never asks.',
+    },
+  ],
+  notePrompt: 'Which wallet would you use for coins you plan to keep for years, and why?',
+  canDo: [],
+  recap: {
+    title: 'Wallets and keys',
+    points: [
+      { text: 'A wallet holds keys, not coins.' },
+      { text: 'Custodial: a company holds the key. Non-custodial: you do.' },
+      { text: 'Your recovery phrase rebuilds your keys: paper, offline, never shared.' },
+      { text: 'Hot for spending, cold for keeping.' },
+    ],
+    highlight: {
+      text: 'You can now say where your crypto really lives, what custodial and non-custodial mean, how to keep a recovery phrase safe, and choose a wallet for a job. Next up: why sending crypto costs a fee.',
+    },
+  },
+  access: FREE,
+};
+
+// ─── Lesson 8 — Why sending crypto costs a fee ───────────────────────────────
+// Chapter 2, one PR a lesson (owner 2026-11-19). Built 2026-11-22 under the owner's goal ("lesson 8
+// implemented, reviewed, pushed to develop"): outline and draft in the git-ignored notes (files 23
+// and 24), fact checked by a technical-writer agent, to be read by the owner. One metaphor, carried
+// from Lesson 5's toll booth: a block is a bus with limited seats, and the fee is the offer for a
+// seat. Our own example: bitcoin's average fee in April 2024, a few dollars early in the month (The Block:
+// the 7-day average was $4.11 earlier in April; we say about $4), about $128
+// on 20 April (halving day and the launch of Runes) and about $35 on 21 April, from The Block and
+// YCharts reports (the sources differ by cents with the day's time base; the picture says "drawn
+// from reported averages"). The $200 payment is ours. No practice trade: the paper account has no
+// network fee, and card 15 says so.
+const lessonFees: Lesson = {
+  id: 'lesson-fees',
+  number: 8,
+  title: 'Why sending crypto costs a fee',
+  stage: 'Your crypto toolbox',
+  minutes: 8,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // Your call follows "Plan before you send" (index 14)
+  momentAfter: 14,
+  cards: [
+    {
+      title: 'What you will learn',
+      art: 'peekFees',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      preview: [
+        'What happens between “send” and “confirmed”',
+        'Why a fee exists, and why it moves',
+        'How a real fee spike hit a small payment',
+        'How to check the cost before you send',
+      ],
+    },
+    {
+      title: 'Sending has a price',
+      art: 'sendFee',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Sending crypto is not free. Each send carries a small [[network fee|network-fee]]. The fee itself does not go to us or to your wallet app. It goes toward the people and computers that keep the network running, and some chains burn part of it. A wallet or exchange may charge its own fee on top. In Lesson 5 you met the toll booth: this is that toll.',
+    },
+    {
+      title: 'A block is a bus',
+      art: 'busBlock',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Payments are not confirmed one by one. They travel in groups called blocks, and each block has room for only so many.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a bus with limited seats. A payment needs a seat, and the fee is what it offers for one. Where it stops matching: the bus leaves on the network’s schedule, so a payment may wait for the next one.',
+      },
+    },
+    {
+      title: 'Who picks the passengers?',
+      art: 'waitingLine',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Sent payments wait in line. A [[validator]] picks payments from the line and adds them to the next block. On Bitcoin, as Lesson 2 showed, [[miners|mining]] do the same job, while nodes check the payments. Payments that offer higher fees usually board first.',
+    },
+    {
+      title: 'From send to confirmed',
+      quiz: {
+        format: 'order',
+        question: 'Put the steps of a payment, from send to confirmed, in order.',
+        steps: [
+          'You send a payment',
+          'It waits in line with others',
+          'A validator picks it for the next block',
+          'The block joins the chain: confirmed',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'A payment counts as confirmed once its block is added to the chain. The fee decides how soon it is picked.',
+      },
+    },
+    {
+      title: 'Why a fee exists',
+      art: 'tollBooth',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Two reasons. First, it pays the people and computers who keep the network honest and running, as a toll pays for a road. Second, it stops abuse: if sending were free, anyone could flood the network with junk payments and push real ones out.',
+    },
+    {
+      title: 'Why the fee moves',
+      art: 'feeBids',
+      presenter: { who: 'tick', mood: 'frank', pose: 'point' },
+      text: 'There are only so many seats in a block, so when many people want one, they offer more. The fee is a price set by demand, not a fixed charge: quiet hours cost little, busy hours cost more. No company sets it.',
+    },
+    {
+      title: 'Who is who?',
+      quiz: {
+        format: 'match',
+        question: 'Match each word to what it means.',
+        pairs: [
+          { term: 'Block', meaning: 'A group of payments added to the chain together' },
+          { term: 'Validator', meaning: 'Picks waiting payments and adds the next block' },
+          { term: 'Network fee', meaning: 'What you offer for a seat in a block' },
+          { term: 'Confirmation', meaning: 'Your payment is in a block, so it counts' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'A fee buys a seat in a block, a validator fills the block, and a payment counts once its block is added.',
+      },
+    },
+    {
+      title: 'A real fee spike',
+      art: 'feeSpike',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'In early April 2024 the average fee to send bitcoin was a few dollars, about $4. On 20 April, halving day and the launch of Runes, a new way to make tokens on Bitcoin, it hit about $128. A day later it was about $35. Same network, same coin, a different price for a seat.',
+    },
+    {
+      title: 'Is it worth it?',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'You want to send $200. How much of it would the fee take?',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'A quiet day’s share', sum: '4 ÷ 200 = 0.02' },
+          { label: 'As a percent', sum: '0.02 × 100 = 2%' },
+          { label: 'The spike day’s share', sum: '128 ÷ 200 = 0.64' },
+          { label: 'As a percent', sum: '0.64 × 100 = 64%' },
+        ],
+        answer:
+          'On a quiet day the fee takes **2%** of the payment. On the spike day it took **64%**. The numbers are the rounded averages above. The same $200 can be fine to send one day and not worth sending the next.',
+      },
+    },
+    {
+      title: 'Cheap chains and pricey chains',
+      art: 'chainsCompare',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Fees depend on the chain too. Some chains are built to be cheap, often a few cents a send. Others cost dollars when busy. Cheap is not always better: chains also differ in how many people run them and how they are kept safe, so choose with your eyes open.',
+    },
+    {
+      title: 'A plain send or a swap',
+      art: 'simpleComplex',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'The fee also depends on the work. A plain send is one small step. A swap, or any action that runs a small program on the chain, does more work, so it costs more. Same network, same hour, a bigger fee.',
+    },
+    {
+      title: 'What makes a fee higher?',
+      quiz: {
+        format: 'pick',
+        question: 'What makes a fee higher? Pick three.',
+        tiles: [
+          { label: 'Many people sending at once', icon: 'people', right: true },
+          { label: 'A swap or other complex action', icon: 'gear', right: true },
+          { label: 'Asking to be confirmed faster', icon: 'lightning', right: true },
+          { label: 'Sending in a quiet hour', icon: 'moon', right: false },
+          { label: 'The amount you send', icon: 'coins', right: false },
+          { label: 'How long you held the coin', icon: 'calendar', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Fees follow demand and work: a busy network, a bigger job, or a higher offer for a seat. A quiet hour lowers them, and most chains charge for the work, not for how much you send.',
+      },
+    },
+    {
+      title: 'Busy days',
+      quiz: {
+        question: 'Why do fees rise on busy days?',
+        options: [
+          'The network adds a fixed surcharge every Friday',
+          'Validators charge more when the coin’s price falls',
+          'Seats in a block are limited, so people offer more to get one',
+          'Your wallet app quietly raises its own fee',
+        ],
+        correct: 2,
+        explain:
+          'Limited room and many senders mean the higher offers win the seats. Nobody sets the price by hand.',
+      },
+    },
+    {
+      title: 'Plan before you send',
+      art: 'feeCheck',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Before you confirm, look at the fee your wallet shows. If the network is busy, you can wait for a quieter time, or use a cheaper chain if both sides support it. Public fee trackers show today’s level. After a trade, subtract the fee before you call it profit: a $30 gain with a $4 fee leaves $26.',
+    },
+    {
+      title: 'Two different fees',
+      art: 'sendFee',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Here, practice orders pay a trading fee, shown as Commission in Order History. A real exchange charges it for matching your order; here it is simulated. A network fee is different: it is paid when crypto moves between wallets on a blockchain, and no practice trade has one.',
+    },
+    {
+      title: 'Which costs the most?',
+      quiz: {
+        question: 'Which of these will most likely cost the highest fee?',
+        options: [
+          'A plain send, in a quiet hour',
+          'A swap, sent in a busy hour',
+          'A plain send of a small amount, in a quiet hour',
+        ],
+        correct: 1,
+        explain:
+          'More work and more demand both push the fee up. A plain send in a quiet hour is the cheapest case, whatever the amount.',
+      },
+    },
+  ],
+  // Your call, after the planning card: the honest answer is the praised one
+  moment: {
+    art: 'feeCheck',
+    context:
+      'You want to send $40 of crypto to a friend. The wallet shows a $12 fee because the network is busy.',
+    question: 'What do you do first?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Confirm it: the fee is the fee',
+      'Check whether waiting, or a cheaper chain, would cost less',
+      'Ask your friend to pay the fee',
+    ],
+    correct: 1,
+    explain:
+      'A fee that big is a signal to look, not a rule. It moves with demand, so a quieter hour or another chain may cost far less.',
+  },
+  checks: [],
+  notePrompt: 'Which payment would you only send when the fee is low, and why?',
+  canDo: [],
+  recap: {
+    title: 'Network fees',
+    points: [
+      { text: 'A payment waits in line, then a validator puts it in a block.' },
+      { text: 'The fee pays for a seat in the block, and rises when many want one.' },
+      { text: 'A busy day can turn a $4 fee into $128 and swallow a small payment.' },
+      { text: 'Look at the fee before you confirm, and send when it is worth it.' },
+    ],
+    highlight: {
+      text: 'You can now say what happens between send and confirmed, why a fee exists and moves, and check the cost before you press confirm. Next up: trading without a middleman.',
+    },
+  },
+  access: FREE,
+};
+
+export const LESSONS: readonly Lesson[] = [
+  lesson01,
+  lessonOwnership,
+  lesson02,
+  lesson04,
+  lessonCoins,
+  lessonStablecoins,
+  lessonWallets,
+  lessonFees,
+];
 
 export function getLesson(id: LessonId): Lesson {
   const lesson = LESSONS.find((l) => l.id === id);
@@ -1687,6 +2801,7 @@ export function cardWords(card: LessonCard): number {
     plainText(card.analogy?.text ?? ''),
     ...(card.meet ? [card.meet.tick, card.meet.tock, card.meet.lead, ...card.meet.list] : []),
     ...(card.points ?? []).flatMap((p) => [p.label, p.text]),
+    ...(card.preview ?? []),
     ...(card.beats ?? []).map((b) => b.text),
   ].join(' ');
   return text.split(/\s+/).filter((w) => /\w/.test(w)).length;

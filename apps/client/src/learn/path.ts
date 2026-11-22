@@ -39,7 +39,9 @@ interface ChapterBase {
 }
 
 export type Chapter =
-  | (ChapterBase & { status: 'open'; nodes: BuiltNode[] })
+  // `soon`: the stops still to write, shown after the built ones as locked "coming soon" titles
+  // (owner 2026-11-19: a chapter is built lesson by lesson, one PR each)
+  | (ChapterBase & { status: 'open'; nodes: BuiltNode[]; soon?: SoonNode[] })
   | (ChapterBase & { status: 'soon'; preview: SoonNode[] });
 
 export const CHAPTERS: readonly Chapter[] = [
@@ -67,20 +69,25 @@ export const CHAPTERS: readonly Chapter[] = [
     ],
   },
   {
-    // Placeholder titles until the Lessons 1–3 makeover places the next unit (the lesson-authoring
-    // skill: the path follows the topic order, with our own titles)
+    // Chapter 2 (owner 2026-11-19): the benchmark's topic order, our own title and lesson titles. It
+    // replaces the "Trade with a plan" placeholder, whose topics (limit orders, stop-loss and
+    // take-profit, risk, scams) move to a later chapter. Built lesson by lesson: the lessons still
+    // to write are `soon` titles
     id: 'ch2',
     number: 2,
-    title: 'Trade with a plan',
+    title: 'Your crypto toolbox: coins, wallets and the networks behind them',
     tone: 'green',
     access: FREE,
-    status: 'soon',
-    preview: [
-      { kind: 'lesson', title: 'Limit orders: wait for your price' },
-      { kind: 'lesson', title: 'Stop-loss and take-profit' },
-      { kind: 'lesson', title: 'Risk 1–2% of the account' },
-      { kind: 'lesson', title: 'Scams and red flags' },
-      { kind: 'checkpoint', title: 'Checkpoint' },
+    status: 'open',
+    nodes: [
+      { kind: 'lesson', id: 'lesson-coins', access: FREE },
+      { kind: 'lesson', id: 'lesson-stablecoins', access: FREE },
+      { kind: 'lesson', id: 'lesson-wallets', access: FREE },
+      { kind: 'lesson', id: 'lesson-fees', access: FREE },
+    ],
+    soon: [
+      { kind: 'lesson', title: 'Trading without a middleman: DApps and pools' },
+      { kind: 'checkpoint', title: 'Checkpoint: wallets, fees and the networks' },
     ],
   },
 ];
@@ -158,7 +165,10 @@ export interface PathProgress {
 
 export interface PathView {
   chapters: ChapterView[];
-  /** Finished nodes over all built nodes, 0–100 */
+  /**
+   * Finished nodes over all built nodes, 0–100. A built lesson of a chapter that is only partly
+   * written counts too, so the figure can drop below 100 when a new lesson ships (owner 2026-11-19).
+   */
   percent: number;
   /** The next step's key, if any */
   current: string | null;
@@ -245,7 +255,7 @@ export function pathState(
       stops += chapter.preview.length;
       return { chapter, firstIndex, locked: true, nodes: [], done: 0 };
     }
-    stops += chapter.nodes.length;
+    stops += chapter.nodes.length + (chapter.soon?.length ?? 0);
     const locked = !chapterOpen;
     const checkpoint = checkpointOf(chapter);
     // Passes from before the Lessons 1–3 rewrite were cleared with its questions (owner 2026-11-17,

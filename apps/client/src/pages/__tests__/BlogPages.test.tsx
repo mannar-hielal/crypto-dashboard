@@ -31,7 +31,6 @@ const renderAt = (path: string) =>
       <Routes>
         <Route path="/blog" element={<BlogIndexPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
-        <Route path="/about" element={<ComingSoonPage page="about" />} />
         <Route path="/support" element={<ComingSoonPage page="support" />} />
       </Routes>
     </MemoryRouter>
@@ -92,12 +91,9 @@ describe('the Blog (owner 2026-11-18)', () => {
   });
 });
 
-describe('About us and Support (placeholders)', () => {
+describe('Support (placeholder)', () => {
   it('should say coming soon, link home, and stay out of search (noindex)', () => {
-    for (const [path, title] of [
-      ['/about', 'About us'],
-      ['/support', 'Support'],
-    ] as const) {
+    for (const [path, title] of [['/support', 'Support']] as const) {
       renderAt(path);
       expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(title);
       expect(screen.getByText('Coming soon.')).toBeTruthy();

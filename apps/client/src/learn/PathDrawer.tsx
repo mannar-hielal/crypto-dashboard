@@ -125,7 +125,7 @@ function ChapterSection({ view, wide, started, onStart, onSkipTour }: ChapterSec
             Chapter {chapter.number}
             {soon
               ? ' · Coming soon'
-              : ` · ${view.done} of ${view.nodes.length} done${view.locked ? ' · Locked' : ''}`}
+              : ` · ${view.done} of ${view.nodes.length + (chapter.soon?.length ?? 0)} done${view.locked ? ' · Locked' : ''}`}
           </p>
         </div>
         {!soon && (
@@ -177,6 +177,15 @@ function ChapterSection({ view, wide, started, onStart, onSkipTour }: ChapterSec
                 onSkipTour={onSkipTour}
               />
             ))}
+            {chapter.soon?.map((node, i) => (
+              <SoonStop
+                key={node.title}
+                first={false}
+                index={firstIndex + view.nodes.length + i}
+                kind={node.kind}
+                title={node.title}
+              />
+            ))}
           </ul>
         </>
       )}
@@ -199,7 +208,10 @@ function SoonStop({ first, index, kind, title }: SoonStopProps) {
         <span className={`${styles.node} ${styles.soon}`} aria-hidden="true">
           <NodeIcon kind={kind} />
         </span>
-        <span className={styles.caption}>{title}</span>
+        <span className={styles.caption}>
+          {title}
+          <span className={styles.srOnly}> (coming soon)</span>
+        </span>
       </li>
     </>
   );

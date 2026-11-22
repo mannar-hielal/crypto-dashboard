@@ -1,0 +1,341 @@
+/* The How it works page's own layout: the sticky anchor nav, the hero and the section rhythm.
+   Shared pieces are in components/landing/. Colours from tokens.ts via the @theme mirror in
+   index.css. */
+
+/* Docks below the top bar (h-12 = 48px) */
+.nav {
+  position: sticky;
+  top: 48px;
+  z-index: 50;
+  display: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-brand-glow) 15%, transparent); /* color.glow at 15% */
+  background: color-mix(in srgb, var(--color-bg-page) 90%, transparent); /* bg.page at 90% */
+  backdrop-filter: blur(12px);
+}
+
+.navInner {
+  display: flex;
+  max-width: 72rem;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  margin: 0 auto;
+  padding: 12px 16px;
+}
+
+.navLink {
+  color: var(--color-brand-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  color: var(--color-brand-white);
+}
+
+.navLink:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+.hero {
+  display: flex;
+  max-width: 48rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 72px 16px 0;
+  margin-bottom: 56px; /* the first section's label would sit on the buttons otherwise */
+  text-align: center;
+}
+
+.h1 {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.75rem; /* the long domain name has to fit a 360 px phone */
+  overflow-wrap: anywhere;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.sub {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 1.125rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.page {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 72px;
+  padding: 0 0 72px;
+}
+
+.anchor,
+.cta :global(#newsletter) {
+  scroll-margin-top: 64px; /* the top bar; the anchor nav is hidden below 768px */
+}
+
+@media (min-width: 768px) {
+  .anchor,
+  .cta :global(#newsletter) {
+    scroll-margin-top: 112px; /* the top bar and the anchor nav */
+  }
+}
+
+.sub2 {
+  width: 100%;
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Pre-launch: a short line above the headline saying the page shows what is coming */
+.soon {
+  margin: 0;
+  color: var(--color-brand-amber);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.faqWrap {
+  width: 100%;
+  max-width: 48rem;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 24px;
+}
+
+.legal {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.8125rem; /* fontSize.xs11 */
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .h1 {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .nav {
+    display: block;
+  }
+}
+
+/* ─── Pieces of the How it works page ─────────────────────────────────────── */
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 4px 0 0;
+  padding: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  list-style: none;
+}
+
+.badges strong {
+  color: var(--color-brand-white);
+}
+
+.twoCols {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.box {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+}
+
+.boxTitle {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.p,
+.note,
+.bullets,
+.stops,
+.remember {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.p strong {
+  color: var(--color-brand-white);
+}
+
+.note {
+  font-size: 0.875rem;
+}
+
+.bullets,
+.stops,
+.remember {
+  padding-left: 20px;
+}
+
+.trick {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.flow {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  background: var(--color-bg-panel);
+}
+
+.statValue {
+  color: var(--color-brand-purple);
+  font-size: 1.75rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.statLabel {
+  color: var(--color-brand-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.more {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 12px;
+  background: var(--color-bg-panel);
+}
+
+.more summary {
+  color: var(--color-brand-white);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.more summary:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+.more[open] summary {
+  margin-bottom: 8px;
+}
+
+.checks {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  background: var(--color-bg-page);
+}
+
+.table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-card); /* border.card */
+  color: var(--color-brand-muted);
+  vertical-align: top;
+}
+
+.table thead th,
+.table tbody th {
+  color: var(--color-brand-white);
+  font-weight: 700;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .twoCols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}

@@ -35,7 +35,7 @@ For each item below, grep/read the codebase and the cited doc, then output: ✅ 
 
 ### 🟡 Tier 2 — Trust & conversion
 
-11. Landing page (`/`) + Features page (`/features`) — confirmed present and styled per `tokens.ts`?
+11. Landing page (`/`) + How it works page (`/how-it-works`) — confirmed present and styled per `tokens.ts`?
 12. Newsletter: subscribers table ✅; **compose + send UI pending** per `NEWSLETTER_ADMIN_PLAN.md`. Decide: ship the landing without broadcast, or finish composer first.
 13. SEO Tier 2: trust badges, social proof, FAQ, contact/legal links.
 14. `README.md` matches reality — no removed tools (Crosshair, Rectangle, Fibonacci) advertised; drawing tools status (text, freehand UI-only) not overstated.

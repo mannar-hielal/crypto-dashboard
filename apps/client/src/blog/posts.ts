@@ -488,7 +488,7 @@ const spotAScam: Article = {
     { kind: 'h', text: 'The same trick in other costumes', id: 'costumes' },
     {
       kind: 'p',
-      text: 'The pattern repeats with new clothes. Fake “support” asks for your recovery phrase (Lesson 2: never share it). Copycat coins borrow a famous name or logo. Apps show your balance growing but ask for a fee before you can withdraw: if you can’t take it out, it isn’t yours. Popularity proves nothing either: a celebrity post or a week of rises only means people traded.',
+      text: 'The pattern repeats with new clothes. Fake “support” asks for your recovery phrase (Lesson 7: never share it). Copycat coins borrow a famous name or logo. Apps show your balance growing but ask for a fee before you can withdraw: if you can’t take it out, it isn’t yours. Popularity proves nothing either: a celebrity post or a week of rises only means people traded.',
     },
     { kind: 'h', text: 'Why smart people fall for it', id: 'why' },
     {
@@ -810,7 +810,7 @@ const gettingBitcoin: Article = {
     },
     {
       kind: 'p',
-      text: '**You hold it yourself,** in a wallet you control, like taking your coat home. No company can freeze or lose your coins. The risk: it’s all on you. Lose the key and the backup, or get tricked into revealing them, and there’s no one to call.',
+      text: '**You hold it yourself,** in a wallet you control, like taking your coat home. No exchange stands in the middle, so none can freeze your account or lose your coins. One catch: the company behind a stablecoin can still freeze that coin at an address. The risk: it’s all on you. Lose the key and the backup, or get tricked into revealing them, and there’s no one to call.',
     },
     {
       kind: 'p',

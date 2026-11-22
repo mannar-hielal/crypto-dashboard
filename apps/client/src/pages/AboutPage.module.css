@@ -1,0 +1,150 @@
+/* The About us page's own layout. Shared pieces are in components/landing/. Colours from tokens.ts
+   via the @theme mirror in index.css. */
+
+.page {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 64px;
+  padding: 72px 0;
+}
+
+.hero {
+  display: flex;
+  max-width: 44rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.h1 {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.sub {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 1.125rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.text {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.beliefs {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.belief {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+}
+
+.beliefTitle {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.beliefText {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.who {
+  display: flex;
+  width: 100%;
+  max-width: 48rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.photo {
+  display: block;
+  width: 168px;
+  height: 168px;
+  flex: none;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+.whoText {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mail {
+  color: var(--color-brand-white);
+  text-underline-offset: 3px;
+}
+
+.mail:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.legal {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.8125rem; /* fontSize.xs11 */
+  line-height: 1.5;
+  text-align: center;
+}
+
+.cta :global(#newsletter) {
+  scroll-margin-top: 64px;
+}
+
+@media (min-width: 640px) {
+  .h1 {
+    font-size: 2.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .beliefs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .who {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}

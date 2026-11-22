@@ -59,7 +59,7 @@ function metrics(over: Partial<RetentionMetricsResponse> = {}): RetentionMetrics
         itemId: 'lesson-02',
         started: 6,
         completed: 5,
-        steps: [{ stepId: 'lesson-02.79', viewers: 5, closedHere: 1 }],
+        steps: [{ stepId: 'lesson-02.120', viewers: 5, closedHere: 1 }],
         rating: { count: 3, average: 4.3 },
       },
       {
@@ -153,7 +153,7 @@ describe('AdminMetricsPage', () => {
         screen.getByText('Lesson 3: News, swings and traps (totals and rating: all versions)')
       ).not.toBeNull()
     );
-    expect(screen.getByText('19. Try it on the real screen')).not.toBeNull();
+    expect(screen.getByText('20. Try it on the real screen')).not.toBeNull();
     expect(screen.getByText(/rated 4.3 \/ 5 by 3/)).not.toBeNull();
   });
 

@@ -36,6 +36,21 @@ export const CONCEPT_IDS = [
   'private-key',
   'custody',
   'pseudonymous',
+  // Chapter 2, Lesson 5 (2026-11-19)
+  'coin',
+  'token',
+  'altcoin',
+  'staking',
+  // Chapter 2, Lesson 6 (2026-11-19)
+  'stablecoin',
+  'peg',
+  // Chapter 2, Lesson 7 (2026-11-22)
+  'wallet',
+  'recovery-phrase',
+  'hardware-wallet',
+  // Chapter 2, Lesson 8 (2026-11-22)
+  'validator',
+  'network-fee',
 ] as const;
 
 export type ConceptId = (typeof CONCEPT_IDS)[number];
@@ -211,6 +226,84 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Pseudonymous',
     peek: 'Every payment is public, but addresses carry no names. Hidden is not the same as invisible.',
     think: 'a party where everyone wears a mask, but everyone can see what each mask does.',
+    access: FREE,
+  },
+  {
+    id: 'coin',
+    term: 'Coin',
+    peek: 'The money of its own blockchain: it pays for that road’s upkeep and pays the people who keep it running.',
+    think: 'the money of a road that belongs to it alone.',
+    access: FREE,
+  },
+  {
+    id: 'token',
+    term: 'Token',
+    peek: 'A crypto that has no blockchain of its own. It lives on another one, such as Ethereum, and follows that road’s rules.',
+    think: 'a shop built along someone else’s road.',
+    access: FREE,
+  },
+  {
+    id: 'altcoin',
+    term: 'Altcoin',
+    peek: 'Short for “alternative coin”: any crypto that is not bitcoin.',
+    think: 'every crypto except the first one.',
+    access: FREE,
+  },
+  {
+    id: 'staking',
+    term: 'Staking',
+    peek: 'Putting coins aside to help keep a blockchain safe, and earning a reward for it. The reward is not guaranteed.',
+    think: 'helping keep the road safe, for a reward.',
+    access: FREE,
+  },
+  {
+    id: 'stablecoin',
+    term: 'Stablecoin',
+    peek: 'A token built to keep one steady price, usually one US dollar.',
+    think: 'a ticket for a dollar kept in a cloakroom.',
+    access: FREE,
+  },
+  {
+    id: 'peg',
+    term: 'Peg',
+    peek: 'The steady price a stablecoin aims for. If it slips off, the coin has lost its peg.',
+    think: 'the line it is meant to stay on.',
+    access: FREE,
+  },
+  {
+    id: 'wallet',
+    term: 'Wallet',
+    peek: 'The app or device that keeps your keys. It does not hold coins: they are records on the blockchain.',
+    think: 'a key ring: the mailboxes stay in the building.',
+    access: FREE,
+  },
+  {
+    id: 'recovery-phrase',
+    term: 'Recovery phrase',
+    peek: 'A list of words, usually 12 or 24, that can rebuild a wallet’s keys. Whoever has it can take everything.',
+    think:
+      'the master key to every mailbox on the ring: keep it on paper, offline, and tell no one.',
+    access: FREE,
+  },
+  {
+    id: 'hardware-wallet',
+    term: 'Hardware wallet',
+    peek: 'A small device that keeps your key away from the internet and signs payments inside itself.',
+    think: 'signing a paper in a locked room and passing out only the signed page.',
+    access: FREE,
+  },
+  {
+    id: 'validator',
+    term: 'Validator',
+    peek: 'A computer that picks waiting payments and adds them to the next block. On Bitcoin the same job is done by miners.',
+    think: 'the driver who picks the passengers for the next bus.',
+    access: FREE,
+  },
+  {
+    id: 'network-fee',
+    term: 'Network fee',
+    peek: 'A small fee paid when you send crypto, for a seat in the next block. It rises when many people send at once.',
+    think: 'the toll on a road, higher at rush hour.',
     access: FREE,
   },
 ];

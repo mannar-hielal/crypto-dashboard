@@ -1,0 +1,48 @@
+/* Blurred, made-up brand marks: generic shapes in brand-palette colours, blurred hard so no real
+   logo can be read from them. Colours from tokens.ts via the @theme mirror in index.css. */
+
+.mark {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  filter: blur(3.5px);
+  opacity: 0.9;
+}
+
+.shape {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.exchange {
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--color-brand-amber), var(--color-brand-purple));
+}
+
+.charting {
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--color-brand-purple-dark), var(--color-brand-muted));
+}
+
+.games {
+  background: linear-gradient(135deg, var(--color-brand-grad-from), var(--color-brand-amber));
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+.journals {
+  background: linear-gradient(135deg, var(--color-brand-glow), var(--color-brand-white));
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+}
+
+.bots {
+  background: linear-gradient(135deg, var(--color-brand-grad-to), var(--color-brand-purple));
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.prop {
+  border: 8px solid var(--color-brand-grad-from);
+  border-radius: 9999px;
+  background: transparent;
+}

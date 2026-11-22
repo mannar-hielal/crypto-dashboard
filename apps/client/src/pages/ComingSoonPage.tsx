@@ -1,6 +1,6 @@
 /**
- * The About us and Support pages until they are written (owner 2026-11-18): a title, one sentence
- * and a way home. Not indexed, and not in the sitemap.
+ * The Support page until it is written (owner 2026-11-18): a title, one sentence and a way home.
+ * Not indexed, and not in the sitemap. (About us is written: `AboutPage`.)
  */
 
 import { Link } from 'react-router';
@@ -11,7 +11,6 @@ import { guide } from '@/lib/guideAnchors';
 import styles from './BlogPage.module.css';
 
 const PAGES = {
-  about: { title: 'About us', path: '/about', text: 'We’re writing this page. Come back soon.' },
   support: {
     title: 'Support',
     path: '/support',
