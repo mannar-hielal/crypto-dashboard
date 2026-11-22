@@ -116,7 +116,15 @@ export type LessonArtId =
   | 'feeSpike'
   | 'chainsCompare'
   | 'simpleComplex'
-  | 'feeCheck';
+  | 'feeCheck'
+  // The sneak peek's own graphic, one per lesson (owner 2026-11-22)
+  | 'peekOwnership'
+  | 'peekSwings'
+  | 'peekStyle'
+  | 'peekCoins'
+  | 'peekStable'
+  | 'peekWallets'
+  | 'peekFees';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -206,11 +214,25 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
   feeBids:
     'Five bars rising from quiet to busy: the busier the network, the higher the fee people offer.',
   feeSpike:
-    'A line through three reported averages, not to scale: bitcoin’s average fee, about $5 in early April 2024, about $128 on 20 April, about $35 on 21 April.',
+    'A line through three reported averages, not to scale: bitcoin’s average fee, about $4 in early April 2024, about $128 on 20 April, about $35 on 21 April.',
   chainsCompare: 'Two panels: a cheap chain, often cents, and a pricier chain, dollars when busy.',
   simpleComplex: 'A plain send is less work and a lower fee; a swap is more work and a higher fee.',
   feeCheck:
     'A send of $40 showing a $12 network fee beside a magnifying glass: look before you confirm.',
+  peekOwnership:
+    'The lesson’s four topics as a numbered path: why Bitcoin exists, one ledger copied, nodes and blocks, no one in charge.',
+  peekSwings:
+    'The lesson’s four topics as a numbered path: swings both ways, news and hype, thin or deep markets, check the coin.',
+  peekStyle:
+    'The lesson’s three topics as a numbered path: trading or investing, spreading money, your time, nerves and goals.',
+  peekCoins:
+    'The lesson’s four topics as a numbered path: coin or token, kinds of token, altcoins and swings, check fast gains.',
+  peekStable:
+    'The lesson’s four topics as a numbered path: steady coins, three kinds, park and pay, not a promise.',
+  peekWallets:
+    'The lesson’s four topics as a numbered path: keys not coins, who holds the key, the recovery phrase, hot and cold.',
+  peekFees:
+    'The lesson’s four topics as a numbered path: send to confirmed, why fees move, a real fee spike, check the fee.',
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -919,8 +941,9 @@ const lessonOwnership: Lesson = {
   title: 'Money nobody controls',
   stage: 'Getting started',
   minutes: LESSON_02_MINUTES,
-  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on, past
-  // its earlier versions' 1–20 and 21–40
+  // Rewritten 2026-11-16, then moved again by the sneak peek card (2026-11-22), each time with
+  // everyone's progress reset: today's screens are steps 101 on, past its earlier versions' 1–20,
+  // 21–40 and 61–100
   stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   tryWidget: 'block-chain',
   tryIntro:
@@ -947,15 +970,12 @@ const lessonOwnership: Lesson = {
           text: 'Someone wrote it into the record on purpose. Why?',
           emphasis: 'Why?',
         },
-        {
-          kind: 'fact',
-          text: `In the next ${LESSON_02_MINUTES} minutes: why Bitcoin exists, how thousands of computers keep one record, and what makes it different.`,
-        },
       ],
     },
     {
       title: 'What you will learn',
-      art: 'ledger',
+      art: 'peekOwnership',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       preview: [
         'Why Bitcoin exists: paying online without a bank in the middle',
         'One ledger, copied on thousands of computers',
@@ -1232,8 +1252,9 @@ const lesson02: Lesson = {
   title: 'News, swings and traps',
   stage: 'Getting started',
   minutes: LESSON_03_MINUTES,
-  // Rewritten 2026-11-16 (and everyone's progress reset): today's screens are steps 61 on; the
-  // versions before used 1–40 and 41–60
+  // Rewritten 2026-11-16, then moved again by the sneak peek card (2026-11-22), each time with
+  // everyone's progress reset: today's screens are steps 101 on; the versions before used 1–40,
+  // 41–60 and 61–100
   stepBase: 100, // the SDK's LESSON_FIRST_STEPS − 1; raised from 60 when the sneak peek card was added (2026-11-22)
   tour: 'primer',
   tryIntro:
@@ -1257,15 +1278,12 @@ const lesson02: Lesson = {
           kind: 'headline',
           text: 'Nothing was hacked. One trader’s program sold far too much, far too fast.',
         },
-        {
-          kind: 'fact',
-          text: `In the next ${LESSON_03_MINUTES} minutes: why prices swing so hard, what moves them, and how to spot a trap.`,
-        },
       ],
     },
     {
       title: 'What you will learn',
-      art: 'swings',
+      art: 'peekSwings',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
       preview: [
         'Why prices swing hard, both ways',
         'How news, shocks and hype move a price',
@@ -1530,11 +1548,12 @@ const lesson04: Lesson = {
       title: 'Two paths, one goal',
       art: 'swings',
       presenter: { who: 'tick', mood: 'curious', pose: 'point' },
-      text: 'Crypto can be fast and exciting, but people use it in two different ways. Some jump in and out of trades to catch short moves. Others buy and hold for a long time. Today you’ll see the difference and find the style that fits you.',
+      text: 'Crypto can be fast and exciting, but people use it in two different ways. Some jump in and out of trades to catch short moves. Others buy and hold for a long time.',
     },
     {
       title: 'What you will learn',
-      art: 'friends',
+      art: 'peekStyle',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       preview: [
         'What trading is, and what investing is',
         'Why spreading money helps, but is not a shield',
@@ -1765,7 +1784,8 @@ const lessonCoins: Lesson = {
   cards: [
     {
       title: 'What you will learn',
-      art: 'twoRoads',
+      art: 'peekCoins',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
       preview: [
         'A coin has its own road; a token uses one',
         'Three common kinds of token: credits, shares and votes',
@@ -1908,7 +1928,7 @@ const lessonCoins: Lesson = {
         ],
         correct: 1,
         explain:
-          'The road’s upkeep is paid in the road’s coin. The lesson on gas fees goes deeper.',
+          'The road’s upkeep is paid in the road’s coin. The lesson on network fees goes deeper.',
       },
     },
   ],
@@ -1958,7 +1978,8 @@ const lessonStablecoins: Lesson = {
   cards: [
     {
       title: 'What you will learn',
-      art: 'wobbleSteady',
+      art: 'peekStable',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       preview: [
         'What a stablecoin is built to do: hold one dollar',
         'The three kinds, and what stands behind each',
@@ -2148,7 +2169,8 @@ const lessonWallets: Lesson = {
   cards: [
     {
       title: 'What you will learn',
-      art: 'mailboxWall',
+      art: 'peekWallets',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
       preview: [
         'Where your crypto really lives: a wallet holds keys, not coins',
         'Custodial or non-custodial: who holds the key',
@@ -2410,7 +2432,7 @@ const lessonWallets: Lesson = {
 // and 24), fact checked by a technical-writer agent, to be read by the owner. One metaphor, carried
 // from Lesson 5's toll booth: a block is a bus with limited seats, and the fee is the offer for a
 // seat. Our own example: bitcoin's average fee in April 2024, a few dollars early in the month (The Block:
-// the 7-day average was $4.11 earlier in April; we say about $5), about $128
+// the 7-day average was $4.11 earlier in April; we say about $4), about $128
 // on 20 April (halving day and the launch of Runes) and about $35 on 21 April, from The Block and
 // YCharts reports (the sources differ by cents with the day's time base; the picture says "drawn
 // from reported averages"). The $200 payment is ours. No practice trade: the paper account has no
@@ -2427,7 +2449,8 @@ const lessonFees: Lesson = {
   cards: [
     {
       title: 'What you will learn',
-      art: 'tollBooth',
+      art: 'peekFees',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
       preview: [
         'What happens between “send” and “confirmed”',
         'Why a fee exists, and why it moves',
@@ -2507,7 +2530,7 @@ const lessonFees: Lesson = {
       title: 'A real fee spike',
       art: 'feeSpike',
       presenter: { who: 'tock', mood: 'frank', pose: 'point' },
-      text: 'In early April 2024 the average fee to send bitcoin was a few dollars, about $5. On 20 April, halving day and the launch of Runes, a new way to make tokens on Bitcoin, it hit about $128. A day later it was about $35. Same network, same coin, a different price for a seat.',
+      text: 'In early April 2024 the average fee to send bitcoin was a few dollars, about $4. On 20 April, halving day and the launch of Runes, a new way to make tokens on Bitcoin, it hit about $128. A day later it was about $35. Same network, same coin, a different price for a seat.',
     },
     {
       title: 'Is it worth it?',
@@ -2516,13 +2539,13 @@ const lessonFees: Lesson = {
       math: {
         who: 'tick',
         steps: [
-          { label: 'A quiet day’s share', sum: '5 ÷ 200 = 0.025' },
-          { label: 'As a percent', sum: '0.025 × 100 = 2.5%' },
+          { label: 'A quiet day’s share', sum: '4 ÷ 200 = 0.02' },
+          { label: 'As a percent', sum: '0.02 × 100 = 2%' },
           { label: 'The spike day’s share', sum: '128 ÷ 200 = 0.64' },
           { label: 'As a percent', sum: '0.64 × 100 = 64%' },
         ],
         answer:
-          'On a quiet day the fee takes **2.5%** of the payment. On the spike day it took **64%**. The numbers are the rounded averages above. The same $200 can be fine to send one day and not worth sending the next.',
+          'On a quiet day the fee takes **2%** of the payment. On the spike day it took **64%**. The numbers are the rounded averages above. The same $200 can be fine to send one day and not worth sending the next.',
       },
     },
     {
@@ -2622,7 +2645,7 @@ const lessonFees: Lesson = {
     points: [
       { text: 'A payment waits in line, then a validator puts it in a block.' },
       { text: 'The fee pays for a seat in the block, and rises when many want one.' },
-      { text: 'A busy day can turn a $5 fee into $128 and swallow a small payment.' },
+      { text: 'A busy day can turn a $4 fee into $128 and swallow a small payment.' },
       { text: 'Look at the fee before you confirm, and send when it is worth it.' },
     ],
     highlight: {

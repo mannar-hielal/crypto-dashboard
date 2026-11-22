@@ -10,13 +10,18 @@
 
 import type { JSX } from 'react';
 import {
+  ArrowsLeftRight,
   Bank,
   Bus,
   Camera,
   Certificate,
+  ChartLineUp,
+  ChartPieSlice,
   Clock,
   Cloud,
   Coins,
+  Compass,
+  Cube,
   Detective,
   DeviceMobile,
   EnvelopeSimple,
@@ -27,22 +32,30 @@ import {
   Handbag,
   HardDrives,
   Key,
+  Leaf,
   ListChecks,
   Lock,
   LockKey,
   MagnifyingGlass,
   Mailbox,
   Money,
+  Newspaper,
   Note,
+  Notebook,
   Package,
   PencilSimple,
   Prohibit,
+  RoadHorizon,
+  Stack,
   Storefront,
   Swap,
   Ticket,
   Tray,
   Usb,
+  UsersThree,
   Vault,
+  Wallet,
+  Warning,
   Waves,
   WifiHigh,
 } from '@phosphor-icons/react';
@@ -1906,7 +1919,7 @@ function FeeBids() {
   );
 }
 
-/** Bitcoin's average fee, April 2024, drawn from reported averages: about $5, $128 and $35 */
+/** Bitcoin's average fee, April 2024, drawn from reported averages: about $4, $128 and $35 */
 function FeeSpike() {
   return (
     <>
@@ -1917,7 +1930,7 @@ function FeeSpike() {
         20 Apr ≈ $128
       </text>
       <text x="130" y="132" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
-        early April ≈ $5
+        early April ≈ $4
       </text>
       <text x="268" y="84" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
         21 Apr ≈ $35
@@ -2008,6 +2021,102 @@ function FeeCheck() {
   );
 }
 
+// ─── The sneak peek's own graphic (owner 2026-11-22) ───
+// Each lesson's "What you will learn" card carries its own picture, derived from the lesson's topics:
+// a numbered path through three or four stops, one icon and a two-line label each, in the order of the
+// numbered lines below it. One template for every lesson, so the opening always looks the same.
+
+type PeekIcon = typeof Coins;
+interface PeekStop {
+  Icon: PeekIcon;
+  line1: string;
+  line2: string;
+}
+
+function PeekMap({ stops }: { stops: readonly PeekStop[] }) {
+  const four = stops.length === 4;
+  const first = four ? 110 : 124;
+  const gap = four ? 57 : 78;
+  const middle = first + (gap * (stops.length - 1)) / 2;
+  return (
+    <>
+      <text x={middle} y="24" textAnchor="middle" className={`${styles.small} ${styles.muted}`}>
+        in this lesson
+      </text>
+      <line
+        x1={first}
+        x2={first + gap * (stops.length - 1)}
+        y1="62"
+        y2="62"
+        className={`${styles.stroke} ${styles.muted} ${styles.dashed}`}
+      />
+      {stops.map(({ Icon, line1, line2 }, i) => {
+        const cx = first + gap * i;
+        return (
+          <g key={line1}>
+            <circle cx={cx} cy="62" r="22" className={styles.panel} />
+            <Icon weight={DUO} x={cx - 13} y={49} size={26} className={styles.white} />
+            <circle cx={cx - 17} cy="42" r="8" className={styles.badge} />
+            <text x={cx - 17} y="46" textAnchor="middle" className={styles.badgeText}>
+              {i + 1}
+            </text>
+            <text x={cx} y="104" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+              {line1}
+            </text>
+            <text x={cx} y="118" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+              {line2}
+            </text>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+const peek = (stops: readonly PeekStop[]) => () => <PeekMap stops={stops} />;
+
+const PeekOwnership = peek([
+  { Icon: Bank, line1: 'Why it', line2: 'exists' },
+  { Icon: Notebook, line1: 'One ledger', line2: 'copied' },
+  { Icon: Cube, line1: 'Nodes and', line2: 'blocks' },
+  { Icon: UsersThree, line1: 'No one in', line2: 'charge' },
+]);
+const PeekSwings = peek([
+  { Icon: ChartLineUp, line1: 'Swings', line2: 'both ways' },
+  { Icon: Newspaper, line1: 'News and', line2: 'hype' },
+  { Icon: Stack, line1: 'Thin or', line2: 'deep' },
+  { Icon: MagnifyingGlass, line1: 'Check the', line2: 'coin' },
+]);
+const PeekStyle = peek([
+  { Icon: ArrowsLeftRight, line1: 'Trading or', line2: 'investing' },
+  { Icon: ChartPieSlice, line1: 'Spreading', line2: 'money' },
+  { Icon: Compass, line1: 'Your time,', line2: 'nerves, goals' },
+]);
+const PeekCoins = peek([
+  { Icon: RoadHorizon, line1: 'Coin or', line2: 'token' },
+  { Icon: Ticket, line1: 'Token', line2: 'kinds' },
+  { Icon: Leaf, line1: 'Altcoin', line2: 'swings' },
+  { Icon: MagnifyingGlass, line1: 'Check fast', line2: 'gains' },
+]);
+const PeekStable = peek([
+  { Icon: Coins, line1: 'Steady', line2: 'coins' },
+  { Icon: Vault, line1: 'Three', line2: 'kinds' },
+  { Icon: Wallet, line1: 'Park and', line2: 'pay' },
+  { Icon: Warning, line1: 'Not a', line2: 'promise' },
+]);
+const PeekWallets = peek([
+  { Icon: Key, line1: 'Keys, not', line2: 'coins' },
+  { Icon: Bank, line1: 'Who holds', line2: 'the key' },
+  { Icon: Note, line1: 'Recovery', line2: 'phrase' },
+  { Icon: LockKey, line1: 'Hot and', line2: 'cold' },
+]);
+const PeekFees = peek([
+  { Icon: Bus, line1: 'Send to', line2: 'confirmed' },
+  { Icon: Coins, line1: 'Why fees', line2: 'move' },
+  { Icon: ChartLineUp, line1: 'A real', line2: 'fee spike' },
+  { Icon: MagnifyingGlass, line1: 'Check the', line2: 'fee' },
+]);
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
   friends: Friends,
   lena: LenaAlone,
@@ -2072,6 +2181,13 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   chainsCompare: ChainsCompare,
   simpleComplex: SimpleComplex,
   feeCheck: FeeCheck,
+  peekOwnership: PeekOwnership,
+  peekSwings: PeekSwings,
+  peekStyle: PeekStyle,
+  peekCoins: PeekCoins,
+  peekStable: PeekStable,
+  peekWallets: PeekWallets,
+  peekFees: PeekFees,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */

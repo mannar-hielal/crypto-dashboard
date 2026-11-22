@@ -293,8 +293,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
      the streak screen first ([lesson.streak]: the flame, "N-day streak" counting up, this week's dots, "Come back
      tomorrow to keep it going"), then [lesson.streak.continue] does what was pressed (M). A guest goes straight on.
 2. Lesson 2 · **Money nobody controls** (rewritten 2026-11-16; a sneak peek card added 2026-11-22), 22 screens → Expect the cold open drawn, no photo
-   and no guide: the Bitcoin mark and the beats ("3 January 2009 · The first block" … the Times headline … "In the
-   next 9 minutes: why Bitcoin exists…"), then **Continue →**. Then **What you will learn** (the dotted world map, then four numbered lines, no guide), then **From the price to the
+   and no guide: the Bitcoin mark and the beats ("3 January 2009 · The first block" … the Times headline … "Someone wrote it into the record on purpose. Why?"; it no longer announces the lesson, 2026-11-22), then **Continue →**. Then **What you will learn** (a numbered path of four stops: Why it exists, One ledger copied, Nodes and blocks, No one in charge, Berwyn pointing; then four numbered lines), then **From the price to the
    thing** (Pulin and Berwyn), **2008: trust broke**, **A paper, then a block**, **One record, many copies** (the dotted world map; [lesson.term `ledger`] → a peek with no
    "From" line; [lesson.term `node`] → "A computer that keeps a full copy…", no Read more: since 2026-11-18 a peek has
    no article behind it), **Sending bitcoin**, **Two checks, then a block**, **Sealed by hard
@@ -327,7 +326,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    _Mailboxes and keys_ (now "practised in a later lesson on keys and custody"): [article.mailbox.step `2`] → the
    stamp seated, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…".
 4. Lesson 3 · **News, swings and traps** (rewritten 2026-11-16; a sneak peek card added 2026-11-22), 22 screens → Expect the cold open **One Bitcoin for
-   $8,200** (kept) and **Continue →**; **What you will learn** (swinging candles, four numbered lines, no guide); **Why so much?**; **Big swings, both ways** (May 2021, "as low as $28,800 on Bybit's perpetual chart", "It can swing up just as
+   $8,200** (kept) and **Continue →**; **What you will learn** (a numbered path of four stops: Swings both ways, News and hype, Thin or deep, Check the coin, Pulin pointing; then four numbered lines); **Why so much?**; **Big swings, both ways** (May 2021, "as low as $28,800 on Bybit's perpetual chart", "It can swing up just as
    hard, often without warning, so no one can reliably time it.", then Berwyn's math in
    glasses, "42,900 − 28,800 = 14,100" … "32.9%", "➜ … about **33%**: a third.", Read more → `price-swings#size`); **News moves it, fast**; **Same news, either way** (the halving chart: "Halving"
    20 Apr 2024, "$58,299", "$71,437"); then **Your call**: the ETF chart stopping on 10 Jan 2024, answer → it plays on
@@ -364,8 +363,7 @@ Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the 
 1. Open the map ([nav.learn]) → Expect chapter 2 **Your crypto toolbox: coins, wallets and the networks behind them**: the
    lessons **Coins and tokens: who has their own road** and **Stablecoins: the coins that try to sit still** (open after the
    checkpoint, one after the other), then three lesson titles and a checkpoint title as grey "coming soon" stops that can't be focused.
-2. [learn.card.start] the lesson → Expect screen 1 of 18, **What you will learn**: two roads (**Its own road** with a coin, **Someone else's road** with a
-   shop) and four numbered lines, no guide (since 2026-11-22; it was the guides' chat). Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
+2. [learn.card.start] the lesson → Expect screen 1 of 18, **What you will learn**: a numbered path of four stops (Coin or token, Token kinds, Altcoins and swings, Check fast gains), Pulin pointing, and four numbered lines (since 2026-11-22; it was the guides' chat). Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
    word _coin_ is a tappable term opening a peek), **The road needs upkeep** (a coin at a toll booth, "paid in the coin"),
    **The coins in our market** (eight purple ticker badges BTC ETH SOL BNB XRP ADA AVAX DOGE; LINK in an amber ring, "a token").
 3. **What does a coin have?** (Pick the right ones, six tiles): pick the three right ones (**Its own blockchain**, **Pays for its
@@ -386,8 +384,7 @@ Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the 
 **UI reproduction** — as for Lesson 5 (a new account, chapter 1 passed, Lesson 5 done: Lesson 6 opens after it). Local dev with the
 real feed for the practice buy.
 
-1. Open the map → Expect Lesson 6 next after Lesson 5. [learn.card.start] it → Expect screen 1 of 17, **What you will learn**: a swinging red line (**my
-   coin**) beside a steady green one (**built to sit still**) and four numbered lines, no guide (since 2026-11-22).
+1. Open the map → Expect Lesson 6 next after Lesson 5. [learn.card.start] it → Expect screen 1 of 17, **What you will learn**: a numbered path of four stops (Steady coins, Three kinds, Park and pay, Not a promise), Berwyn pointing, and four numbered lines (since 2026-11-22).
 2. **The steady coin** (a line on a dashed $1.00, the word _stablecoin_ a tappable term), **A ticket for a dollar** (a dollar
    becoming a ticket at a cloakroom counter; Berwyn in glasses: "Think of it as a cloakroom ticket…").
 3. The three kinds, one counter each: **Kind 1: dollar-backed** (a vault of money), **Kind 2: crypto-backed** (a vault of coins),
@@ -408,7 +405,7 @@ real feed for the practice buy.
 trade: nothing here starts a tour.
 
 1. Open the map → Expect Lesson 7 next after Lesson 6, and "Why sending crypto costs a fee" still a locked "coming soon" stop.
-   [learn.card.start] it → Expect screen 1 of 25, **What you will learn**: a wall of mailboxes with one key, and four numbered lines, no guide.
+   [learn.card.start] it → Expect screen 1 of 25, **What you will learn**: a numbered path of four stops (Keys not coins, Who holds the key, Recovery phrase, Hot and cold), Pulin pointing, and four numbered lines.
 2. **A wallet holds keys, not coins** (a key ring beside mailboxes; the word _wallet_ a tappable term; Berwyn in glasses: "Think of it
    as a key ring…"), **Address and private key** (an address panel and a private key panel), **Who is who?** (Match boxes, four pairs).
 3. **What a wallet is for** (see, receive, sign), **Mira and Sneaky Sam** (Sam behind glass: 2 BTC and a lock), **The phone in the sea**.
@@ -432,16 +429,15 @@ trade: nothing here starts a tour.
 **UI reproduction** — as for Lesson 7 (a new account, chapter 1 passed, Lessons 5 to 7 done: Lesson 8 opens after them). No practice trade.
 
 1. Open the map → Expect Lesson 8 next after Lesson 7, and "Trading without a middleman: DApps and pools" still a locked "coming soon" stop.
-   [learn.card.start] it → Expect screen 1 of 20, **What you will learn**: a toll booth ("Fee", "paid in the coin") and four numbered
-   lines, no guide.
+   [learn.card.start] it → Expect screen 1 of 20, **What you will learn**: a numbered path of four stops (Send to confirmed, Why fees move, A real fee spike, Check the fee), Berwyn pointing, and four numbered lines.
 2. **Sending has a price** (coins to a mailbox with a "+ fee" tag; the words _network fee_ a tappable term), **A block is a bus** (a bus
    with six seats, five taken; Berwyn in glasses: "Think of it as a bus with limited seats…"), **Who picks the passengers?** (payments
    in line, each with a "high", "mid" or "low" fee; the words _validator_ and _miners_ tappable), **From send to confirmed** (Drag and
    drop, four steps).
 3. **Why a fee exists** (the toll booth again), **Why the fee moves** (five rising bars, "quiet" to "busy"), **Who is who?** (Match boxes,
    four pairs).
-4. **A real fee spike** (a line: early April ≈ $5, 20 Apr ≈ $128, 21 Apr ≈ $35, "drawn from reported averages"), **Is it worth it?**
-   (Pulin in glasses, four steps: 5 ÷ 200 = 0.025, 0.025 × 100 = 2.5%, 128 ÷ 200 = 0.64, 0.64 × 100 = 64%).
+4. **A real fee spike** (a line: early April ≈ $4, 20 Apr ≈ $128, 21 Apr ≈ $35, "drawn from reported averages"), **Is it worth it?**
+   (Pulin in glasses, four steps: 4 ÷ 200 = 0.02, 0.02 × 100 = 2%, 128 ÷ 200 = 0.64, 0.64 × 100 = 64%).
 5. **Cheap chains and pricey chains** (two panels), **A plain send or a swap** (a plain send beside a swap), **What makes a fee higher?**
    (Pick, six tiles, pick three: many people sending, a swap or complex action, asking to be faster), **Busy days** → **Seats in a block are
    limited, so people offer more to get one**.

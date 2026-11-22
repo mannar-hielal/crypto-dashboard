@@ -693,7 +693,8 @@ describe('LessonSheet', () => {
     const items = Array.from(sheet()!.querySelectorAll('ol li')).map((li) => li.textContent);
     expect(items).toEqual(peek.preview);
     expect(sheet()!.querySelector('[data-lesson-art]')).not.toBeNull();
-    expect(sheet()!.querySelector('[data-mood]')).toBeNull();
+    // Its own graphic, with a guide pointing at it
+    expect(sheet()!.querySelector('[data-lesson-art="peekCoins"] [data-mood]')).not.toBeNull();
   });
 
   it('should show a guide’s chat line by the avatar alone, the name kept for screen readers only', () => {
