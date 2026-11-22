@@ -48,7 +48,7 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
         className={styles.row}
         // list-style: none drops list semantics in Safari: say it outright
         role="list"
-        aria-label="A peek at the lessons"
+        aria-label={scrolls ? 'Lessons' : 'A peek at the lessons'}
       >
         {LESSON_PREVIEWS.map((l) => (
           <li key={l.number} className={styles.card}>
