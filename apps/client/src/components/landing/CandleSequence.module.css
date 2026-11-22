@@ -8,7 +8,7 @@
 }
 
 .grid {
-  stroke: rgba(255, 255, 255, 0.06); /* border.divider */
+  stroke: var(--color-border-divider); /* border.divider */
   stroke-width: 1;
 }
 

@@ -6,7 +6,10 @@ import { guideSelector } from '@/lib/guideAnchors';
 
 vi.mock('@/components/SeoHead', () => ({ SeoHead: () => null }));
 vi.mock('@/components/dashboard/TopBar', () => ({ TopBar: () => null }));
-vi.mock('@/components/CtaSection', () => ({ CtaSection: () => null }));
+vi.mock('@/components/CtaSection', () => ({
+  // The real one renders the #newsletter target the pre-launch buttons jump to
+  CtaSection: () => React.createElement('div', { id: 'newsletter' }),
+}));
 // The lessons' picture module is large; its own test covers the row
 vi.mock('@/components/landing/LessonPreviewsLazy', () => ({
   LessonPreviewsLazy: () => React.createElement('div', { 'data-testid': 'lesson-previews' }),
@@ -165,6 +168,12 @@ describe('LandingPage', () => {
       expect(screen.queryByRole('table')).toBeNull();
       expect(container.querySelector('a[href="/register"]')).toBeNull();
       expect(container.querySelector('a[href="/chart"]')).toBeNull();
+    });
+
+    it('should have a #newsletter target for every get-notified link (review 2026-11-22)', async () => {
+      const { container } = await renderLanding();
+      expect(container.querySelectorAll('a[href="#newsletter"]').length).toBeGreaterThan(0);
+      expect(container.querySelector('#newsletter')).not.toBeNull();
     });
 
     it('should still link to the features page', async () => {

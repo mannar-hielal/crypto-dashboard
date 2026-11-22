@@ -37,18 +37,26 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
   // Tells the holder the cards are in, so it can drop the height it reserved
   useEffect(() => onReady?.(), [onReady]);
   return (
-    // tabIndex: a row that scrolls sideways on a phone must be reachable by keyboard
-    <ul className={styles.row} aria-label="A peek at the lessons" {...(scrolls && { tabIndex: 0 })}>
-      {LESSON_PREVIEWS.map((l) => (
-        <li key={l.number} className={styles.card}>
-          <div className={styles.art}>
-            <LessonArt id={l.art} />
-          </div>
-          <p className={styles.number}>Lesson {l.number}</p>
-          <h3 className={styles.title}>{l.title}</h3>
-          <p className={styles.blurb}>{l.blurb}</p>
-        </li>
-      ))}
-    </ul>
+    // The scroller is a labelled region (a screen reader hears that there is more to swipe to), and
+    // a tab stop only where it scrolls sideways, on a phone; the list inside keeps its list meaning
+    <div
+      className={styles.scroller}
+      role="region"
+      aria-label="A peek at the lessons"
+      {...(scrolls && { tabIndex: 0 })}
+    >
+      <ul className={styles.row}>
+        {LESSON_PREVIEWS.map((l) => (
+          <li key={l.number} className={styles.card}>
+            <div className={styles.art}>
+              <LessonArt id={l.art} />
+            </div>
+            <p className={styles.number}>Lesson {l.number}</p>
+            <h3 className={styles.title}>{l.title}</h3>
+            <p className={styles.blurb}>{l.blurb}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

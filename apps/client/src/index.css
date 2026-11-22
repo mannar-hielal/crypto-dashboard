@@ -96,6 +96,10 @@
   --color-brand-white: #fcfcfd;
   /* border.input (tokens.ts): a control's outline */
   --color-border-input: rgba(255, 255, 255, 0.1);
+  /* border.divider, border.card and border.hover (tokens.ts): the public pages' lines and card edges */
+  --color-border-divider: rgba(255, 255, 255, 0.06);
+  --color-border-card: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
 
   /* Brand gradient stops — use with bg-gradient-to-r from-brand-grad-from to-brand-grad-to */
   --color-brand-grad-from: #fe4bd1; /* pink-magenta — gradient start */

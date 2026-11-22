@@ -10,12 +10,14 @@ describe('LessonPreviewsLazy', () => {
 
   it('should load the lessons own pictures and titles when the row is near', async () => {
     const { container } = render(React.createElement(LessonPreviewsLazy));
-    const list = await screen.findByRole(
-      'list',
+    // A labelled region (the scroller) around the list: it is told there is more to swipe to
+    const region = await screen.findByRole(
+      'region',
       { name: 'A peek at the lessons' },
       { timeout: 15000 }
     );
-    expect(list.querySelectorAll('li')).toHaveLength(LESSON_PREVIEWS.length);
+    expect(region.querySelector('ul')).not.toBeNull();
+    expect(region.querySelectorAll('li')).toHaveLength(LESSON_PREVIEWS.length);
     expect(container.querySelectorAll('svg[data-lesson-art]')).toHaveLength(LESSON_PREVIEWS.length);
     expect(screen.getByText('Up, down and your first trade')).not.toBeNull();
   }, 20000);
