@@ -74,7 +74,7 @@ export function LessonPreviewsLazy() {
       .then((m) => {
         if (!live) return;
         // A stale chunk can resolve without its component: that is a failure too, not a silent gap
-        if (typeof m.default !== 'function') throw new Error('The lesson previews did not load');
+        if (m.default == null) throw new Error('The lesson previews did not load');
         setLoaded(() => m.default);
       })
       .catch((err: unknown) => {
