@@ -72,7 +72,10 @@ export function LessonPreviewsLazy() {
     let live = true;
     import('./LessonPreviews')
       .then((m) => {
-        if (live) setLoaded(() => m.default);
+        if (!live) return;
+        // A stale chunk can resolve without its component: that is a failure too, not a silent gap
+        if (typeof m.default !== 'function') throw new Error('The lesson previews did not load');
+        setLoaded(() => m.default);
       })
       .catch((err: unknown) => {
         // Always an Error, so even a falsy rejection value trips the boundary

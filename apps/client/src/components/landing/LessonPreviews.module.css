@@ -114,6 +114,7 @@
 
   .card {
     width: auto;
+    max-width: none; /* the grid sizes the cell, not the screen */
   }
 }
 
