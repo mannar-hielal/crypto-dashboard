@@ -37,15 +37,13 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
   // Tells the holder the cards are in, so it can drop the height it reserved
   useEffect(() => onReady?.(), [onReady]);
   return (
-    // The scroller is a labelled region (a screen reader hears that there is more to swipe to), and
-    // a tab stop only where it scrolls sideways, on a phone; the list inside keeps its list meaning
+    // Where the row scrolls sideways (a phone) the scroller is a labelled region and a tab stop; on a
+    // wider screen it is a plain grid, so the list carries the name and no landmark is added
     <div
       className={styles.scroller}
-      role="region"
-      aria-label="A peek at the lessons"
-      {...(scrolls && { tabIndex: 0 })}
+      {...(scrolls && { role: 'region', 'aria-label': 'A peek at the lessons', tabIndex: 0 })}
     >
-      <ul className={styles.row}>
+      <ul className={styles.row} {...(!scrolls && { 'aria-label': 'A peek at the lessons' })}>
         {LESSON_PREVIEWS.map((l) => (
           <li key={l.number} className={styles.card}>
             <div className={styles.art}>

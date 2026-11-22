@@ -97,6 +97,7 @@
 @media (min-width: 768px) {
   .scroller {
     overflow: visible;
+    scroll-snap-type: none;
   }
 
   .row {

@@ -5,12 +5,16 @@ import styles from './LessonPreviews.module.css';
 
 type Previews = ComponentType<{ onReady?: () => void }>;
 
-/** What the failure fallbacks render: it tells the holder to close its gap, and offers a retry */
-function FailedNote({ onFail, onRetry }: { onFail: () => void; onRetry: () => void }) {
+/**
+ * What the failure fallbacks render: it tells the holder to close its gap, and offers a reload. A
+ * reload, not a second import: after a deploy the old hashed file is gone, and asking for the same
+ * URL again would fail the same way
+ */
+function FailedNote({ onFail }: { onFail: () => void }) {
   useEffect(onFail, [onFail]);
   return (
-    <button type="button" className={styles.retry} onClick={onRetry}>
-      The lesson previews did not load. Try again
+    <button type="button" className={styles.retry} onClick={() => window.location.reload()}>
+      The lesson previews did not load. Reload the page
     </button>
   );
 }
@@ -18,8 +22,7 @@ function FailedNote({ onFail, onRetry }: { onFail: () => void; onRetry: () => vo
 /**
  * Loads the lesson previews only when they come near the screen: the lessons' picture module is
  * large, and most visitors read the top of the page first. Without `IntersectionObserver` it
- * loads at once. The module is imported by hand (not `React.lazy`, which would cache a failed
- * import for good), so a failure costs this section only and a retry imports it again.
+ * loads at once. A failed import (offline, or a stale chunk after a deploy) costs this section only.
  */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
@@ -27,13 +30,8 @@ export function LessonPreviewsLazy() {
   const [Loaded, setLoaded] = useState<Previews | null>(null);
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
-  const [attempt, setAttempt] = useState(0);
   const markFailed = useCallback(() => setFailed(true), []);
   const markReady = useCallback(() => setReady(true), []);
-  const retry = useCallback(() => {
-    setFailed(false);
-    setAttempt((a) => a + 1);
-  }, []);
 
   useEffect(() => {
     const el = holder.current;
@@ -48,7 +46,7 @@ export function LessonPreviewsLazy() {
     return () => observer.disconnect();
   }, [near]);
 
-  // The import: when the row is near, and again on each retry
+  // The import, once the row is near
   useEffect(() => {
     if (!near) return;
     let live = true;
@@ -56,14 +54,16 @@ export function LessonPreviewsLazy() {
       .then((m) => {
         if (live) setLoaded(() => m.default);
       })
-      .catch(() => {
-        // A failed chunk (offline, or a stale hashed file after a deploy) costs this section only
+      .catch((err: unknown) => {
+        // A failed chunk (offline, or a stale hashed file after a deploy) costs this section only;
+        // logged like the error boundary does, since the app has no client error reporting
+        console.error('[LessonPreviews] chunk failed:', err instanceof Error ? err.message : err);
         if (live) setFailed(true);
       });
     return () => {
       live = false;
     };
-  }, [near, attempt]);
+  }, [near]);
 
   return (
     <div
@@ -71,15 +71,12 @@ export function LessonPreviewsLazy() {
       className={`${styles.holder}${failed || ready ? ` ${styles.holderSettled}` : ''}`}
     >
       {failed ? (
-        <FailedNote onFail={markFailed} onRetry={retry} />
+        <FailedNote onFail={markFailed} />
       ) : (
         near &&
         (Loaded ? (
           // A render error inside the row (a picture that throws) lands here too
-          <ErrorBoundary
-            key={attempt}
-            fallback={<FailedNote onFail={markFailed} onRetry={retry} />}
-          >
+          <ErrorBoundary fallback={<FailedNote onFail={markFailed} />}>
             <Loaded onReady={markReady} />
           </ErrorBoundary>
         ) : (

@@ -102,7 +102,7 @@
   padding: 0 14px;
   border: 0;
   border-radius: 9999px;
-  background: var(--color-border-divider);
+  background: color-mix(in srgb, var(--color-brand-white) 6%, transparent);
   color: var(--color-brand-muted);
   font-size: 0.8125rem; /* fontSize.xs11 */
   cursor: pointer;

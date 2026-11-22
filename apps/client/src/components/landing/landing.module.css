@@ -74,7 +74,7 @@
 
 .ctaPrimary {
   background: linear-gradient(90deg, var(--color-brand-grad-from), var(--color-brand-grad-to));
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-bg-deep) 35%, transparent);
+  box-shadow: 0 6px 20px color-mix(in srgb, black 35%, transparent);
   color: var(--color-brand-white); /* white on the brand gradient, as the other CTAs */
 }
 
