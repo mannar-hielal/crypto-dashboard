@@ -28,7 +28,7 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
       className={styles.scroller}
       {...(scrolls && {
         role: 'region',
-        'aria-label': 'Lesson previews, swipe sideways',
+        'aria-label': 'Lesson previews',
         tabIndex: 0,
       })}
     >
@@ -36,7 +36,7 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
         className={styles.row}
         // list-style: none drops list semantics in Safari: say it outright
         role="list"
-        aria-label="A peek at the lessons" // one stable name at every width
+        aria-label="Lessons" // one stable name at every width
       >
         {LESSON_PREVIEWS.map((l) => (
           <li key={l.number} className={styles.card}>
