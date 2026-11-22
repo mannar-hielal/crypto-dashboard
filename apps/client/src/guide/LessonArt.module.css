@@ -355,13 +355,13 @@
   stroke-dasharray: 8 6;
 }
 
-/* A coin's ticker badge: our purple with white letters; the token is outlined in amber instead */
+/* A coin's ticker: white letters under (or beside) its real logo; the token's logo sits in an amber ring */
 .badge {
   fill: var(--color-brand-purple-dark); /* color.purpleDark */
 }
 
-.tokenBadge {
-  fill: var(--color-bg-panel); /* bg.panel */
+.tokenRing {
+  fill: none;
   stroke: var(--color-brand-amber); /* color.amber */
   stroke-width: 3;
 }

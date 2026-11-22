@@ -26,6 +26,7 @@ export const LESSON_IDS = [
   'lesson-02',
   'lesson-04',
   'lesson-coins',
+  'lesson-stablecoins',
 ] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
@@ -76,7 +77,19 @@ export type LessonArtId =
   | 'shareCertificate'
   | 'ballotBox'
   | 'calmStormy'
-  | 'stopCoin';
+  | 'stopCoin'
+  // Chapter 2, Lesson 6 (owner's visual Q&A 2026-11-19): stablecoins as a cloakroom ticket
+  | 'wobbleSteady'
+  | 'steadyPeg'
+  | 'cloakroom'
+  | 'vaultDollar'
+  | 'vaultCrypto'
+  | 'vaultRule'
+  | 'vaultCheck'
+  | 'usdtPair'
+  | 'parkProfit'
+  | 'pegDip'
+  | 'tooSweet';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -125,6 +138,18 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
   ballotBox: null,
   calmStormy: 'A steady line and a line that swings up and down.',
   stopCoin: null,
+  wobbleSteady: 'A coin whose line swings up and down beside a stablecoin’s line that sits still.',
+  steadyPeg: 'A stablecoin’s price line staying on the dashed $1.00 line.',
+  cloakroom: 'You hand in one dollar at the cloakroom counter and get a ticket.',
+  vaultDollar: 'Behind the counter, a vault holds real money for the tickets.',
+  vaultCrypto: 'Behind the counter, a vault holds more crypto than the tickets are worth.',
+  vaultRule: 'Behind the counter there is no vault of money, only a note with a rule on it.',
+  vaultCheck: 'A vault under a magnifying glass: who checks what is inside?',
+  usdtPair: 'The pair BTC / USDT, with USDT lit up: the price of one bitcoin is quoted in USDT.',
+  parkProfit: 'A coin now worth $300 is sold for 300 USDT, which stays steady.',
+  pegDip:
+    'A drawn example: a stablecoin’s price falls from the $1.00 line to about $0.87, then climbs back.',
+  tooSweet: null,
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -1814,12 +1839,200 @@ const lessonCoins: Lesson = {
   access: FREE,
 };
 
+// ─── Chapter 2, Lesson 6: stablecoins (owner 2026-11-19: text approved after the fact check) ─────
+// One metaphor all lesson: the cloakroom ticket. Practice trade: the Lesson 1 spot buy, paid in USDT.
+
+const lessonStablecoins: Lesson = {
+  id: 'lesson-stablecoins',
+  number: 6,
+  title: 'Stablecoins: the coins that try to sit still',
+  stage: 'Your crypto toolbox',
+  minutes: 8,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  cards: [
+    {
+      title: 'A coin that sits still',
+      art: 'wobbleSteady',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      lines: [
+        {
+          speaker: 'tick',
+          text: 'Last week my coin lost a fifth of its value. Can I still pay my rent with it?',
+        },
+        { speaker: 'tock', text: 'Not safely. But some crypto is built to sit still.' },
+      ],
+    },
+    {
+      title: 'The steady coin',
+      art: 'steadyPeg',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A [[stablecoin]] aims to keep one steady price, almost always one US dollar. It should be worth about $1 today, next week and next year. That makes it a calm place to park money. Most stablecoins are tokens that live on someone else’s road, such as Ethereum.',
+    },
+    {
+      title: 'A ticket for a dollar',
+      art: 'cloakroom',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Why should a coin stay at $1? Because of what stands behind it.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a cloakroom ticket. You hand in one dollar and get a ticket. Give the ticket back and you get your dollar. The ticket holds its value because the dollar is kept safe. Where it stops matching: only the first kind works exactly like this, and most people sell the ticket on an exchange instead. The three kinds of counter come next.',
+      },
+    },
+    {
+      title: 'Kind 1: dollar-backed',
+      art: 'vaultDollar',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'Kind one is **dollar-backed**. The company behind it holds reserves, mostly cash and short-term US government debt, to cover its tickets. It is the most common kind. USDT and USDC are both called dollar-backed, but USDT also holds other assets, and companies differ in how often and how well they show their reserves.',
+    },
+    {
+      title: 'Kind 2: crypto-backed',
+      art: 'vaultCrypto',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'Kind two is **crypto-backed**. Other crypto is locked away as a deposit, and there is more in the deposit than the tickets are worth, because crypto prices swing. The rules run as code on a blockchain, not on a company’s promise.',
+    },
+    {
+      title: 'Kind 3: rule-based',
+      art: 'vaultRule',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Kind three is **rule-based**, also called algorithmic. There is no vault of dollars, only a rule meant to steer the price back to $1. It is the riskiest of the three: if people stop believing the rule, nothing solid stands behind the ticket. In May 2022 one of these, TerraUSD, lost its dollar price and collapsed.',
+    },
+    {
+      title: 'What stands behind the ticket?',
+      quiz: {
+        format: 'match',
+        question: 'Match each kind to what stands behind it.',
+        pairs: [
+          { term: 'Dollar-backed', meaning: 'Real money and short-term assets in a bank or fund' },
+          { term: 'Crypto-backed', meaning: 'Extra crypto locked as a deposit' },
+          { term: 'Rule-based', meaning: 'Only a rule, no vault' },
+        ],
+        options: [],
+        correct: 0,
+        explain: 'Ask what is behind the ticket: money, a crypto deposit, or only a rule.',
+      },
+    },
+    {
+      title: 'Why traders keep them',
+      art: 'usdtPair',
+      presenter: { who: 'tock', mood: 'smile', pose: 'point' },
+      text: 'Traders keep stablecoins for three reasons. They are a calm place to park money. They can usually move at any hour. And they are what you trade with: our markets are priced in USDT, so a BTC/USDT price tells you how many USDT one bitcoin costs.',
+      practice: { tour: 'practice-buy', label: 'Try a buy, paid in USDT, on the real chart' },
+    },
+    {
+      title: 'Park your profit',
+      art: 'parkProfit',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'You bought a coin at $200 and it is now $300. You sell it for USDT.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'The gain', sum: '300 − 200 = 100' },
+          { label: 'Divide', sum: '100 ÷ 200 = 0.5' },
+          { label: 'As a percent', sum: '0.5 × 100 = 50%' },
+        ],
+        answer:
+          'You lock in a **50% gain**, held as 300 USDT, and the coin’s next swing can’t touch it. You also miss its next rise, and the stablecoin has risks of its own: the next cards. Fees are left out to keep the sum simple.',
+      },
+    },
+    {
+      title: 'Parking a profit, in order',
+      quiz: {
+        format: 'order',
+        question: 'Put the steps of parking a profit in order.',
+        steps: [
+          'Your coin has gone up',
+          'You sell it for USDT',
+          'Later, the coin’s price moves again',
+          'Your USDT is still worth about the same, whichever way the coin went',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'You left the swinging coin before it moved, and your USDT keeps its value as long as the stablecoin holds its peg.',
+      },
+    },
+    {
+      title: 'The catch: the peg can slip',
+      art: 'pegDip',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'The catch: a stablecoin can lose its [[peg]], its link to $1. In March 2023 USDC, a dollar-backed coin, fell to about 87 cents over a weekend. A bank holding part of its cash had failed, and holders got scared. The money was not gone: when the US government protected the bank’s depositors, the price came back.',
+    },
+    {
+      title: '“Stable” is a goal',
+      art: 'vaultCheck',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: '“Stable” is a goal, not a promise. Not every stablecoin has a full vault, and not every vault is checked by someone independent. A useful question is: what is behind it, and who checks the reserves? A big reward just for holding one is often a warning sign, not a bonus.',
+    },
+    {
+      title: 'A stablecoin at $0.92',
+      quiz: {
+        question: 'A stablecoin trades at $0.92. What is the most likely reason?',
+        options: [
+          'People doubt it is fully backed',
+          'The dollar lost 8% in one day',
+          'Stablecoins are meant to trade at 92 cents',
+          'Its company had a good year',
+        ],
+        correct: 0,
+        explain:
+          'Below $1 usually means holders are rushing out because they doubt the backing, or the rule that steers the price.',
+      },
+    },
+    {
+      title: 'A key advantage',
+      quiz: {
+        question: 'What is a key advantage of holding a stablecoin while you trade?',
+        options: [
+          'It always rises in a bull market',
+          'Its value is meant to stay steady while you wait for your next move',
+          'It pays a profit for sure',
+          'It can never lose its peg',
+        ],
+        correct: 1,
+        explain: 'Steady is the point. The other three are promises no stablecoin can make.',
+      },
+    },
+  ],
+  // Your call follows the last quiz: the honest answer is the praised one
+  moment: {
+    art: 'tooSweet',
+    context: 'A new “stablecoin” you have never heard of pays 20% a year just for holding it.',
+    question: 'What do you check first?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Put in a small amount with real money, to see',
+      'What stands behind it, and who checks',
+      'Ask a friend if they hold it',
+    ],
+    correct: 1,
+    explain:
+      'What stands behind it, and who checks. A reward that big has to come from somewhere: find out where before anything else.',
+  },
+  checks: [],
+  notePrompt: 'Which stablecoin have you heard of? Which kind do you think it is?',
+  canDo: [],
+  recap: {
+    title: 'Stablecoins',
+    points: [
+      { text: 'A stablecoin is a ticket meant to hold one dollar.' },
+      { text: 'Three kinds: dollar-backed, crypto-backed and rule-based.' },
+      { text: 'Traders park money in them, and pay with them.' },
+      { text: 'A stablecoin can sometimes lose its peg.' },
+    ],
+    highlight: {
+      text: 'You can now say what a stablecoin is built to do, name the three kinds and what stands behind each, and explain why “stable” is a goal, not a promise. Next up: wallets, and who holds your keys.',
+    },
+  },
+  access: FREE,
+};
+
 export const LESSONS: readonly Lesson[] = [
   lesson01,
   lessonOwnership,
   lesson02,
   lesson04,
   lessonCoins,
+  lessonStablecoins,
 ];
 
 export function getLesson(id: LessonId): Lesson {

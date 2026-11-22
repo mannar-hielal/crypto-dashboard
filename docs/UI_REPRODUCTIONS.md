@@ -362,8 +362,8 @@ the analogy, and the math's steps (a sum wraps under its label on a narrow phone
 Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the map's chapter 2 after testing out.
 
 1. Open the map ([nav.learn]) → Expect chapter 2 **Your crypto toolbox: coins, wallets and the networks behind them**: the
-   lesson **Coins and tokens: who has their own road** (open after the checkpoint), then four lesson titles and a checkpoint
-   title as grey "coming soon" stops that can't be focused.
+   lessons **Coins and tokens: who has their own road** and **Stablecoins: the coins that try to sit still** (open after the
+   checkpoint, one after the other), then three lesson titles and a checkpoint title as grey "coming soon" stops that can't be focused.
 2. [learn.card.start] the lesson → Expect screen 1 of 18: two roads (**Its own road** with a coin, **Someone else's road** with a
    shop) and the guides' four lines. Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
    word _coin_ is a tappable term opening a peek), **The road needs upkeep** (a coin at a toll booth, "paid in the coin"),
@@ -380,6 +380,27 @@ Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the 
    picture) → **Find out who made it and what it is for** (the praised answer); the other two answers give "Not quite." and a
    Why. Then the summary ("Coins and tokens", four points and "You can now…"), the journal line, the rating.
 7. Phone (390 px): no sideways scroll; the badges and roads sit inside the picture box.
+
+### Learning path — Chapter 2, Lesson 6 "Stablecoins: the coins that try to sit still" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 5 (a new account, chapter 1 passed, Lesson 5 done: Lesson 6 opens after it). Local dev with the
+real feed for the practice buy.
+
+1. Open the map → Expect Lesson 6 next after Lesson 5. [learn.card.start] it → Expect screen 1 of 17: a swinging red line (**my
+   coin**) beside a steady green one (**built to sit still**) and the guides' two lines.
+2. **The steady coin** (a line on a dashed $1.00, the word _stablecoin_ a tappable term), **A ticket for a dollar** (a dollar
+   becoming a ticket at a cloakroom counter; Berwyn in glasses: "Think of it as a cloakroom ticket…").
+3. The three kinds, one counter each: **Kind 1: dollar-backed** (a vault of money), **Kind 2: crypto-backed** (a vault of coins),
+   **Kind 3: rule-based** (an empty shelf and a note), then **What stands behind the ticket?** (Match boxes, three pairs).
+4. **Why traders keep them** (a **BTC / USDT** tag with USDT lit up) → the button **Try a buy, paid in USDT, on the real chart** starts the
+   spot buy tour; the lesson comes back on the next screen after the review ("Back to the lesson"). **Skip** moves on.
+5. **Park your profit** (Pulin in glasses, three numbered steps: 300 − 200 = 100, 100 ÷ 200 = 0.5, 0.5 × 100 = 50%), then
+   **Parking a profit, in order** (Drag and drop, four steps: gone up, sold for USDT, price moves, USDT steady).
+6. **The catch: the peg can slip** (a drawn line dipping from the $1.00 peg to about $0.87 and back, labelled "drawn example"),
+   **"Stable" is a goal** (a vault under a magnifying glass), **A stablecoin at $0.92** → **People doubt it is fully backed**,
+   **A key advantage** → **Its value stays steady while you wait for your next move**. **Your call** (a ticket with "+20% a year")
+   → **What stands behind it, and who checks** (the praised answer). Then the summary, the journal line and the rating.
+7. Phone (390 px): no sideways scroll; the counters and vaults sit inside the picture box.
 
 ### Learning path — the learning map (no Part B rows yet)
 

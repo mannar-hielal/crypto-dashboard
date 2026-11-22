@@ -35,6 +35,17 @@ const ARTS: LessonArtId[] = [
   'ballotBox',
   'calmStormy',
   'stopCoin',
+  'wobbleSteady',
+  'steadyPeg',
+  'cloakroom',
+  'vaultDollar',
+  'vaultCrypto',
+  'vaultRule',
+  'vaultCheck',
+  'usdtPair',
+  'parkProfit',
+  'pegDip',
+  'tooSweet',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -57,6 +68,16 @@ const TELLING: LessonArtId[] = [
   'tickerBadges',
   'shopRoad',
   'calmStormy',
+  'wobbleSteady',
+  'steadyPeg',
+  'cloakroom',
+  'vaultDollar',
+  'vaultCrypto',
+  'vaultRule',
+  'vaultCheck',
+  'usdtPair',
+  'parkProfit',
+  'pegDip',
 ];
 
 describe('the guides', () => {
@@ -164,6 +185,13 @@ describe('LessonArt', () => {
     expect(words('tollBooth')).toMatch(/Fee.*paid in the coin/);
     expect(words('shopRoad')).toMatch(/Token.*house.*rules/);
     expect(words('calmStormy')).toMatch(/steady.*swings/);
+    // Chapter 2, Lesson 6: the cloakroom scenes say what stands behind each ticket
+    expect(words('cloakroom')).toMatch(/\$1 in.*ticket out.*cloakroom/);
+    expect(words('vaultDollar')).toMatch(/counter.*real money/);
+    expect(words('vaultCrypto')).toMatch(/counter.*extra crypto/);
+    expect(words('vaultRule')).toMatch(/counter.*just a rule/);
+    expect(words('usdtPair')).toMatch(/BTC.*USDT.*priced in.*1 BTC costs/);
+    expect(words('pegDip')).toMatch(/\$1\.00 peg.*about \$0\.87.*drawn example/);
     const badges = render(<LessonArt id="tickerBadges" />).container.textContent ?? '';
     expect(badges).toMatch(/BTC.*ETH.*SOL.*BNB.*XRP.*ADA.*AVAX.*DOGE.*LINK.*a token/);
     // The chain: each block's prev is the fingerprint of the block before it
@@ -173,6 +201,14 @@ describe('LessonArt', () => {
     const seal = render(<LessonArt id="sealBroken" />).container;
     expect(seal.textContent).toMatch(/pays 5 → 9.*redo every block after/);
     expect([...seal.querySelectorAll('text')].filter((t) => t.textContent === '✕')).toHaveLength(2);
+  });
+
+  it('should show real coin logos, not plain ticker circles (owner 2026-11-20)', () => {
+    const logos = (id: LessonArtId) =>
+      render(<LessonArt id={id} />).container.querySelectorAll('image').length;
+    expect(logos('tickerBadges')).toBe(9); // the eight coins and LINK
+    expect(logos('usdtPair')).toBe(2); // BTC and USDT
+    expect(logos('parkProfit')).toBe(1); // USDT
   });
 
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {
