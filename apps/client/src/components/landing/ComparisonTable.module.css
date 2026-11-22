@@ -10,6 +10,7 @@
 }
 
 .scroller {
+  position: relative; /* keeps the visually hidden caption inside the scroll box */
   width: 100%;
   overflow-x: auto;
   border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */

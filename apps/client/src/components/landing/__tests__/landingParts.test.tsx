@@ -274,3 +274,18 @@ describe('the ribbon and the table, accessibility (review 2026-11-22)', () => {
     expect(region.getAttribute('aria-label')).toBeNull();
   });
 });
+
+describe('the figures on the pages come from the app', () => {
+  it('should keep the timeframes, indicators, leverage cap and balance equal to the app’s own (review 2026-11-22)', async () => {
+    const { INTERVALS } = await import('@/lib/markets');
+    const { INDICATOR_CATALOG } = await import('@/lib/indicators/catalog');
+    const { MAX_LEVERAGE, STARTING_BALANCE } = await import('@crypto-dashboard/sdk');
+    const { CHART_FEATURES, DESK_FEATURES, FEATURES_FAQ } = await import('@/lib/landingContent');
+    const titles = CHART_FEATURES.map((f) => f.title);
+    expect(titles).toContain(`${INTERVALS.length} timeframes`);
+    expect(titles).toContain(`${INDICATOR_CATALOG.length} indicators`);
+    const copy = JSON.stringify([DESK_FEATURES, FEATURES_FAQ, BEGINNER_FAQ]);
+    expect(copy).toContain(`${MAX_LEVERAGE}x`);
+    expect(copy).toContain(`$${STARTING_BALANCE.toLocaleString('en-US')}`);
+  });
+});

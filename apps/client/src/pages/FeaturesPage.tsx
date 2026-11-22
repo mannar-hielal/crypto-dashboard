@@ -70,7 +70,7 @@ export function FeaturesPage() {
       {/* Sticky anchor nav: docks below the top bar */}
       <nav className={styles.nav} aria-label="On this page">
         <div className={styles.navInner}>
-          {SECTIONS.map((s) => (
+          {SECTIONS.filter((s) => isLive || s.id !== 'questions').map((s) => (
             <a key={s.id} href={`#${s.id}`} className={styles.navLink}>
               {s.label}
             </a>
@@ -201,21 +201,26 @@ export function FeaturesPage() {
             <FeatureGrid items={DEVICE_FEATURES} />
           </section>
 
-          {/* ─── Questions ──────────────────────────────────────────────── */}
-          <section
-            id="questions"
-            className={`${shared.section} ${styles.anchor}`}
-            aria-labelledby="questions-title"
-          >
-            <SectionHead
-              id="questions-title"
-              eyebrow="Questions"
-              title="Quick answers"
-              lead="Tap a question to open it."
-            />
-            <div className={styles.faqWrap}>
-              <FaqList items={FEATURES_FAQ} live={isLive} anchor="features.faq.start" />
-            </div>
+          {/* ─── Questions: live only, as on the landing page (its answers say what launched) ── */}
+          {isLive && (
+            <section
+              id="questions"
+              className={`${shared.section} ${styles.anchor}`}
+              aria-labelledby="questions-title"
+            >
+              <SectionHead
+                id="questions-title"
+                eyebrow="Questions"
+                title="Quick answers"
+                lead="Tap a question to open it."
+              />
+              <div className={styles.faqWrap}>
+                <FaqList items={FEATURES_FAQ} live anchor="features.faq.start" />
+              </div>
+            </section>
+          )}
+
+          <section className={shared.section} aria-label="Please note">
             <p className={styles.legal}>
               Paper trading only: no real money is involved, and nothing here is financial advice.
             </p>

@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import styles from './Accordion.module.css';
@@ -32,6 +32,10 @@ export function Accordion({ items, headingLevel = 3, defaultOpen = [] }: Accordi
   const base = useId();
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(defaultOpen));
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
+  // Drop stale buttons when the list shrinks, so Up / Down / Home / End never land on a detached one
+  useEffect(() => {
+    buttons.current.length = Math.min(buttons.current.length, items.length);
+  }, [items.length]);
   const Heading = `h${headingLevel}` as 'h3' | 'h4';
 
   const toggle = (id: string) =>
