@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { LessonArt } from '@/guide/LessonArt';
 import { LESSON_PREVIEWS } from '@/lib/landingContent';
 import styles from './LessonPreviews.module.css';
@@ -7,30 +8,15 @@ import styles from './LessonPreviews.module.css';
 // The exact complement of the CSS grid query (min-width: 768px), also at a fractional width
 const PHONE_ROW = 'not all and (min-width: 768px)';
 
-/** The row scrolls sideways only on a phone: only there is it a stop for the keyboard */
-function useScrollingRow() {
-  const supported = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
-  const [scrolls, setScrolls] = useState(() =>
-    supported ? window.matchMedia(PHONE_ROW).matches : false
-  );
-  useEffect(() => {
-    if (!supported) return;
-    const query = window.matchMedia(PHONE_ROW);
-    const update = () => setScrolls(query.matches);
-    update(); // a resize between the first render and this effect would be missed otherwise
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, [supported]);
-  return scrolls;
-}
-
 /**
  * A row of real lesson cards: each shows the lesson's own picture (the one in the lesson) with its
  * number, title and one line. It proves the learning side exists. Heavy (the lessons' picture
  * module), so the page loads it late, through `LessonPreviewsLazy`.
  */
 export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
-  const scrolls = useScrollingRow();
+  // The row scrolls sideways only on a phone: only there is it a labelled region and a keyboard stop.
+  // (the browser floor in APP_LOG has matchMedia; without it the plain list is shown)
+  const scrolls = useMediaQuery(PHONE_ROW);
   // Tells the holder the cards are in, so it can drop the height it reserved
   useEffect(() => {
     onReady?.();

@@ -10,9 +10,13 @@ vi.mock('../LessonPreviews', () => {
 import { LessonPreviewsLazy } from '../LessonPreviewsLazy';
 
 describe('LessonPreviewsLazy when the chunk fails', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it('should cost only its own section, say so politely and close the reserved gap (review 2026-11-22)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     const { container } = render(React.createElement(LessonPreviewsLazy));
     // Announced to assistive technology, in plain words (no button to get wrong)
     const note = screen.getByRole('status');
