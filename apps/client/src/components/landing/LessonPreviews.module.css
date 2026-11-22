@@ -48,13 +48,13 @@
 }
 
 .card {
-  /* max-width 92vw: never wider than the screen; below about 283 px (260 / 0.92) this cap wins over
-     the 260 px floor, on purpose */
   display: flex;
   width: max(
     260px,
     78vw
   ); /* 78% of the screen (a viewport unit, so a card never depends on the row's own width) */
+  /* never wider than the screen: below about 283 px (260 / 0.92) this cap wins over the 260 px floor,
+     on purpose (the 78vw term never matters below about 333 px) */
   max-width: 92vw;
   flex: 0 0 auto;
   flex-direction: column;

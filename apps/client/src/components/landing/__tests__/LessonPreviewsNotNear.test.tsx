@@ -10,7 +10,7 @@ describe('LessonPreviewsLazy before the row is near the screen', () => {
     vi.unstubAllGlobals();
   });
 
-  it('should have an empty status region ready and no list yet (review 2026-11-22)', () => {
+  it('should have an empty status region ready and no list yet', () => {
     // An observer that never reports the row as visible
     vi.stubGlobal(
       'IntersectionObserver',

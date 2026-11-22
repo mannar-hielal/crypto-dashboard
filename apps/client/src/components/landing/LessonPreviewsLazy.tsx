@@ -41,7 +41,7 @@ function Slot({
  */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
-  // Latches true and never goes back (the import and the failure note both rely on it)
+  // Latches true and never goes back (the import and the observer's cleanup rely on it)
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
   const [Loaded, setLoaded] = useState<Previews | null>(null);
   const [loadError, setLoadError] = useState<Error | null>(null);
