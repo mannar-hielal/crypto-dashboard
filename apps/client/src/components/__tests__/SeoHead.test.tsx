@@ -20,10 +20,10 @@ describe('SeoHead', () => {
   afterEach(cleanup);
 
   it('should write the title, description and canonical when rendered', async () => {
-    renderSeo({ title: 'Hello', description: 'A page', path: '/features' });
+    renderSeo({ title: 'Hello', description: 'A page', path: '/how-it-works' });
     await waitFor(() => expect(document.title).toBe('Hello | cryptopapertrade.com'));
     expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(
-      /\/features$/
+      /\/how-it-works$/
     );
   });
 
@@ -31,7 +31,7 @@ describe('SeoHead', () => {
     renderSeo({
       title: 'Faq',
       description: 'Questions',
-      path: '/features',
+      path: '/how-it-works',
       jsonLd: { '@type': 'FAQPage', name: '</script><b>x & y\u2028z' },
     });
     await waitFor(() =>

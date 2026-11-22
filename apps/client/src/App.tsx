@@ -48,8 +48,11 @@ const BlogPostPage = lazy(() =>
 const ComingSoonPage = lazy(() =>
   import('@/pages/ComingSoonPage').then((m) => ({ default: m.ComingSoonPage }))
 );
-const FeaturesPage = lazy(() =>
-  import('@/pages/FeaturesPage').then((m) => ({ default: m.FeaturesPage }))
+const HowItWorksPage = lazy(() =>
+  import('@/pages/HowItWorksPage').then((m) => ({ default: m.HowItWorksPage }))
+);
+const OpenPathPage = lazy(() =>
+  import('@/pages/OpenPathPage').then((m) => ({ default: m.OpenPathPage }))
 );
 const UnverifiedPage = lazy(() =>
   import('@/pages/UnverifiedPage').then((m) => ({ default: m.UnverifiedPage }))
@@ -118,7 +121,7 @@ export default function App() {
           <Routes location={location} key={routeKey(location.pathname)}>
             {/* Landing page */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/features" element={<FeaturesPage />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
             {/* The Blog (owner 2026-11-18), and the two pages still to be written */}
             <Route path="/blog" element={<BlogIndexPage />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
@@ -151,6 +154,7 @@ export default function App() {
               <Route path="/dashboard/spot/:base/:quote" element={<DashboardPage />} />
               <Route path="/dashboard/usdt/:symbol" element={<DashboardPage />} />
               <Route path="/dashboard/*" element={<DashboardRedirect />} />
+              <Route path="/path" element={<OpenPathPage />} />
               <Route path="/admin/newsletter" element={<AdminNewsletterPage />} />
               <Route path="/admin/metrics" element={<AdminMetricsPage />} />
             </Route>

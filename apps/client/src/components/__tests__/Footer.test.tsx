@@ -20,10 +20,10 @@ describe('Footer', () => {
     vi.unstubAllEnvs();
   });
 
-  it('should link the features page, the live chart and the blog when live', async () => {
+  it('should link the How it works page, the live chart and the blog when live', async () => {
     vi.stubEnv('VITE_IS_LIVE', 'true');
     const { container } = await renderFooter();
-    for (const href of ['/features', '/chart', '/blog', '/terms', '/privacy']) {
+    for (const href of ['/how-it-works', '/chart', '/blog', '/terms', '/privacy']) {
       expect(container.querySelector(`a[href="${href}"]`), href).not.toBeNull();
     }
   });
@@ -32,13 +32,13 @@ describe('Footer', () => {
     vi.stubEnv('VITE_IS_LIVE', 'false');
     const { container } = await renderFooter();
     expect(container.querySelector('a[href="/chart"]')).toBeNull();
-    expect(container.querySelector('a[href="/features"]')).not.toBeNull();
+    expect(container.querySelector('a[href="/how-it-works"]')).not.toBeNull();
   });
 
   it('should keep the plain footer on sign-in, register and the legal pages (review 2026-11-22)', async () => {
     vi.stubEnv('VITE_IS_LIVE', 'true');
     const { container } = await renderFooter(false);
-    for (const href of ['/features', '/chart', '/blog']) {
+    for (const href of ['/how-it-works', '/chart', '/blog']) {
       expect(container.querySelector(`a[href="${href}"]`), href).toBeNull();
     }
     expect(container.querySelector('a[href="/terms"]')).not.toBeNull();

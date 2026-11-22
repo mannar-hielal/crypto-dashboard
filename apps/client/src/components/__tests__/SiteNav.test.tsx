@@ -26,12 +26,13 @@ const el = <T extends HTMLElement>(anchor: Parameters<typeof guideSelector>[0], 
 describe('SiteNav (the public pages’ header links)', () => {
   it('should link Blog, About us and Support to their pages (owner 2026-11-18)', () => {
     renderNav();
+    expect(el('nav.how').getAttribute('href')).toBe('/how-it-works');
     expect(el('nav.blog').getAttribute('href')).toBe('/blog');
     expect(el('nav.about').getAttribute('href')).toBe('/about');
     expect(el('nav.support').getAttribute('href')).toBe('/support');
   });
 
-  it('should open the Product panel with Chart and Features, and close it on a link', () => {
+  it('should open the Product panel with Chart and Crypto path, and close it on a link', () => {
     renderNav();
     const trigger = el('nav.product');
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
@@ -39,10 +40,14 @@ describe('SiteNav (the public pages’ header links)', () => {
     fireEvent.click(trigger);
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
     expect(el('nav.product.item', 'chart').getAttribute('href')).toBe('/chart');
-    expect(el('nav.product.item', 'features').getAttribute('href')).toBe('/features');
-    fireEvent.click(el('nav.product.item', 'features'));
+    expect(el('nav.product.item', 'path').getAttribute('href')).toBe('/path');
+    // Chart first, Crypto path second (owner 2026-11-22)
+    const items = [...document.querySelectorAll('#site-nav-product a')].map((a) => a.textContent);
+    expect(items[0]).toMatch(/^Chart/);
+    expect(items[1]).toMatch(/^Crypto path/);
+    fireEvent.click(el('nav.product.item', 'path'));
     expect(document.querySelector('#site-nav-product')).toBeNull();
-    expect(screen.getByTestId('where').textContent).toBe('/features');
+    expect(screen.getByTestId('where').textContent).toBe('/path');
   });
 
   it('should close the Product panel on Esc, giving the focus back, and on a press outside', () => {
@@ -68,7 +73,7 @@ describe('SiteNav (the public pages’ header links)', () => {
     expect(el('nav.blog').getAttribute('aria-current')).toBeNull();
   });
 
-  it('should open a phone menu sheet with the same links, Product expanding to Chart and Features', () => {
+  it('should open a phone menu sheet with the same links, Product expanding to Chart and Crypto path', () => {
     renderNav();
     const button = el('nav.menu');
     expect(el('nav.menu.sheet')).toBeNull();

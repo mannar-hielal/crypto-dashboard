@@ -6,7 +6,7 @@ import homeBg from '@/assets/home-bg.svg';
 interface AuthLayoutProps {
   children: ReactNode;
   hideFooter?: boolean;
-  /** The landing and features pages add their own links (features, chart, blog) to the footer */
+  /** The landing and How it works pages add their own links (how it works, chart, blog) to the footer */
   marketingFooter?: boolean;
   centerContent?: boolean;
 }

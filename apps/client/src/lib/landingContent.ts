@@ -334,6 +334,21 @@ export const SHOTS: readonly Shot[] = [
   },
 ] as const;
 
+/** The Crypto path, opened (owner 2026-11-22): beside the chart on a desktop, full screen on a phone */
+export const PATH_SHOTS = {
+  desktop: {
+    title: 'The Crypto path, beside the chart',
+    caption:
+      'On a computer the map opens at the side, so the chart stays in view. Your next step is highlighted.',
+    alt: 'Screenshot of the trading screen with the Crypto trading path open on the right: Chapter 1, the first lesson ready to continue and the next stops locked.',
+  },
+  phone: {
+    title: 'And on a phone',
+    caption: 'It fills the screen, and the same map, the same stops and the same Continue button.',
+    alt: 'Screenshot of the Crypto trading path on a phone: Chapter 1 with the first lesson ready to continue.',
+  },
+} as const;
+
 // ─── Where we are different: the six competitor groups ───────────────────────
 // Groups, never brand names. Strengths and weaknesses come from the business-strategy report's
 // "Competitive landscape" and "Why a user would pick this app over each competitor group".
@@ -494,11 +509,16 @@ export const TABLE_NOTE =
 export const SMALL_ON_PURPOSE =
   'Why small on purpose: huge pretend balances and 100x leverage build false confidence. Here you practise with the account you would really have, and leverage stops at 10x.';
 
-// ─── The features page ───────────────────────────────────────────────────────
+// ─── The How it works page (it replaced the Features page) ───────────────────────────────────────────────────────
+
+/** A cropped screenshot of the app that sits behind a feature card (the chart section) */
+export type FeatureShot = 'timeframes' | 'indicators' | 'drawing' | 'layouts' | 'live';
 
 export interface Feature {
   title: string;
   text: string;
+  /** Fades in behind the card's right side; decorative, the text says it all */
+  shot?: FeatureShot;
 }
 
 export const LEARN_STEPS: readonly Feature[] = [
@@ -520,37 +540,31 @@ export const LEARN_STEPS: readonly Feature[] = [
   },
 ] as const;
 
-export const LEARN_TOPICS: readonly Feature[] = [
-  {
-    title: 'Chapter 1: Start here',
-    text: 'Buy and sell, going long and short, how money without a bank works, why prices swing, how to spot a trap, and whether you are a trader or an investor.',
-  },
-  {
-    title: 'Chapter 2: Your crypto toolbox',
-    text: 'Coins and tokens, stablecoins, wallets and keys, and why sending crypto costs a fee. More lessons are on the way.',
-  },
-] as const;
-
 export const CHART_FEATURES: readonly Feature[] = [
   {
     title: '10 timeframes',
     text: 'Zoom from one minute to one month: 1m, 5m, 15m, 30m, 1h, 2h, 4h, 1D, 1W, 1M. Each candle is one slice of that time.',
+    shot: 'timeframes',
   },
   {
     title: '9 indicators',
     text: 'An indicator is a line or number worked out from the price, to help you read it. EMA, SMA, Average Price, Median Price, Typical Price, VWAP, Momentum, Rate of Change and MACD. Turn each on or off and change its colour and settings.',
+    shot: 'indicators',
   },
   {
     title: 'Drawing tools',
     text: 'Trend lines, Fibonacci levels, rectangles, text notes and freehand. Mark what you see, then come back to it.',
+    shot: 'drawing',
   },
   {
     title: 'Up to 4 charts at once',
     text: 'Five layouts: single, 2 columns, 2 rows, 3 columns, and a 2×2 grid. Link the coin, the timeframe and the crosshair across charts, or keep them apart.',
+    shot: 'layouts',
   },
   {
     title: 'Live, not delayed',
     text: 'Candles update as the market moves, with no page refresh. A small light shows if the connection is healthy, and it reconnects by itself.',
+    shot: 'live',
   },
 ] as const;
 
@@ -700,3 +714,17 @@ export const FEATURES_FAQ: readonly FaqItem[] = [
     },
   },
 ] as const;
+
+// ─── Where the pretend money lives (the practice desk section) ───────────────
+
+export const PRETEND_MONEY = {
+  title: 'Where does the pretend money live?',
+  text: 'In your account, right under the chart, in the Order & Account panel. It is only numbers saved on our server, so it can never turn into real money. Every practice trade changes it, and it is still there next time you come back.',
+  callout: 'Your $10,000 of pretend money',
+  resetTitle: 'Start again any time',
+  resetText:
+    'Open the account settings and press Reset account. It asks you twice, so you cannot do it by accident. Your balance goes back to $10,000.',
+  panelAlt:
+    'The Order and Account panel under the chart: a balance of $10,000.00, and one asset, USDT, 10,000.00.',
+  resetAlt: 'The Account Settings window with a Reset account button and a Done button.',
+} as const;

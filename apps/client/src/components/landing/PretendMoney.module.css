@@ -1,0 +1,143 @@
+/* Where the pretend money lives. Colours from tokens.ts via the @theme mirror in index.css. */
+
+.wrap {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.coin {
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+}
+
+.coinFace {
+  fill: var(--color-brand-amber); /* color.amber: a coin */
+}
+
+.coinRing {
+  fill: none;
+  stroke: var(--color-bg-page); /* bg.page, dashed: the milled edge */
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+}
+
+.coinMark {
+  fill: var(--color-bg-page);
+  font-size: 44px;
+  font-weight: 800;
+}
+
+.stamp {
+  fill: var(--color-brand-purple);
+  stroke: var(--color-brand-white);
+  stroke-width: 1.5;
+}
+
+.stampText {
+  fill: var(--color-brand-white);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.title {
+  margin: 0 0 6px;
+  color: var(--color-brand-white);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.text {
+  max-width: 52rem;
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 1rem;
+  line-height: 1.55; /* lineHeight.normal */
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.panel {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  padding-top: 40px;
+  border: 1px solid var(--color-brand-purple); /* the balance is the thing to see */
+  border-radius: 14px;
+  background: var(--color-bg-panel);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-brand-purple) 14%, transparent);
+}
+
+.callout {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: var(--color-brand-purple);
+  color: var(--color-brand-white);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.panelImg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.reset {
+  display: flex;
+  margin: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+}
+
+.resetImg {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  border-radius: 10px;
+}
+
+.resetText {
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.resetText strong {
+  color: var(--color-brand-white);
+}
+
+@media (min-width: 768px) {
+  .row {
+    grid-template-columns: 1.7fr 1fr;
+    align-items: start;
+  }
+}
+
+@media (max-width: 479px) {
+  .head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

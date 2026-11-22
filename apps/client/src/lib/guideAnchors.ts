@@ -39,10 +39,11 @@ export const GUIDE_ANCHORS = [
   'nav.sign-out',
   'nav.trade-menu',
   'nav.trade-menu.option',
-  // The public pages' header links (owner 2026-11-18): Product ▾ with Chart and Features (key), Blog,
+  // The public pages' header links (owner 2026-11-18): Product ▾ with Chart and Crypto path (key), How it works, Blog,
   // About us, Support, and the phone menu with its sheet
   'nav.product',
   'nav.product.item',
+  'nav.how',
   'nav.blog',
   'nav.about',
   'nav.support',
@@ -265,11 +266,11 @@ export const GUIDE_ANCHORS = [
   /** The hero's animated candle drawing (decorative) */
   'landing.candles',
   // The beginner FAQ's "Start here" buttons (key: the item's id, e.g. 'where-to-start'), and the
-  // features page's two hero buttons and its own FAQ's (key: the item's id)
+  // How it works page's two hero buttons and its own FAQ's (key: the item's id)
   'landing.faq.start',
-  'features.hero.chart',
-  'features.hero.register',
-  'features.faq.start',
+  'how.hero.chart',
+  'how.hero.register',
+  'how.faq.start',
   // footer
   'footer.chart-credit',
   // lock (signed-out visitors on /chart)

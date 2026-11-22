@@ -50,6 +50,12 @@ describe('safeReturnPath() — 🔐 no open redirect after sign-in', () => {
     expect(safeReturnPath('/dashboard/usdt/BTCUSDT')).toBe('/dashboard/usdt/BTCUSDT');
   });
 
+  it('accepts the Crypto path entry, and only that exact path', () => {
+    expect(safeReturnPath('/path')).toBe('/path');
+    expect(safeReturnPath('/path/x')).toBeNull();
+    expect(safeReturnPath('/path?next=https://evil.example')).toBeNull();
+  });
+
   it.each([
     'https://evil.example/dashboard/usdt/BTCUSDT',
     '//evil.example/dashboard/usdt/BTCUSDT',

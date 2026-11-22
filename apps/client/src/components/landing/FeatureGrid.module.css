@@ -11,6 +11,7 @@
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -18,6 +19,53 @@
   border: 1px solid var(--color-border-card); /* border.card */
   border-radius: 14px;
   background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+}
+
+/* A card with a screenshot: it fades in from the right and never takes the words' room */
+.withShot {
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.shot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  width: 62%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left top;
+  opacity: 0.32;
+  pointer-events: none;
+  /* The left edge fades out, so the text stays on a clear card */
+  mask-image: linear-gradient(to left, black 25%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to left, black 25%, transparent 100%);
+}
+
+.withShot > :not(.shot) {
+  position: relative;
+  z-index: 1;
+  max-width: 62%; /* the words stay on the clear left side */
+}
+
+@media (max-width: 639px) {
+  /* A phone: the crop sits behind the lower half, the words span the card */
+  .shot {
+    width: 100%;
+    height: 55%;
+    opacity: 0.26;
+    mask-image: linear-gradient(to top, black 20%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, black 20%, transparent 100%);
+  }
+
+  .withShot > :not(.shot) {
+    max-width: none;
+  }
+
+  .withShot {
+    min-height: 240px;
+  }
 }
 
 .number {

@@ -14,7 +14,7 @@ tells you which steps apply.
 
 | Type                       | Examples                                                      | Indexable? | Route location in `App.tsx`                   | `SeoHead`          | Sitemap |
 | -------------------------- | ------------------------------------------------------------- | ---------- | --------------------------------------------- | ------------------ | ------- |
-| **Public – indexable**     | `/`, `/features`, `/chart`, legal pages, blog/guide           | Yes        | Public section (top of `<Routes>`)            | full, no `noIndex` | Yes     |
+| **Public – indexable**     | `/`, `/how-it-works`, `/chart`, legal pages, blog/guide       | Yes        | Public section (top of `<Routes>`)            | full, no `noIndex` | Yes     |
 | **Public – transactional** | `/verify-email`, `/newsletter/unsubscribe`, `/reset-password` | No         | Public section                                | `noIndex`          | No      |
 | **Authenticated**          | `/dashboard`                                                  | No         | Inside `<Route element={<ProtectedRoute />}>` | `noIndex`          | No      |
 | **Admin**                  | `/admin/newsletter`                                           | No         | Inside `<ProtectedRoute />`                   | `noIndex`          | No      |
@@ -51,7 +51,7 @@ Follow `.claude/rules/react.md`.
    - login/register-style forms → `AuthLayout` (`apps/client/src/components/AuthLayout.tsx`)
    - marketing/content → `<TopBar marketing />` (`apps/client/src/components/dashboard/TopBar.tsx`)
      rendered as a sibling **above** `AuthLayout`
-     (see `LandingPage.tsx` / `FeaturesPage.tsx`; don't put it inside `AuthLayout`)
+     (see `LandingPage.tsx` / `HowItWorksPage.tsx`; don't put it inside `AuthLayout`)
 4. **`<SeoHead>`** (`apps/client/src/components/SeoHead.tsx`) as the first child of every page:
    ```tsx
    <SeoHead title="…" description="…" path="/your-path" /* noIndex for non-indexable types */ />
@@ -82,7 +82,7 @@ Follow `.claude/rules/react.md`.
    Add a `Disallow:` line only for new private/transactional paths.
 3. **Internal links** — a page nothing links to (an "orphan") ranks poorly even if it's in the
    sitemap. Link it from at least one of: `apps/client/src/components/Footer.tsx`, the marketing
-   `TopBar`, `/features`, or a related content page. Use react-router `<Link to="…">` with
+   `TopBar`, `/how-it-works`, or a related content page. Use react-router `<Link to="…">` with
    descriptive anchor text (not "click here").
 
 ## Step 5 — Legal & security impact
