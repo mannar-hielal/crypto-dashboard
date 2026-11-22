@@ -1,715 +1,194 @@
 import { Link } from 'react-router';
-import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Activity, Globe } from 'lucide-react';
 
 import { SeoHead } from '@/components/SeoHead';
-import { Button } from '@/components/ui/button';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
-import { AccountUnlocksTerminal } from '@/components/landing/AccountUnlocksTerminal';
 import { TopBar } from '@/components/dashboard/TopBar';
-import { guide } from '@/lib/guideAnchors';
-import { bg, color, gradient, font } from '@/lib/tokens';
-import macHeaderApp from '@/assets/hero-mac-app.png';
-import chartImg from '@/assets/chart.svg';
-import papertradingImg from '@/assets/papertrading.svg';
-import cryptoPairsImg from '@/assets/9crypto.svg';
-import realtimeDataImg from '@/assets/realtime-data.svg';
-import visualBalanceImg from '@/assets/visual-balance.svg';
+import { CandleSequence } from '@/components/landing/CandleSequence';
+import { CoinRibbon } from '@/components/landing/CoinRibbon';
+import { ComparisonTable } from '@/components/landing/ComparisonTable';
+import { FaqList } from '@/components/landing/FaqList';
+import { GroupSections } from '@/components/landing/GroupSections';
+import { LessonPreviewsLazy } from '@/components/landing/LessonPreviewsLazy';
+import { PathCards } from '@/components/landing/PathCards';
+import { SectionHead } from '@/components/landing/SectionHead';
+import { ShotShowcase } from '@/components/landing/ShotShowcase';
+import { StartLink } from '@/components/landing/StartLink';
+import { Timeline } from '@/components/landing/Timeline';
+import { BEGINNER_FAQ, CTA_REGISTER } from '@/lib/landingContent';
+import shared from '@/components/landing/landing.module.css';
+import styles from './LandingPage.module.css';
 
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12 } as const,
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' as const },
-  },
-};
-
-function SectionIcon({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl">
-      <div
-        className="absolute inset-0 rounded-2xl opacity-25 blur-xl"
-        style={{ background: gradient.brand }}
-      />
-      <div
-        className="relative z-10 flex h-full w-full items-center justify-center rounded-2xl"
-        style={{
-          background: `linear-gradient(135deg, ${color.purpleDark}40, ${color.purple}40)`,
-          border: `1px solid ${color.purple}30`,
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function AlternatingSection({
-  title,
-  desc,
-  icon,
-  graphic,
-  reversed,
-  ctaLabel,
-  ctaHref,
-}: {
-  title: string;
-  desc: string;
-  icon: React.ReactNode;
-  graphic: React.ReactNode;
-  reversed?: boolean;
-  ctaLabel?: string;
-  ctaHref?: string;
-}) {
-  return (
-    <div
-      className={`flex w-full flex-col items-center gap-10 lg:flex-row${reversed ? ' lg:flex-row-reverse' : ''}`}
-    >
-      <motion.div variants={itemVariants} className="flex flex-1 flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <SectionIcon>{icon}</SectionIcon>
-          <div>
-            <h3 className="text-xl font-bold text-white sm:text-2xl">{title}</h3>
-          </div>
-        </div>
-        <p className="max-w-lg text-sm leading-relaxed sm:text-base" style={{ color: color.muted }}>
-          {desc}
-        </p>
-        {ctaLabel && ctaHref && (
-          <div>
-            <Button
-              asChild
-              size="sm"
-              className="mt-1 h-9 rounded-full px-5 text-sm font-semibold text-white shadow-md"
-              style={{ background: gradient.brand }}
-            >
-              <Link to={ctaHref}>{ctaLabel}</Link>
-            </Button>
-          </div>
-        )}
-      </motion.div>
-      <motion.div variants={itemVariants} className="flex flex-1 items-center justify-center">
-        {graphic}
-      </motion.div>
-    </div>
-  );
-}
-
-const learningSteps = [
-  {
-    step: '1',
-    title: 'Learn',
-    desc: 'Explore our charts, indicators, and order types in a risk-free environment.',
-  },
-  {
-    step: '2',
-    title: 'Practice',
-    desc: 'Execute trades with $10K virtual balance. Refine your strategy without losing a cent.',
-  },
-  {
-    step: '3',
-    title: 'Grow',
-    desc: 'Track your P&L, journal every trade, and build confidence before trading real money.',
-  },
-];
-
-const alternatingSections = [
-  {
-    icon: <TrendingUp className="h-6 w-6" style={{ color: color.purple }} />,
-    title: 'Advanced Charts',
-    desc: 'Up to 4 multi-layout panes with 10 timeframes (1m to 1M). Sync symbol, interval, crosshair, and time range across panes. 9 built-in indicators — EMA, SMA, VWAP, MACD, and more — each with live values and its own settings. Full drawing toolkit included: trend lines, Fibonacci, shapes, text, and freehand.',
-    graphic: <img src={chartImg} alt="" loading="lazy" className="w-full max-w-lg select-none" />,
-    ctaLabel: 'Discover Charts',
-    ctaHref: '/features#charts',
-  },
-  {
-    icon: <Activity className="h-6 w-6" style={{ color: color.purple }} />,
-    title: 'Paper Trading',
-    desc: 'Market orders fill instantly at the best available price. Limit orders let you name your price, executed when the market reaches your level. Stop orders trigger a market order once the price hits your stop — perfect for entries and exits. All with $10K virtual balance, take-profit and stop-loss on every position, and leverage 1–10x. No real money at risk.',
-    graphic: (
-      <img
-        src={papertradingImg}
-        alt=""
-        loading="lazy"
-        // The 40 px shift right only from md: on phones it pushed the page 24 px past the screen
-        className="w-full max-w-sm -translate-y-10 select-none object-contain md:translate-x-10"
-      />
-    ),
-    reversed: true,
-    ctaLabel: 'Explore Paper Trading',
-    ctaHref: '/features#trading',
-  },
-  {
-    icon: <Globe className="h-6 w-6" style={{ color: color.purple }} />,
-    title: 'Real-time Data',
-    desc: 'Live Bybit WebSocket feed across 9 crypto pairs. Bid/ask spread, connection health indicator, and automatic reconnection. Professional charting with real-time candlestick updates.',
-    graphic: (
-      <div className="flex flex-wrap items-center justify-center gap-4">
-        {[
-          // A static illustration, not quotes: round numbers, no live-looking precision
-          { pair: 'BTC/USDT', price: '83,000', chg: '+2.1%', up: true },
-          { pair: 'ETH/USDT', price: '1,600', chg: '+1.8%', up: true },
-          { pair: 'SOL/USDT', price: '120', chg: '-0.8%', up: false },
-          { pair: 'XRP/USDT', price: '2.2', chg: '+3.1%', up: true },
-        ].map((t) => (
-          <div
-            key={t.pair}
-            className="flex flex-col items-center gap-1 rounded-xl px-3 py-2"
-            style={{ background: `${bg.surface}40`, minWidth: 80 }}
-          >
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: color.muted }}
-            >
-              {t.pair}
-            </span>
-            <span className="text-xs font-bold text-white">{t.price}</span>
-            <span
-              className="text-[10px] font-semibold"
-              style={{ color: t.up ? color.green : color.red }}
-            >
-              {t.chg}
-            </span>
-          </div>
-        ))}
-      </div>
-    ),
-    ctaLabel: 'Read More',
-    ctaHref: '/features#realtime',
-  },
-];
-
+/**
+ * The landing page (owner's rewrite, 2026-11-22): a total beginner should see within seconds that
+ * this is a learning app AND a real-data chart with virtual money. Live: the hero offers two paths
+ * (the live chart, no sign up; lessons, free account), then the questions every beginner asks, the
+ * first steps, the value of learning on the real chart, real screenshots, where we differ from six
+ * kinds of competitor and one comparison table. Before launch there is no sign-up and no chart link,
+ * so the page is the hero, the coin ribbon and the newsletter form.
+ */
 export function LandingPage() {
   return (
     <>
       <SeoHead
-        title="Free Live Crypto Charts & Paper Trading"
-        description="Free live crypto charts with indicators and drawing tools — no signup. Create a free account to paper trade with a $10,000 virtual balance on live market data from Bybit."
+        title="Learn Crypto Trading Free"
+        description="Learn crypto trading from zero with short lessons, then practise on a live chart with $10,000 of pretend money. Free, no real money, and the chart needs no sign up."
         path="/"
         {...(!isLive && { noIndex: true })}
       />
       <TopBar marketing />
-      <AuthLayout>
-        {/* Exgen Cover-style Hero — full-width gradient background */}
-        <div
-          className="relative w-full"
-          style={{
-            background: `linear-gradient(135deg, ${bg.deep} 0%, ${bg.page} 30%, ${bg.navy} 100%)`,
-          }}
-        >
-          <div
-            className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-16 px-4 py-20 lg:flex-row lg:py-28"
-            style={{ overflow: 'hidden' }}
-          >
-            {/* Hero content — left/center */}
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="flex flex-1 flex-col items-start gap-4 text-center lg:items-start lg:text-left"
-            >
-              <motion.div
-                variants={itemVariants}
-                className="flex items-center gap-3 rounded-full border border-white/10 px-4 py-1.5"
-                style={{ background: `${color.glow}15` }}
-              >
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={String(isLive)}
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.6, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: isLive ? color.green : color.amber }}
-                  />
-                </AnimatePresence>
-                <span
-                  className="text-xs font-medium tracking-wide uppercase"
-                  style={{ color: color.muted }}
-                >
-                  {isLive ? 'Live charts · No signup' : 'Launching Soon'}
-                </span>
-              </motion.div>
+      <AuthLayout marketingFooter>
+        {/* ─── Hero ─────────────────────────────────────────────────────── */}
+        <header className={styles.hero}>
+          <div className={styles.candles}>
+            <CandleSequence />
+          </div>
+          <div className={styles.heroInner}>
+            <p className={styles.badge}>
+              <span
+                className={`${styles.dot}${isLive ? '' : ` ${styles.dotSoon}`}`}
+                aria-hidden="true"
+              />
+              {isLive ? 'Free · Pretend money · Real prices' : 'Launching Soon'}
+            </p>
 
-              <motion.h1
-                variants={itemVariants}
-                // Live: "Live crypto charts." must stay on one line in the 480 px desktop column (461 px at
-                // text-5xl, 576 px at text-6xl), so desktop steps down; pre-launch keeps its size
-                className={`text-5xl font-black leading-tight sm:text-6xl ${isLive ? 'lg:text-5xl' : 'lg:text-7xl'}`}
-                style={{ fontFamily: font.sans }}
-              >
-                {isLive ? (
-                  <>
-                    <span
-                      className="block"
-                      style={{
-                        background: gradient.brand,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                      }}
-                    >
-                      Live crypto charts.
-                    </span>
-                    <span className="block text-white">No signup.</span>
-                  </>
-                ) : (
-                  <>
-                    <span
-                      style={{
-                        background: gradient.brand,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                      }}
-                    >
-                      Paper trade crypto,{' '}
-                    </span>
-                    <span className="text-white uppercase">FREE</span>
-                  </>
-                )}
-              </motion.h1>
+            {isLive ? (
+              <>
+                <h1 className={styles.h1}>
+                  <span className={shared.gradientText}>Learn crypto trading.</span>{' '}
+                  <span>Practise on a real chart.</span>
+                </h1>
+                <p className={styles.sub}>
+                  Short lessons for people who know nothing yet, a live chart with real prices, and
+                  $10,000 of pretend money to train with. Pick how you want to begin.
+                </p>
+                <div className={styles.paths}>
+                  <PathCards />
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 className={styles.h1}>
+                  <span className={shared.gradientText}>Paper trade crypto,</span> <span>FREE</span>
+                </h1>
+                <p className={styles.sub}>
+                  Learn on a real-data chart with $10K of pretend money. Stop paying. Start
+                  learning.
+                </p>
+                <div className={styles.heroActions}>
+                  <StartLink cta={CTA_REGISTER} live={false} />
+                  <Link to="/features" className={shared.ctaGhost}>
+                    See Features
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        </header>
 
-              <motion.p variants={itemVariants} className="text-xl font-semibold text-white">
-                {isLive ? 'Open it. Draw on it. Decide later.' : 'Stop paying. Start learning.'}
-              </motion.p>
-
-              <motion.p
-                variants={itemVariants}
-                className="max-w-xl text-base leading-relaxed"
-                style={{ color: color.muted }}
-              >
-                {isLive
-                  ? 'Real-time candles for BTC, ETH, SOL and 6 more pairs, 9 indicators, drawing tools and up to 4 synced charts — right in your browser.'
-                  : 'Real-time Bybit data, professional charts, and $10K virtual balance.'}
-              </motion.p>
-
-              <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
-                {isLive ? (
-                  <Button
-                    asChild
-                    size="lg"
-                    className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
-                    style={{ background: gradient.brand }}
-                  >
-                    <Link to="/chart" {...guide('landing.hero.chart')}>
-                      Open the Live Chart
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
-                    style={{ background: gradient.brand }}
-                    onClick={() =>
-                      document.getElementById('newsletter')?.scrollIntoView({ behavior: 'smooth' })
-                    }
-                  >
-                    Get notified when live
-                  </Button>
-                )}
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="h-12 rounded-full border-white/20 px-8 text-base font-semibold"
-                  style={{ color: color.muted }}
-                >
-                  {isLive ? (
-                    <Link to="/register" {...guide('landing.hero.register')}>
-                      Create Free Account
-                    </Link>
-                  ) : (
-                    <Link to="/features">See Features</Link>
-                  )}
-                </Button>
-              </motion.div>
-            </motion.div>
-
-            {/* Crypto coins graphic */}
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7, ease: 'easeOut' }}
-              className="flex flex-1 items-center justify-center"
-            >
-              <div className="overflow-hidden" style={{ width: '36rem', height: 'auto' }}>
-                <img
-                  src={macHeaderApp}
-                  alt=""
-                  className="w-full select-none object-contain"
-                  style={{ objectPosition: 'center center' }}
+        <div className={styles.page}>
+          {isLive && (
+            <section className={shared.section} aria-labelledby="questions-title">
+              <SectionHead
+                id="questions-title"
+                eyebrow="Start here"
+                title="Questions every beginner asks"
+                lead="Short, honest answers. Tap one to open it."
+              />
+              <div className={styles.faqWrap}>
+                <FaqList
+                  items={BEGINNER_FAQ}
+                  live={isLive}
+                  anchor="landing.faq.start"
+                  defaultOpen={['where-to-start']}
                 />
               </div>
-            </motion.div>
+            </section>
+          )}
+
+          <div className={shared.section}>
+            <CoinRibbon />
           </div>
-        </div>
 
-        {/* ─── What a free account unlocks (live only: pre-launch has no sign-up) ─ */}
-        {isLive && (
-          <div className="mx-auto flex w-full max-w-6xl justify-center px-4 pt-12">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="w-full"
-            >
-              <AccountUnlocksTerminal />
-            </motion.div>
-          </div>
-        )}
-
-        {/* ─── Stats strip ──────────────────────────────────────────────── */}
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-24 px-4 py-16">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3"
-          >
-            {[
-              {
-                label: 'more are being added',
-                value: '9 crypto pairs',
-                icon: (
-                  <img
-                    src={cryptoPairsImg}
-                    alt=""
-                    loading="lazy"
-                    className="select-none"
-                    style={{ marginBottom: '1rem' }}
-                  />
-                ),
-              },
-              {
-                label: 'Data Feed',
-                value: 'Real-time Bybit',
-                icon: <img src={realtimeDataImg} alt="" loading="lazy" className="select-none" />,
-              },
-              {
-                label: 'Virtual Balance',
-                value: '$10,000',
-                icon: (
-                  <img
-                    src={visualBalanceImg}
-                    alt=""
-                    loading="lazy"
-                    className="w-full select-none"
-                  />
-                ),
-              },
-            ].map((stat) => (
-              <motion.div
-                key={stat.label}
-                variants={itemVariants}
-                className="relative overflow-hidden rounded-2xl border px-6 py-7 text-center transition-all duration-300 hover:-translate-y-0.5"
-                style={{
-                  background: `linear-gradient(135deg, ${bg.panel} 0%, ${bg.page} 100%)`,
-                  borderColor: `${color.glow}20`,
-                  boxShadow: `0 4px 20px ${color.purpleDeep}20`,
-                }}
-              >
-                <div
-                  className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{
-                    width: '12rem',
-                    height: 'auto',
-                    background: 'transparent',
-                  }}
-                >
-                  {stat.icon}
+          {isLive && (
+            <>
+              {/* ─── The timeline ───────────────────────────────────────── */}
+              <section className={shared.section} aria-labelledby="steps-title">
+                <SectionHead
+                  id="steps-title"
+                  eyebrow="What you get"
+                  title="From your first click to your first trade"
+                  lead="The chart is free. So is the practice desk. Here is the path, step by step."
+                />
+                <div className={styles.timelineRow}>
+                  <Timeline />
+                  <StartLink cta={CTA_REGISTER} live={isLive} anchor="landing.timeline.register" />
                 </div>
-                <span
-                  className="mt-1 block text-3xl font-black"
-                  style={{
-                    background: gradient.brand,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  {stat.value}
-                </span>
-                <span className="mt-1 block text-sm" style={{ color: color.muted }}>
-                  {stat.label}
-                </span>
-              </motion.div>
-            ))}
-          </motion.div>
+              </section>
 
-          {/* ─── Alternating feature sections ─────────────────────────────── */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.15 }}
-            className="flex w-full flex-col items-center gap-16"
-          >
-            <motion.div variants={itemVariants} className="text-center">
-              <h2 className="text-3xl font-bold text-white">
-                Everything you need to practice crypto trading
-              </h2>
-              <p className="mt-2 text-sm" style={{ color: color.muted }}>
-                Built for beginners and experienced traders alike.
-              </p>
-            </motion.div>
-            <div className="flex w-full flex-col gap-20">
-              {alternatingSections.map((sec) => (
-                <AlternatingSection key={sec.title} {...sec} />
-              ))}
-            </div>
-          </motion.div>
+              {/* ─── Learn it, then try it ──────────────────────────────── */}
+              <section className={shared.section} aria-labelledby="learn-title">
+                <SectionHead
+                  id="learn-title"
+                  eyebrow="Why it works"
+                  title="Learn it. Then try it on real candles."
+                  lead="Most chart apps hand you a chart and wish you luck. Most courses hand you words and no chart. Here they sit together: read a short card, then open the real chart and see it happen, with pretend money on the line."
+                />
+                <LessonPreviewsLazy />
+                <ul className={styles.valueList}>
+                  <li>Each lesson is short, and every new word is explained the first time.</li>
+                  <li>Quizzes tell you why an answer is right, then let you try again.</li>
+                  <li>
+                    Practical lessons end with a real practice trade, and a look at what happened.
+                  </li>
+                </ul>
+              </section>
 
-          {/* ─── Learning Path — CPT Differentiator ─────────────────────── */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            className="flex w-full flex-col items-center gap-8"
-          >
-            <motion.div variants={itemVariants} className="text-center">
-              <div
-                className="mb-4 inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
-                style={{ borderColor: `${color.glow}30`, background: `${color.glow}10` }}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={color.purple}
-                  strokeWidth="2"
-                  className="h-4 w-4"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-                <span
-                  className="text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: color.purple }}
-                >
-                  Zero to Trader
-                </span>
-              </div>
-              <h2 className="text-3xl font-bold text-white">Your learning journey</h2>
-              <p className="mt-2 text-sm" style={{ color: color.muted }}>
-                Unlike other platforms, we're built for learning — not just charting.
-              </p>
-            </motion.div>
-            <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-              {learningSteps.map((step, i) => (
-                <motion.div key={step.step} variants={itemVariants} className="relative">
-                  {/* Connector line */}
-                  {i < learningSteps.length - 1 && (
-                    <div
-                      className="absolute -right-3 top-12 hidden h-px w-6 md:block"
-                      style={{ background: `${color.glow}30` }}
-                    />
-                  )}
-                  <div
-                    className="flex flex-col items-center gap-4 rounded-2xl px-6 py-8 text-center transition-all duration-300 hover:-translate-y-1"
-                    style={{
-                      background: `linear-gradient(135deg, ${bg.panel}80 0%, ${bg.page}80 100%)`,
-                      border: `1px solid ${color.glow}20`,
-                    }}
-                  >
-                    <div
-                      className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white shadow-lg"
-                      style={{
-                        background: gradient.brand,
-                        boxShadow: `0 0 20px ${color.purpleDark}40`,
-                      }}
-                    >
-                      {step.step}
-                    </div>
-                    <h3 className="text-lg font-bold text-white">{step.title}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
-                      {step.desc}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+              {/* ─── Real screenshots ───────────────────────────────────── */}
+              <section className={shared.section} aria-labelledby="screens-title">
+                <SectionHead
+                  id="screens-title"
+                  eyebrow="See it for real"
+                  title="This is what you will use"
+                  lead="Screens taken from the app itself, not mock-ups. Prices in a picture are just a snapshot."
+                />
+                <ShotShowcase />
+              </section>
 
-          {/* ─── Dashboard preview ──────────────────────────────────────── */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            className="flex w-full flex-col items-center gap-6"
-          >
-            <motion.div variants={itemVariants} className="text-center">
-              <h2 className="text-3xl font-bold text-white">Designed for clarity, not clutter</h2>
-              <p className="mt-2 text-sm" style={{ color: color.muted }}>
-                Unlike traditional platforms, every pixel serves a purpose.
-              </p>
-            </motion.div>
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-col items-center gap-5 text-center"
-            >
-              <div
-                className="relative rounded-2xl border p-2 shadow-2xl"
-                style={{
-                  background: `linear-gradient(${bg.surface} 0%, rgb(33, 30, 73) 100%)`,
-                  boxShadow: `0 20px 60px ${color.purpleDeep}40`,
-                }}
-              >
-                <div
-                  className="overflow-hidden rounded-xl"
-                  style={{ background: 'rgb(15, 14, 41)' }}
-                >
-                  {/* Window title bar */}
-                  <div
-                    className="flex items-center gap-2 px-4 py-2.5"
-                    style={{ background: `${bg.footer}cc` }}
-                  >
-                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
-                    <div
-                      className="ml-3 flex-1 rounded-md px-3 py-1"
-                      style={{ background: `${bg.surface}60` }}
-                    >
-                      <div
-                        className="mx-auto h-2 w-40 rounded"
-                        style={{ background: `${color.muted}30` }}
-                      />
-                    </div>
-                  </div>
+              {/* ─── Where we are different ─────────────────────────────── */}
+              <section className={shared.section} aria-labelledby="different-title">
+                <SectionHead
+                  id="different-title"
+                  eyebrow="Why this one"
+                  title="Not like the other practice tools"
+                  lead="Six kinds of tools let you practise. Here is how this one is different, and where the others are better."
+                />
+                <GroupSections />
+              </section>
 
-                  {/* Mock chart body */}
-                  <div className="p-4 sm:p-6">
-                    {/* Header row */}
-                    <div className="flex items-center justify-between border-b pb-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="h-8 w-8 rounded-lg"
-                          style={{
-                            background: `linear-gradient(135deg, ${color.purpleDark}, ${color.purple})`,
-                          }}
-                        />
-                        <div>
-                          <div
-                            className="h-3 w-16 rounded"
-                            style={{ background: `${color.muted}30` }}
-                          />
-                          <div
-                            className="mt-1 h-2 w-10 rounded"
-                            style={{ background: `${color.muted}20` }}
-                          />
-                        </div>
-                      </div>
-                      <div
-                        className="h-6 w-20 rounded-full"
-                        style={{ background: `${color.green}20` }}
-                      />
-                    </div>
+              {/* ─── The comparison table ───────────────────────────────── */}
+              <section className={shared.section} aria-labelledby="compare-title">
+                <SectionHead
+                  id="compare-title"
+                  eyebrow="Side by side"
+                  title="How it adds up"
+                  lead="Only what works in the app today. We say it plainly where we are smaller."
+                />
+                <ComparisonTable />
+                <p className={styles.legal}>
+                  Paper trading only: no real money is involved, and nothing here is financial
+                  advice. A practice record does not help anyone get funded.
+                </p>
+              </section>
+            </>
+          )}
 
-                    {/* Candlestick bars — volatile crypto price action */}
-                    <div className="mt-3 flex items-end gap-1">
-                      {[
-                        { body: 5, top: 2, bottom: 1, up: false },
-                        { body: 7, top: 1, bottom: 2, up: true },
-                        { body: 3, top: 1, bottom: 1, up: false },
-                        { body: 9, top: 2, bottom: 2, up: true },
-                        { body: 11, top: 3, bottom: 1, up: false },
-                        { body: 6, top: 1, bottom: 1, up: true },
-                        { body: 4, top: 2, bottom: 2, up: false },
-                        { body: 2, top: 1, bottom: 1, up: true },
-                        { body: 15, top: 3, bottom: 2, up: false },
-                        { body: 10, top: 2, bottom: 1, up: true },
-                        { body: 8, top: 1, bottom: 3, up: false },
-                        { body: 13, top: 2, bottom: 2, up: true },
-                        { body: 6, top: 1, bottom: 1, up: false },
-                        { body: 17, top: 4, bottom: 2, up: true },
-                        { body: 5, top: 2, bottom: 1, up: false },
-                        { body: 19, top: 3, bottom: 1, up: true },
-                        { body: 14, top: 2, bottom: 2, up: true },
-                        { body: 7, top: 1, bottom: 1, up: false },
-                        { body: 21, top: 3, bottom: 2, up: true },
-                        { body: 24, top: 2, bottom: 2, up: true },
-                      ].map((c, i) => {
-                        const clr = c.up ? color.green : color.red;
-                        const totalH = c.body + c.top + c.bottom;
-                        return (
-                          <div
-                            key={i}
-                            className="relative flex items-center justify-center"
-                            style={{ width: 8, height: totalH }}
-                          >
-                            {/* Wick */}
-                            <div
-                              className="absolute w-0.5 rounded-full"
-                              style={{ height: '100%', background: clr }}
-                            />
-                            {/* Body */}
-                            <div
-                              className="absolute w-2 rounded-sm"
-                              style={{
-                                height: c.body,
-                                bottom: c.bottom,
-                                background: clr,
-                              }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Price cards */}
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                      {[
-                        // Illustration only — round numbers, not quotes
-                        { pair: 'BTC/USDT', price: '83,000' },
-                        { pair: 'ETH/USDT', price: '1,600' },
-                        { pair: 'SOL/USDT', price: '120' },
-                      ].map((c) => (
-                        <div
-                          key={c.pair}
-                          className="rounded-lg px-2 py-2"
-                          style={{ background: `${bg.surface}50` }}
-                        >
-                          <div className="text-[10px] font-medium" style={{ color: color.muted }}>
-                            {c.pair}
-                          </div>
-                          <div className="mt-0.5 text-xs font-bold text-white">{c.price}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm" style={{ color: color.muted }}>
-                Clean, focused interface — the live chart needs no login
-              </p>
-            </motion.div>
-          </motion.div>
-
-          {/* ─── Final CTA ─────────────────────────────────────────────── */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            className="w-full"
-          >
+          {/* ─── Final call ───────────────────────────────────────────── */}
+          <section className={shared.section} aria-label="Get started">
             <CtaSection />
-          </motion.div>
+          </section>
         </div>
       </AuthLayout>
     </>

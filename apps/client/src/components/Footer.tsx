@@ -2,7 +2,28 @@ import { Link } from 'react-router';
 import { TrustBadges } from '@/components/TrustBadges';
 import { bg, color, fontSize } from '@/lib/tokens';
 
-export function Footer() {
+// The public pages' own links first (internal links for visitors and search engines), then the legal ones
+const LINKS = [
+  { to: '/features', label: 'Features' },
+  { to: '/chart', label: 'Live chart' },
+  { to: '/blog', label: 'Blog' },
+  { to: '/terms', label: 'Terms of Service' },
+  { to: '/privacy', label: 'Privacy Policy' },
+  { to: '/security', label: 'Security' },
+  { to: '/aup', label: 'Acceptable Use Policy' },
+] as const;
+
+const isLive = import.meta.env.VITE_IS_LIVE === 'true';
+
+// The links only the landing and features pages carry: sign-in, register and the legal pages keep
+// the footer they had (the paper-trading line and the legal links, design.md on phones)
+const MARKETING = new Set<string>(['/features', '/chart', '/blog']);
+
+export function Footer({ marketing = false }: { marketing?: boolean }) {
+  // Before launch there is no chart to link to; /features says "launching soon" and is noindex then
+  const links = LINKS.filter(
+    (l) => (marketing || !MARKETING.has(l.to)) && (isLive || l.to !== '/chart')
+  );
   return (
     <footer
       className="relative px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"
@@ -21,34 +42,16 @@ export function Footer() {
         className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5"
         aria-label="Footer"
       >
-        <Link
-          to="/terms"
-          className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
-          style={{ fontSize: fontSize.xs, color: color.muted }}
-        >
-          Terms of Service
-        </Link>
-        <Link
-          to="/privacy"
-          className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
-          style={{ fontSize: fontSize.xs, color: color.muted }}
-        >
-          Privacy Policy
-        </Link>
-        <Link
-          to="/security"
-          className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
-          style={{ fontSize: fontSize.xs, color: color.muted }}
-        >
-          Security
-        </Link>
-        <Link
-          to="/aup"
-          className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
-          style={{ fontSize: fontSize.xs, color: color.muted }}
-        >
-          Acceptable Use Policy
-        </Link>
+        {links.map((l) => (
+          <Link
+            key={l.to}
+            to={l.to}
+            className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
+            style={{ fontSize: fontSize.xs, color: color.muted }}
+          >
+            {l.label}
+          </Link>
+        ))}
       </nav>
       <p className="mt-2" style={{ fontSize: fontSize.xs, color: color.muted }}>
         © {new Date().getFullYear()} cryptopapertrade.com

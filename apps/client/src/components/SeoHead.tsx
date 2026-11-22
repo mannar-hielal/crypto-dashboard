@@ -9,9 +9,11 @@ interface SeoHeadProps {
   description: string;
   path?: string;
   noIndex?: boolean;
+  /** Structured data (schema.org) for this page, written as a JSON-LD block */
+  jsonLd?: Record<string, unknown>;
 }
 
-export function SeoHead({ title, description, path, noIndex }: SeoHeadProps) {
+export function SeoHead({ title, description, path, noIndex, jsonLd }: SeoHeadProps) {
   const location = useLocation();
   const currentPath = path || location.pathname;
   const fullTitle = `${title} | cryptopapertrade.com`;
@@ -32,6 +34,19 @@ export function SeoHead({ title, description, path, noIndex }: SeoHeadProps) {
       <meta name="twitter:image" content={`${SITE_URL}/og-image.svg`} />
       <link rel="canonical" href={url} />
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
+      {/* 🔐 A data block, never run as script (so the CSP's script-src does not apply); its content
+          is our own constants, escaped for `<`, `>`, `&` and the two line separators so no text can close
+          the tag; `jsonLd` is for trusted constants only */}
+      {jsonLd && (
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/&/g, '\\u0026')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029')}
+        </script>
+      )}
     </Helmet>
   );
 }

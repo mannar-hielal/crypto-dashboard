@@ -489,6 +489,25 @@ trade: nothing here starts a tour.
 8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen), **Back to the path** full width and **Try again** under it.
 
+**Manual check (M).** The landing and features pages (rewrite, 2026-11-22), signed out, at 375, 412, 820 and 1440 px, no
+sideways scroll at any width:
+
+1. `/` → Expect one h1 ("Learn crypto trading. Practise on a real chart."), then two path cards side by side from 768 px (stacked
+   below): [landing.hero.chart] → `/chart`, [landing.hero.register] → `/register`; the candles draw themselves once behind the
+   headline, then the last one breathes.
+2. Under the cards, "Questions every beginner asks": Tab to a question, Enter or Space opens it, Up / Down / Home / End move between
+   questions; each answer ends in a [landing.faq.start] "Start here" link. Expect a visible focus ring on each.
+3. The coin ribbon slides slowly and pauses on hover; with the system's reduced-motion setting on, the candles are drawn still and
+   the ribbon is a still, wrapped row.
+4. Scroll down: the timeline (8 steps), "Learn it. Then try it on real candles." (six lesson cards load as they near the screen; a
+   row you swipe on a phone), three screenshots in frames, six "where we do better" sections, and the table. The table scrolls inside
+   its own box on a phone with the feature column pinned; every cell is a tick, a tilde or a cross with a word for screen readers; the
+   three "small on purpose" rows show our crosses; the competitor columns carry blurred shapes, never a logo.
+5. `/features` → h1 "Learn it. Try it. All in one place.", the sticky anchor nav from 768 px (each link scrolls to its section, the
+   heading clear of the bars), the questions as an accordion, and the links to `/blog`, `/register` and `/chart`.
+6. With `VITE_IS_LIVE=false` the landing page is the Launching Soon hero, the coin ribbon and the newsletter form: no sign-up, chart,
+   questions or table.
+
 **Manual check (M).** The public header (2026-11-18): on `/`, `/features`, `/blog` and `/about` at 1440 px [nav.product]
 opens Chart and Features (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
 their pages, the current one underlined; at 375 px [nav.menu] opens a full-width sheet of 44 px rows with Product

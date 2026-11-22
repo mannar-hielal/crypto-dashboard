@@ -261,7 +261,15 @@ export const GUIDE_ANCHORS = [
   // landing (marketing home page)
   'landing.hero.chart',
   'landing.hero.register',
-  'landing.unlocks.register',
+  'landing.timeline.register',
+  /** The hero's animated candle drawing (decorative) */
+  'landing.candles',
+  // The beginner FAQ's "Start here" buttons (key: the item's id, e.g. 'where-to-start'), and the
+  // features page's two hero buttons and its own FAQ's (key: the item's id)
+  'landing.faq.start',
+  'features.hero.chart',
+  'features.hero.register',
+  'features.faq.start',
   // footer
   'footer.chart-credit',
   // lock (signed-out visitors on /chart)

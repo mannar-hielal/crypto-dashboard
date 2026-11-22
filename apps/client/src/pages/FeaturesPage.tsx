@@ -1,778 +1,235 @@
-import { motion } from 'framer-motion';
-import { GraduationCap, Sparkles, Smartphone, Heart } from 'lucide-react';
+import { Link } from 'react-router';
 
 import { SeoHead } from '@/components/SeoHead';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
 import { TopBar } from '@/components/dashboard/TopBar';
-import { bg, color, gradient, font } from '@/lib/tokens';
+import { CoinRibbon } from '@/components/landing/CoinRibbon';
+import { FaqList } from '@/components/landing/FaqList';
+import { FeatureGrid } from '@/components/landing/FeatureGrid';
+import { LessonPreviewsLazy } from '@/components/landing/LessonPreviewsLazy';
+import { SectionHead } from '@/components/landing/SectionHead';
+import { SingleShot } from '@/components/landing/ShotShowcase';
+import { StartLink } from '@/components/landing/StartLink';
+import {
+  ACCOUNT_FEATURES,
+  CHART_FEATURES,
+  CTA_CHART,
+  CTA_REGISTER,
+  DATA_FEATURES,
+  DESK_FEATURES,
+  DEVICE_FEATURES,
+  FEATURES_FAQ,
+  LEARN_STEPS,
+  LEARN_TOPICS,
+} from '@/lib/landingContent';
+import shared from '@/components/landing/landing.module.css';
+import styles from './FeaturesPage.module.css';
 
-const sections = [
-  { id: 'charts', label: 'Charts' },
-  { id: 'trading', label: 'Trading' },
-  { id: 'account', label: 'Account' },
-  { id: 'realtime', label: 'Real-time Data' },
-  { id: 'crossplatform', label: 'Cross-platform' },
+const isLive = import.meta.env.VITE_IS_LIVE === 'true';
+
+const SECTIONS = [
+  { id: 'learn', label: 'Learn' },
+  { id: 'charts', label: 'The chart' },
+  { id: 'trading', label: 'Practice desk' },
+  { id: 'account', label: 'Your account' },
+  { id: 'realtime', label: 'Real data' },
+  { id: 'crossplatform', label: 'Phone and more' },
+  { id: 'questions', label: 'Questions' },
 ] as const;
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 } as const,
-  },
+// Structured data: the page's questions, the same text the accordion shows
+const FAQ_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FEATURES_FAQ.map((q) => ({
+    '@type': 'Question',
+    name: q.question,
+    acceptedAnswer: { '@type': 'Answer', text: q.answer },
+  })),
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: 'easeOut' as const },
-  },
-};
-
-const detailCardStyles = {
-  border: '1px solid',
-  borderColor: `${color.glow}15`,
-} as const;
-
-function SectionHeading({ title, subtitle }: { title?: string; subtitle?: string }) {
-  return (
-    <div className="mb-8">
-      {title && <h2 className="text-2xl font-bold text-white sm:text-3xl">{title}</h2>}
-      {subtitle && (
-        <p className="mt-1 text-sm" style={{ color: color.muted }}>
-          {subtitle}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function MacWindow({ flat, children }: { flat?: boolean; children: React.ReactNode }) {
-  return (
-    <div
-      className="w-full overflow-hidden rounded-2xl"
-      style={{
-        background: '#000',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: flat
-          ? undefined
-          : '0 12px 48px rgba(0,0,0,0.6), -200px 0 300px 10px rgba(102, 98, 169, 0.3), 200px 0 300px 10px rgba(102, 98, 169, 0.3)',
-      }}
-    >
-      <div
-        className="flex items-center px-4 py-2.5"
-        style={{
-          background: '#1c1c1e',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-        }}
-      >
-        <div className="flex gap-1.5">
-          <div className="h-3 w-3 rounded-full" style={{ background: '#ff5f57' }} />
-          <div className="h-3 w-3 rounded-full" style={{ background: '#febc2e' }} />
-          <div className="h-3 w-3 rounded-full" style={{ background: '#28c840' }} />
-        </div>
-      </div>
-      <div className="p-8 sm:p-10">{children}</div>
-    </div>
-  );
-}
-
-function DetailCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
-  return (
-    <div
-      className="flex flex-col gap-4 rounded-xl p-5 transition-all duration-300 hover:-translate-y-0.5"
-      style={{
-        ...detailCardStyles,
-        background: `linear-gradient(135deg, ${bg.panel} 0%, ${bg.page} 100%)`,
-        boxShadow: `0 2px 12px ${color.purpleDeep}15`,
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-          style={{
-            background: `linear-gradient(135deg, ${color.purpleDark}30, ${color.purple}30)`,
-            border: `1px solid ${color.purple}20`,
-            color: color.purple,
-          }}
-        >
-          <div
-            className="absolute inset-0 rounded-xl opacity-20 blur-md"
-            style={{ background: gradient.brand }}
-          />
-          <span className="relative z-10">{icon}</span>
-        </div>
-        <h4 className="text-sm font-semibold text-white">{title}</h4>
-      </div>
-      <p className="text-xs leading-relaxed" style={{ color: color.muted }}>
-        {desc}
-      </p>
-    </div>
-  );
-}
-
+/**
+ * The features page (owner's rewrite, 2026-11-22): written in plain English for a beginner, with
+ * the learning side first, then the chart, the practice desk, the account, the data and the phone.
+ * Every section ends in a way into the app; the questions are an accordion with FAQ structured data.
+ */
 export function FeaturesPage() {
   return (
     <>
       <SeoHead
-        title="Features — Live Charts, Paper Trading and More"
-        description="Explore all features of cryptopapertrade.com: multi-chart layouts, technical indicators, long/short paper trading, real-time data, and PWA support."
+        title="Features: Learn Crypto by Doing"
+        description="See what you get: step-by-step crypto lessons, a live chart with indicators and drawing tools, a $10,000 practice account and a saved history. Free, paper money only."
         path="/features"
+        // Before launch the page stays out of the index and publishes no FAQ data; it still describes
+        // the product, under a "launching soon" line, so its sign-up and chart words read as what is coming
+        {...(isLive ? { jsonLd: FAQ_JSON_LD } : { noIndex: true })}
       />
       <TopBar marketing />
 
-      {/* Sticky anchor nav — docks below TopBar (h-12 = 48px) */}
-      <nav
-        className="sticky top-12 z-50 hidden border-b md:block"
-        style={{
-          background: `linear-gradient(90deg, ${bg.page}E6 0%, ${bg.navy}E6 100%)`,
-          backdropFilter: 'blur(12px)',
-          borderColor: `${color.glow}15`,
-        }}
-      >
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-8 px-4 py-3">
-          {sections.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="text-sm font-medium transition-colors hover:text-white"
-              style={{ color: color.muted }}
-            >
+      {/* Sticky anchor nav: docks below the top bar */}
+      <nav className={styles.nav} aria-label="On this page">
+        <div className={styles.navInner}>
+          {SECTIONS.filter((s) => isLive || s.id !== 'questions').map((s) => (
+            <a key={s.id} href={`#${s.id}`} className={styles.navLink}>
               {s.label}
             </a>
           ))}
         </div>
       </nav>
 
-      <AuthLayout>
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="flex w-full max-w-6xl flex-col items-center gap-20 px-4 pb-16 pt-24 sm:pt-28"
-        >
-          {/* ─── Hero ─────────────────────────────────────────────────── */}
-          <motion.div
-            variants={itemVariants}
-            id="hero"
-            className="flex max-w-3xl flex-col items-center gap-4 text-center"
-            style={{ scrollMarginTop: 80 }}
-          >
-            <h1
-              className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl"
-              style={{
-                background: gradient.brand,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontFamily: font.sans,
-              }}
-            >
-              Everything in one place
-            </h1>
-            <p className="max-w-xl text-base" style={{ color: color.muted }}>
-              Professional-grade trading tools built for paper trading. No downloads, no setup, no
-              risk.
-            </p>
-          </motion.div>
+      <AuthLayout marketingFooter>
+        <header className={styles.hero}>
+          {!isLive && <p className={styles.soon}>Launching soon · this is what you will get</p>}
+          <h1 className={styles.h1}>
+            <span className={shared.gradientText}>Learn it. Try it.</span> All in one place.
+          </h1>
+          <p className={styles.sub}>
+            Here is everything you get, in plain words: short crypto lessons, a live chart with real
+            prices, and $10,000 of pretend money to practise with. No real money is ever involved.
+          </p>
+          <div className={styles.actions}>
+            <StartLink cta={CTA_REGISTER} live={isLive} anchor="features.hero.register" />
+            {isLive && (
+              <StartLink cta={CTA_CHART} live variant="ghost" anchor="features.hero.chart" />
+            )}
+          </div>
+        </header>
 
-          {/* ─── Charts ───────────────────────────────────────────────── */}
-          <motion.section
+        <div className={styles.page}>
+          {/* ─── Learn ──────────────────────────────────────────────────── */}
+          <section
+            id="learn"
+            className={`${shared.section} ${styles.anchor}`}
+            aria-labelledby="learn-title"
+          >
+            <SectionHead
+              id="learn-title"
+              eyebrow="Learn"
+              title="Learn crypto trading from zero"
+              lead="You do not need to know anything first. Each lesson is a few short cards, and the chart is right behind them."
+            />
+            <FeatureGrid items={LEARN_STEPS} numbered />
+            <LessonPreviewsLazy />
+            <h3 className={styles.sub2}>What the lessons cover today</h3>
+            <FeatureGrid items={LEARN_TOPICS} headingLevel={4} />
+            <div className={styles.links}>
+              <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
+              <Link to="/blog" className={shared.ctaText}>
+                Read the articles on the blog
+              </Link>
+            </div>
+          </section>
+
+          {/* ─── The chart ──────────────────────────────────────────────── */}
+          <section
             id="charts"
-            variants={itemVariants}
-            className="w-full"
-            style={{ scrollMarginTop: 80 }}
+            className={`${shared.section} ${styles.anchor}`}
+            aria-labelledby="charts-title"
           >
-            <MacWindow>
-              <SectionHeading
-                title="Advanced Charts"
-                subtitle="Analyze the markets with professional-grade charting tools."
-              />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <path d="M3 9h18M9 3v18" />
-                    </svg>
-                  }
-                  title="Multi-layout"
-                  desc="5 layout modes — single, 2 columns, 2 rows, 3 columns, and a 2×2 grid. Switch instantly."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M12 2v20M2 12h20" />
-                    </svg>
-                  }
-                  title="10 Timeframes"
-                  desc="1m, 5m, 15m, 30m, 1h, 2h, 4h, 1D, 1W, 1M — all powered by real Bybit data."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M3 3v18h18" />
-                      <path d="M7 16l4-8 4 4 4-6" />
-                    </svg>
-                  }
-                  title="Indicators"
-                  desc="9 built-in indicators — EMA, SMA, Average Price, Median Price, Typical Price, VWAP, Momentum, Rate of Change (ROC), and MACD. Oscillators get a pane of their own; every indicator has a legend with live values under the crosshair, an eye toggle, and a settings panel for color, line style, and parameters — independently per chart pane."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M12 19V5m-7 7l7-7 7 7" />
-                    </svg>
-                  }
-                  title="Drawing Tools"
-                  desc="Trend lines, Fibonacci retracements, rectangles, text labels, and freehand drawing."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 6v6l4 2" />
-                    </svg>
-                  }
-                  title="Real-time Updates"
-                  desc="Candlesticks stream live via WebSocket. No page refresh needed."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <rect x="2" y="3" width="20" height="14" rx="2" />
-                      <path d="M8 21h8M12 17v4" />
-                    </svg>
-                  }
-                  title="Full-screen Mode"
-                  desc="Undistracted charting with a single click. All tools remain accessible."
-                />
-              </div>
-            </MacWindow>
-          </motion.section>
+            <SectionHead
+              id="charts-title"
+              eyebrow="The chart"
+              title="A real chart you can draw on"
+              lead="A chart shows a price over time. This one moves with the real market, and the chart needs no sign up."
+            />
+            <SingleShot id="chart" />
+            <FeatureGrid items={CHART_FEATURES} />
+            {isLive && <StartLink cta={CTA_CHART} live variant="text" />}
+          </section>
 
-          {/* ─── Trading ──────────────────────────────────────────────── */}
-          <motion.section
+          {/* ─── The practice desk ──────────────────────────────────────── */}
+          <section
             id="trading"
-            variants={itemVariants}
-            className="w-full"
-            style={{ scrollMarginTop: 80 }}
+            className={`${shared.section} ${styles.anchor}`}
+            aria-labelledby="trading-title"
           >
-            <MacWindow flat>
-              <SectionHeading
-                title="Paper Trading"
-                subtitle="Practice every strategy without risking real money."
-              />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  }
-                  title="Order Types"
-                  desc="Market, limit, and stop orders. Full control over entry and exit."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M12 2v20M2 12h20" />
-                    </svg>
-                  }
-                  title="TP / SL"
-                  desc="Set take-profit and stop-loss on every position. Auto-closes at your price."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 6v6l4 2" />
-                    </svg>
-                  }
-                  title="$10K Virtual Balance"
-                  desc="Pre-funded paper account. Track P&L as if it were real."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M4 20h16M4 20V4m0 16l6-8 4 4 6-8" />
-                    </svg>
-                  }
-                  title="Leverage 1–10x"
-                  desc="Set per symbol, USDT Perpetual only, up to 10×. See exactly how it affects your P&L."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-                    </svg>
-                  }
-                  title="Position Netting"
-                  desc="One net position per pair. Simplifies tracking and avoids over-trading."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <rect x="2" y="3" width="20" height="14" rx="2" />
-                      <path d="M8 21h8M12 17v4" />
-                    </svg>
-                  }
-                  title="Order Book"
-                  desc="Live bid/ask quotes from the Bybit order book feed. See the spread before placing orders."
-                />
-              </div>
-            </MacWindow>
-          </motion.section>
+            <SectionHead
+              id="trading-title"
+              eyebrow="Practice desk"
+              title="Pretend money, real prices"
+              lead="Make a free account and you get $10,000 of pretend money. Practise buying and selling as many times as you like. Nothing you do here can cost real money."
+            />
+            <SingleShot id="desk" />
+            <FeatureGrid items={DESK_FEATURES} />
+            <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
+          </section>
 
-          {/* ─── Account ──────────────────────────────────────────────── */}
-          <motion.section
+          {/* ─── Your account ───────────────────────────────────────────── */}
+          <section
             id="account"
-            variants={itemVariants}
-            className="w-full"
-            style={{ scrollMarginTop: 80 }}
+            className={`${shared.section} ${styles.anchor}`}
+            aria-labelledby="account-title"
           >
-            <MacWindow>
-              <SectionHeading
-                title="Account Overview"
-                subtitle="Full transparency into your trading activity."
-              />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <rect x="2" y="3" width="20" height="14" rx="2" />
-                      <path d="M8 21h8M12 17v4" />
-                    </svg>
-                  }
-                  title="Positions Table"
-                  desc="Open positions with real-time P&L, entry price, mark price, and liquidation price."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <polyline points="10 9 9 9 8 9" />
-                    </svg>
-                  }
-                  title="Order History"
-                  desc="Complete history of all filled, cancelled, and rejected orders."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M4 20h16M4 20V4m0 16l6-8 4 4 6-8" />
-                    </svg>
-                  }
-                  title="Balance Audit Trail"
-                  desc="Every credit and debit logged. Full reconciliation from day one."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-                    </svg>
-                  }
-                  title="Trading Journal"
-                  desc="Annotate every trade with text notes. Review and improve."
-                />
-              </div>
-            </MacWindow>
-          </motion.section>
+            <SectionHead
+              id="account-title"
+              eyebrow="Your account"
+              title="Look back and learn from every trade"
+              lead="Everything you do is saved, so you can see what happened and why. It is your account, and you stay in charge of it."
+            />
+            <FeatureGrid items={ACCOUNT_FEATURES} />
+          </section>
 
-          {/* ─── Real-time Data ────────────────────────────────────────── */}
-          <motion.section
+          {/* ─── Real data ──────────────────────────────────────────────── */}
+          <section
             id="realtime"
-            variants={itemVariants}
-            className="w-full"
-            style={{ scrollMarginTop: 80 }}
+            className={`${shared.section} ${styles.anchor}`}
+            aria-labelledby="realtime-title"
           >
-            <MacWindow flat>
-              <SectionHeading
-                title="Real-time Data"
-                subtitle="Live market data powered by Bybit WebSocket API."
-              />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  }
-                  title="Bybit WebSocket Feed"
-                  desc="Live Bybit market data streamed over WebSocket — candles update in real time."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 6v6l4 2" />
-                    </svg>
-                  }
-                  title="9 Crypto Pairs"
-                  desc="BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK. More pairs coming."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <rect x="2" y="2" width="20" height="8" rx="2" />
-                      <rect x="2" y="14" width="20" height="8" rx="2" />
-                      <path d="M6 6h.01M6 18h.01" />
-                    </svg>
-                  }
-                  title="Bid / Ask Spread"
-                  desc="Live spread displayed per pair. Know the cost of entry before you trade."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-                    </svg>
-                  }
-                  title="Connection Status"
-                  desc="Visual indicator showing WebSocket health. Auto-reconnects on drop."
-                />
-              </div>
-            </MacWindow>
-          </motion.section>
+            <SectionHead
+              id="realtime-title"
+              eyebrow="Real data"
+              title="Real coins, real prices"
+              lead="You practise on the same prices that real traders see."
+            />
+            <CoinRibbon />
+            <FeatureGrid items={DATA_FEATURES} />
+          </section>
 
-          {/* ─── Cross-platform ────────────────────────────────────────── */}
-          <motion.section
+          {/* ─── Phone and more ─────────────────────────────────────────── */}
+          <section
             id="crossplatform"
-            variants={itemVariants}
-            className="w-full"
-            style={{ scrollMarginTop: 80 }}
+            className={`${shared.section} ${styles.anchor}`}
+            aria-labelledby="crossplatform-title"
           >
-            <MacWindow>
-              <SectionHeading
-                title="Cross-platform"
-                subtitle="Your trading setup, everywhere you go."
-              />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <rect x="4" y="2" width="16" height="20" rx="2" />
-                      <line x1="12" y1="18" x2="12.01" y2="18" />
-                    </svg>
-                  }
-                  title="PWA Installable"
-                  desc="Add to home screen on iOS and Android. Feels like a native app."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3" />
-                    </svg>
-                  }
-                  title="Offline Support"
-                  desc="Service worker caches key assets. Works on flaky connections."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-                    </svg>
-                  }
-                  title="Synced Across Devices"
-                  desc="Settings and preferences sync. Login once, trade anywhere."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <rect x="2" y="3" width="20" height="14" rx="2" />
-                      <path d="M8 21h8M12 17v4" />
-                    </svg>
-                  }
-                  title="Responsive Design"
-                  desc="Optimized for desktop, tablet, and phone. Trade from any screen size."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                  }
-                  title="No Download Required"
-                  desc="Open the browser, log in, and start trading. Zero installation."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                  }
-                  title="HTTPS + Secure"
-                  desc="Served over HTTPS with httpOnly cookies. Your data stays safe."
-                />
-              </div>
-            </MacWindow>
-          </motion.section>
+            <SectionHead
+              id="crossplatform-title"
+              eyebrow="Phone and more"
+              title="Use it on your phone, too"
+              lead="Nothing to install and nothing to set up."
+            />
+            <FeatureGrid items={DEVICE_FEATURES} />
+          </section>
 
-          {/* ─── Why CPT — Differentiator ────────────────────────────── */}
-          <motion.section
-            variants={itemVariants}
-            className="w-full"
-            style={{ scrollMarginTop: 80 }}
-          >
-            <MacWindow flat>
-              <div className="mb-8 flex items-center gap-3">
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-lg"
-                  style={{
-                    background: gradient.brand,
-                  }}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="2"
-                    className="h-4 w-4"
-                  >
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-white sm:text-3xl">Why CPT?</h2>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  {
-                    title: 'Built for Learning',
-                    desc: 'Not another cluttered platform. Every feature is designed to help you understand the markets.',
-                    icon: <GraduationCap className="mx-auto h-6 w-6" />,
-                  },
-                  {
-                    title: 'Zero Bloat',
-                    desc: 'No ads, no noise, no upselling. Just the tools you need to practice and improve.',
-                    icon: <Sparkles className="mx-auto h-6 w-6" />,
-                  },
-                  {
-                    title: 'PWA-First',
-                    desc: 'Install on any device in seconds. No App Store, no download, no updates.',
-                    icon: <Smartphone className="mx-auto h-6 w-6" />,
-                  },
-                  {
-                    title: 'Free Forever',
-                    desc: 'No credit card, no trial period, no hidden costs. Paper trading should be accessible to everyone.',
-                    icon: <Heart className="mx-auto h-6 w-6" />,
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.title}
-                    className="flex flex-col gap-3 rounded-xl p-5 transition-all duration-300 hover:-translate-y-0.5"
-                    style={{
-                      background: `linear-gradient(135deg, ${bg.panel} 0%, ${bg.page} 100%)`,
-                      border: `1px solid ${color.glow}15`,
-                      boxShadow: `0 2px 12px ${color.purpleDeep}15`,
-                    }}
-                  >
-                    <span
-                      className="flex h-6 w-6 items-center justify-center"
-                      style={{ color: color.purple }}
-                    >
-                      {item.icon}
-                    </span>
-                    <h4 className="text-sm font-semibold text-white">{item.title}</h4>
-                    <p className="text-xs leading-relaxed" style={{ color: color.muted }}>
-                      {item.desc}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </MacWindow>
-          </motion.section>
-
-          {/* ─── CTA ───────────────────────────────────────────────────── */}
-          <motion.div variants={itemVariants} className="w-full">
-            <CtaSection />
-          </motion.div>
-
-          {/* ─── Back to top ──────────────────────────────────────────── */}
-          <motion.div variants={itemVariants}>
-            <a
-              href="#"
-              className="inline-flex items-center gap-2 text-sm transition-colors hover:text-white"
-              style={{ color: color.muted }}
+          {/* ─── Questions: live only, as on the landing page (its answers say what launched) ── */}
+          {isLive && (
+            <section
+              id="questions"
+              className={`${shared.section} ${styles.anchor}`}
+              aria-labelledby="questions-title"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="h-4 w-4"
-              >
-                <path d="M18 15l-6-6-6 6" />
-              </svg>
-              Back to top
-            </a>
-          </motion.div>
-        </motion.div>
+              <SectionHead
+                id="questions-title"
+                eyebrow="Questions"
+                title="Quick answers"
+                lead="Tap a question to open it."
+              />
+              <div className={styles.faqWrap}>
+                <FaqList items={FEATURES_FAQ} live anchor="features.faq.start" />
+              </div>
+            </section>
+          )}
+
+          <div className={shared.section}>
+            <p className={styles.legal}>
+              Paper trading only: no real money is involved, and nothing here is financial advice.
+            </p>
+          </div>
+
+          <section className={`${shared.section} ${styles.cta}`} aria-label="Get started">
+            <CtaSection />
+          </section>
+        </div>
       </AuthLayout>
     </>
   );

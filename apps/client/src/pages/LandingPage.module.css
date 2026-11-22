@@ -1,0 +1,174 @@
+/* The landing page's own layout: the hero and the vertical rhythm. Shared pieces are in
+   components/landing/landing.module.css. Colours from tokens.ts via the @theme mirror in index.css. */
+
+.hero {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-deep) 0%,
+    var(--color-bg-page) 30%,
+    var(--color-bg-navy) 100%
+  );
+}
+
+/* The animated candles sit behind the headline, soft, so the words stay easy to read */
+.candles {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 340px;
+  opacity: 0.35;
+  pointer-events: none;
+  mask-image: linear-gradient(180deg, black 0%, black 40%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, black 0%, black 40%, transparent 100%);
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  max-width: 72rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin: 0 auto;
+  padding: 56px 16px 48px;
+  text-align: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  background: rgba(102, 98, 169, 0.1); /* color.glow at 10% */
+  color: var(--color-brand-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-brand-green);
+}
+
+.dotSoon {
+  background: var(--color-brand-amber);
+}
+
+.h1 {
+  margin: 0;
+  max-width: 52rem;
+  color: var(--color-brand-white);
+  font-size: 2.5rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.h1 span {
+  display: block;
+}
+
+.sub {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--color-brand-muted);
+  font-size: 1.125rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.paths {
+  width: 100%;
+  max-width: 60rem;
+  margin-top: 12px;
+}
+
+.page :global(#newsletter) {
+  scroll-margin-top: 64px; /* below the sticky top bar */
+}
+
+.page {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 88px;
+  padding: 56px 0 72px;
+}
+
+.faqWrap {
+  width: 100%;
+  max-width: 48rem;
+}
+
+.timelineRow {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.valueList {
+  display: flex;
+  max-width: 44rem;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  color: var(--color-brand-muted);
+  font-size: 1rem;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.valueList li {
+  display: flex;
+  gap: 10px;
+}
+
+.valueList li::before {
+  flex-shrink: 0;
+  color: var(--color-brand-purple);
+  content: '→';
+}
+
+.legal {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.8125rem; /* fontSize.xs11 */
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .h1 {
+    font-size: 3.25rem;
+  }
+
+  .heroInner {
+    padding-top: 80px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .h1 {
+    font-size: 3.75rem;
+  }
+}

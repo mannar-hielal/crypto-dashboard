@@ -1,0 +1,87 @@
+/* The accordion (owner's landing rewrite, 2026-11-22). Colours from tokens.ts via the @theme mirror
+   in index.css; values with no CSS variable are noted with their token. */
+
+.list {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+}
+
+.rowOpen {
+  border-color: var(--color-brand-glow);
+}
+
+.heading {
+  margin: 0;
+  font-size: inherit;
+}
+
+.button {
+  display: flex;
+  width: 100%;
+  min-height: 48px; /* a comfortable tap target */
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand-white);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.375; /* lineHeight.snug */
+  text-align: left;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* focusRing: 2px purpleDark, 3px offset; inset so the row's overflow does not clip it */
+.button:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark);
+  outline-offset: -3px;
+}
+
+.question {
+  flex: 1;
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--color-brand-purple);
+  transition: transform 0.2s ease;
+}
+
+.button[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+.panel {
+  padding: 0 16px 16px;
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
