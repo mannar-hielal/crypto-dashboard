@@ -104,6 +104,8 @@
   .scroller {
     overflow: visible;
     scroll-snap-type: none;
+    padding: 0; /* the room for shadows and rings is only for the clipping phone row */
+    scroll-padding-inline: 0;
   }
 
   .row {
