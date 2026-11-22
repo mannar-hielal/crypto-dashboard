@@ -41,6 +41,7 @@ function Slot({
  */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
+  // Latches true and never goes back (the import and the observer's cleanup rely on it)
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
   const [Loaded, setLoaded] = useState<Previews | null>(null);
   const [loadError, setLoadError] = useState<Error | null>(null);
@@ -89,9 +90,10 @@ export function LessonPreviewsLazy() {
 
   return (
     <div ref={holder} className={`${styles.holder}${settled ? ` ${styles.holderSettled}` : ''}`}>
-      {/* A live region that is always in the page and only gets its words when the previews fail, so a
-          screen reader announces it (a region mounted with its text already in it is often silent). It
-          is empty on purpose until a failure; copy this pattern only for a section that can fail. */}
+      {/* A live region that is in the page from the first render and only gets its words on a failure, so
+          a screen reader announces the change even when the import fails within a frame of starting
+          (a region mounted with its text already in it is often silent). Empty on purpose until
+          then; copy this pattern only for a section that can fail. */}
       <p role="status" className={styles.failed}>
         {failed ? 'The lesson previews did not load. Refresh the page to try again.' : ''}
       </p>

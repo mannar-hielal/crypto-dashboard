@@ -13,12 +13,8 @@ describe('LessonPreviewsLazy', () => {
 
   it('should load the lessons own pictures and titles when the row is near', async () => {
     const { container } = render(React.createElement(LessonPreviewsLazy));
-    // Where the row does not scroll (no phone width here) the list itself carries the name
-    const list = await screen.findByRole(
-      'list',
-      { name: 'A peek at the lessons' },
-      { timeout: 15000 }
-    );
+    // The list carries its name at every width; only a phone adds the region around it
+    const list = await screen.findByRole('list', { name: 'Lessons' }, { timeout: 15000 });
     expect(list.querySelectorAll('li')).toHaveLength(LESSON_PREVIEWS.length);
     expect(screen.queryByRole('region')).toBeNull();
     expect(container.querySelectorAll('svg[data-lesson-art]')).toHaveLength(LESSON_PREVIEWS.length);
@@ -35,7 +31,7 @@ describe('LessonPreviewsLazy', () => {
     render(React.createElement(LessonPreviewsLazy));
     const region = await screen.findByRole(
       'region',
-      { name: 'A peek at the lessons' },
+      { name: 'Lesson previews' },
       { timeout: 15000 }
     );
     expect(region.getAttribute('tabindex')).toBe('0');
@@ -54,13 +50,13 @@ describe('LessonPreviewsLazy', () => {
       removeEventListener: () => {},
     }));
     render(React.createElement(LessonPreviewsLazy));
-    await screen.findByRole('list', { name: 'A peek at the lessons' }, { timeout: 15000 });
+    await screen.findByRole('list', { name: 'Lessons' }, { timeout: 15000 });
     expect(screen.queryByRole('region')).toBeNull();
     matches = true;
     act(() => listeners.forEach((fn) => fn()));
-    expect(
-      screen.getByRole('region', { name: 'A peek at the lessons' }).getAttribute('tabindex')
-    ).toBe('0');
+    expect(screen.getByRole('region', { name: 'Lesson previews' }).getAttribute('tabindex')).toBe(
+      '0'
+    );
     matches = false;
     act(() => listeners.forEach((fn) => fn()));
     expect(screen.queryByRole('region')).toBeNull();
