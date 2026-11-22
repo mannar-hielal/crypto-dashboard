@@ -49,7 +49,7 @@
 
 .card {
   display: flex;
-  width: clamp(260px, 78vw, 320px);
+  width: min(clamp(260px, 78vw, 320px), 92vw); /* never wider than the screen */
   flex: 0 0 auto;
   flex-direction: column;
   gap: 4px;
@@ -120,7 +120,7 @@
   }
 }
 
-/* The quiet retry after a failed chunk: a text button, like the ticker's pause */
+/* The failure note shown when the previews chunk does not load: plain, centred text */
 .failed {
   margin: 0;
   color: var(--color-brand-muted);

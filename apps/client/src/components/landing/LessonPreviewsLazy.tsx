@@ -7,12 +7,12 @@ type Previews = ComponentType<{ onReady?: () => void }>;
 
 /**
  * What the error boundary renders when the previews fail: it closes the holder's gap and says so,
- * as an alert. Plain words, no button: a reload is the visitor's to do, and nothing here can go wrong
+ * as a polite status message. Plain words, no button: a reload is the visitor's to do, and nothing here can go wrong
  */
 function FailedNote({ onFail }: { onFail: () => void }) {
   useEffect(onFail, [onFail]);
   return (
-    <p role="alert" className={styles.failed}>
+    <p role="status" className={styles.failed}>
       The lesson previews did not load. Refresh the page to try again.
     </p>
   );
@@ -41,7 +41,7 @@ function Slot({
  * Loads the lesson previews only when they come near the screen: the lessons' picture module is
  * large, and most visitors read the top of the page first. Without `IntersectionObserver` it
  * loads at once. A failure (offline, a stale chunk after a deploy, a picture that throws) costs this
- * section only: one note with a reload button.
+ * section only: one plain note asking the visitor to refresh.
  */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
