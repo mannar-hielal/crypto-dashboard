@@ -7,7 +7,9 @@ type Previews = ComponentType<{ onReady?: () => void }>;
 
 /** What the error boundary renders when the previews fail: nothing itself, it only tells the holder */
 function FailedMarker({ onFail }: { onFail: () => void }) {
-  useEffect(onFail, [onFail]);
+  useEffect(() => {
+    onFail();
+  }, [onFail]);
   return null;
 }
 

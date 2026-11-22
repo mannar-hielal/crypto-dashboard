@@ -5,7 +5,7 @@ import { LESSON_PREVIEWS } from '@/lib/landingContent';
 import styles from './LessonPreviews.module.css';
 
 // The exact complement of the CSS grid query (min-width: 768px), also at a fractional width
-const PHONE_ROW = 'not (min-width: 768px)';
+const PHONE_ROW = 'not all and (min-width: 768px)';
 
 /** The row scrolls sideways only on a phone: only there is it a stop for the keyboard */
 function useScrollingRow() {
@@ -18,13 +18,8 @@ function useScrollingRow() {
     const query = window.matchMedia(PHONE_ROW);
     const update = () => setScrolls(query.matches);
     update(); // a resize between the first render and this effect would be missed otherwise
-    // Older Safari (before 14) has addListener only
-    if (query.addEventListener) {
-      query.addEventListener('change', update);
-      return () => query.removeEventListener('change', update);
-    }
-    query.addListener(update);
-    return () => query.removeListener(update);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
   }, [supported]);
   return scrolls;
 }
@@ -37,7 +32,9 @@ function useScrollingRow() {
 export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
   const scrolls = useScrollingRow();
   // Tells the holder the cards are in, so it can drop the height it reserved
-  useEffect(() => onReady?.(), [onReady]);
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
   return (
     // Where the row scrolls sideways (a phone) the scroller is a labelled region and a tab stop; on a
     // wider screen it is a plain grid, so no landmark is added; the list always has its own name
