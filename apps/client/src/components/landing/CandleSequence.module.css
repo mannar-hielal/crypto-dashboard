@@ -1,0 +1,161 @@
+/* The hero's animated candles. Plain SVG + CSS, drawn once, then the last candle breathes. Colours
+   from tokens.ts via the @theme mirror in index.css. */
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.grid {
+  stroke: rgba(255, 255, 255, 0.06); /* border.divider */
+  stroke-width: 1;
+}
+
+.up {
+  color: var(--color-brand-green);
+}
+
+.down {
+  color: var(--color-brand-red);
+}
+
+.wick {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.body {
+  fill: currentColor;
+}
+
+.average {
+  fill: none;
+  stroke: var(--color-brand-purple);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+}
+
+/* Motion only for visitors who have not asked for less of it */
+@media (prefers-reduced-motion: no-preference) {
+  .candle {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: draw 0.45s ease-out both;
+  }
+
+  .candle:nth-of-type(1) {
+    animation-delay: 0.15s;
+  }
+  .candle:nth-of-type(2) {
+    animation-delay: 0.27s;
+  }
+  .candle:nth-of-type(3) {
+    animation-delay: 0.39s;
+  }
+  .candle:nth-of-type(4) {
+    animation-delay: 0.51s;
+  }
+  .candle:nth-of-type(5) {
+    animation-delay: 0.63s;
+  }
+  .candle:nth-of-type(6) {
+    animation-delay: 0.75s;
+  }
+  .candle:nth-of-type(7) {
+    animation-delay: 0.87s;
+  }
+  .candle:nth-of-type(8) {
+    animation-delay: 0.99s;
+  }
+  .candle:nth-of-type(9) {
+    animation-delay: 1.11s;
+  }
+  .candle:nth-of-type(10) {
+    animation-delay: 1.23s;
+  }
+  .candle:nth-of-type(11) {
+    animation-delay: 1.35s;
+  }
+  .candle:nth-of-type(12) {
+    animation-delay: 1.47s;
+  }
+  .candle:nth-of-type(13) {
+    animation-delay: 1.59s;
+  }
+  .candle:nth-of-type(14) {
+    animation-delay: 1.71s;
+  }
+  .candle:nth-of-type(15) {
+    animation-delay: 1.83s;
+  }
+  .candle:nth-of-type(16) {
+    animation-delay: 1.95s;
+  }
+  .candle:nth-of-type(17) {
+    animation-delay: 2.07s;
+  }
+  .candle:nth-of-type(18) {
+    animation-delay: 2.19s;
+  }
+  .candle:nth-of-type(19) {
+    animation-delay: 2.31s;
+  }
+  .candle:nth-of-type(20) {
+    animation-delay: 2.43s;
+  }
+  .candle:nth-of-type(21) {
+    animation-delay: 2.55s;
+  }
+  .candle:nth-of-type(22) {
+    animation-delay: 2.67s;
+  }
+  .candle:nth-of-type(23) {
+    animation-delay: 2.79s;
+  }
+  .candle:nth-of-type(24) {
+    animation-delay: 2.91s;
+  }
+
+  .candle.last {
+    animation:
+      draw 0.45s ease-out 3.2s both,
+      breathe 2.4s ease-in-out 3.7s infinite;
+  }
+
+  .average {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trace 3s ease-out 0.4s forwards;
+  }
+}
+
+@keyframes draw {
+  from {
+    opacity: 0;
+    transform: scaleY(0.15);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.88);
+  }
+}
+
+@keyframes trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

@@ -1,0 +1,82 @@
+/* The coin ribbon: a slow ticker of the nine coins. Colours from tokens.ts via the @theme mirror. */
+
+.ribbon {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 12px 0;
+  border-block: 1px solid rgba(255, 255, 255, 0.06); /* border.divider */
+  background: rgba(255, 255, 255, 0.02);
+  /* The ends fade out, so coins slide in and out softly */
+  mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 40px;
+  margin: 0;
+  padding: 0 20px;
+  list-style: none;
+}
+
+.coin {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+}
+
+.name {
+  color: var(--color-brand-white);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.symbol {
+  color: var(--color-brand-muted);
+  font-size: 0.8125rem; /* fontSize.xs11 */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .track {
+    animation: slide 45s linear infinite;
+  }
+
+  .ribbon:hover .track {
+    animation-play-state: paused;
+  }
+}
+
+/* A still, wrapped row: no loop, so no twin */
+@media (prefers-reduced-motion: reduce) {
+  .ribbon {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .track {
+    width: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px 32px;
+  }
+
+  .twin {
+    display: none;
+  }
+}
+
+@keyframes slide {
+  to {
+    transform: translateX(-50%);
+  }
+}

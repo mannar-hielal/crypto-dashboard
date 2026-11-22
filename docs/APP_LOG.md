@@ -4705,6 +4705,62 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
   "coming soon" titles.
 
+### 2026-11-22 — The landing and features pages rewritten for a beginner: learning app and real chart
+
+Owner's brief: whoever lands should see within seconds that this is BOTH a learning app (lessons on a real-data chart) and an
+advanced real-data chart with account management, drawing tools and virtual money. Plain, fun English for people with zero trading
+knowledge; no hype, no profit promises, paper trading only. Branch `feat/landing-features-rewrite`.
+
+**Landing page (live), in order:** hero (one h1, two path cards: "Open the live chart", no sign up, and "Start learning", free
+account); "Questions every beginner asks" (accessible accordion, each answer ends in "Start here"); a coin ribbon of the 9 pairs;
+"From your first click to your first trade" (a timeline of 8 milestones, in place of the terminal band "The chart's free. So is the
+trading desk"); "Learn it. Then try it on real candles." (six lesson cards drawn with the lessons' own `LessonArt`, in place of
+"Advanced Charts"); three real screenshots in device frames; six "where we do better" sections, one per competitor group, each with
+an honest "where they are better"; one comparison table. **Pre-launch (`VITE_IS_LIVE` not true):** the Launching Soon hero, the coin
+ribbon and the newsletter form only (no sign-up, chart, FAQ or table, because none exists before launch); still `noindex`.
+
+**Features page:** learning first (how a lesson works, the lesson cards, what is covered today), then the chart, the practice desk,
+the account, real data, phone, and an accordion of six questions with FAQPage JSON-LD (`SeoHead` gained an optional `jsonLd` prop,
+escaped for `<`). Links to `/blog`, `/register`, `/chart`. Footer: Features, Live chart and Blog added beside the legal links.
+Titles: landing "Learn Crypto Trading Free: Lessons and a Live Chart", features "Features: Learn Crypto Trading on a Live Chart".
+
+**Decisions.** Competitors are groups, never brands, and the page names no brand (a test checks). The blurred "logos" are made-up
+CSS shapes with a heavy blur (`BrandMark`), no real logo files. The page's words live in `lib/landingContent.ts` (pages, tests and
+JSON-LD read the same text). Graphics: the candle sequence is plain SVG + CSS, drawn once, then the last candle breathes (the motion
+sits inside `prefers-reduced-motion: no-preference`); the coin ribbon uses the bundled cryptocurrency-icons (CC0) already in
+`lib/cryptoIcons.ts`; screenshots are real Playwright captures of a throwaway account (name scrubbed), 1100 px WebP of 30-48 KB in
+`assets/landing/`, lazy with width and height; the lesson row loads late (`LessonPreviewsLazy`: IntersectionObserver plus
+`React.lazy`, so the lessons' picture module is off the first load). No third-party illustration library was added and no npm
+dependency. Removed with the old page: `AccountUnlocksTerminal` (+ test, + anchor `landing.unlocks.register`) and the unused
+`chart.svg`, `papertrading.svg`, `9crypto.svg`, `realtime-data.svg`, `visual-balance.svg`, `hero-mac-app.png`, `hero.png`. New anchors:
+`landing.faq.start`, `features.hero.chart`, `features.hero.register`, `features.faq.start`.
+
+**The claims table (what each tick, tilde or cross rests on).** A cell is what most of the group does ("some" = it varies); the
+groups' columns come from `reports/Paper trading app business strategy.md` ("Competitive landscape", "Why a user would pick this
+app"), read November 2026. Our column, each verified here:
+
+| Row                                  | Us  | Verified against                                                                                    |
+| ------------------------------------ | --- | --------------------------------------------------------------------------------------------------- |
+| Open the chart with no sign up       | yes | `/chart` is a public route (`App.tsx`); trading there asks to sign in                               |
+| No exchange account or ID needed     | yes | Sign-up is email + password only (`RegisterPage.tsx`)                                               |
+| Free to practise, no card            | yes | No payment code; Terms: free service                                                                |
+| Lessons that end in a practice trade | yes | `learn/path.ts`: lesson 1 ends on the buy practice, then Buy / Sell stops with "what just happened" |
+| Crypto futures rules                 | yes | Bybit Parity BP-3 (mark price, liquidation), BP-4 (funding), BP-5 (cross / isolated), this log      |
+| Drawing tools and indicators         | yes | `lib/libraryTools.ts`, `lib/indicators/catalog.ts` (9), `INTERVALS` (10)                            |
+| Saved record with notes              | yes | Account tabs: Order History, Balance History, Journal (`isUserNote` notes)                          |
+| No ads, no push to deposit           | yes | No ad code or affiliate link anywhere in `apps/client`                                              |
+| Balance above $10,000 (we: no)       | no  | `STARTING_BALANCE = 10_000` (`engine/types.ts`)                                                     |
+| Hundreds of coins (we: no)           | no  | `ALLOWED_SYMBOLS`: 9                                                                                |
+| Leverage above 10x (we: no)          | no  | `MAX_LEVERAGE` 10 (2026-05-04 entry)                                                                |
+
+**Refused claims:** a record that helps anyone get funded (the page says the opposite); free replay, a journal with R-multiples and
+prop-firm rehearsal (roadmap, not built); "works where exchange demos are blocked" (the Terms exclude some jurisdictions); "history is
+never wiped" (not verified); any price, profit or win-rate promise. The lessons row says "as far as we could find".
+
+**Tests:** `LandingPage.test` (both states), `FeaturesPage.test`, `Accordion.test` (ARIA wiring, keys), `landingParts.test` (table
+rows and marks, the three deliberate crosses, path-card links, FAQ buttons, ribbon, candles, timeline, screenshots),
+`LessonPreviews.test`, `SeoHead.test`. Checked at 375 / 412 / 820 / 1440 px: no sideways scroll.
+
 ### 2026-11-22 — Chapter 2, Lesson 8 "Why sending crypto costs a fee"
 
 The fourth lesson of chapter 2 (its own PR, owner 2026-11-19), built on the owner's goal of 2026-11-22 ("implemented, code-reviewed,
