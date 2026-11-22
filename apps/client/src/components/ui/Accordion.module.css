@@ -44,7 +44,7 @@
 }
 
 .button:hover {
-  background: color-mix(in srgb, var(--color-brand-white) 3%, transparent);
+  background: color-mix(in srgb, white 3%, transparent);
 }
 
 /* focusRing: 2px purpleDark, 3px offset; inset so the row's overflow does not clip it */

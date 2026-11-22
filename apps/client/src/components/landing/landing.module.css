@@ -79,7 +79,7 @@
 }
 
 .ctaGhost {
-  border: 1px solid color-mix(in srgb, var(--color-brand-white) 20%, transparent);
+  border: 1px solid color-mix(in srgb, white 20%, transparent);
   color: var(--color-brand-white);
 }
 
