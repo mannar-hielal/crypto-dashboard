@@ -36,23 +36,22 @@ export function CoinRibbon() {
   // WCAG 2.2.2: a loop that runs over five seconds needs a way to pause it, by keyboard and touch too
   const [paused, setPaused] = useState(false);
   return (
-    <div className={`${styles.ribbon}${paused ? ` ${styles.paused}` : ''}`}>
-      <button
-        type="button"
-        className={styles.pause}
-        aria-pressed={paused}
-        onClick={() => setPaused((p) => !p)}
-      >
+    <div className={`${styles.wrap}${paused ? ` ${styles.paused}` : ''}`}>
+      {/* Outside the masked, clipped ribbon, so its focus ring and its text are never cut or faded.
+          The label changes with the state, so it carries no aria-pressed (a toggle keeps one label) */}
+      <button type="button" className={styles.pause} onClick={() => setPaused((p) => !p)}>
         {paused ? 'Play the coin ticker' : 'Pause the coin ticker'}
       </button>
-      <ul className={styles.track} aria-label="The nine coins you can practise on">
-        {COINS.map((c) => (
-          <Coin key={c.symbol} {...c} />
-        ))}
-        {COINS.map((c) => (
-          <Coin key={`twin-${c.symbol}`} {...c} twin />
-        ))}
-      </ul>
+      <div className={styles.ribbon}>
+        <ul className={styles.track} aria-label="The nine coins you can practise on">
+          {COINS.map((c) => (
+            <Coin key={c.symbol} {...c} />
+          ))}
+          {COINS.map((c) => (
+            <Coin key={`twin-${c.symbol}`} {...c} twin />
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

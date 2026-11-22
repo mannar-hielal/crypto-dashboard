@@ -264,6 +264,18 @@ export const LESSON_PREVIEWS: readonly LessonPreview[] = [
     art: 'friends',
   },
   {
+    number: 5,
+    title: 'Coins and tokens',
+    blurb: 'A coin has its own road, a token uses one. What each is for.',
+    art: 'twoRoads',
+  },
+  {
+    number: 6,
+    title: 'Stablecoins',
+    blurb: 'Coins that try to sit still, and why traders keep them.',
+    art: 'cloakroom',
+  },
+  {
     number: 7,
     title: 'Your wallet, your keys',
     blurb: 'Who really holds your crypto, and how to keep it safe.',

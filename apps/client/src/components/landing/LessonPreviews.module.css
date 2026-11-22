@@ -86,11 +86,17 @@
 @media (min-width: 768px) {
   .row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     overflow: visible;
   }
 
   .card {
     min-width: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .row {
+    grid-template-columns: repeat(4, 1fr);
   }
 }

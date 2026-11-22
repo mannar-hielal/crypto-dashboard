@@ -98,6 +98,10 @@
   margin-top: 12px;
 }
 
+.page :global(#newsletter) {
+  scroll-margin-top: 64px; /* below the sticky top bar */
+}
+
 .page {
   display: flex;
   width: 100%;

@@ -1,5 +1,11 @@
 /* The coin ribbon: a slow ticker of the nine coins. Colours from tokens.ts via the @theme mirror. */
 
+.wrap {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
 .ribbon {
   position: relative;
   width: 100%;
@@ -52,7 +58,7 @@
   }
 
   .ribbon:hover .track,
-  .ribbon:focus-within .track,
+  .wrap:focus-within .track,
   .paused .track {
     animation-play-state: paused;
   }
@@ -83,13 +89,11 @@
   }
 }
 
-/* The pause control: a small text button above the ribbon's right end, focusable, never in the way */
+/* The pause control: a small text button above the ribbon's right end, focusable, outside the mask */
 .pause {
-  position: absolute;
-  top: 2px;
-  right: 8px;
-  z-index: 1;
-  padding: 2px 8px;
+  align-self: flex-end;
+  margin: 0 12px 6px 0;
+  padding: 4px 10px;
   border: 0;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.06);

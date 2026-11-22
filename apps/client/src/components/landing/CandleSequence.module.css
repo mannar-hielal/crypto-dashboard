@@ -123,7 +123,7 @@
   .candle.last {
     animation:
       draw 0.45s ease-out 3.2s both,
-      breathe 2.4s ease-in-out 3.7s infinite;
+      breathe 2.4s ease-in-out 3.7s 3;
   }
 
   .average {

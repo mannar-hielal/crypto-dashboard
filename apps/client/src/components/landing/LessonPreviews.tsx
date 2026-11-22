@@ -21,8 +21,13 @@ function useScrollingRow() {
     if (!supported) return;
     const query = window.matchMedia(PHONE_ROW);
     const update = () => setScrolls(query.matches);
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
+    // Older Safari (before 14) has addListener only
+    if (query.addEventListener) {
+      query.addEventListener('change', update);
+      return () => query.removeEventListener('change', update);
+    }
+    query.addListener(update);
+    return () => query.removeListener(update);
   }, [supported]);
   return scrolls;
 }

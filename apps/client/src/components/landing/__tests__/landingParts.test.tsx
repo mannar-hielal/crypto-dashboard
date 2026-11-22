@@ -260,11 +260,10 @@ describe('the ribbon and the table, accessibility (review 2026-11-22)', () => {
   it('should let a visitor pause the coin ticker, by keyboard or touch', () => {
     render(React.createElement(CoinRibbon));
     const pause = screen.getByRole('button', { name: 'Pause the coin ticker' });
-    expect(pause.getAttribute('aria-pressed')).toBe('false');
+    // A toggle keeps one label, or its label swaps without aria-pressed: here the label swaps
+    expect(pause.hasAttribute('aria-pressed')).toBe(false);
     fireEvent.click(pause);
-    expect(
-      screen.getByRole('button', { name: 'Play the coin ticker' }).getAttribute('aria-pressed')
-    ).toBe('true');
+    expect(screen.getByRole('button', { name: 'Play the coin ticker' })).not.toBeNull();
   });
 
   it('should name the table’s scroll region by its caption, once', () => {
