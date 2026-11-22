@@ -41,6 +41,7 @@ function Slot({
  */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
+  // Latches true and never goes back (the import and the failure note both rely on it)
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
   const [Loaded, setLoaded] = useState<Previews | null>(null);
   const [loadError, setLoadError] = useState<Error | null>(null);
@@ -92,9 +93,11 @@ export function LessonPreviewsLazy() {
       {/* A live region that is always in the page and only gets its words when the previews fail, so a
           screen reader announces it (a region mounted with its text already in it is often silent). It
           is empty on purpose until a failure; copy this pattern only for a section that can fail. */}
-      <p role="status" className={styles.failed}>
-        {failed ? 'The lesson previews did not load. Refresh the page to try again.' : ''}
-      </p>
+      {near && (
+        <p role="status" className={styles.failed}>
+          {failed ? 'The lesson previews did not load. Refresh the page to try again.' : ''}
+        </p>
+      )}
       {near && (
         <ErrorBoundary fallback={<FailedMarker onFail={markFailed} />}>
           <Slot Loaded={Loaded} error={loadError} onReady={markSettled} />

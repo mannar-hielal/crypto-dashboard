@@ -35,7 +35,7 @@ describe('LessonPreviewsLazy', () => {
     render(React.createElement(LessonPreviewsLazy));
     const region = await screen.findByRole(
       'region',
-      { name: 'A peek at the lessons' },
+      { name: 'Lesson previews, swipe sideways' },
       { timeout: 15000 }
     );
     expect(region.getAttribute('tabindex')).toBe('0');
@@ -59,7 +59,9 @@ describe('LessonPreviewsLazy', () => {
     matches = true;
     act(() => listeners.forEach((fn) => fn()));
     expect(
-      screen.getByRole('region', { name: 'A peek at the lessons' }).getAttribute('tabindex')
+      screen
+        .getByRole('region', { name: 'Lesson previews, swipe sideways' })
+        .getAttribute('tabindex')
     ).toBe('0');
     matches = false;
     act(() => listeners.forEach((fn) => fn()));
