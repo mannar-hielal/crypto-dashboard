@@ -4,7 +4,8 @@ import { LessonArt } from '@/guide/LessonArt';
 import { LESSON_PREVIEWS } from '@/lib/landingContent';
 import styles from './LessonPreviews.module.css';
 
-const PHONE_ROW = '(max-width: 767px)';
+// The exact complement of the CSS grid query (min-width: 768px), also at a fractional width
+const PHONE_ROW = 'not (min-width: 768px)';
 
 /** The row scrolls sideways only on a phone: only there is it a stop for the keyboard */
 function useScrollingRow() {

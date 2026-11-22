@@ -12,7 +12,10 @@ vi.mock('../LessonPreviews', () => ({
 import { LessonPreviewsLazy } from '../LessonPreviewsLazy';
 
 describe('LessonPreviewsLazy when a preview throws on render', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it('should show the same plain note and close the reserved gap (review 2026-11-22)', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
