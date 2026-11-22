@@ -360,9 +360,17 @@ learner wants first is **what they will know by the end**. So every lesson has o
 near the start, drawn from the lesson's own closing recap.
 
 - **The card:** `title: 'What you will learn'` (the same on every lesson, like the one label set),
-  `art` on top, then `preview: [...]`: **3 or 4 short numbered lines** (at most 16 words each),
-  rendered in the summary's style (purple numbers). No `text`, no `lines`, no `presenter`: the
-  learner reads the promise, not a performance. It counts toward the 80-word cap.
+  its **own graphic** on top, then `preview: [...]`: **3 or 4 short numbered lines** (at most 16
+  words each), rendered in the summary's style (purple numbers). It counts toward the 80-word cap.
+  - **The graphic is derived from the lesson's topics, never borrowed** (owner 2026-11-22: a road
+    scene or the friends, drawn for another card, said little at this moment). It is a numbered path
+    through the same 3 or 4 topics as the lines below, one icon and a two-line label each
+    (`PeekMap` in `LessonArt.tsx`, one `peek…` art id per lesson, e.g. `peekCoins`), the same
+    template every time so every opening looks alike. A new lesson adds its own `peek…` id (type,
+    `ART`, `ART_LABELS`, the art test), with labels of at most 10 characters a line (13 for three
+    stops) and the stops in the order of the lines.
+  - **A guide points at it:** Pulin or Berwyn stands in the picture with `pose: 'point'` (alternate
+    them from lesson to lesson). They only point; there is no chat and no text from them.
 - **Where it goes:**
   - A lesson whose opening would be a chat: the peek **is card 1** and takes its picture (Lessons
     5, 6 and 7).
@@ -375,6 +383,9 @@ near the start, drawn from the lesson's own closing recap.
   new fact: the promise and the summary must match. Write the recap first, then the peek from it, and
   re-read both whenever one changes. A line that names a number or a claim goes through the fact check
   like any card.
+- **The first card never repeats the peek** (owner 2026-11-22): a cold open, a hook or an opening
+  text card does not announce what the lesson will teach ("In the next 9 minutes: …", "Today you
+  will see …"). The peek, right after it, says it once. A hook ends on its own question or fact.
 - **The guides still appear** on the analogies, the math, the quizzes and the teaching cards. The
   chat card (`lines`) stays a tool for a mid-lesson exchange where two voices help; it is never card 1.
 - **A peek added to a released lesson moves its screens:** raise `stepBase` by the SDK's
@@ -383,8 +394,9 @@ near the start, drawn from the lesson's own closing recap.
   data migration that clears every learner's progress on the lesson (see "Tests and docs"). A lesson
   not yet released only changes its card.
 - **Tests:** `lessons.test.ts` ("should open with a sneak peek, never the guides' chat") holds the
-  rule for every lesson; `LessonSheet.test.tsx` checks the card renders as a picture and a numbered
-  list with no guide.
+  rule for every lesson (its own `peek…` graphic, a pointing guide, no announcement in a cold open);
+  `LessonSheet.test.tsx` checks the card renders as a graphic with a pointing guide and a numbered
+  list; `LessonArt.test.tsx` checks each graphic's stops.
 - **Outline:** list the peek's lines in the outline (Workflow step 2), next to the recap.
 
 ## Quiz formats

@@ -69,6 +69,13 @@ const ARTS: LessonArtId[] = [
   'chainsCompare',
   'simpleComplex',
   'feeCheck',
+  'peekOwnership',
+  'peekSwings',
+  'peekStyle',
+  'peekCoins',
+  'peekStable',
+  'peekWallets',
+  'peekFees',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -120,6 +127,13 @@ const TELLING: LessonArtId[] = [
   'chainsCompare',
   'simpleComplex',
   'feeCheck',
+  'peekOwnership',
+  'peekSwings',
+  'peekStyle',
+  'peekCoins',
+  'peekStable',
+  'peekWallets',
+  'peekFees',
 ];
 
 describe('the guides', () => {
@@ -255,13 +269,27 @@ describe('LessonArt', () => {
     expect(words('waitingLine')).toMatch(/high.*mid.*low.*low.*higher fees board first/);
     expect(words('feeBids')).toMatch(/quiet.*busy.*the fee people offer/);
     expect(words('feeSpike')).toMatch(
-      /20 Apr ≈ \$128.*early April ≈ \$5.*21 Apr ≈ \$35.*drawn from reported averages/
+      /20 Apr ≈ \$128.*early April ≈ \$4.*21 Apr ≈ \$35.*drawn from reported averages/
     );
     expect(words('chainsCompare')).toMatch(
       /a cheap chain.*often cents.*a pricier chain.*dollars when busy/
     );
     expect(words('simpleComplex')).toMatch(/a plain send.*lower fee.*a swap.*higher fee/);
     expect(words('feeCheck')).toMatch(/\$40.*\$12.*look at the fee before you confirm/);
+    // The sneak peek graphics: a numbered path, one stop per line of the card below it
+    expect(words('peekCoins')).toMatch(
+      /in this lesson.*1.*Coin or.*token.*2.*Token.*kinds.*3.*Altcoin.*swings.*4.*Check fast.*gains/
+    );
+    expect(words('peekStyle')).toMatch(/1.*Trading or.*2.*Spreading.*3.*Your time/);
+    for (const id of [
+      'peekOwnership',
+      'peekSwings',
+      'peekStable',
+      'peekWallets',
+      'peekFees',
+    ] as const) {
+      expect(words(id), id).toMatch(/in this lesson.*1.*2.*3.*4/);
+    }
     const badges = render(<LessonArt id="tickerBadges" />).container.textContent ?? '';
     expect(badges).toMatch(/BTC.*ETH.*SOL.*BNB.*XRP.*ADA.*AVAX.*DOGE.*LINK.*a token/);
     // The chain: each block's prev is the fingerprint of the block before it
