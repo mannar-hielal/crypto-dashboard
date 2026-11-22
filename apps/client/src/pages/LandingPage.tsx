@@ -33,7 +33,7 @@ export function LandingPage() {
   return (
     <>
       <SeoHead
-        title="Learn Crypto Trading Free: Lessons and a Live Chart"
+        title="Learn Crypto Trading Free"
         description="Learn crypto trading from zero with short lessons, then practise on a live chart with $10,000 of pretend money. Free, no real money, and the chart needs no sign up."
         path="/"
         {...(!isLive && { noIndex: true })}

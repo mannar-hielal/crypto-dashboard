@@ -144,11 +144,6 @@
   content: '→';
 }
 
-.centered {
-  display: flex;
-  justify-content: center;
-}
-
 .legal {
   max-width: 44rem;
   margin: 0;

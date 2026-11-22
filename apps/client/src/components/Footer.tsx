@@ -16,7 +16,8 @@ const LINKS = [
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
 export function Footer() {
-  // Before launch there is no chart to link to
+  // Before launch there is no chart to link to. /features stays on purpose (it says "launching soon" and
+  // is noindex before launch, like the landing page link to it) and /blog is public content
   const links = LINKS.filter((l) => isLive || l.to !== '/chart');
   return (
     <footer

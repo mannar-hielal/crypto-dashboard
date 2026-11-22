@@ -58,10 +58,11 @@ export function FeaturesPage() {
   return (
     <>
       <SeoHead
-        title="Features: Learn Crypto Trading on a Live Chart"
+        title="Features: Learn Crypto by Doing"
         description="See what you get: step-by-step crypto lessons, a live chart with indicators and drawing tools, a $10,000 practice account and a saved history. Free, paper money only."
         path="/features"
-        // Before launch the page says nothing that is not live yet: no index, no FAQ data
+        // Before launch the page stays out of the index and publishes no FAQ data; it still describes
+        // the product, under a "launching soon" line, so its sign-up and chart words read as what is coming
         {...(isLive ? { jsonLd: FAQ_JSON_LD } : { noIndex: true })}
       />
       <TopBar marketing />
@@ -79,6 +80,7 @@ export function FeaturesPage() {
 
       <AuthLayout>
         <header className={styles.hero}>
+          {!isLive && <p className={styles.soon}>Launching soon · this is what you will get</p>}
           <h1 className={styles.h1}>
             <span className={shared.gradientText}>Learn it. Try it.</span> All in one place.
           </h1>

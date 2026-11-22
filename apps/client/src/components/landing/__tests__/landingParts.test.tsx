@@ -226,3 +226,29 @@ describe('the chapter claims on the pages', () => {
     }
   });
 });
+
+describe('the lesson and chapter facts on the pages', () => {
+  it('should pin the lesson previews and the lesson count to the lessons themselves (review 2026-11-22)', async () => {
+    const { LESSONS } = await import('@/guide/lessons');
+    const { CHAPTERS } = await import('@/learn/path');
+    const { LESSON_PREVIEWS, FEATURES_FAQ } = await import('@/lib/landingContent');
+    for (const p of LESSON_PREVIEWS) {
+      const lesson = LESSONS.find((l) => l.number === p.number)!;
+      expect(lesson, `lesson ${p.number}`).toBeDefined();
+      // A shortened title still starts the real one's words
+      expect(lesson.title.toLowerCase(), p.title).toContain(
+        p.title
+          .toLowerCase()
+          .replace(/[?:].*$/, '')
+          .trim()
+          .split(' ')[0]
+      );
+    }
+    const built = CHAPTERS.filter((c) => c.status === 'open').length;
+    const answer = FEATURES_FAQ.find((q) => q.id === 'lessons')!.answer;
+    const words = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+    expect(answer).toContain(
+      `${words[LESSONS.length - 1]} lessons in ${words[built - 1].toLowerCase()} chapters`
+    );
+  });
+});

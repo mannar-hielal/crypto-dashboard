@@ -135,4 +135,15 @@ describe('FeaturesPage', () => {
     expect(seo.getAttribute('data-noindex')).toBe('false');
     expect(seo.getAttribute('data-json')).toContain('FAQPage');
   });
+
+  it('should say it is launching soon before launch, and not when live', async () => {
+    vi.stubEnv('VITE_IS_LIVE', 'false');
+    await renderFeatures();
+    expect(screen.getByText(/launching soon/i)).not.toBeNull();
+    cleanup();
+    vi.resetModules();
+    vi.stubEnv('VITE_IS_LIVE', 'true');
+    await renderFeatures();
+    expect(screen.queryByText(/launching soon/i)).toBeNull();
+  });
 });
