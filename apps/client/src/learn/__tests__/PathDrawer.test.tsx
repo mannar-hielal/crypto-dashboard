@@ -82,7 +82,7 @@ describe('PathDrawer', () => {
     expect(
       screen.getByText('Your crypto toolbox: coins, wallets and the networks behind them')
     ).toBeTruthy();
-    expect(screen.getByText('Why sending crypto costs a fee')).toBeTruthy();
+    expect(screen.getByText('Trading without a middleman: DApps and pools')).toBeTruthy();
     // The legend names the two icons, and nothing says "Hands-on" any more (owner 2026-11-12)
     const legend = screen.getByRole('list', { name: 'Kinds of stop' }).textContent;
     expect(legend).toContain('Practice on the real chart');
@@ -147,15 +147,15 @@ describe('PathDrawer', () => {
   it('should never make a coming-soon stop focusable', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const stop = screen.getByText('Why sending crypto costs a fee').closest('li')!;
+    const stop = screen.getByText('Trading without a middleman: DApps and pools').closest('li')!;
     expect(stop.querySelectorAll('button')).toHaveLength(0);
   });
 
   it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
-    // Review fix 2026-11-19: chapter 2 is open with three built lessons and three stops still to come
+    // Review fix 2026-11-19: chapter 2 is open with four built lessons and two stops still to come
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const stop = screen.getByText('Why sending crypto costs a fee').closest('li')!;
+    const stop = screen.getByText('Trading without a middleman: DApps and pools').closest('li')!;
     expect(stop.textContent).toContain('(coming soon)');
     expect(screen.getByText(/Chapter 2 · 0 of 6 done/)).toBeTruthy();
   });

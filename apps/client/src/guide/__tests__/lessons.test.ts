@@ -224,7 +224,8 @@ describe('lessons', () => {
           lesson.id === 'lesson-04' ||
           lesson.id === 'lesson-coins' ||
           lesson.id === 'lesson-stablecoins' ||
-          lesson.id === 'lesson-wallets'
+          lesson.id === 'lesson-wallets' ||
+          lesson.id === 'lesson-fees'
         ) {
           expect([lesson.tour, lesson.tryWidget, lesson.tryIntro]).toEqual([
             undefined,
@@ -317,6 +318,7 @@ describe('lessons', () => {
       ['lesson-coins', 5, 'Coins and tokens: who has their own road'],
       ['lesson-stablecoins', 6, 'Stablecoins: the coins that try to sit still'],
       ['lesson-wallets', 7, 'Your wallet, your keys: who holds them?'],
+      ['lesson-fees', 8, 'Why sending crypto costs a fee'],
     ]);
   });
 
@@ -423,6 +425,7 @@ describe('lessons', () => {
       'An investor’s year',
       'Two assets, one week',
       'Park your profit',
+      'Is it worth it?',
     ]);
   });
 
@@ -1164,6 +1167,72 @@ describe('lessons', () => {
     // Lesson 6 said wallets come next, and this one says fees do
     expect(l.recap?.highlight?.text).toMatch(/Next up: why sending crypto costs a fee/);
     expect(l.next).toBeUndefined();
+  });
+
+  it('should teach network fees in the approved order, with the bus metaphor (owner goal 2026-11-22)', () => {
+    const l = getLesson('lesson-fees');
+    expect(l.cards.map((c) => c.title)).toEqual([
+      'What you will learn',
+      'Sending has a price',
+      'A block is a bus',
+      'Who picks the passengers?',
+      'From send to confirmed',
+      'Why a fee exists',
+      'Why the fee moves',
+      'Who is who?',
+      'A real fee spike',
+      'Is it worth it?',
+      'Cheap chains and pricey chains',
+      'A plain send or a swap',
+      'What makes a fee higher?',
+      'Busy days',
+      'Plan before you send',
+      'Two different fees',
+      'Which costs the most?',
+    ]);
+    // 20 screens: 17 cards, Your call after "Plan before you send", the summary and the close
+    expect(lessonScreens(l)).toHaveLength(20);
+    expect(l.cards[l.momentAfter!].title).toBe('Plan before you send');
+    expect(l.moment.options[l.moment.correct]).toMatch(/^Check whether waiting/);
+    // Quizzes: order, match, pick, then two multiple choice; no practice trade
+    const quiz = (title: string) => l.cards.find((c) => c.title === title)!.quiz!;
+    expect(quiz('From send to confirmed').format).toBe('order');
+    expect(quiz('From send to confirmed').steps).toHaveLength(4);
+    expect(quiz('Who is who?').format).toBe('match');
+    expect(quiz('Who is who?').pairs).toHaveLength(4);
+    const pick = quiz('What makes a fee higher?');
+    expect(pick.format).toBe('pick');
+    expect(pick.tiles!.filter((t) => t.right)).toHaveLength(3);
+    for (const title of ['Busy days', 'Which costs the most?']) {
+      const q = quiz(title);
+      expect(q.options[q.correct], title).toBeTruthy();
+    }
+    expect(l.cards.filter((c) => c.practice)).toEqual([]);
+    // The bus is Berwyn's analogy, and says where it stops matching
+    const bus = l.cards.find((c) => c.title === 'A block is a bus')!.analogy;
+    expect(bus?.who).toBe('tock');
+    expect(bus?.text).toMatch(/^Think of it as a bus.*Where it stops matching/);
+    // Our real example: bitcoin's average fee, April 2024 (about $5, $128 on 20 April, $35 on 21 April)
+    const spike = l.cards.find((c) => c.title === 'A real fee spike')!;
+    expect(spike.text).toMatch(/few dollars, about \$5.*20 April.*about \$128.*about \$35/);
+    expect(spike.chart).toBeUndefined();
+    // The sum is true: a $200 send, a $5 fee and a $128 fee
+    const math = l.cards.find((c) => c.title === 'Is it worth it?')!.math!;
+    expect(math.steps.map((s) => s.sum)).toEqual([
+      '5 ÷ 200 = 0.025',
+      '0.025 × 100 = 2.5%',
+      '128 ÷ 200 = 0.64',
+      '0.64 × 100 = 64%',
+    ]);
+    expect(math.answer).toMatch(/2\.5%.*64%/);
+    // The paper account's fee is the exchange's Commission, not a network fee
+    expect(l.cards.find((c) => c.title === 'Two different fees')?.text).toMatch(
+      /Commission.*exchange.*network fee is different/
+    );
+    // The sneak peek matches the summary: four lines each
+    expect(l.cards[0].preview).toHaveLength(4);
+    expect(l.recap?.points).toHaveLength(4);
+    expect(l.recap?.highlight?.text).toMatch(/Next up: trading without a middleman/);
   });
 
   it('should keep every funnel step id within the server’s pattern, past each earlier version', () => {

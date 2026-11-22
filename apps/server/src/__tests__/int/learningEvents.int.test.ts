@@ -150,6 +150,7 @@ describe('LearningEvent (Postgres)', () => {
       'lesson-coins',
       'lesson-stablecoins',
       'lesson-wallets',
+      'lesson-fees',
       'primer',
       'buy-first-coin',
       'sell-and-review',

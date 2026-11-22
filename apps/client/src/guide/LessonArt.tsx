@@ -11,6 +11,7 @@
 import type { JSX } from 'react';
 import {
   Bank,
+  Bus,
   Camera,
   Certificate,
   Clock,
@@ -21,6 +22,7 @@ import {
   EnvelopeSimple,
   Eye,
   GameController,
+  Gear,
   HandPalm,
   Handbag,
   HardDrives,
@@ -32,9 +34,11 @@ import {
   Mailbox,
   Money,
   Note,
+  Package,
   PencilSimple,
   Prohibit,
   Storefront,
+  Swap,
   Ticket,
   Tray,
   Usb,
@@ -1780,6 +1784,230 @@ function PurseSafe() {
   );
 }
 
+// ─── Chapter 2, Lesson 8: why sending crypto costs a fee ───
+// One metaphor from Lesson 5's toll booth, carried on: a block is a bus with limited seats, and the
+// fee is what you offer for a seat. The spike is drawn from reported averages (never a chart).
+
+/** A send carries a small fee */
+function SendFee() {
+  return (
+    <>
+      <Coins weight={DUO} x={100} y={44} size={48} className={styles.amber} />
+      <PathArrow
+        points={[
+          [156, 68],
+          [214, 68],
+        ]}
+        className={styles.muted}
+      />
+      <Tag x={166} y={78} w={40}>
+        + fee
+      </Tag>
+      <Mailbox weight={DUO} x={222} y={44} size={48} className={styles.white} />
+      <text x="196" y="124" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        a small fee rides along
+      </text>
+    </>
+  );
+}
+
+/** A block is a bus with a limited number of seats */
+function BusBlock() {
+  return (
+    <>
+      <Bus weight={DUO} x={96} y={34} size={64} className={styles.white} />
+      <text x="128" y="112" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        a block
+      </text>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <rect
+          key={i}
+          x={176 + (i % 3) * 38}
+          y={44 + Math.floor(i / 3) * 34}
+          width="30"
+          height="26"
+          rx="5"
+          className={i === 5 ? styles.panel : styles.badge}
+        />
+      ))}
+      <text x="252" y="112" textAnchor="middle" className={`${styles.small} ${styles.muted}`}>
+        1 seat left
+      </text>
+      <text x="212" y="136" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        a block has limited seats
+      </text>
+    </>
+  );
+}
+
+/** Payments wait in line; the ones offering more board first */
+function WaitingLine() {
+  const line = [
+    { x: 94, label: 'high' },
+    { x: 138, label: 'mid' },
+    { x: 182, label: 'low' },
+    { x: 226, label: 'low' },
+  ] as const;
+  return (
+    <>
+      {line.map(({ x, label }) => (
+        <g key={x}>
+          <rect x={x} y={52} width="38" height="34" rx="5" className={styles.panel} />
+          <Package weight={DUO} x={x + 7} y={54} size={24} className={styles.white} />
+          <text x={x + 19} y={82} textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
+            {label}
+          </text>
+        </g>
+      ))}
+      <PathArrow
+        points={[
+          [268, 70],
+          [286, 70],
+        ]}
+        className={styles.muted}
+      />
+      <Bus weight={DUO} x={284} y={50} size={34} className={styles.white} />
+      <text x="188" y="40" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        payments waiting, with the fee each offers
+      </text>
+      <text x="196" y="112" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        higher fees board first
+      </text>
+    </>
+  );
+}
+
+/** A busier network: the bids rise */
+function FeeBids() {
+  const bars = [14, 20, 34, 52, 76];
+  return (
+    <>
+      {bars.map((h, i) => (
+        <rect
+          key={i}
+          x={112 + i * 38}
+          y={118 - h}
+          width="26"
+          height={h}
+          rx="4"
+          className={styles.amberFill}
+        />
+      ))}
+      <text x="126" y="136" textAnchor="middle" className={`${styles.small} ${styles.muted}`}>
+        quiet
+      </text>
+      <text x="278" y="136" textAnchor="middle" className={`${styles.small} ${styles.muted}`}>
+        busy
+      </text>
+      <text x="200" y="24" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        the fee people offer
+      </text>
+    </>
+  );
+}
+
+/** Bitcoin's average fee, April 2024, drawn from reported averages: about $5, $128 and $35 */
+function FeeSpike() {
+  return (
+    <>
+      <line x1="96" x2="308" y1="118" y2="118" className={`${styles.stroke} ${styles.muted}`} />
+      <polyline points="110,108 190,30 250,88" className={`${styles.stroke} ${styles.amber}`} />
+      <circle cx="190" cy="30" r="4" className={styles.amberFill} />
+      <text x="190" y="20" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        20 Apr ≈ $128
+      </text>
+      <text x="130" y="132" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        early April ≈ $5
+      </text>
+      <text x="268" y="84" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        21 Apr ≈ $35
+      </text>
+      <text x="238" y="150" textAnchor="middle" className={`${styles.small} ${styles.muted}`}>
+        drawn from reported averages, not to scale
+      </text>
+    </>
+  );
+}
+
+/** Some chains are built cheap; others get pricey when busy */
+function ChainsCompare() {
+  return (
+    <>
+      <rect x="94" y="28" width="104" height="86" rx="8" className={styles.panel} />
+      <Coins weight={DUO} x={124} y={36} size={36} className={styles.up} />
+      <text x="146" y="92" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        a cheap chain
+      </text>
+      <text x="146" y="106" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        often cents
+      </text>
+      <rect x="210" y="28" width="104" height="86" rx="8" className={styles.panel} />
+      <Coins weight={DUO} x={240} y={36} size={36} className={styles.amber} />
+      <text x="262" y="92" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        a pricier chain
+      </text>
+      <text x="262" y="106" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
+        dollars when busy
+      </text>
+    </>
+  );
+}
+
+/** A plain send is one step; a swap does more work */
+function SimpleComplex() {
+  return (
+    <>
+      <rect x="94" y="28" width="92" height="86" rx="8" className={styles.panel} />
+      <Package weight={DUO} x={118} y={38} size={44} className={styles.white} />
+      <text x="140" y="94" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        a plain send
+      </text>
+      <text x="140" y="108" textAnchor="middle" className={`${styles.small} ${styles.up}`}>
+        less work, lower fee
+      </text>
+      <rect x="198" y="28" width="116" height="86" rx="8" className={styles.panel} />
+      <Swap weight={DUO} x={206} y={40} size={32} className={styles.white} />
+      <Gear weight={DUO} x={242} y={40} size={32} className={styles.white} />
+      <Package weight={DUO} x={278} y={40} size={32} className={styles.white} />
+      <text x="256" y="94" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        a swap
+      </text>
+      <text x="256" y="108" textAnchor="middle" className={`${styles.small} ${styles.amber}`}>
+        more work, higher fee
+      </text>
+    </>
+  );
+}
+
+/** Check the fee before you confirm */
+function FeeCheck() {
+  return (
+    <>
+      <rect x="98" y="22" width="132" height="84" rx="8" className={styles.panel} />
+      <text x="110" y="44" className={`${styles.small} ${styles.white}`}>
+        Send
+      </text>
+      <text x="218" y="44" textAnchor="end" className={`${styles.chipText} ${styles.white}`}>
+        $40
+      </text>
+      <text x="110" y="68" className={`${styles.small} ${styles.white}`}>
+        Network fee
+      </text>
+      <text x="218" y="68" textAnchor="end" className={`${styles.chipText} ${styles.amber}`}>
+        $12
+      </text>
+      <rect x="110" y="80" width="108" height="18" rx="9" className={styles.amberFill} />
+      <text x="164" y="93" textAnchor="middle" className={styles.tagText}>
+        Confirm
+      </text>
+      <MagnifyingGlass weight={DUO} x={242} y={34} size={56} className={styles.white} />
+      <text x="204" y="132" textAnchor="middle" className={`${styles.small} ${styles.white}`}>
+        look at the fee before you confirm
+      </text>
+    </>
+  );
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
   friends: Friends,
   lena: LenaAlone,
@@ -1836,6 +2064,14 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   hotPhone: HotPhone,
   coldDevice: ColdDevice,
   purseSafe: PurseSafe,
+  sendFee: SendFee,
+  busBlock: BusBlock,
+  waitingLine: WaitingLine,
+  feeBids: FeeBids,
+  feeSpike: FeeSpike,
+  chainsCompare: ChainsCompare,
+  simpleComplex: SimpleComplex,
+  feeCheck: FeeCheck,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */

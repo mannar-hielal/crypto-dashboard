@@ -4705,6 +4705,35 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
   "coming soon" titles.
 
+### 2026-11-22 — Chapter 2, Lesson 8 "Why sending crypto costs a fee"
+
+The fourth lesson of chapter 2 (its own PR, owner 2026-11-19), built on the owner's goal of 2026-11-22 ("implemented, code-reviewed,
+committed and pushed to develop"): the outline, the text and the pictures were drafted and fact checked without a round of owner
+approvals, so the owner reads them on the PR. `lesson-fees`, 8 min, 20 screens, step base 60; first step 61.
+
+- **One metaphor, carried from Lesson 5's toll booth:** a block is a bus with limited seats, and the fee is what a payment offers for a
+  seat. Berwyn's analogy says where it stops matching (the bus leaves on the network's schedule).
+- **Cards:** the sneak peek (card 1), sending has a price, a block is a bus, who picks the passengers (validators; miners on Bitcoin,
+  Lesson 2), **Drag and drop** (send to confirmed), why a fee exists (pay for upkeep, stop spam), why it moves (limited seats, demand),
+  **Match boxes**, **a real fee spike** (our example: bitcoin's average fee, April 2024), **Do the math** (a $200 send: 2.5% on a quiet
+  day, 64% on the spike day), cheap and pricey chains, a plain send or a swap, **Pick the right ones** (what makes a fee higher), a
+  multiple-choice question, plan before you send, then **Your call** ($40 to a friend, a $12 fee: check whether waiting or a cheaper
+  chain costs less), two different fees (the practice account's Commission is the exchange's; no practice trade has a network fee), a
+  multiple-choice question (which costs the most), summary, close. No practice trade.
+- **Text:** fact checked by a technical-writer agent (2026-11-22). Applied: early April's fee is "a few dollars, about $5" (The Block
+  gives a 7-day average of $4.11 earlier in April; the $128 and $35 figures are confirmed); the validator "picks and adds" payments,
+  and Bitcoin's nodes check them (Lesson 2); the Commission is simulated here, a real exchange charges it; the second "big fee on a
+  small send" question became "which costs the most?", so it no longer repeats Your call. To re-check before a release: the
+  "often a few cents a send" line on cheap chains.
+- **Our example:** bitcoin's average transaction fee was about $5 in early April 2024, about $128 on 20 April (halving day and the
+  launch of Runes) and about $35 on 21 April (The Block and YCharts reports; sources differ by cents with the day's time base). Drawn,
+  never a chart, and labelled "drawn from reported averages". The $200 payment is ours.
+- **Pictures:** eight new flat drawings in the Lesson 7 style (`LessonArt.tsx`), and two Pick tile icons (`gear`, `moon`). The visual
+  Q&A of Lesson 7 stands: no new widget, no new layout.
+- **Concepts:** `validator`, `network-fee` (peeks, no article). **Ids:** `lesson-fees` in the client's `LESSON_IDS`, the server's
+  `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. It leaves
+  the map's "coming soon" list: chapter 2 now shows one lesson and the checkpoint still to write.
+
 ### 2026-11-22 — A sneak peek opens every lesson, in place of the guides' chat
 
 Owner, 2026-11-22: the chat between the two guides on the first card told the learner little. A lesson now opens with what the
