@@ -182,6 +182,7 @@ export function FeaturesPage() {
               title="Real coins, real prices"
               lead="You practise on the same prices that real traders see."
             />
+            {/* The ribbon is static icons and names: no price feed, so it is fine before launch too */}
             <CoinRibbon />
             <FeatureGrid items={DATA_FEATURES} />
           </section>

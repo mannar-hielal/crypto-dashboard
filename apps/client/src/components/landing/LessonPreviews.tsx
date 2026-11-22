@@ -1,31 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { LessonArt } from '@/guide/LessonArt';
 import { LESSON_PREVIEWS } from '@/lib/landingContent';
 import styles from './LessonPreviews.module.css';
 
-const PHONE_ROW = '(max-width: 767px)';
-
-/** The row scrolls sideways only on a phone: only there is it a stop for the keyboard */
-function useScrollingRow() {
-  const supported = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
-  const [scrolls, setScrolls] = useState(() =>
-    supported ? window.matchMedia(PHONE_ROW).matches : false
-  );
-  useEffect(() => {
-    if (!supported) return;
-    const query = window.matchMedia(PHONE_ROW);
-    const update = () => setScrolls(query.matches);
-    // Older Safari (before 14) has addListener only
-    if (query.addEventListener) {
-      query.addEventListener('change', update);
-      return () => query.removeEventListener('change', update);
-    }
-    query.addListener(update);
-    return () => query.removeListener(update);
-  }, [supported]);
-  return scrolls;
-}
+// The exact complement of the CSS grid query (min-width: 768px), also at a fractional width
+const PHONE_ROW = 'not all and (min-width: 768px)';
 
 /**
  * A row of real lesson cards: each shows the lesson's own picture (the one in the lesson) with its
@@ -33,22 +14,37 @@ function useScrollingRow() {
  * module), so the page loads it late, through `LessonPreviewsLazy`.
  */
 export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
-  const scrolls = useScrollingRow();
+  // The row scrolls sideways only on a phone: only there is it a labelled region and a keyboard stop.
+  // (the browser floor in APP_LOG has matchMedia; without it the plain list is shown)
+  const scrolls = useMediaQuery(PHONE_ROW);
   // Tells the holder the cards are in, so it can drop the height it reserved
-  useEffect(() => onReady?.(), [onReady]);
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
   return (
-    // tabIndex: a row that scrolls sideways on a phone must be reachable by keyboard
-    <ul className={styles.row} aria-label="A peek at the lessons" {...(scrolls && { tabIndex: 0 })}>
-      {LESSON_PREVIEWS.map((l) => (
-        <li key={l.number} className={styles.card}>
-          <div className={styles.art}>
-            <LessonArt id={l.art} />
-          </div>
-          <p className={styles.number}>Lesson {l.number}</p>
-          <h3 className={styles.title}>{l.title}</h3>
-          <p className={styles.blurb}>{l.blurb}</p>
-        </li>
-      ))}
-    </ul>
+    // Where the row scrolls sideways (a phone) the scroller is a labelled region and a tab stop; on a
+    // wider screen it is a plain grid, so no landmark is added; the list always has its own name
+    <div
+      className={styles.scroller}
+      {...(scrolls && { role: 'region', 'aria-label': 'A peek at the lessons', tabIndex: 0 })}
+    >
+      <ul
+        className={styles.row}
+        // list-style: none drops list semantics in Safari: say it outright
+        role="list"
+        aria-label={scrolls ? 'Lessons' : 'A peek at the lessons'}
+      >
+        {LESSON_PREVIEWS.map((l) => (
+          <li key={l.number} className={styles.card}>
+            <div className={styles.art}>
+              <LessonArt id={l.art} />
+            </div>
+            <p className={styles.number}>Lesson {l.number}</p>
+            <h3 className={styles.title}>{l.title}</h3>
+            <p className={styles.blurb}>{l.blurb}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

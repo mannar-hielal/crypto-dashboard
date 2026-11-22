@@ -505,6 +505,9 @@ sideways scroll at any width:
    three "small on purpose" rows show our crosses; the competitor columns carry blurred shapes, never a logo.
 5. `/features` → h1 "Learn it. Try it. All in one place.", the sticky anchor nav from 768 px (each link scrolls to its section, the
    heading clear of the bars), the questions as an accordion, and the links to `/blog`, `/register` and `/chart`.
+   **Lesson previews (a check):** on a phone width the eight cards are one row you swipe (the row is a labelled region and a tab stop; arrow
+   keys scroll it); from 768 px they are a grid (two columns, then four) and no landmark is added. With the network offline before the row
+   nears the screen, the section shows "The lesson previews did not load. Refresh the page to try again." (announced politely) and no gap.
 6. With `VITE_IS_LIVE=false` the landing page is the Launching Soon hero, the coin ribbon and the newsletter form: no sign-up, chart,
    questions or table.
 

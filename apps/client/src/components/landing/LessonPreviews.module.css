@@ -27,28 +27,38 @@
   width: 100%;
   height: 320px;
   border-radius: var(--radius-card);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, white 3%, transparent);
 }
 
-/* Phones: a row you swipe, each card snapping into view */
+/* Phones: a row you swipe, each card snapping into view (the region scrolls, the list lays out) */
+.scroller {
+  overflow-x: auto;
+  scroll-padding-inline: 4px; /* the snap stops keep the padding that shows shadows and rings */
+  padding: 4px 4px 12px; /* room for shadows and focus rings inside the clipping box */
+  scroll-snap-type: x mandatory;
+}
+
 .row {
   display: flex;
+  width: max-content;
   gap: 16px;
   margin: 0;
-  padding: 4px 4px 12px;
+  padding: 0;
   list-style: none;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
 }
 
 .card {
   display: flex;
-  min-width: 260px;
-  flex: 0 0 78%;
+  width: max(
+    260px,
+    78vw
+  ); /* 78% of the screen (a viewport unit, so a card never depends on the row's own width) */
+  max-width: 92vw; /* and never wider than the screen */
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border: 1px solid var(--color-border-card); /* border.card */
   border-radius: 14px;
   background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
   scroll-snap-align: start;
@@ -85,20 +95,28 @@
 }
 
 /* The row keyboard-scrolls, so it needs a visible focus ring */
-.row:focus-visible {
+.scroller:focus-visible {
   outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
   outline-offset: 3px;
 }
 
 @media (min-width: 768px) {
+  .scroller {
+    overflow: visible;
+    scroll-snap-type: none;
+    padding: 0; /* the room for shadows and rings is only for the clipping phone row */
+    scroll-padding-inline: 0;
+  }
+
   .row {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    overflow: visible;
+    width: auto;
   }
 
   .card {
-    min-width: 0;
+    width: auto;
+    max-width: none; /* the grid sizes the cell, not the screen */
   }
 }
 
@@ -106,4 +124,12 @@
   .row {
     grid-template-columns: repeat(4, 1fr);
   }
+}
+
+/* The failure note shown when the previews chunk does not load: plain, centred text */
+.failed {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.875rem; /* fontSize.xs */
+  text-align: center;
 }

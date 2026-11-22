@@ -13,7 +13,7 @@
   position: relative; /* keeps the visually hidden caption inside the scroll box */
   width: 100%;
   overflow-x: auto;
-  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border: 1px solid var(--color-border-card); /* border.card */
   border-radius: 14px;
   background: var(--color-bg-page);
 }
@@ -84,7 +84,11 @@
 }
 
 .usHead {
-  background: rgba(165, 85, 226, 0.12); /* color.purple at 12% */
+  background: color-mix(
+    in srgb,
+    var(--color-brand-purple) 12%,
+    transparent
+  ); /* color.purple at 12% */
   color: var(--color-brand-white);
 }
 
@@ -103,16 +107,16 @@
 
 .cell {
   padding: 10px 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06); /* border.divider */
+  border-top: 1px solid var(--color-border-divider); /* border.divider */
   text-align: center;
 }
 
 .feature {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--color-border-divider);
 }
 
 .us {
-  background: rgba(165, 85, 226, 0.08);
+  background: color-mix(in srgb, var(--color-brand-purple) 8%, transparent);
 }
 
 .mark {

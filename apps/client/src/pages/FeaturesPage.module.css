@@ -8,8 +8,8 @@
   top: 48px;
   z-index: 50;
   display: none;
-  border-bottom: 1px solid rgba(102, 98, 169, 0.15); /* color.glow at 15% */
-  background: rgba(6, 4, 19, 0.9); /* bg.page at 90% */
+  border-bottom: 1px solid color-mix(in srgb, var(--color-brand-glow) 15%, transparent); /* color.glow at 15% */
+  background: color-mix(in srgb, var(--color-bg-page) 90%, transparent); /* bg.page at 90% */
   backdrop-filter: blur(12px);
 }
 
