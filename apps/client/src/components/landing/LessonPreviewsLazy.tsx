@@ -85,7 +85,8 @@ export function LessonPreviewsLazy() {
   return (
     <div ref={holder} className={`${styles.holder}${settled ? ` ${styles.holderSettled}` : ''}`}>
       {/* A live region that is always in the page and only gets its words when the previews fail, so a
-          screen reader announces it (a region mounted with its text already in it is often silent) */}
+          screen reader announces it (a region mounted with its text already in it is often silent). It
+          is empty on purpose until a failure; copy this pattern only for a section that can fail. */}
       <p role="status" className={styles.failed}>
         {failed ? 'The lesson previews did not load. Refresh the page to try again.' : ''}
       </p>

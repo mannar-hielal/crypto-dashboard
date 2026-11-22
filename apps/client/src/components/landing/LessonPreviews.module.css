@@ -124,6 +124,6 @@
 .failed {
   margin: 0;
   color: var(--color-brand-muted);
-  font-size: 0.9375rem;
+  font-size: 0.875rem; /* fontSize.xs */
   text-align: center;
 }

@@ -16,6 +16,7 @@ function useScrollingRow() {
     if (!supported) return;
     const query = window.matchMedia(PHONE_ROW);
     const update = () => setScrolls(query.matches);
+    update(); // a resize between the first render and this effect would be missed otherwise
     // Older Safari (before 14) has addListener only
     if (query.addEventListener) {
       query.addEventListener('change', update);
@@ -38,7 +39,7 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
   useEffect(() => onReady?.(), [onReady]);
   return (
     // Where the row scrolls sideways (a phone) the scroller is a labelled region and a tab stop; on a
-    // wider screen it is a plain grid, so the list carries the name and no landmark is added
+    // wider screen it is a plain grid, so no landmark is added; the list always has its own name
     <div
       className={styles.scroller}
       {...(scrolls && { role: 'region', 'aria-label': 'A peek at the lessons', tabIndex: 0 })}
@@ -47,7 +48,7 @@ export default function LessonPreviews({ onReady }: { onReady?: () => void }) {
         className={styles.row}
         // list-style: none drops list semantics in Safari: say it outright
         role="list"
-        {...(!scrolls && { 'aria-label': 'A peek at the lessons' })}
+        aria-label="A peek at the lessons"
       >
         {LESSON_PREVIEWS.map((l) => (
           <li key={l.number} className={styles.card}>
