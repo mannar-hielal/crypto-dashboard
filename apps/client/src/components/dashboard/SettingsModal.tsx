@@ -780,7 +780,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                       onClick={() => setShowDeleteConfirm(true)}
                       {...guide('settings.delete')}
                       className="w-full h-10 font-bold tracking-wide rounded-full text-white"
-                      style={{ background: color.red }}
+                      style={{ background: color.red, color: color.white }}
                     >
                       Delete account
                     </Button>
@@ -814,7 +814,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           {...guide('settings.delete.confirm')}
                           disabled={isDeleting || !deletePassword}
                           className="flex-1 h-10 font-bold text-white disabled:opacity-40"
-                          style={{ background: color.red }}
+                          style={{ background: color.red, color: color.white }}
                         >
                           {isDeleting ? 'Deleting...' : 'Delete Account Now'}
                         </Button>
