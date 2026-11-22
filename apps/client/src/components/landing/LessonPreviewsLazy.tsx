@@ -5,17 +5,10 @@ import styles from './LessonPreviews.module.css';
 
 type Previews = ComponentType<{ onReady?: () => void }>;
 
-/**
- * What the error boundary renders when the previews fail: it closes the holder's gap and says so,
- * as a polite status message. Plain words, no button: a reload is the visitor's to do, and nothing here can go wrong
- */
-function FailedNote({ onFail }: { onFail: () => void }) {
+/** What the error boundary renders when the previews fail: nothing itself, it only tells the holder */
+function FailedMarker({ onFail }: { onFail: () => void }) {
   useEffect(onFail, [onFail]);
-  return (
-    <p role="status" className={styles.failed}>
-      The lesson previews did not load. Refresh the page to try again.
-    </p>
-  );
+  return null;
 }
 
 /** The previews, a placeholder while the module loads, or the load error handed to the boundary */
@@ -41,7 +34,8 @@ function Slot({
  * Loads the lesson previews only when they come near the screen: the lessons' picture module is
  * large, and most visitors read the top of the page first. Without `IntersectionObserver` it
  * loads at once. A failure (offline, a stale chunk after a deploy, a picture that throws) costs this
- * section only: one plain note asking the visitor to refresh.
+ * section only: one plain note asking the visitor to refresh. A failed load stays failed until the
+ * visitor refreshes, on purpose: a second import of a file a deploy removed would fail the same way.
  */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
@@ -49,6 +43,11 @@ export function LessonPreviewsLazy() {
   const [Loaded, setLoaded] = useState<Previews | null>(null);
   const [loadError, setLoadError] = useState<Error | null>(null);
   const [settled, setSettled] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const markFailed = useCallback(() => {
+    setFailed(true);
+    setSettled(true);
+  }, []);
   // Either the cards are in, or the section failed: the height reserved for them has done its job
   const markSettled = useCallback(() => setSettled(true), []);
 
@@ -85,8 +84,13 @@ export function LessonPreviewsLazy() {
 
   return (
     <div ref={holder} className={`${styles.holder}${settled ? ` ${styles.holderSettled}` : ''}`}>
+      {/* A live region that is always in the page and only gets its words when the previews fail, so a
+          screen reader announces it (a region mounted with its text already in it is often silent) */}
+      <p role="status" className={styles.failed}>
+        {failed ? 'The lesson previews did not load. Refresh the page to try again.' : ''}
+      </p>
       {near && (
-        <ErrorBoundary fallback={<FailedNote onFail={markSettled} />}>
+        <ErrorBoundary fallback={<FailedMarker onFail={markFailed} />}>
           <Slot Loaded={Loaded} error={loadError} onReady={markSettled} />
         </ErrorBoundary>
       )}

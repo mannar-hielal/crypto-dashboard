@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, act } from '@testing-library/react';
 import React from 'react';
 
 import { LESSON_PREVIEWS } from '@/lib/landingContent';
@@ -40,5 +40,29 @@ describe('LessonPreviewsLazy', () => {
     );
     expect(region.getAttribute('tabindex')).toBe('0');
     expect(region.querySelectorAll('li')).toHaveLength(LESSON_PREVIEWS.length);
+  }, 20000);
+
+  it('should follow a resize across 768 px: the region and tab stop appear on a phone width and go on a wide one', async () => {
+    let matches = false;
+    const listeners: Array<() => void> = [];
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      get matches() {
+        return matches;
+      },
+      media: query,
+      addEventListener: (_: string, fn: () => void) => listeners.push(fn),
+      removeEventListener: () => {},
+    }));
+    render(React.createElement(LessonPreviewsLazy));
+    await screen.findByRole('list', { name: 'A peek at the lessons' }, { timeout: 15000 });
+    expect(screen.queryByRole('region')).toBeNull();
+    matches = true;
+    act(() => listeners.forEach((fn) => fn()));
+    expect(
+      screen.getByRole('region', { name: 'A peek at the lessons' }).getAttribute('tabindex')
+    ).toBe('0');
+    matches = false;
+    act(() => listeners.forEach((fn) => fn()));
+    expect(screen.queryByRole('region')).toBeNull();
   }, 20000);
 });
