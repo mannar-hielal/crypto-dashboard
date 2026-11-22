@@ -268,6 +268,8 @@ export const GUIDE_ANCHORS = [
   // The beginner FAQ's "Start here" buttons (key: the item's id, e.g. 'where-to-start'), and the
   // How it works page's two hero buttons and its own FAQ's (key: the item's id)
   'landing.faq.start',
+  'about.register',
+  'about.chart',
   'how.hero.chart',
   'how.hero.register',
   'how.faq.start',

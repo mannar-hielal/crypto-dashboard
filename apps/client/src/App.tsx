@@ -45,6 +45,7 @@ const BlogIndexPage = lazy(() =>
 const BlogPostPage = lazy(() =>
   import('@/pages/BlogPostPage').then((m) => ({ default: m.BlogPostPage }))
 );
+const AboutPage = lazy(() => import('@/pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const ComingSoonPage = lazy(() =>
   import('@/pages/ComingSoonPage').then((m) => ({ default: m.ComingSoonPage }))
 );
@@ -125,7 +126,7 @@ export default function App() {
             {/* The Blog (owner 2026-11-18), and the two pages still to be written */}
             <Route path="/blog" element={<BlogIndexPage />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
-            <Route path="/about" element={<ComingSoonPage page="about" />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/support" element={<ComingSoonPage page="support" />} />
 
             {/* Public routes */}
