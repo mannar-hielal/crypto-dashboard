@@ -90,15 +90,13 @@ export function LessonPreviewsLazy() {
 
   return (
     <div ref={holder} className={`${styles.holder}${settled ? ` ${styles.holderSettled}` : ''}`}>
-      {/* A live region that mounts as the row comes near, before the import can fail, and only gets its
-          words on a failure, so a screen reader announces it (a region mounted with its text already in
-          it is often silent). Empty on purpose until then; copy this pattern only for a section that
-          can fail. */}
-      {near && (
-        <p role="status" className={styles.failed}>
-          {failed ? 'The lesson previews did not load. Refresh the page to try again.' : ''}
-        </p>
-      )}
+      {/* A live region that is in the page from the first render and only gets its words on a failure, so
+          a screen reader announces the change even when the import fails within a frame of starting
+          (a region mounted with its text already in it is often silent). Empty on purpose until
+          then; copy this pattern only for a section that can fail. */}
+      <p role="status" className={styles.failed}>
+        {failed ? 'The lesson previews did not load. Refresh the page to try again.' : ''}
+      </p>
       {near && (
         <ErrorBoundary fallback={<FailedMarker onFail={markFailed} />}>
           <Slot Loaded={Loaded} error={loadError} onReady={markSettled} />

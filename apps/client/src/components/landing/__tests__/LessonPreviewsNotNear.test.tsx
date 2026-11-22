@@ -10,7 +10,7 @@ describe('LessonPreviewsLazy before the row is near the screen', () => {
     vi.unstubAllGlobals();
   });
 
-  it('should have no status note and no list yet (review 2026-11-22)', () => {
+  it('should have an empty status region ready and no list yet (review 2026-11-22)', () => {
     // An observer that never reports the row as visible
     vi.stubGlobal(
       'IntersectionObserver',
@@ -20,7 +20,8 @@ describe('LessonPreviewsLazy before the row is near the screen', () => {
       }
     );
     render(React.createElement(LessonPreviewsLazy));
-    expect(screen.queryByRole('status')).toBeNull();
+    // In the page before any failure, so a later failure is announced
+    expect(screen.getByRole('status').textContent).toBe('');
     expect(screen.queryByRole('list')).toBeNull();
   });
 });
