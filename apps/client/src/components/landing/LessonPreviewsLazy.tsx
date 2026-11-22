@@ -5,47 +5,49 @@ import styles from './LessonPreviews.module.css';
 
 type Previews = ComponentType<{ onReady?: () => void }>;
 
-/**
- * Reload, after asking the service worker (the app's offline shell) to update first: an old worker
- * would otherwise serve the old page and the same missing chunk again
- */
-function reloadFresh() {
-  const reload = () => window.location.reload();
-  if (!('serviceWorker' in navigator)) return reload();
-  navigator.serviceWorker
-    .getRegistration()
-    .then((registration) => registration?.update())
-    .catch(() => undefined)
-    .finally(reload);
-}
-
-/**
- * What the failure fallbacks render: it tells the holder to close its gap, and offers a reload. A
- * reload, not a second import: after a deploy the old hashed file is gone, and asking for the same
- * URL again would fail the same way
- */
+/** What the error boundary renders when the previews fail: it closes the holder's gap and offers a reload */
 function FailedNote({ onFail }: { onFail: () => void }) {
   useEffect(onFail, [onFail]);
   return (
-    <button type="button" className={styles.retry} onClick={reloadFresh}>
+    <button type="button" className={styles.retry} onClick={() => window.location.reload()}>
       The lesson previews did not load. Reload the page
     </button>
+  );
+}
+
+/** The previews, a placeholder while the module loads, or the load error handed to the boundary */
+function Slot({
+  Loaded,
+  error,
+  onReady,
+}: {
+  Loaded: Previews | null;
+  error: unknown;
+  onReady: () => void;
+}) {
+  // Thrown here so the one error boundary answers a failed import and a render error alike
+  if (error) throw error;
+  return Loaded ? (
+    <Loaded onReady={onReady} />
+  ) : (
+    <div className={styles.placeholder} aria-hidden="true" />
   );
 }
 
 /**
  * Loads the lesson previews only when they come near the screen: the lessons' picture module is
  * large, and most visitors read the top of the page first. Without `IntersectionObserver` it
- * loads at once. A failed import (offline, or a stale chunk after a deploy) costs this section only.
+ * loads at once. A failure (offline, a stale chunk after a deploy, a picture that throws) costs this
+ * section only: one note with a reload button.
  */
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
   const [Loaded, setLoaded] = useState<Previews | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [ready, setReady] = useState(false);
-  const markFailed = useCallback(() => setFailed(true), []);
-  const markReady = useCallback(() => setReady(true), []);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [settled, setSettled] = useState(false);
+  // Either the cards are in, or the section failed: the height reserved for them has done its job
+  const markSettled = useCallback(() => setSettled(true), []);
 
   useEffect(() => {
     const el = holder.current;
@@ -68,9 +70,8 @@ export function LessonPreviewsLazy() {
       .then((m) => {
         if (live) setLoaded(() => m.default);
       })
-      .catch(() => {
-        // A failed chunk (offline, or a stale hashed file after a deploy) costs this section only
-        if (live) setFailed(true);
+      .catch((err: unknown) => {
+        if (live) setLoadError(err ?? new Error('The lesson previews did not load'));
       });
     return () => {
       live = false;
@@ -78,22 +79,11 @@ export function LessonPreviewsLazy() {
   }, [near]);
 
   return (
-    <div
-      ref={holder}
-      className={`${styles.holder}${failed || ready ? ` ${styles.holderSettled}` : ''}`}
-    >
-      {failed ? (
-        <FailedNote onFail={markFailed} />
-      ) : (
-        near &&
-        (Loaded ? (
-          // A render error inside the row (a picture that throws) lands here too
-          <ErrorBoundary fallback={<FailedNote onFail={markFailed} />}>
-            <Loaded onReady={markReady} />
-          </ErrorBoundary>
-        ) : (
-          <div className={styles.placeholder} aria-hidden="true" />
-        ))
+    <div ref={holder} className={`${styles.holder}${settled ? ` ${styles.holderSettled}` : ''}`}>
+      {near && (
+        <ErrorBoundary fallback={<FailedNote onFail={markSettled} />}>
+          <Slot Loaded={Loaded} error={loadError} onReady={markSettled} />
+        </ErrorBoundary>
       )}
     </div>
   );

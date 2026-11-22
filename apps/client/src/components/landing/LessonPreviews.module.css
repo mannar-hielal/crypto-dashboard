@@ -48,7 +48,7 @@
 
 .card {
   display: flex;
-  width: min(78vw, 320px);
+  width: clamp(260px, 78vw, 320px);
   flex: 0 0 auto;
   flex-direction: column;
   gap: 4px;

@@ -43,7 +43,7 @@
   gap: 10px;
   margin: 0;
   padding: 6px 16px;
-  border: 1px solid var(--color-border-input);
+  border: 1px solid var(--color-border-hover); /* border.hover: a pill outline a little brighter than a card edge */
   border-radius: 9999px;
   background: color-mix(in srgb, var(--color-brand-glow) 10%, transparent); /* color.glow at 10% */
   color: var(--color-brand-muted);
