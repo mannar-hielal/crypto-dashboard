@@ -20,7 +20,10 @@ const CLASS = {
   text: styles.ctaText,
 } as const;
 
-/** One call-to-action link, the same everywhere on the public pages */
+/**
+ * One call-to-action link, the same everywhere on the public pages. Before launch it jumps to
+ * `#newsletter`, which `CtaSection` renders: a page using it pre-launch must render `CtaSection`.
+ */
 export function StartLink({ cta, live, variant = 'primary', anchor, anchorKey }: StartLinkProps) {
   const extra = anchor ? guide(anchor, anchorKey) : {};
   return live ? (
