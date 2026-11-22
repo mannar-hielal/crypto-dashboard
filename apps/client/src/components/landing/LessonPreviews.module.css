@@ -6,8 +6,8 @@
 }
 
 /* A failed chunk leaves nothing to wait for: close the gap (set from the component, not :has) */
-.holder.holderFailed {
-  min-height: 0 !important; /* a failed chunk, or the cards are in: the reservation has done its job */
+.holder.holderSettled {
+  min-height: 0 !important; /* the cards are in, or the chunk failed: either way the reservation has done its job */
 }
 
 /* The loaded grid is taller than the phone row: reserve about its height, so nothing jumps */

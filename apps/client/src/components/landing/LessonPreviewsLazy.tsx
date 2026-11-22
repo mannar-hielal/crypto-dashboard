@@ -40,7 +40,7 @@ export function LessonPreviewsLazy() {
   return (
     <div
       ref={holder}
-      className={`${styles.holder}${failed || ready ? ` ${styles.holderFailed}` : ''}`}
+      className={`${styles.holder}${failed || ready ? ` ${styles.holderSettled}` : ''}`}
     >
       {near && (
         // A failed chunk (offline, or a stale hashed file after a deploy) costs this section, never the page

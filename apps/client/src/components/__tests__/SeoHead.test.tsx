@@ -32,14 +32,15 @@ describe('SeoHead', () => {
       title: 'Faq',
       description: 'Questions',
       path: '/features',
-      jsonLd: { '@type': 'FAQPage', name: '</script><b>x' },
+      jsonLd: { '@type': 'FAQPage', name: '</script><b>x & y\u2028z' },
     });
     await waitFor(() =>
       expect(document.querySelector('script[type="application/ld+json"]')).not.toBeNull()
     );
     const text = document.querySelector('script[type="application/ld+json"]')?.textContent ?? '';
     expect(text).not.toContain('</script>');
-    expect(JSON.parse(text).name).toBe('</script><b>x');
+    expect(text).not.toMatch(/[<>&\u2028]/);
+    expect(JSON.parse(text).name).toBe('</script><b>x & y\u2028z');
   });
 
   it('should write no JSON-LD block when none is given', async () => {

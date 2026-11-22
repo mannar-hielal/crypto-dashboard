@@ -33,11 +33,11 @@ export function StartLink({ cta, live, variant = 'primary', anchor, anchorKey }:
       className={CLASS[variant]}
       // The jump alone leaves keyboard focus on the link: move it to the email field
       onClick={() => {
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           document
             .querySelector<HTMLInputElement>('#newsletter input')
             ?.focus({ preventScroll: true });
-        }, 0);
+        });
       }}
       {...extra}
     >
