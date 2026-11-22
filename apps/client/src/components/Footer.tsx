@@ -4,7 +4,7 @@ import { bg, color, fontSize } from '@/lib/tokens';
 
 // The public pages' own links first (internal links for visitors and search engines), then the legal ones
 const LINKS = [
-  { to: '/features', label: 'Features' },
+  { to: '/how-it-works', label: 'How it works' },
   { to: '/chart', label: 'Live chart' },
   { to: '/blog', label: 'Blog' },
   { to: '/terms', label: 'Terms of Service' },
@@ -15,12 +15,12 @@ const LINKS = [
 
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
-// The links only the landing and features pages carry: sign-in, register and the legal pages keep
+// The links only the landing and How it works pages carry: sign-in, register and the legal pages keep
 // the footer they had (the paper-trading line and the legal links, design.md on phones)
-const MARKETING = new Set<string>(['/features', '/chart', '/blog']);
+const MARKETING = new Set<string>(['/how-it-works', '/chart', '/blog']);
 
 export function Footer({ marketing = false }: { marketing?: boolean }) {
-  // Before launch there is no chart to link to; /features says "launching soon" and is noindex then
+  // Before launch there is no chart to link to; /how-it-works says "launching soon" and is noindex then
   const links = LINKS.filter(
     (l) => (marketing || !MARKETING.has(l.to)) && (isLive || l.to !== '/chart')
   );

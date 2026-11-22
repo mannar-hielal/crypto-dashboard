@@ -503,16 +503,19 @@ sideways scroll at any width:
    row you swipe on a phone), three screenshots in frames, six "where we do better" sections, and the table. The table scrolls inside
    its own box on a phone with the feature column pinned; every cell is a tick, a tilde or a cross with a word for screen readers; the
    three "small on purpose" rows show our crosses; the competitor columns carry blurred shapes, never a logo.
-5. `/features` → h1 "Learn it. Try it. All in one place.", the sticky anchor nav from 768 px (each link scrolls to its section, the
-   heading clear of the bars), the questions as an accordion, and the links to `/blog`, `/register` and `/chart`.
+5. `/how-it-works` → h1 "How cryptopapertrade.com works", the sticky anchor nav from 768 px (each link scrolls to its section, the
+   heading clear of the bars), nine numbered sections, the questions as an accordion (live), and the links to `/blog`, `/register` and
+   `/chart`; no sideways scroll at 375 px. `/features` no longer exists (it lands on the landing page).
+   **Crypto path (a check):** Product ▾ → Crypto path signed in opens the dashboard with the learning map open at the side (a full
+   screen sheet on a phone); signed out it goes to the login page and, after signing in, lands on the same place.
    **Lesson previews (a check):** on a phone width the eight cards are one row you swipe (the row is a labelled region and a tab stop; arrow
    keys scroll it); from 768 px they are a grid (two columns, then four) and no landmark is added. With the network offline before the row
    nears the screen, the section shows "The lesson previews did not load. Refresh the page to try again." (announced politely) and no gap.
 6. With `VITE_IS_LIVE=false` the landing page is the Launching Soon hero, the coin ribbon and the newsletter form: no sign-up, chart,
    questions or table.
 
-**Manual check (M).** The public header (2026-11-18): on `/`, `/features`, `/blog` and `/about` at 1440 px [nav.product]
-opens Chart and Features (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
+**Manual check (M).** The public header (2026-11-18): on `/`, `/how-it-works`, `/blog` and `/about` at 1440 px [nav.product]
+opens Chart and Crypto path ([nav.how] sits between Product and Blog) (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
 their pages, the current one underlined; at 375 px [nav.menu] opens a full-width sheet of 44 px rows with Product
 expanding. `/about` and `/support` say "Coming soon." and are not indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the

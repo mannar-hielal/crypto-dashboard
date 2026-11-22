@@ -12,6 +12,9 @@ import { SYMBOLS } from '@/lib/markets';
 
 export const DASHBOARD_PATH = '/dashboard';
 
+/** The menu's Crypto path link: signed in it opens the dashboard with the path map open */
+export const PATH_ENTRY = '/path';
+
 export interface Market {
   category: MarketCategory;
   symbol: string;
@@ -70,11 +73,12 @@ export function parseMarketPath(pathname: string): (Market & { canonical: string
 }
 
 /**
- * 🔐 Where a sign-in may send the user back to: only a dashboard market URL we trade. Anything
+ * 🔐 Where a sign-in may send the user back to: only a dashboard market URL we trade, or the Crypto path entry. Anything
  * else (another origin, `//evil.example`, an arbitrary path) is refused — no open redirect.
  */
 export function safeReturnPath(from: unknown): string | null {
   if (typeof from !== 'string') return null;
+  if (from === PATH_ENTRY) return PATH_ENTRY;
   return parseMarketPath(from)?.canonical ?? null;
 }
 

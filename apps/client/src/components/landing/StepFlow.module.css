@@ -1,0 +1,100 @@
+/* Steps that read left to right. Colours from tokens.ts via the @theme mirror in index.css. */
+
+.flow {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* a phone: two rows of two */
+  gap: 28px 32px; /* room for the arrows between the boxes */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+}
+
+.number {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--color-brand-grad-from), var(--color-brand-grad-to));
+  color: var(--color-brand-white);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.text {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.875rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+/* The arrow after a box: in the gap to its right, centred on the box */
+.arrow {
+  position: absolute;
+  top: 50%;
+  right: -30px;
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
+  color: var(--color-brand-purple);
+}
+
+/* A phone's second box of a row has no arrow to its right (the next box is on the next row) ... */
+.step:nth-child(2n) .arrow {
+  display: none;
+}
+
+/* ... it gets a bend under it instead, pointing back to the start of the next row */
+.bend {
+  position: absolute;
+  bottom: -26px;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translateX(-50%);
+  color: var(--color-brand-purple);
+}
+
+@media (min-width: 768px) {
+  .flow {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 44px;
+  }
+
+  .step {
+    padding: 20px;
+  }
+
+  .step:nth-child(2n) .arrow {
+    display: block;
+  }
+
+  .arrow {
+    right: -36px;
+  }
+
+  .bend {
+    display: none;
+  }
+}

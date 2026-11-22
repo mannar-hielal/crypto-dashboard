@@ -12,7 +12,7 @@ longer linked from any card, lesson, path or panel. The public pages get a new h
 
 `cryptopapertrade.com  BETA   Product ▾   Blog   About us   Support`
 
-- **Product ▾** drops down to **Chart** (`/chart`) and **Features** (`/features`).
+- **Product ▾** drops down to **Chart** (`/chart`) and **Crypto path** (`/path`; the nav also links **How it works**, `/how-it-works`, which replaced Features).
 - **Blog** (`/blog`) is where every article lives.
 - **About us** (`/about`) and **Support** (`/support`) are placeholders ("Coming soon") until planned.
 
@@ -43,7 +43,7 @@ longer linked from any card, lesson, path or panel. The public pages get a new h
   panel's `LibraryTab` (a tab of `PathDrawer`).
 - `guide/lessons.ts`: 14 `more: { article }` and 23 `article:` references (cards, recap points, can-do lines).
   `LessonSheet.tsx` imports the article store, articles, widgets and graph.
-- Public pages (`LandingPage`, `FeaturesPage`) render `<TopBar marketing />`; legal and auth pages use `LegalLayout` and
+- Public pages (`LandingPage`, `HowItWorksPage`) render `<TopBar marketing />`; legal and auth pages use `LegalLayout` and
   `AuthLayout` (logo and footer, no nav). The dashboard uses `<TopBar />`.
 - The site is a client-rendered app on Cloudflare Pages: no prerender today.
 

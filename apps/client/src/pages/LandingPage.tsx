@@ -79,8 +79,8 @@ export function LandingPage() {
                 </p>
                 <div className={styles.heroActions}>
                   <StartLink cta={CTA_REGISTER} live={false} />
-                  <Link to="/features" className={shared.ctaGhost}>
-                    See Features
+                  <Link to="/how-it-works" className={shared.ctaGhost}>
+                    See how it works
                   </Link>
                 </div>
               </>

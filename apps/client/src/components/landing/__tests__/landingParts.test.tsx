@@ -200,7 +200,8 @@ describe('Timeline and ShotShowcase', () => {
   it('should give every screenshot alt text, a size and lazy loading', () => {
     const { container } = render(React.createElement(ShotShowcase));
     const imgs = container.querySelectorAll('img');
-    expect(imgs).toHaveLength(SHOTS.length);
+    // The three screens, then the Crypto path opened: beside the chart, and on a phone
+    expect(imgs).toHaveLength(SHOTS.length + 2);
     for (const img of imgs) {
       expect((img.getAttribute('alt') ?? '').length).toBeGreaterThan(20);
       expect(img.getAttribute('loading')).toBe('lazy');
@@ -304,5 +305,56 @@ describe('the table’s column order', () => {
       'prop',
     ]);
     for (const row of TABLE_ROWS) expect(row.groups, row.id).toHaveLength(GROUPS.length);
+  });
+});
+
+describe('the steps flow, the card screenshots and the pretend money (owner 2026-11-22)', () => {
+  afterEach(cleanup);
+
+  it('should read as one ordered list of the four steps, with arrows that are only a picture', async () => {
+    const { StepFlow } = await import('../StepFlow');
+    const { LEARN_STEPS } = await import('@/lib/landingContent');
+    const { container } = render(React.createElement(StepFlow, { items: LEARN_STEPS }));
+    const list = screen.getByRole('list');
+    expect(list.tagName).toBe('OL');
+    expect(within(list).getAllByRole('listitem')).toHaveLength(LEARN_STEPS.length);
+    // An arrow after every box but the last; a bend after the first row's end (a phone's 2 + 2)
+    const arrows = container.querySelectorAll('svg[aria-hidden="true"]');
+    expect(arrows.length).toBeGreaterThanOrEqual(LEARN_STEPS.length - 1);
+    expect(
+      container.querySelectorAll('li')[LEARN_STEPS.length - 1].querySelector('svg')
+    ).toBeNull();
+  });
+
+  it('should fade a real screenshot behind each of the five chart cards, and nowhere else', async () => {
+    const { FeatureGrid } = await import('../FeatureGrid');
+    const { CHART_FEATURES, DESK_FEATURES } = await import('@/lib/landingContent');
+    const withShots = render(React.createElement(FeatureGrid, { items: CHART_FEATURES }));
+    const imgs = withShots.container.querySelectorAll('img');
+    expect(imgs).toHaveLength(CHART_FEATURES.length);
+    for (const img of imgs) {
+      // Decorative: the words say it all; sized, and loaded late
+      expect(img.getAttribute('alt')).toBe('');
+      expect(img.getAttribute('width')).toBeTruthy();
+      expect(img.getAttribute('height')).toBeTruthy();
+      expect(img.getAttribute('loading')).toBe('lazy');
+    }
+    withShots.unmount();
+    const plain = render(React.createElement(FeatureGrid, { items: DESK_FEATURES }));
+    expect(plain.container.querySelectorAll('img')).toHaveLength(0);
+  });
+
+  it('should show where the pretend money lives: the panel with its balance, a coin, and the reset window', async () => {
+    const { PretendMoney } = await import('../PretendMoney');
+    const { PRETEND_MONEY } = await import('@/lib/landingContent');
+    const { container } = render(React.createElement(PretendMoney));
+    expect(screen.getByRole('heading', { name: PRETEND_MONEY.title })).not.toBeNull();
+    expect(screen.getByText(PRETEND_MONEY.callout)).not.toBeNull();
+    // The two screenshots say what they show; the coin is a drawing
+    expect(screen.getByRole('img', { name: PRETEND_MONEY.panelAlt })).not.toBeNull();
+    expect(screen.getByRole('img', { name: PRETEND_MONEY.resetAlt })).not.toBeNull();
+    expect(container.querySelector('svg[aria-hidden="true"]')?.textContent).toMatch(/PRETEND/);
+    expect(PRETEND_MONEY.panelAlt).toMatch(/\$10,000\.00/);
+    expect(PRETEND_MONEY.resetText).toMatch(/twice/);
   });
 });

@@ -167,9 +167,9 @@ describe('LandingPage', () => {
       expect(container.querySelector('a[href="/chart"]')).toBeNull();
     });
 
-    it('should still link to the features page', async () => {
+    it('should link to the How it works page', async () => {
       const { container } = await renderLanding();
-      expect(container.querySelector('a[href="/features"]')).not.toBeNull();
+      expect(container.querySelector('a[href="/how-it-works"]')).not.toBeNull();
     });
   });
 });

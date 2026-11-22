@@ -1,6 +1,6 @@
 /**
  * The public pages' header links (owner's visual Q&A 2026-11-18), beside the logo in the marketing
- * `TopBar`: Product ▾ (Chart, Features), Blog, About us and Support. From md up they are text links
+ * `TopBar`: Product ▾ (Chart, Crypto path), How it works, Blog, About us and Support. From md up they are text links
  * with a dropdown panel; below it one menu button opens a full-width sheet (rows of 44 px). Esc and a
  * click outside close what is open, and a link closes it too. The dashboard's bar has no nav.
  */
@@ -12,11 +12,12 @@ import { guide } from '@/lib/guideAnchors';
 import styles from './SiteNav.module.css';
 
 const PRODUCT = [
-  { to: '/chart', name: 'Chart', text: 'Live candles and indicators' },
-  { to: '/features', name: 'Features', text: 'Everything you get' },
+  { to: '/chart', key: 'chart', name: 'Chart', text: 'Live candles and indicators' },
+  { to: '/path', key: 'path', name: 'Crypto path', text: 'Your lessons, step by step' },
 ] as const;
 
 const LINKS = [
+  { to: '/how-it-works', label: 'How it works', anchor: 'nav.how' },
   { to: '/blog', label: 'Blog', anchor: 'nav.blog' },
   { to: '/about', label: 'About us', anchor: 'nav.about' },
   { to: '/support', label: 'Support', anchor: 'nav.support' },
@@ -94,7 +95,7 @@ export function SiteNav() {
                     to={p.to}
                     className={styles.item}
                     onClick={closeProduct}
-                    {...guide('nav.product.item', p.name.toLowerCase())}
+                    {...guide('nav.product.item', p.key)}
                   >
                     <span className={styles.itemName}>{p.name}</span>
                     <span className={styles.itemText}>{p.text}</span>
@@ -158,7 +159,7 @@ export function SiteNav() {
                 to={p.to}
                 className={`${styles.row} ${styles.sub}`}
                 onClick={closeMenu}
-                {...guide('nav.product.item', p.name.toLowerCase())}
+                {...guide('nav.product.item', p.key)}
               >
                 {p.name}
               </Link>
