@@ -128,8 +128,9 @@ describe('lessons', () => {
         expect([0, 1], lesson.id).toContain(at);
         const peek = lesson.cards[at];
         expect(peek.title).toBe('What you will learn');
-        expect(peek.art, 'the picture on top').toBeDefined();
-        expect(peek.presenter, 'no guide on the card').toBeUndefined();
+        // Its own graphic, derived from the lesson's topics, with a guide pointing at it (owner 2026-11-22)
+        expect(peek.art, 'the picture on top').toMatch(/^peek[A-Z]/);
+        expect(peek.presenter?.pose, 'a guide points at it').toBe('point');
         expect(peek.preview!.length).toBeGreaterThanOrEqual(3);
         expect(peek.preview!.length).toBeLessThanOrEqual(4);
         for (const line of peek.preview!) {
@@ -459,7 +460,7 @@ describe('lessons', () => {
     });
     expect(art('lesson-ownership')).toEqual({
       'A headline in the first block': 'bitcoin',
-      'What you will learn': 'ledger',
+      'What you will learn': 'peekOwnership',
       'One record, many copies': 'ledger',
       'Sealed by hard work': 'sealBroken',
       'The hash links the chain': 'hashChain',
@@ -467,7 +468,7 @@ describe('lessons', () => {
     // Lesson 3 keeps its pictures as they were
     expect(art('lesson-02')).toEqual({
       'One Bitcoin for $8,200': 'flashCrash',
-      'What you will learn': 'swings',
+      'What you will learn': 'peekSwings',
       'Thousands of deals, one candle': 'candleAnatomy',
       'Thin or deep': 'deepThin',
       'The $8,200 moment': 'staircase',
@@ -533,7 +534,8 @@ describe('lessons', () => {
     expect(lessonScreens(l)[l.momentAfter! + 1]).toEqual({ kind: 'moment' });
     // The cold open: the genesis block's headline, and the lesson's own length
     expect(l.cards[0].beats?.[0].text).toBe('3 January 2009 · The first block');
-    expect(l.cards[0].beats?.at(-1)?.text).toContain(`${l.minutes} minutes`);
+    // The cold open no longer announces what you will learn: the sneak peek next does (2026-11-22)
+    expect(JSON.stringify(l.cards[0].beats)).not.toMatch(/In the next \d+ minutes/);
     // The quizzes: a payment's journey in order, then two Match boxes
     const quizzes = l.cards.flatMap((c) => (c.quiz ? [c.quiz] : []));
     expect(quizzes.map((q) => q.format)).toEqual(['order', 'match', 'match']);
@@ -898,7 +900,8 @@ describe('lessons', () => {
       'On 19 May 2021 Bitcoin fell from about $42,900 to as low as $28,800 on Bybit’s perpetual chart, then closed near $36,700. It can swing up just as hard, often without warning, so no one can reliably time it.'
     );
     expect(l.cards[0].art).toBe('flashCrash');
-    expect(l.cards[0].beats?.at(-1)?.text).toContain(`${l.minutes} minutes`);
+    // The cold open no longer announces what you will learn: the sneak peek next does (2026-11-22)
+    expect(JSON.stringify(l.cards[0].beats)).not.toMatch(/In the next \d+ minutes/);
     // The benchmark's company and token are gone; the examples are ours
     expect(JSON.stringify(l)).not.toMatch(/Tesla|Squid/);
     // The quizzes: Match boxes (situations), then the rug pull's steps in order
@@ -1214,17 +1217,17 @@ describe('lessons', () => {
     expect(bus?.text).toMatch(/^Think of it as a bus.*Where it stops matching/);
     // Our real example: bitcoin's average fee, April 2024 (about $5, $128 on 20 April, $35 on 21 April)
     const spike = l.cards.find((c) => c.title === 'A real fee spike')!;
-    expect(spike.text).toMatch(/few dollars, about \$5.*20 April.*about \$128.*about \$35/);
+    expect(spike.text).toMatch(/few dollars, about \$4.*20 April.*about \$128.*about \$35/);
     expect(spike.chart).toBeUndefined();
-    // The sum is true: a $200 send, a $5 fee and a $128 fee
+    // The sum is true: a $200 send, a $4 fee and a $128 fee
     const math = l.cards.find((c) => c.title === 'Is it worth it?')!.math!;
     expect(math.steps.map((s) => s.sum)).toEqual([
-      '5 ÷ 200 = 0.025',
-      '0.025 × 100 = 2.5%',
+      '4 ÷ 200 = 0.02',
+      '0.02 × 100 = 2%',
       '128 ÷ 200 = 0.64',
       '0.64 × 100 = 64%',
     ]);
-    expect(math.answer).toMatch(/2\.5%.*64%/);
+    expect(math.answer).toMatch(/2%.*64%/);
     // The paper account's fee is the exchange's Commission, not a network fee
     expect(l.cards.find((c) => c.title === 'Two different fees')?.text).toMatch(
       /Commission.*exchange.*network fee is different/

@@ -4705,6 +4705,21 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
   "coming soon" titles.
 
+### 2026-11-22 — The sneak peek gets its own graphic, and the first cards stop announcing it
+
+Owner, 2026-11-22: the picture on a "What you will learn" card (a road scene, the friends) was drawn for another card and says little
+there. Each peek now has **its own graphic, derived from the lesson's topics**, with Pulin or Berwyn pointing at it.
+
+- **The graphic:** `PeekMap` in `LessonArt.tsx`: a numbered path through the lesson's 3 or 4 topics, an icon and a two-line label each,
+  in the order of the lines below it. One template, seven art ids (`peekOwnership`, `peekSwings`, `peekStyle`, `peekCoins`,
+  `peekStable`, `peekWallets`, `peekFees`); a guide stands in the picture, pointing (they alternate by lesson). Lesson 1's "Meet your
+  guides" card is its own peek and is unchanged.
+- **The sweep:** the first cards of Lessons 2 and 3 ended on "In the next 9 minutes: …", and Lesson 4's opening text on "Today you'll
+  see the difference and find the style that fits you": all three said what the peek says next, so they are gone. Lessons 5 to 8 open
+  on the peek itself.
+- **Rule:** the lesson-authoring skill's "The opening" section says it; the lesson rules test checks the `peek…` graphic, the pointing
+  guide and that no cold open announces the lesson.
+
 ### 2026-11-22 — Chapter 2, Lesson 8 "Why sending crypto costs a fee"
 
 The fourth lesson of chapter 2 (its own PR, owner 2026-11-19), built on the owner's goal of 2026-11-22 ("implemented, code-reviewed,
@@ -4715,17 +4730,17 @@ approvals, so the owner reads them on the PR. `lesson-fees`, 8 min, 20 screens, 
   seat. Berwyn's analogy says where it stops matching (the bus leaves on the network's schedule).
 - **Cards:** the sneak peek (card 1), sending has a price, a block is a bus, who picks the passengers (validators; miners on Bitcoin,
   Lesson 2), **Drag and drop** (send to confirmed), why a fee exists (pay for upkeep, stop spam), why it moves (limited seats, demand),
-  **Match boxes**, **a real fee spike** (our example: bitcoin's average fee, April 2024), **Do the math** (a $200 send: 2.5% on a quiet
+  **Match boxes**, **a real fee spike** (our example: bitcoin's average fee, April 2024), **Do the math** (a $200 send: 2% on a quiet
   day, 64% on the spike day), cheap and pricey chains, a plain send or a swap, **Pick the right ones** (what makes a fee higher), a
   multiple-choice question, plan before you send, then **Your call** ($40 to a friend, a $12 fee: check whether waiting or a cheaper
   chain costs less), two different fees (the practice account's Commission is the exchange's; no practice trade has a network fee), a
   multiple-choice question (which costs the most), summary, close. No practice trade.
-- **Text:** fact checked by a technical-writer agent (2026-11-22). Applied: early April's fee is "a few dollars, about $5" (The Block
-  gives a 7-day average of $4.11 earlier in April; the $128 and $35 figures are confirmed); the validator "picks and adds" payments,
+- **Text:** fact checked by a technical-writer agent (2026-11-22). Applied: early April's fee is "a few dollars, about $4" (The Block
+  gives a 7-day average of $4.11 earlier in April, and a review caught the card rounding it up to $5; the $128 and $35 figures are confirmed); the validator "picks and adds" payments,
   and Bitcoin's nodes check them (Lesson 2); the Commission is simulated here, a real exchange charges it; the second "big fee on a
   small send" question became "which costs the most?", so it no longer repeats Your call. To re-check before a release: the
   "often a few cents a send" line on cheap chains.
-- **Our example:** bitcoin's average transaction fee was about $5 in early April 2024, about $128 on 20 April (halving day and the
+- **Our example:** bitcoin's average transaction fee was about $4 in early April 2024, about $128 on 20 April (halving day and the
   launch of Runes) and about $35 on 21 April (The Block and YCharts reports; sources differ by cents with the day's time base). Drawn,
   never a chart, and labelled "drawn from reported averages". The $200 payment is ours.
 - **Pictures:** eight new flat drawings in the Lesson 7 style (`LessonArt.tsx`), and two Pick tile icons (`gear`, `moon`). The visual
