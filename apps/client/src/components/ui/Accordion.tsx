@@ -47,6 +47,8 @@ export function Accordion({ items, headingLevel = 3, defaultOpen = [] }: Accordi
     });
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    // Leave Alt, Ctrl, Cmd and Shift combinations to the browser (Cmd+Down jumps to the page end)
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     const last = items.length - 1;
     const target =
       e.key === 'ArrowDown'

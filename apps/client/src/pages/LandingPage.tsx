@@ -108,9 +108,9 @@ export function LandingPage() {
             </section>
           )}
 
-          <section className={shared.section} aria-label="The coins you can practise on">
+          <div className={shared.section}>
             <CoinRibbon />
-          </section>
+          </div>
 
           {isLive && (
             <>

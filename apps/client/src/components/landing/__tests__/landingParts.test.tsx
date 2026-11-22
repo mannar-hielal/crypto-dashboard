@@ -166,12 +166,12 @@ describe('CoinRibbon', () => {
     ]);
   });
 
-  it('should load coin logos lazily with a size, from our own files', () => {
+  it('should load the coin logos at once (a sliding ribbon would show blanks), with a size, from our own files', () => {
     const { container } = render(React.createElement(CoinRibbon));
     const imgs = container.querySelectorAll('img');
     expect(imgs.length).toBe(COINS.length * 2);
     for (const img of imgs) {
-      expect(img.getAttribute('loading')).toBe('lazy');
+      expect(img.getAttribute('loading')).toBeNull();
       expect(img.getAttribute('width')).toBe('36');
       expect(img.getAttribute('alt')).toBe('');
     }

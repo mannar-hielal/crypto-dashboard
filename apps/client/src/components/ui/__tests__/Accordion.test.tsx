@@ -70,4 +70,14 @@ describe('Accordion', () => {
     render(React.createElement(Accordion, { items: ITEMS, headingLevel: 4 }));
     expect(screen.getByRole('button', { name: 'First?' }).closest('h4')).not.toBeNull();
   });
+
+  it('should leave Cmd, Ctrl, Alt and Shift arrow combinations to the browser (review 2026-11-22)', () => {
+    render(React.createElement(Accordion, { items: ITEMS }));
+    const first = screen.getByRole('button', { name: 'First?' });
+    first.focus();
+    fireEvent.keyDown(first, { key: 'ArrowDown', metaKey: true });
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(first, { key: 'ArrowDown' });
+    expect(document.activeElement).not.toBe(first);
+  });
 });

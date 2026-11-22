@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import styles from './LessonPreviews.module.css';
@@ -10,9 +10,17 @@ const LessonPreviews = lazy(() => import('./LessonPreviews'));
  * large, and most visitors read the top of the page first. Without `IntersectionObserver` it
  * loads at once.
  */
+/** What the error boundary renders: nothing, and it tells the holder to close its reserved gap */
+function FailedMarker({ onFail }: { onFail: () => void }) {
+  useEffect(onFail, [onFail]);
+  return null;
+}
+
 export function LessonPreviewsLazy() {
   const holder = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
+  const [failed, setFailed] = useState(false);
+  const markFailed = useCallback(() => setFailed(true), []);
 
   useEffect(() => {
     const el = holder.current;
@@ -28,10 +36,10 @@ export function LessonPreviewsLazy() {
   }, [near]);
 
   return (
-    <div ref={holder} className={styles.holder}>
+    <div ref={holder} className={`${styles.holder}${failed ? ` ${styles.holderFailed}` : ''}`}>
       {near && (
         // A failed chunk (offline, or a stale hashed file after a deploy) costs this section, never the page
-        <ErrorBoundary fallback={<span className={styles.failed} />}>
+        <ErrorBoundary fallback={<FailedMarker onFail={markFailed} />}>
           <Suspense fallback={<div className={styles.placeholder} aria-hidden="true" />}>
             <LessonPreviews />
           </Suspense>

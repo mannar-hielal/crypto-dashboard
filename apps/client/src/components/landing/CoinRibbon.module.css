@@ -57,7 +57,6 @@
     animation: slide 45s linear infinite;
   }
 
-  .ribbon:hover .track,
   .paused .track {
     animation-play-state: paused;
   }
@@ -82,6 +81,13 @@
   }
 }
 
+/* Hover pauses only where hover is real: on touch a tap leaves :hover stuck, and Play would not restart it */
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .ribbon:hover .track {
+    animation-play-state: paused;
+  }
+}
+
 @keyframes slide {
   to {
     transform: translateX(-50%);
@@ -100,6 +106,11 @@
   color: var(--color-brand-muted);
   font-size: 0.8125rem; /* fontSize.xs11 */
   cursor: pointer;
+}
+
+.pause:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
 }
 
 .pause:hover {

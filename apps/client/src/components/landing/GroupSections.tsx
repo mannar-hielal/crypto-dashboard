@@ -7,7 +7,7 @@ export function GroupSections() {
   return (
     <div className={styles.grid}>
       {GROUPS.map((g) => (
-        <section key={g.id} className={styles.card} aria-labelledby={`group-${g.id}`}>
+        <article key={g.id} className={styles.card} aria-labelledby={`group-${g.id}`}>
           <p className={styles.group}>
             <BrandMark group={g.id} />
             <span>Instead of: {g.label.toLowerCase()}</span>
@@ -19,7 +19,7 @@ export function GroupSections() {
           <p className={styles.theyWin}>
             <strong>Where they are better.</strong> {g.theyWin}
           </p>
-        </section>
+        </article>
       ))}
     </div>
   );

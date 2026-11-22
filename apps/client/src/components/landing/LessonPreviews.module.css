@@ -5,15 +5,22 @@
   min-height: 320px; /* keeps the page from jumping when the cards load */
 }
 
-/* The marker a failed chunk leaves (an empty span) */
-.failed {
-  display: block;
-  height: 0;
+/* A failed chunk leaves nothing to wait for: close the gap (set from the component, not :has) */
+.holder.holderFailed {
+  min-height: 0 !important; /* beats the per-width reservations below */
 }
 
-/* A failed chunk leaves nothing to wait for: close the gap */
-.holder:has(.failed) {
-  min-height: 0;
+/* The loaded grid is taller than the phone row: reserve about its height, so nothing jumps */
+@media (min-width: 768px) {
+  .holder {
+    min-height: 1360px; /* two columns, four rows */
+  }
+}
+
+@media (min-width: 1024px) {
+  .holder {
+    min-height: 680px; /* four columns, two rows */
+  }
 }
 
 .placeholder {

@@ -17,7 +17,6 @@ function Coin({ symbol, name, twin }: { symbol: CoinSymbol; name: string; twin?:
         alt=""
         width={36}
         height={36}
-        loading="lazy"
         decoding="async"
         className={styles.icon}
       />

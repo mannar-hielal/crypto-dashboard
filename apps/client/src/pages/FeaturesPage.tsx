@@ -220,11 +220,11 @@ export function FeaturesPage() {
             </section>
           )}
 
-          <section className={shared.section} aria-label="Please note">
+          <div className={shared.section}>
             <p className={styles.legal}>
               Paper trading only: no real money is involved, and nothing here is financial advice.
             </p>
-          </section>
+          </div>
 
           <section className={`${shared.section} ${styles.cta}`} aria-label="Get started">
             <CtaSection />

@@ -523,7 +523,7 @@ export const LEARN_STEPS: readonly Feature[] = [
 export const LEARN_TOPICS: readonly Feature[] = [
   {
     title: 'Chapter 1: Start here',
-    text: 'Buy and sell, going long and short, why prices swing, how to spot a trap, and whether you are a trader or an investor.',
+    text: 'Buy and sell, going long and short, how money without a bank works, why prices swing, how to spot a trap, and whether you are a trader or an investor.',
   },
   {
     title: 'Chapter 2: Your crypto toolbox',
@@ -665,7 +665,7 @@ export const FEATURES_FAQ: readonly FaqItem[] = [
     id: 'lessons',
     question: 'Which lessons are there today?',
     answer:
-      'Eight lessons in two chapters: buy and sell, long and short, how money without a bank works, why prices swing, trader or investor, coins and tokens, stablecoins, wallets and keys, and fees. Chapter 1 ends with a checkpoint. More lessons are on the way.',
+      'Eight lessons in two chapters: buy and sell with long and short, how money without a bank works, why prices swing and how to spot a trap, trader or investor, coins and tokens, stablecoins, wallets and keys, and fees. Chapter 1 ends with a checkpoint. More lessons are on the way.',
     cta: {
       to: '/register',
       label: 'Start here: open lesson 1',
