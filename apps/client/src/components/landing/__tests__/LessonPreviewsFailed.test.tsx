@@ -16,8 +16,9 @@ describe('LessonPreviewsLazy when the chunk fails', () => {
     const { container } = render(React.createElement(LessonPreviewsLazy));
     // Announced to assistive technology, in plain words (no button to get wrong)
     const note = screen.getByRole('status');
+    // The live region is in the page before it has any words (so a screen reader announces the change)
+    expect(note.textContent).toBe('');
     await waitFor(() => expect(note.textContent).toMatch(/did not load.*Refresh the page/));
-    // The same live region was in the page before it had words (so a screen reader announces the change)
     expect(screen.queryByRole('button')).toBeNull();
     // The holder dropped the height it had reserved
     await waitFor(() => expect(container.firstElementChild?.className).toMatch(/holderSettled/));

@@ -43,7 +43,7 @@
   gap: 10px;
   margin: 0;
   padding: 6px 16px;
-  border: 1px solid var(--color-border-input); /* border.input: the pill's outline, as it was */
+  border: 1px solid color-mix(in srgb, white 10%, transparent); /* the pill's outline */
   border-radius: 9999px;
   background: color-mix(in srgb, var(--color-brand-glow) 10%, transparent); /* color.glow at 10% */
   color: var(--color-brand-muted);
