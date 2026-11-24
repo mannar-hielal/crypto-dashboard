@@ -78,6 +78,20 @@ describe('PictureAccordion', () => {
   });
 });
 
+describe('PictureAccordion focus', () => {
+  it('should not open a panel when focus only reaches its heading (Tab)', () => {
+    render(<PictureAccordion items={items} />);
+    const second = screen.getByRole('button', { name: /Second/ });
+    fireEvent.focus(second);
+    expect(second.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getByRole('button', { name: /First/ }).getAttribute('aria-expanded')).toBe(
+      'true'
+    );
+    fireEvent.click(second);
+    expect(second.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
 describe('PictureCallouts', () => {
   it('should show both post-its with their points', () => {
     render(<PictureCallouts learn={HALVES[0]} chart={HALVES[1]} alt="The lesson over the chart" />);
@@ -121,6 +135,18 @@ describe('StackDiagram', () => {
     render(<StackDiagram />);
     const guide = screen.getByLabelText('The four parts in one line');
     for (const l of STACK) expect(within(guide).getByText(l.title)).not.toBeNull();
+  });
+});
+
+describe('TourPlayer clip state', () => {
+  it('should show Play, not Pause, when another tour opens after a clip was playing', () => {
+    const { container } = render(<TourPlayer />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    fireEvent.play(video);
+    expect(screen.getByText('Pause the clip')).not.toBeNull();
+    fireEvent.click(screen.getAllByRole('tab')[1]);
+    expect(screen.queryByText('Pause the clip')).toBeNull();
+    expect(screen.getByText('Play the clip')).not.toBeNull();
   });
 });
 

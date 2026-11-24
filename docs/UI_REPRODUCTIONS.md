@@ -506,8 +506,8 @@ sideways scroll at any width:
 5. `/how-it-works` → h1 "How cryptopapertrade.com works", the sticky anchor nav from 768 px (each link scrolls to its section, the
    heading clear of the bars), eight numbered sections, the questions as an accordion (live), and the links to `/blog`, `/register` and
    `/chart`; no sideways scroll at 375 px. `/features` no longer exists (it lands on the landing page).
-   **Visual sections (2026-11-23):** Why is a vertical picture accordion (hover, focus or tap opens a panel, the arrow keys move between
-   panels, below 768 px the open panel grows with its text); One picture has two post-its with arrows (side by side from 900 px, under the
+   **Visual sections (2026-11-23):** Why is a vertical picture accordion (hover or tap opens a panel, Enter or Space on its heading too, the arrow keys move between
+   panels, Tab only moves focus, below 768 px the open panel grows with its text); One picture has two post-its with arrows (side by side from 900 px, under the
    picture on a phone); Tours are five muted looping clips, one per tab, desktop and phone frames, loaded only near the screen and
    paused off it (a play button under reduced motion); Behind the scenes is the four-layer blueprint. No candle, three-words or flows
    sections.

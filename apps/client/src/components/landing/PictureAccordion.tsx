@@ -14,7 +14,7 @@ export interface AccordionItem {
 
 /**
  * A vertical accordion of picture panels (owner 2026-11-23): the open panel grows, its picture zooms in
- * and the text sits on it. Hover, focus and tap all open a panel; the arrow keys move between them. The
+ * and the text sits on it. Hover and tap open a panel, and so do Enter and Space on its heading (Tab only moves focus); the arrow keys move between them. The
  * text of a closed panel stays in the page (inert, so a screen reader skips it, a crawler still reads it).
  */
 export function PictureAccordion({ items }: { items: readonly AccordionItem[] }) {
@@ -82,7 +82,6 @@ export function PictureAccordion({ items }: { items: readonly AccordionItem[] })
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => setOpen(i)}
-                onFocus={() => setOpen(i)}
                 onKeyDown={(e) => onKey(e, i)}
               >
                 <span className={styles.index} aria-hidden="true">

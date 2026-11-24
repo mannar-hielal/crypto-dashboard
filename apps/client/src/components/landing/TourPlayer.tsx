@@ -21,27 +21,25 @@ function fileFor(id: Tour['id'], ext: string): string | undefined {
 const reducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+const HAS_OBSERVER = typeof IntersectionObserver !== 'undefined';
+
 /** The clip of the open tour: muted, looping, loaded only when it nears the screen, paused when it leaves */
 function Clip({ tour }: { tour: Tour }) {
   const video = useRef<HTMLVideoElement>(null);
   const box = useRef<HTMLDivElement>(null);
   // A pause the visitor chose stays: scrolling away and back does not restart the clip
   const userPaused = useRef(false);
-  const [near, setNear] = useState(false);
-  const [onScreen, setOnScreen] = useState(false);
+  // No observer (an old browser): the clip counts as near and on screen, so it still loads
+  const [near, setNear] = useState(!HAS_OBSERVER);
+  const [onScreen, setOnScreen] = useState(!HAS_OBSERVER);
   const [playing, setPlaying] = useState(false);
   const mp4 = fileFor(tour.id, 'mp4');
   const poster = fileFor(tour.id, 'webp');
 
-  // Another tour is another clip: its pause choice starts over
-  useEffect(() => {
-    userPaused.current = false;
-  }, [tour.id]);
-
   // Load the clip when its box is close to the screen; it plays only while it is on screen
   useEffect(() => {
     const el = box.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
+    if (!el || !HAS_OBSERVER) return;
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) setNear(true);
@@ -51,14 +49,14 @@ function Clip({ tour }: { tour: Tour }) {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [tour.id]);
+  }, []);
 
   // The video is keyed on `near`, so its source exists when this runs
   useEffect(() => {
     const v = video.current;
     if (!v) return;
     if (onScreen && near && !userPaused.current && !reducedMotion()) {
-      void v.play().catch(() => undefined);
+      void v.play?.()?.catch(() => undefined);
     } else {
       v.pause();
     }
@@ -73,7 +71,7 @@ function Clip({ tour }: { tour: Tour }) {
     if (!v) return;
     if (v.paused) {
       userPaused.current = false;
-      void v.play().catch(() => undefined);
+      void v.play?.()?.catch(() => undefined);
     } else {
       userPaused.current = true;
       v.pause();
@@ -165,7 +163,7 @@ export function TourPlayer() {
         <div
           className={`${styles.frame} ${tour.device === 'phone' ? styles.phone : styles.desktop}`}
         >
-          <Clip tour={tour} />
+          <Clip key={tour.id} tour={tour} />
         </div>
         <div className={styles.copy}>
           <p className={styles.device}>{tour.device === 'phone' ? 'On a phone' : 'On a desktop'}</p>
