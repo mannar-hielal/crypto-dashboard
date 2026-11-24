@@ -1,0 +1,413 @@
+/* The Why slider: one big slide at a time, moved up and down. Colours from tokens.ts via the @theme mirror. */
+
+.slider {
+  position: relative;
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr 36px;
+  grid-template-areas:
+    'up up'
+    'stage dots'
+    'down down'
+    'hint hint';
+  align-items: center;
+  gap: 10px 14px;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 20px;
+}
+
+.stage {
+  grid-area: stage;
+  height: 440px;
+  overflow: hidden;
+  border-radius: 14px;
+  cursor: grab;
+  user-select: none;
+}
+
+.track {
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.65, 0, 0.2, 1);
+}
+
+.tone0 {
+  --tone: var(--color-tint-pink-deep);
+  --tone-edge: var(--color-tint-pink-edge);
+}
+
+.tone1 {
+  --tone: var(--color-tint-teal-deep);
+  --tone-edge: var(--color-tint-teal-edge);
+}
+
+.tone2 {
+  --tone: var(--color-tint-amber-deep);
+  --tone-edge: var(--color-tint-amber-edge);
+}
+
+.tone3 {
+  --tone: var(--color-tint-violet-deep);
+  --tone-edge: var(--color-tint-violet-edge);
+}
+
+.tone4 {
+  --tone: var(--color-tint-blue-deep);
+  --tone-edge: var(--color-tint-blue-edge);
+}
+
+.slide {
+  position: relative;
+  /* Each slide has its own colour: a glow behind the phone, over a gradient from its deep tint to the page */
+  background:
+    radial-gradient(
+      circle at 78% 50%,
+      color-mix(in srgb, var(--tone-edge) 42%, transparent) 0%,
+      transparent 58%
+    ),
+    linear-gradient(135deg, var(--tone) 0%, var(--color-bg-page) 100%);
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  align-items: flex-start;
+}
+
+/* A phone, turned toward the words: its near edge is on the right, its screen faces the text */
+.phone {
+  position: absolute;
+  top: 50%;
+  right: 12%;
+  height: 94%;
+  aspect-ratio: 390 / 844;
+  padding: 7px;
+  border: 2px solid color-mix(in srgb, white 30%, transparent);
+  border-radius: 34px;
+  background: linear-gradient(145deg, var(--color-bg-surface) 0%, var(--color-bg-deep) 55%);
+  box-shadow:
+    0 0 0 3px var(--color-bg-deep),
+    0 30px 60px color-mix(in srgb, black 70%, transparent);
+  transform: translateY(-50%) perspective(1400px) rotateY(-32deg) rotateX(6deg);
+  transform-origin: 50% 50%;
+  /* the frame has depth: its side wall (.side) stands out behind the screen */
+  transform-style: preserve-3d;
+}
+
+/* The phone's thickness: slices of the same rounded frame, stacked one behind the other (inline --i),
+   so the side wall follows the rounded corners and has a steel sheen that darkens toward the back */
+.slice {
+  position: absolute;
+  inset: 0;
+  border-radius: 34px;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, white 48%, var(--color-bg-deep)) 0%,
+    color-mix(in srgb, white 85%, var(--color-bg-deep)) 35%,
+    color-mix(in srgb, white 38%, var(--color-bg-deep)) 70%,
+    color-mix(in srgb, white 62%, var(--color-bg-deep)) 100%
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, black 35%, transparent);
+  filter: brightness(calc(1 - var(--i) * 0.03));
+}
+
+/* The power key and the volume keys: small raised bars on the near wall */
+.key {
+  position: absolute;
+  right: -2px;
+  width: 5px;
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, white 55%, var(--color-bg-deep)),
+    color-mix(in srgb, white 20%, var(--color-bg-deep))
+  );
+  transform: translateZ(-12px);
+}
+
+.keyPower {
+  top: 26%;
+  height: 11%;
+}
+
+.keyUp {
+  top: 14%;
+  height: 5%;
+}
+
+.keyDown {
+  top: 21%;
+  height: 5%;
+}
+
+/* The speaker notch at the top of the screen */
+.notch {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  z-index: 2;
+  width: 36%;
+  height: 4.2%;
+  border-radius: 0 0 14px 14px;
+  background: var(--color-bg-deep);
+  transform: translateX(-50%);
+}
+
+.notch::after {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: 36%;
+  height: 24%;
+  border-radius: 4px;
+  background: color-mix(in srgb, white 16%, var(--color-bg-deep));
+  content: '';
+  transform: translateX(-50%);
+}
+
+/* The glass: a soft diagonal shine over the screen */
+.gloss {
+  position: absolute;
+  inset: 7px;
+  border-radius: 27px;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, white 14%, transparent) 0%,
+    transparent 38%
+  );
+  pointer-events: none;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 27px;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+  max-width: 32rem;
+  margin: 28px;
+  padding: 24px 26px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  /* the words sit on a dark glass card, so they read over any part of the background */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-bg-panel) 82%, transparent) 0%,
+    color-mix(in srgb, var(--color-bg-deep) 78%, transparent) 100%
+  );
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--color-brand-white);
+}
+
+.title {
+  margin: 0 0 14px;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each bullet gets a glowing gradient tick, so the list scans at a glance */
+.bullet {
+  position: relative;
+  padding-left: 36px;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+.bullet::before {
+  position: absolute;
+  top: 0.1em;
+  left: 0;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--color-brand-grad-from), var(--color-brand-grad-to));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color-brand-purple) 60%, transparent);
+  color: var(--color-brand-white);
+  content: '✓';
+  font-size: 0.8125rem;
+  font-weight: 900;
+}
+
+.bullet strong {
+  color: var(--color-brand-white);
+  font-weight: 800;
+}
+
+.note {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-card); /* border.card */
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+/* The big number, cut off by the bottom edge, as in the Splide demo */
+.number {
+  position: absolute;
+  bottom: -0.2em;
+  left: 28px;
+  z-index: 1;
+  color: var(--color-brand-white);
+  font-size: 9rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 4px 24px color-mix(in srgb, var(--color-bg-deep) 80%, transparent);
+}
+
+.arrow {
+  display: inline-flex;
+  width: 44px;
+  height: 36px;
+  justify-self: center;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--color-brand-white);
+  cursor: pointer;
+}
+
+.arrow svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 3;
+}
+
+.arrow[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.up {
+  grid-area: up;
+}
+
+.down {
+  grid-area: down;
+}
+
+.dots {
+  display: flex;
+  grid-area: dots;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A 28 px tap target around a small dot */
+.dot {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dot::after {
+  position: absolute;
+  inset: 8px;
+  border-radius: 9999px;
+  background: var(--color-brand-muted);
+  content: '';
+  opacity: 0.5;
+  transition:
+    opacity 0.25s,
+    transform 0.25s,
+    background 0.25s;
+}
+
+.dot[aria-current='true']::after {
+  background: var(--color-brand-purple);
+  opacity: 1;
+  transform: scale(1.5);
+}
+
+.hint {
+  grid-area: hint;
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+/* A white ring, not the purple focusRing: the purple vanishes on the violet and blue slide colours (the one
+   exception to design.md's single focus ring, recorded in APP_LOG) */
+.arrow:focus-visible,
+.dot:focus-visible {
+  outline: 2px solid var(--color-brand-white);
+  outline-offset: 2px;
+}
+
+@media (max-width: 899px) {
+  .stage {
+    height: 640px;
+  }
+
+  /* No room for the big number beside a phone that stands under the words */
+  .number {
+    display: none;
+  }
+
+  /* A phone: the words on top, the phone standing below them, centred */
+  .phone {
+    top: auto;
+    right: 50%;
+    bottom: 3%;
+    height: 41%;
+    transform: translateX(50%) perspective(1400px) rotateY(-28deg) rotateX(4deg);
+  }
+
+  .copy {
+    margin: 14px;
+    padding: 18px 18px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .bullet {
+    font-size: 1rem;
+  }
+}
+
+/* A narrow phone: the words wrap onto more lines, so the phone is smaller */
+@media (max-width: 479px) {
+  .phone {
+    height: 37%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track,
+  .dot::after {
+    transition: none;
+  }
+}

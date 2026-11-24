@@ -49,7 +49,7 @@ export function NewsletterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-3">
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <input
           type="email"
           name="email"
@@ -63,7 +63,7 @@ export function NewsletterForm() {
           }}
           placeholder="your@email.com"
           disabled={state === 'loading'}
-          className="h-12 flex-1 rounded-xl border px-4 text-sm text-white outline-none transition-colors placeholder:text-white/30 disabled:opacity-50"
+          className="h-12 min-w-0 rounded-xl border px-4 sm:flex-1 text-sm text-white outline-none transition-colors placeholder:text-white/30 disabled:opacity-50"
           style={{
             background: bg.surface,
             borderColor: state === 'error' ? color.red : 'rgba(255,255,255,0.15)',
@@ -72,7 +72,7 @@ export function NewsletterForm() {
         <button
           type="submit"
           disabled={state === 'loading'}
-          className="flex h-12 shrink-0 items-center gap-2 rounded-xl px-6 text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90 disabled:opacity-50"
           style={{ background: gradient.brand }}
         >
           {state === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Get Notified'}

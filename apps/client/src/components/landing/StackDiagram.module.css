@@ -232,10 +232,34 @@
 
 .arrowTop {
   top: -4px;
+  /* the arrows nudge the way they point, in step with the dashes */
+  animation: nudgeUp 1s ease-in-out infinite;
 }
 
 .arrowBottom {
   bottom: -4px;
+  animation: nudgeDown 1s ease-in-out infinite;
+}
+
+/* Prices come in: the dashes stream up, from the feed to the server, and only one way */
+.linkUp .arrowBottom {
+  display: none;
+}
+
+.linkUp .linkLine {
+  animation-direction: reverse;
+}
+
+@keyframes nudgeUp {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes nudgeDown {
+  50% {
+    transform: translateY(5px);
+  }
 }
 
 .roads {
@@ -375,7 +399,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .linkLine {
+  .linkLine,
+  .linkArrow {
     animation: none;
   }
 }

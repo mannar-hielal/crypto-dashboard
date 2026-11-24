@@ -1,8 +1,17 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, within, act } from '@testing-library/react';
 
-import { HALVES, STACK, STACK_LINKS, TOURS, WORDS_PICTURED } from '@/lib/howItWorksContent';
-import { PictureAccordion } from '../PictureAccordion';
+import {
+  HALVES,
+  STACK,
+  STACK_LINKS,
+  STACK_TECH,
+  TOURS,
+  WORDS_PICTURED,
+} from '@/lib/howItWorksContent';
+import { MemoryRouter } from 'react-router';
+import LessonCarousel from '../LessonCarousel';
+import { WhySlider } from '../WhySlider';
 import { PictureCallouts } from '../PictureCallouts';
 import { StackDiagram } from '../StackDiagram';
 import { TourPlayer } from '../TourPlayer';
@@ -10,85 +19,99 @@ import { TourPlayer } from '../TourPlayer';
 afterEach(cleanup);
 
 const img = { src: '/x.webp', width: 10, height: 10 };
-const items = [
-  { id: 'a', title: 'First', image: img, body: <p>Body one</p> },
-  { id: 'b', title: 'Second', image: img, body: <p>Body two</p> },
-  { id: 'c', title: 'Third', image: img, body: <p>Body three</p> },
+const slides = [
+  { id: 'a', title: 'First', image: img, bullets: [{ lead: 'One' }], note: 'A note' },
+  { id: 'b', title: 'Second', image: img, bullets: [{ lead: 'Two', text: 'more' }] },
+  { id: 'c', title: 'Third', image: img, bullets: [{ lead: 'Three' }] },
 ];
 
-describe('PictureAccordion', () => {
-  it('should open the first panel and keep every panel text in the page', () => {
-    render(<PictureAccordion items={items} />);
-    expect(screen.getByRole('button', { name: /First/ }).getAttribute('aria-expanded')).toBe(
-      'true'
-    );
-    expect(screen.getByRole('button', { name: /Second/ }).getAttribute('aria-expanded')).toBe(
-      'false'
-    );
-    expect(screen.getByText('Body two')).not.toBeNull();
+describe('WhySlider', () => {
+  const dots = () =>
+    within(screen.getByRole('list', { name: 'Pick a reason' })).getAllByRole('button');
+
+  it('should start on the first slide with every slide’s text in the page', () => {
+    render(<WhySlider slides={slides} />);
+    expect(screen.getByText('One')).not.toBeNull();
+    expect(screen.getByText('Two')).not.toBeNull();
+    expect(screen.getByText('A note')).not.toBeNull();
+    expect(dots()[0]?.getAttribute('aria-current')).toBe('true');
+    expect(
+      screen.getByRole('button', { name: 'Previous reason' }).getAttribute('aria-disabled')
+    ).toBe('true');
   });
 
-  it('should open a panel on click and close the one before it', () => {
-    render(<PictureAccordion items={items} />);
-    fireEvent.click(screen.getByRole('button', { name: /Third/ }));
-    expect(screen.getByRole('button', { name: /Third/ }).getAttribute('aria-expanded')).toBe(
-      'true'
-    );
-    expect(screen.getByRole('button', { name: /First/ }).getAttribute('aria-expanded')).toBe(
-      'false'
-    );
+  it('should hide the slides that are not showing from a screen reader (inert)', () => {
+    const { container } = render(<WhySlider slides={slides} />);
+    const sections = [...container.querySelectorAll('section')];
+    expect(sections.map((s) => s.hasAttribute('inert'))).toEqual([false, true, true]);
   });
 
-  it('should open a panel on mouse hover after a short pause, but not on touch', () => {
-    vi.useFakeTimers();
-    const { container } = render(<PictureAccordion items={items} />);
-    const rows = container.querySelectorAll('[data-open]');
-    fireEvent.pointerEnter(rows[1], { pointerType: 'touch' });
-    act(() => vi.advanceTimersByTime(500));
-    expect(rows[1].getAttribute('data-open')).toBe('false');
-    fireEvent.pointerEnter(rows[1], { pointerType: 'mouse' });
-    expect(rows[1].getAttribute('data-open')).toBe('false');
-    act(() => vi.advanceTimersByTime(200));
-    expect(rows[1].getAttribute('data-open')).toBe('true');
-    vi.useRealTimers();
-  });
-
-  it('should not open a panel the pointer only passed over', () => {
-    vi.useFakeTimers();
-    const { container } = render(<PictureAccordion items={items} />);
-    const rows = container.querySelectorAll('[data-open]');
-    fireEvent.pointerEnter(rows[2], { pointerType: 'mouse' });
-    fireEvent.pointerLeave(rows[2]);
-    act(() => vi.advanceTimersByTime(500));
-    expect(rows[2].getAttribute('data-open')).toBe('false');
-    vi.useRealTimers();
-  });
-
-  it('should move between panels with the arrow keys', () => {
-    render(<PictureAccordion items={items} />);
-    const first = screen.getByRole('button', { name: /First/ });
-    fireEvent.keyDown(first, { key: 'ArrowDown' });
-    expect(screen.getByRole('button', { name: /Second/ }).getAttribute('aria-expanded')).toBe(
+  it('should move with the arrows, the dots and the keyboard, and stop at the ends', () => {
+    const { container } = render(<WhySlider slides={slides} />);
+    const region = container.firstElementChild as HTMLElement;
+    fireEvent.click(screen.getByRole('button', { name: 'Next reason' }));
+    expect(dots()[1]?.getAttribute('aria-current')).toBe('true');
+    fireEvent.click(dots()[2]!);
+    expect(dots()[2]?.getAttribute('aria-current')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Next reason' }).getAttribute('aria-disabled')).toBe(
       'true'
     );
-    fireEvent.keyDown(screen.getByRole('button', { name: /Second/ }), { key: 'End' });
-    expect(screen.getByRole('button', { name: /Third/ }).getAttribute('aria-expanded')).toBe(
-      'true'
-    );
+    fireEvent.keyDown(region, { key: 'ArrowUp' });
+    expect(dots()[1]?.getAttribute('aria-current')).toBe('true');
+    fireEvent.keyDown(region, { key: 'Home' });
+    expect(dots()[0]?.getAttribute('aria-current')).toBe('true');
+    fireEvent.keyDown(region, { key: 'End' });
+    expect(dots()[2]?.getAttribute('aria-current')).toBe('true');
   });
-});
 
-describe('PictureAccordion focus', () => {
-  it('should not open a panel when focus only reaches its heading (Tab)', () => {
-    render(<PictureAccordion items={items} />);
-    const second = screen.getByRole('button', { name: /Second/ });
-    fireEvent.focus(second);
-    expect(second.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.getByRole('button', { name: /First/ }).getAttribute('aria-expanded')).toBe(
-      'true'
+  it('should change slide on a wheel flick, and let the page scroll at the ends', () => {
+    const { container } = render(<WhySlider slides={slides} />);
+    const stage = container.querySelector('section')!.parentElement!.parentElement as HTMLElement;
+    // On the first slide, scrolling up belongs to the page: not prevented
+    const up = new WheelEvent('wheel', { deltaY: -80, bubbles: true, cancelable: true });
+    stage.dispatchEvent(up);
+    expect(up.defaultPrevented).toBe(false);
+    // Scrolling down takes the slider on
+    const down = new WheelEvent('wheel', { deltaY: 80, bubbles: true, cancelable: true });
+    act(() => {
+      stage.dispatchEvent(down);
+    });
+    expect(down.defaultPrevented).toBe(true);
+    expect(dots()[1]?.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('should change slide when a mouse drags up, and back when it drags down', () => {
+    const { container } = render(<WhySlider slides={slides} />);
+    const stage = container.querySelector('section')!.parentElement!.parentElement as HTMLElement;
+    stage.setPointerCapture = vi.fn();
+    const ptr = (type: string, clientY: number) =>
+      fireEvent(
+        stage,
+        Object.assign(new MouseEvent(type, { bubbles: true, clientY }), {
+          pointerType: 'mouse',
+          pointerId: 1,
+        })
+      );
+    ptr('pointerdown', 300);
+    ptr('pointermove', 220);
+    expect(dots()[1]?.getAttribute('aria-current')).toBe('true');
+    ptr('pointerdown', 220);
+    ptr('pointermove', 300);
+    expect(dots()[0]?.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('should give neighbouring slides different colours, cycling through five', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      ...slides[0]!,
+      id: `r${i}`,
+      title: `R${i}`,
+    }));
+    const { container } = render(<WhySlider slides={many} />);
+    const tones = [...container.querySelectorAll('section')].map(
+      (r) => /tone\d/.exec(r.className)?.[0]
     );
-    fireEvent.click(second);
-    expect(second.getAttribute('aria-expanded')).toBe('true');
+    expect(new Set(tones.slice(0, 5)).size).toBe(5);
+    expect(tones[5]).toBe(tones[0]);
   });
 });
 
@@ -178,8 +201,187 @@ describe('TourPlayer', () => {
     expect(screen.getAllByRole('tab')[4].getAttribute('aria-selected')).toBe('true');
   });
 
+  it('should keep every tour zoom sorted, inside the frame and not overlapping the next one', () => {
+    for (const t of TOURS) {
+      expect(t.zoom.length).toBeGreaterThan(0);
+      t.zoom.forEach((z, i) => {
+        expect(z.at).toBeGreaterThanOrEqual(0);
+        expect(z.x).toBeGreaterThanOrEqual(0);
+        expect(z.x).toBeLessThanOrEqual(1);
+        expect(z.y).toBeGreaterThanOrEqual(0);
+        expect(z.y).toBeLessThanOrEqual(1);
+        const next = t.zoom[i + 1];
+        if (next) expect(z.at + (z.hold ?? 1.4)).toBeLessThanOrEqual(next.at + 1e-9);
+      });
+    }
+  });
+
+  it('should zoom the clip in on a click while it plays and out again after', () => {
+    vi.stubGlobal('matchMedia', undefined);
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', () => undefined);
+    try {
+      const { container } = render(<TourPlayer />);
+      const video = container.querySelector('video') as HTMLVideoElement;
+      const z = TOURS[0].zoom[0];
+      fireEvent.play(video);
+      const run = (t: number) => {
+        Object.defineProperty(video, 'currentTime', { value: t, configurable: true });
+        const due = frames.splice(0);
+        act(() => due.forEach((cb) => cb(0)));
+      };
+      run(z.at + 0.1);
+      // Panned to put the spot mid-view (clamped to the clip's edge), then zoomed
+      expect(video.style.transform).toMatch(/^translate\(-?[\d.]+%, -?[\d.]+%\) scale\(1\.8\)$/);
+      run(z.at + 3);
+      expect(video.style.transform).toBe('');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('should mix desktop and phone tours', () => {
     expect(TOURS.some((t) => t.device === 'phone')).toBe(true);
     expect(TOURS.some((t) => t.device === 'desktop')).toBe(true);
+  });
+});
+
+describe('the stack picture’s tech tiles', () => {
+  it('should show every layer’s tools by name', () => {
+    render(<StackDiagram />);
+    for (const names of Object.values(STACK_TECH)) {
+      for (const n of names) expect(screen.getAllByText(n).length).toBeGreaterThan(0);
+    }
+    // Every tile has a drawn mark, never an empty icon
+    for (const svg of document.querySelectorAll('ul[aria-label="Built with"] svg')) {
+      expect(svg.childElementCount).toBeGreaterThan(0);
+    }
+    // One "Built with" row for each of the four layers
+    expect(screen.getAllByRole('list', { name: 'Built with' })).toHaveLength(STACK.length);
+  });
+
+  it('should send the price road upward only: one arrow, dashes streaming up', () => {
+    const { container } = render(<StackDiagram />);
+    const up = container.querySelector('[aria-label="Between the live price feed and the server"]');
+    expect(up?.className).toMatch(/linkUp/);
+    const down = container.querySelector('[aria-label="Between the server and the database"]');
+    expect(down?.className).not.toMatch(/linkUp/);
+  });
+});
+
+describe('the lesson carousel', () => {
+  // jsdom has no layout: give every element a row that is wider than its box, so the carousel has room to move
+  const sized = (name: 'scrollWidth' | 'clientWidth', value: number) =>
+    vi.spyOn(HTMLElement.prototype, name, 'get').mockReturnValue(value);
+  beforeEach(() => {
+    sized('scrollWidth', 1000);
+    sized('clientWidth', 300);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const renderCarousel = () =>
+    render(
+      <MemoryRouter>
+        <LessonCarousel />
+      </MemoryRouter>
+    );
+
+  it('should open the Crypto path from every lesson card', () => {
+    const { container } = renderCarousel();
+    const links = container.querySelectorAll('a[href="/path"]');
+    expect(links).toHaveLength(8);
+  });
+
+  it('should offer arrows and a dot for each lesson, starting at the first', () => {
+    renderCarousel();
+    expect(
+      screen.getByRole('button', { name: 'Previous lesson' }).getAttribute('aria-disabled')
+    ).toBe('true');
+    expect(screen.getByRole('button', { name: 'Next lesson' }).getAttribute('aria-disabled')).toBe(
+      'false'
+    );
+    const dots = within(screen.getByRole('list', { name: 'Pick a lesson' })).getAllByRole('button');
+    expect(dots).toHaveLength(8);
+    expect(dots[0]?.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('should keep an arrow at an end focusable (aria-disabled, not disabled), so keyboard focus is not lost', () => {
+    renderCarousel();
+    const prev = screen.getByRole('button', { name: 'Previous lesson' });
+    expect(prev.hasAttribute('disabled')).toBe(false);
+    prev.focus();
+    fireEvent.click(prev);
+    expect(document.activeElement).toBe(prev);
+  });
+
+  it('should move the row by one card from where it is when an arrow is pressed', () => {
+    const { container } = renderCarousel();
+    const track = container.querySelector('ul[role="list"]') as HTMLElement;
+    const scrollBy = vi.fn();
+    track.scrollBy = scrollBy;
+    fireEvent.click(screen.getByRole('button', { name: 'Next lesson' }));
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    // A positive step: forward, from the current place (never to a card index)
+    expect(scrollBy.mock.calls[0]?.[0].left).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('WhySlider touch', () => {
+  const touch = (target: Element, type: string, y: number, count = 1) => {
+    const e = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(e, {
+      touches: Array.from({ length: count }, () => ({ clientX: 0, clientY: y })),
+    });
+    act(() => {
+      target.dispatchEvent(e);
+    });
+    return e;
+  };
+  const stageOf = (c: HTMLElement) => c.querySelector('section')!.parentElement!.parentElement!;
+
+  it('should keep the rest of a swipe once it has moved a slide, so the page never follows it', () => {
+    const { container } = render(<WhySlider slides={slides} />);
+    const stage = stageOf(container);
+    touch(stage, 'touchstart', 400);
+    expect(touch(stage, 'touchmove', 300).defaultPrevented).toBe(true); // moves slide 1 -> 2
+    touch(stage, 'touchmove', 200); // the finger carries on
+    touch(stage, 'touchstart', 400);
+    touch(stage, 'touchmove', 300); // slide 2 -> 3, the last
+    const tail = touch(stage, 'touchmove', 100);
+    expect(tail.defaultPrevented).toBe(true);
+  });
+
+  it('should ignore a two-finger pinch', () => {
+    const { container } = render(<WhySlider slides={slides} />);
+    const stage = stageOf(container);
+    touch(stage, 'touchstart', 400, 2);
+    expect(touch(stage, 'touchmove', 200, 2).defaultPrevented).toBe(false);
+  });
+
+  it('should let the page scroll when swiping up on the last slide', () => {
+    const { container } = render(<WhySlider slides={slides} />);
+    fireEvent.keyDown(container.firstElementChild!, { key: 'End' });
+    const stage = stageOf(container);
+    touch(stage, 'touchstart', 400);
+    expect(touch(stage, 'touchmove', 300).defaultPrevented).toBe(false);
+  });
+});
+
+describe('LessonArt center', () => {
+  it('should slide the view so the drawing sits in the middle of the card', async () => {
+    const { LessonArt } = await import('@/guide/LessonArt');
+    // A drawing whose box runs from x 100 to 300: its centre is 200, so the view moves 40 to the right
+    const getBBox = vi.fn(() => ({ x: 100, y: 0, width: 200, height: 100 }));
+    Object.defineProperty(SVGElement.prototype, 'getBBox', { configurable: true, value: getBBox });
+    try {
+      const { container } = render(<LessonArt id="threePaths" center />);
+      expect(container.querySelector('svg')?.getAttribute('viewBox')).toBe('40 0 320 160');
+      cleanup();
+      const plain = render(<LessonArt id="threePaths" />);
+      expect(plain.container.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 320 160');
+    } finally {
+      Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
+    }
   });
 });

@@ -128,10 +128,156 @@
   color: var(--color-brand-white);
 }
 
+/* The reset window, an arrow, and the post-it that says what a reset takes and leaves */
+.resetRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.arrow {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  color: var(--color-brand-purple);
+  stroke-width: 2.5;
+}
+
+.arrowSide {
+  display: none;
+}
+
+.arrowUp {
+  animation: nudgeUp 1.1s ease-in-out infinite;
+}
+
+.postit {
+  position: relative;
+  width: 100%;
+  padding: 26px 18px 18px;
+  border-radius: 3px;
+  background: var(--color-brand-amber);
+  box-shadow: 0 14px 28px color-mix(in srgb, black 50%, transparent); /* shadow.modal */
+  color: var(--color-bg-page);
+  transform: rotate(1.2deg);
+}
+
+.tape {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 84px;
+  height: 22px;
+  background: color-mix(in srgb, white 45%, transparent);
+  transform: translateX(-50%) rotate(-2deg);
+}
+
+.postTitle {
+  margin: 0 0 6px;
+  font-size: 1.125rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.postLabel {
+  margin: 8px 0 2px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.postList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.postList li {
+  position: relative;
+  padding-left: 22px;
+}
+
+/* A cross for what is lost, a tick for what stays: shapes as well as words */
+.postList li::before {
+  position: absolute;
+  left: 0;
+  font-weight: 900;
+}
+
+.lose li::before {
+  content: '✕' / '';
+  color: color-mix(
+    in srgb,
+    var(--color-brand-red) 40%,
+    black
+  ); /* a dark red that reads on the amber paper */
+}
+
+.keep li::before {
+  content: '✓' / '';
+  color: color-mix(
+    in srgb,
+    var(--color-brand-green) 45%,
+    black
+  ); /* a dark green that reads on the amber paper */
+}
+
+@keyframes nudgeUp {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes nudgeLeft {
+  50% {
+    transform: translateX(-6px);
+  }
+}
+
 @media (min-width: 768px) {
   .row {
     grid-template-columns: 1.7fr 1fr;
     align-items: start;
+  }
+}
+
+/* Wide: the post-it sits to the right of the reset window, the arrow points back at it */
+@media (min-width: 1100px) {
+  .row {
+    grid-template-columns: 1.4fr 1.6fr;
+  }
+
+  .resetRow {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .reset {
+    flex: 0 1 46%;
+  }
+
+  .arrowUp {
+    display: none;
+  }
+
+  .arrowSide {
+    display: block;
+    animation: nudgeLeft 1.1s ease-in-out infinite;
+  }
+
+  .postit {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow {
+    animation: none !important;
   }
 }
 

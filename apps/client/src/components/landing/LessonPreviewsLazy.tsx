@@ -39,7 +39,7 @@ function Slot({
  * section only: one plain note asking the visitor to refresh. A failed load stays failed until the
  * visitor refreshes, on purpose: a second import of a file a deploy removed would fail the same way.
  */
-export function LessonPreviewsLazy() {
+export function LessonPreviewsLazy({ carousel = false }: { carousel?: boolean }) {
   const holder = useRef<HTMLDivElement>(null);
   // Latches true and never goes back (the import and the observer's cleanup rely on it)
   const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
@@ -71,7 +71,8 @@ export function LessonPreviewsLazy() {
   useEffect(() => {
     if (!near) return;
     let live = true;
-    import('./LessonPreviews')
+    // The carousel (How it works) and the grid (the landing page) are two views of the same cards
+    (carousel ? import('./LessonCarousel') : import('./LessonPreviews'))
       .then((m) => {
         if (!live) return;
         // A stale chunk can resolve without its component: that is a failure too, not a silent gap
@@ -86,10 +87,13 @@ export function LessonPreviewsLazy() {
     return () => {
       live = false;
     };
-  }, [near]);
+  }, [near, carousel]);
 
   return (
-    <div ref={holder} className={`${styles.holder}${settled ? ` ${styles.holderSettled}` : ''}`}>
+    <div
+      ref={holder}
+      className={`${styles.holder}${carousel ? ` ${styles.holderCarousel}` : ''}${settled ? ` ${styles.holderSettled}` : ''}`}
+    >
       {/* A live region that is in the page from the first render and only gets its words on a failure, so
           a screen reader announces the change even when the import fails within a frame of starting
           (a region mounted with its text already in it is often silent). Empty on purpose until
