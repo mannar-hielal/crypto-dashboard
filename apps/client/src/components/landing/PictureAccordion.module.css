@@ -1,0 +1,198 @@
+/* A vertical accordion of picture panels. Colours from tokens.ts via the @theme mirror in index.css. */
+
+.list {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  min-height: 64px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 14px;
+  background: var(--color-bg-deep);
+  transition: border-color 0.25s;
+}
+
+.row[data-open='true'] {
+  border-color: var(--color-brand-purple-dark);
+}
+
+/* The picture fills the panel; it zooms in as the panel opens */
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+  opacity: 0.6;
+  transform: scale(1);
+  transform-origin: top left;
+  transition:
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 0.4s;
+}
+
+.row[data-open='true'] .image {
+  opacity: 1;
+  transform: scale(1.12);
+}
+
+/* Keeps the words readable over any part of the picture */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-bg-page) 92%, transparent) 0%,
+    color-mix(in srgb, var(--color-bg-page) 62%, transparent) 50%,
+    color-mix(in srgb, var(--color-bg-page) 8%, transparent) 100%
+  );
+}
+
+.heading {
+  position: relative;
+  margin: 0;
+}
+
+.trigger {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand-white);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: -4px;
+  border-radius: 14px;
+}
+
+.index {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--color-bg-surface);
+  color: var(--color-brand-white);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  transition: background 0.25s;
+}
+
+.row[data-open='true'] .index {
+  background: var(--color-brand-purple-dark);
+}
+
+/* Phone: the body opens by growing from nothing, so the panel is as tall as its text */
+.body {
+  position: relative;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s ease;
+}
+
+.row[data-open='true'] .body {
+  grid-template-rows: 1fr;
+}
+
+.bodyInner {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 20px;
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.row[data-open='true'] .bodyInner {
+  padding-bottom: 20px;
+}
+
+.bodyInner p,
+.bodyInner ul {
+  margin: 0 0 10px;
+}
+
+.bodyInner ul {
+  padding-left: 20px;
+}
+
+.bodyInner strong {
+  color: var(--color-brand-white);
+}
+
+/* Desktop: a fixed-height stack; the open panel takes what the closed ones leave */
+@media (min-width: 768px) {
+  .list {
+    height: 540px;
+    gap: 8px;
+  }
+
+  .row {
+    flex: 0 0 64px;
+    transition:
+      flex-grow 0.55s cubic-bezier(0.2, 0.7, 0.2, 1),
+      flex-basis 0.55s cubic-bezier(0.2, 0.7, 0.2, 1),
+      border-color 0.25s;
+  }
+
+  .row[data-open='true'] {
+    flex: 1 1 0;
+  }
+
+  .body {
+    flex: 1;
+    grid-template-rows: 1fr;
+    transition: none;
+  }
+
+  .bodyInner {
+    max-width: 46rem;
+    font-size: 1rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 0.35s,
+      transform 0.35s;
+  }
+
+  .row[data-open='true'] .bodyInner {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0.2s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .image,
+  .body,
+  .bodyInner,
+  .index {
+    transition: none !important;
+  }
+
+  .row[data-open='true'] .image {
+    transform: none;
+  }
+}

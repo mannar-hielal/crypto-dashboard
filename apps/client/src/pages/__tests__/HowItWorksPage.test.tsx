@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
 import React from 'react';
 
 // The page's claims must match the code: INTERVALS (lib/markets.ts), LAYOUT_ORDER
@@ -87,7 +87,7 @@ describe('HowItWorksPage', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     const h2s = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(h2s[0]).toBe('Why this app exists');
-    expect(h2s).toContain('Four flows, step by step');
+    expect(h2s).not.toContain('Four flows, step by step');
     expect(h2s).toContain('Remember 5 things');
   });
 
@@ -117,8 +117,9 @@ describe('HowItWorksPage', () => {
   });
 
   it('should give the questions as an accordion and as FAQ structured data', async () => {
-    await renderPage();
-    const buttons = screen.getAllByRole('button', { expanded: false });
+    const { container } = await renderPage();
+    const faq = container.querySelector('#questions') as HTMLElement;
+    const buttons = within(faq).getAllByRole('button', { expanded: false });
     expect(buttons.length).toBe(6);
     const json = JSON.parse(screen.getByTestId('seo').getAttribute('data-json') ?? '{}');
     expect(json['@type']).toBe('FAQPage');

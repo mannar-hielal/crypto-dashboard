@@ -9,10 +9,14 @@ import { CoinRibbon } from '@/components/landing/CoinRibbon';
 import { FaqList } from '@/components/landing/FaqList';
 import { FeatureGrid } from '@/components/landing/FeatureGrid';
 import { LessonPreviewsLazy } from '@/components/landing/LessonPreviewsLazy';
+import { PictureAccordion, type AccordionItem } from '@/components/landing/PictureAccordion';
+import { PictureCallouts } from '@/components/landing/PictureCallouts';
 import { PretendMoney } from '@/components/landing/PretendMoney';
+import { TourPlayer } from '@/components/landing/TourPlayer';
 import { SectionHead } from '@/components/landing/SectionHead';
 import { SingleShot } from '@/components/landing/ShotShowcase';
 import { StartLink } from '@/components/landing/StartLink';
+import { StackDiagram } from '@/components/landing/StackDiagram';
 import { StepFlow } from '@/components/landing/StepFlow';
 import {
   ACCOUNT_FEATURES,
@@ -27,39 +31,99 @@ import {
 } from '@/lib/landingContent';
 import {
   BEGINNER_GETS,
-  CANDLE,
   CHART_STATS,
   CHECKPOINT,
   CHECK_YOURSELF,
-  DAY_STEPS,
-  FLOWS,
   GUIDES,
   HALVES,
   HOSTING,
   NOT_THIS,
-  PARTS,
   PATH_CHAPTERS,
   QUIZ_NOTE,
   QUIZ_TYPES,
   REMEMBER,
-  THREE_WORDS,
   TRICK,
   WHO_FOR,
   WHY_POINTS,
-  WORDS_PICTURED,
   WORD_LIST,
 } from '@/lib/howItWorksContent';
+import chartShot from '@/assets/landing/shot-chart.webp';
+import deskShot from '@/assets/landing/shot-desk.webp';
+import lessonShot from '@/assets/landing/shot-lesson.webp';
+import pathDesktop from '@/assets/landing/shot-path-desktop.webp';
+import pretendPanel from '@/assets/landing/pretend-panel.webp';
 import shared from '@/components/landing/landing.module.css';
 import styles from './HowItWorksPage.module.css';
 
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
+// The Why section's five panels: a real capture of the app behind each one (decorative)
+const WHY_PICTURES = [lessonShot, pretendPanel, chartShot, pathDesktop, deskShot] as const;
+const WHY_SIZES = [
+  [1100, 657],
+  [1000, 170],
+  [1100, 510],
+  [1100, 688],
+  [1100, 657],
+] as const;
+
+function whyItems(): AccordionItem[] {
+  const image = (i: number) => ({
+    src: WHY_PICTURES[i],
+    width: WHY_SIZES[i][0],
+    height: WHY_SIZES[i][1],
+  });
+  return [
+    ...WHY_POINTS.map((p, i) => ({
+      id: `why-${i}`,
+      title: p.title,
+      image: image(i),
+      body: <p>{p.text}</p>,
+    })),
+    {
+      id: 'why-who',
+      title: 'Who is it for?',
+      image: image(3),
+      body: (
+        <>
+          <ul>
+            {WHO_FOR.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+          <p>
+            You never need to know anything first. Each new word is explained the first time you
+            meet it.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: 'why-gets',
+      title: 'What a beginner gets',
+      image: image(4),
+      body: (
+        <>
+          <p>
+            <strong>Understanding before risk.</strong> {BEGINNER_GETS.understanding}
+          </p>
+          <p>{BEGINNER_GETS.free}</p>
+          <p>
+            <strong>Honest limits.</strong> {BEGINNER_GETS.limits}
+          </p>
+        </>
+      ),
+    },
+  ];
+}
+
+const WHY_ITEMS = whyItems();
+
 const SECTIONS = [
   { id: 'why', label: 'Why' },
   { id: 'picture', label: 'One picture' },
-  { id: 'day', label: 'A day' },
+  { id: 'day', label: 'Tours' },
   { id: 'behind', label: 'Behind the scenes' },
-  { id: 'flows', label: 'Four flows' },
   { id: 'chart', label: 'On the chart' },
   { id: 'path', label: 'Learning path' },
   { id: 'not', label: 'What it is not' },
@@ -169,31 +233,7 @@ export function HowItWorksPage() {
             title="Why this app exists"
             lead="Most people meet trading with real money on the line. That is a bad way to learn. This app lets you learn first, and risk nothing."
           >
-            <FeatureGrid items={WHY_POINTS} />
-            <div className={styles.twoCols}>
-              <div className={styles.box}>
-                <h3 className={styles.boxTitle}>Who is it for?</h3>
-                <ul className={styles.bullets}>
-                  {WHO_FOR.map((t) => (
-                    <li key={t}>{t}</li>
-                  ))}
-                </ul>
-                <p className={styles.note}>
-                  You never need to know anything first. Each new word is explained the first time
-                  you meet it.
-                </p>
-              </div>
-              <div className={styles.box}>
-                <h3 className={styles.boxTitle}>What a beginner gets</h3>
-                <p className={styles.p}>
-                  <strong>Understanding before risk.</strong> {BEGINNER_GETS.understanding}
-                </p>
-                <p className={styles.p}>{BEGINNER_GETS.free}</p>
-                <p className={styles.p}>
-                  <strong>Honest limits.</strong> {BEGINNER_GETS.limits}
-                </p>
-              </div>
-            </div>
+            <PictureAccordion items={WHY_ITEMS} />
           </Part>
 
           <Part
@@ -202,29 +242,21 @@ export function HowItWorksPage() {
             title="What it is, in one picture"
             lead="Two halves that work together. One teaches. One lets you practise."
           >
-            <div className={styles.twoCols}>
-              {HALVES.map((h) => (
-                <div key={h.title} className={styles.box}>
-                  <h3 className={styles.boxTitle}>{h.title}</h3>
-                  <ul className={styles.bullets}>
-                    {h.points.map((t) => (
-                      <li key={t}>{t}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+            <PictureCallouts
+              learn={HALVES[0]}
+              chart={HALVES[1]}
+              alt="The first lesson card open over the live chart"
+            />
             <p className={styles.trick}>{TRICK}</p>
-            <SingleShot id="lesson" />
           </Part>
 
           <Part
             id="day"
-            eyebrow="3 · A day in the life"
-            title="What a new person does, one step at a time"
-            lead="From the first look at the chart to reading your own history."
+            eyebrow="3 · Tours"
+            title="Little tours of the real app"
+            lead="Short clips of the app in use, each one a few steps a new person takes."
           >
-            <FeatureGrid items={DAY_STEPS} numbered />
+            <TourPlayer />
             <div className={styles.links}>
               <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
             </div>
@@ -236,47 +268,16 @@ export function HowItWorksPage() {
             title="How it works behind the scenes"
             lead="Every technical word gets an everyday picture. Think of a busy little restaurant."
           >
-            <StepFlow items={PARTS} />
-            <h3 className={styles.sub2}>The words, in pictures</h3>
-            <FeatureGrid items={WORDS_PICTURED} headingLevel={4} />
+            <StackDiagram />
             <details className={styles.more}>
               <summary>A little more detail: who hosts what</summary>
               <p className={styles.p}>{HOSTING}</p>
             </details>
-            <h3 className={styles.sub2}>What is a candle?</h3>
-            <p className={styles.p}>
-              Each bar on the chart is a candle. One candle is one slice of time, say one minute. It
-              tells four things.
-            </p>
-            <FeatureGrid items={CANDLE} headingLevel={4} />
-            <h3 className={styles.sub2}>Three words, kept short</h3>
-            <FeatureGrid items={THREE_WORDS} headingLevel={4} />
-          </Part>
-
-          <Part
-            id="flows"
-            eyebrow="5 · Four flows"
-            title="Four flows, step by step"
-            lead="How things travel, from the market to your screen and back."
-          >
-            {FLOWS.map((f, i) => (
-              <div key={f.id} className={styles.flow}>
-                <h3 className={styles.sub2}>
-                  {String.fromCharCode(65 + i)} · {f.title}
-                </h3>
-                {f.steps.length === 4 ? (
-                  <StepFlow items={f.steps} />
-                ) : (
-                  <FeatureGrid items={f.steps} numbered headingLevel={4} />
-                )}
-                {f.note && <p className={styles.note}>{f.note}</p>}
-              </div>
-            ))}
           </Part>
 
           <Part
             id="chart"
-            eyebrow="6 · On the chart"
+            eyebrow="5 · On the chart"
             title="What you can do on the chart"
             lead="A real charting screen, with room to explore. The chart needs no sign up."
           >
@@ -309,7 +310,7 @@ export function HowItWorksPage() {
 
           <Part
             id="path"
-            eyebrow="7 · The learning path"
+            eyebrow="6 · The learning path"
             title="Short lessons, then practice, then a checkpoint"
             lead="A stop opens once the one before it is done. Open the map from the top bar once you have an account."
           >
@@ -358,7 +359,7 @@ export function HowItWorksPage() {
 
           <Part
             id="not"
-            eyebrow="8 · What it is not"
+            eyebrow="7 · What it is not"
             title="What it is not"
             lead="Said plainly, so there are no surprises."
           >
@@ -367,7 +368,7 @@ export function HowItWorksPage() {
 
           <Part
             id="recap"
-            eyebrow="9 · Recap"
+            eyebrow="8 · Recap"
             title="Remember 5 things"
             lead="If you keep only these, you have the idea."
           >
