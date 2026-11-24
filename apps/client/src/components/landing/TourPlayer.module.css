@@ -1,0 +1,167 @@
+/* The tour player: tabs, a clip in a device frame, the steps in words. Colours from tokens.ts via the
+   @theme mirror in index.css. */
+
+.player {
+  display: flex;
+  width: 100%;
+  max-width: 64rem;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.tab {
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 9999px;
+  background: var(--color-bg-panel);
+  color: var(--color-brand-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.tab[aria-selected='true'] {
+  border-color: var(--color-brand-purple-dark);
+  background: var(--color-brand-purple-dark);
+  color: var(--color-brand-white);
+}
+
+.tab:focus-visible,
+.playBtn:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 24px;
+}
+
+.frame {
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+  border: 1px solid color-mix(in srgb, white 10%, transparent); /* the device frame's outline */
+  border-radius: 14px;
+  background: var(--color-bg-deep);
+  box-shadow: 0 16px 48px color-mix(in srgb, black 55%, transparent); /* shadow.modal, deeper for a hero image */
+}
+
+.desktop {
+  width: 100%;
+  aspect-ratio: 1280 / 800;
+}
+
+.phone {
+  width: min(100%, 260px);
+  aspect-ratio: 390 / 844;
+  border-radius: 28px;
+  border-width: 3px;
+}
+
+.clip {
+  position: absolute;
+  inset: 0;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--color-bg-deep);
+}
+
+.playBtn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-bg-deep) 75%, transparent);
+  color: var(--color-brand-white);
+  cursor: pointer;
+}
+
+.playBtn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.empty {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: var(--color-brand-muted);
+  text-align: center;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.device {
+  margin: 0;
+  color: var(--color-brand-purple);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 22px;
+  list-style: decimal;
+  color: var(--color-brand-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.steps li::marker {
+  color: var(--color-brand-purple);
+  font-weight: 700;
+}
+
+@media (min-width: 900px) {
+  .panel {
+    grid-template-columns: 1.6fr 1fr;
+  }
+}

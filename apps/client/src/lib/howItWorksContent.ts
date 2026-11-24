@@ -61,60 +61,84 @@ export const HALVES: readonly { title: string; points: readonly string[] }[] = [
 
 export const TRICK = 'You learn an idea. Then you try it on a real chart. That is the whole trick.';
 
-export const DAY_STEPS: readonly Feature[] = [
+/** One short clip of the real app: a little tour, with its steps in words under it */
+export interface Tour {
+  id: 'lesson' | 'chart' | 'journal' | 'draw' | 'pnl';
+  /** Which screen the clip was recorded on */
+  device: 'desktop' | 'phone';
+  title: string;
+  /** The tab label */
+  tab: string;
+  steps: readonly string[];
+}
+
+export const TOURS: readonly Tour[] = [
   {
-    title: 'Open the chart',
-    text: 'No sign up. Watch real candles move and press a few buttons. You cannot break anything.',
+    id: 'lesson',
+    device: 'desktop',
+    title: 'Finish a lesson',
+    tab: 'A lesson',
+    steps: [
+      'Open the path and pick the next stop.',
+      'Read the cards: one idea, short sentences. The clip is sped up.',
+      'Answer the quiz. A wrong answer shows you why, then you try again.',
+      'Finish the lesson and the next stop opens.',
+    ],
   },
   {
-    title: 'Make a free account',
-    text: 'An email and a password. You get $10,000 of pretend money, and your progress is kept for you.',
+    id: 'chart',
+    device: 'desktop',
+    title: 'Try it on the chart',
+    tab: 'Try it on the chart',
+    steps: [
+      'The lesson says "Try a buy on the real chart".',
+      'Place a practice buy with pretend money.',
+      'See the order in Order and Account Management.',
+      'Watch your balance and your trade move with the live price.',
+    ],
   },
   {
-    title: 'Read a lesson card',
-    text: 'One idea at a time, in short sentences. New words are explained when they first show up.',
+    id: 'journal',
+    device: 'phone',
+    title: 'Keep a journal',
+    tab: 'The journal',
+    steps: [
+      'Open Orders and Account, then the Journal tab.',
+      'Tap the pencil and write a note: why you took the trade.',
+      'Press Enter. The note is saved with your trades.',
+    ],
   },
   {
-    title: 'Answer a quiz',
-    text: 'Pick an answer. If you are wrong, you see why, then try again.',
+    id: 'draw',
+    device: 'desktop',
+    title: 'Draw and add an indicator',
+    tab: 'Draw on the chart',
+    steps: [
+      'Pick the trend line and draw it with two clicks.',
+      'Add an indicator, here a moving average of the price.',
+      'Switch the timeframe, and the same chart zooms out.',
+    ],
   },
   {
-    title: 'Place a practice buy',
-    text: 'Buy a small piece of Bitcoin with pretend money, right from the lesson.',
-  },
-  {
-    title: 'Watch it on the chart',
-    text: 'See your trade move with the live price, with its profit or loss.',
-  },
-  {
-    title: 'Close it and look back',
-    text: 'Sell it. See what you made or lost, and what the fees took.',
-  },
-  {
-    title: 'Read your history',
-    text: 'Every order and every balance change is saved. Add your own notes to a trade.',
+    id: 'pnl',
+    device: 'phone',
+    title: 'Check a price and your profit or loss',
+    tab: 'Price and profit',
+    steps: [
+      'Open the chart on your phone. The price moves live.',
+      'Open Orders and Account to see your balance and your profit or loss.',
+      'Slide the Assets table to read the profit or loss of each coin.',
+    ],
   },
 ] as const;
 
-/** The restaurant picture: the four parts of the system (a left-to-right flow) */
-export const PARTS: readonly Feature[] = [
-  {
-    title: 'Your browser',
-    text: 'The shop window and counter. The website you see and click. It shows things and takes your orders. It does no cooking.',
-  },
-  {
-    title: 'The server',
-    text: 'The kitchen and back office. Where the real work happens: checking, filling orders, keeping score.',
-  },
-  {
-    title: 'The database',
-    text: 'A filing cabinet. It remembers your account, your trades, your lessons and your notes.',
-  },
-  {
-    title: 'The live price feed',
-    text: 'A live radio broadcast. The server listens to a real crypto exchange (Bybit) and relays the prices to you.',
-  },
-] as const;
+const PARTS_TEXT = {
+  browser:
+    'The website you see and click. It shows things and takes your orders. It does no cooking.',
+  server: 'Where the real work happens: checking, filling orders, keeping score.',
+  database: 'It remembers your account, your trades, your lessons and your notes.',
+  feed: 'The server listens to a real crypto exchange (Bybit) and relays the prices to you.',
+} as const;
 
 export const WORDS_PICTURED: readonly Feature[] = [
   {
@@ -143,116 +167,66 @@ export const WORDS_PICTURED: readonly Feature[] = [
   },
 ] as const;
 
-export const HOSTING =
-  "The website is served from Cloudflare Pages. The server runs on Fly.io. The database is PostgreSQL. The chart is drawn with TradingView Lightweight Charts, an open charting library. Prices come from Bybit's public market data. cryptopapertrade.com is independent: no partnership or endorsement is claimed.";
-
-export const CANDLE: readonly Feature[] = [
-  { title: 'Open', text: 'Where the price started in that slice of time.' },
-  { title: 'Close', text: 'Where it ended.' },
-  {
-    title: 'High and low',
-    text: 'The thin lines (the wicks) show the highest and lowest price it touched.',
-  },
-  { title: 'Colour', text: 'Green: it closed higher than it opened. Red: it closed lower.' },
-] as const;
-
-export const THREE_WORDS: readonly Feature[] = [
-  {
-    title: 'Long and short',
-    text: 'Long: you hope the price goes up. Short: you hope it goes down. You can practise both.',
-  },
-  {
-    title: 'Leverage',
-    text: 'A magnifying glass. 10x makes gains and losses ten times bigger. Here it stops at 10x.',
-  },
-  {
-    title: 'Liquidation',
-    text: 'If a leveraged trade loses too much, it is closed for you and the money you put into it is gone. The app shows where that line is.',
-  },
-] as const;
-
-export interface Flow {
-  id: string;
+/** One layer of the architect diagram: a part of the system, in the restaurant picture */
+export interface StackLayer {
+  id: 'browser' | 'server' | 'database' | 'feed';
   title: string;
-  steps: readonly Feature[];
-  note?: string;
+  /** The restaurant picture, in a few words */
+  tag: string;
+  text: string;
+  does: string;
+  without: string;
+  /** Titles of the WORDS_PICTURED cards that belong to this layer */
+  words: readonly string[];
 }
 
-export const FLOWS: readonly Flow[] = [
+export const STACK: readonly StackLayer[] = [
   {
-    id: 'chart',
-    title: 'The live chart',
-    steps: [
-      { title: 'The market', text: 'People buy and sell all day and night. Prices change.' },
-      { title: 'The price feed', text: 'The exchange broadcasts every change, like a live radio.' },
-      {
-        title: 'Our server',
-        text: 'It listens, tidies the data and passes it on over an open call.',
-      },
-      { title: 'Your screen', text: 'The candle grows live. No refresh needed.' },
-    ],
+    id: 'browser',
+    title: 'Your browser',
+    tag: 'The shop window and counter',
+    text: PARTS_TEXT.browser,
+    does: 'Shows the chart and the lessons, and takes your clicks.',
+    without: 'Nothing to look at or press.',
+    words: ['Login token: a wristband for the evening', 'Cookie: the ticket stub'],
   },
   {
-    id: 'trade',
-    title: 'A practice trade',
-    steps: [
-      { title: 'You click Buy', text: 'The order travels to the server.' },
-      {
-        title: 'Balance check',
-        text: 'The server asks: do you have enough pretend money?',
-      },
-      {
-        title: 'The engine fills it',
-        text: 'The cashier fills it at the live price, and takes the fee.',
-      },
-      {
-        title: 'Account updates',
-        text: 'Your balance and trade are written in the filing cabinet.',
-      },
-      { title: 'You see it', text: 'It shows in Positions and History.' },
-    ],
-    note: 'The engine keeps watching your waiting orders and exits after this, even with your tab closed.',
+    id: 'server',
+    title: 'The server',
+    tag: 'The kitchen and back office',
+    text: PARTS_TEXT.server,
+    does: 'Checks your balance, fills your orders and keeps score.',
+    without: 'Nobody to fill an order or check the money.',
+    words: ['The fill engine: the cashier', 'Password hashing: scrambling an egg'],
   },
   {
-    id: 'lesson',
-    title: 'A lesson',
-    steps: [
-      { title: 'A card', text: 'One idea, short sentences, a picture.' },
-      { title: 'A quiz', text: 'Wrong? You see why, and try again.' },
-      {
-        title: 'Try it on the chart',
-        text: 'A practice trade on the live chart, then a look at what happened.',
-      },
-      {
-        title: 'Progress saved',
-        text: 'Kept in your account, so any device can pick up.',
-      },
-      { title: 'Next lesson', text: 'The next stop on the path opens.' },
-    ],
+    id: 'database',
+    title: 'The database',
+    tag: 'The filing cabinet',
+    text: PARTS_TEXT.database,
+    does: 'Keeps your account, trades, lessons and notes safe between visits.',
+    without: 'Every visit would start from zero.',
+    words: [],
   },
   {
-    id: 'signin',
-    title: 'Signing in safely',
-    steps: [
-      {
-        title: 'You type your password',
-        text: 'It travels in a sealed envelope (HTTPS).',
-      },
-      {
-        title: 'The server checks',
-        text: 'It compares with the scrambled copy. It never keeps the real password.',
-      },
-      {
-        title: 'Wristband and stub',
-        text: 'You get a token (wristband, 15 min, memory only) and a cookie (ticket stub, 7 days).',
-      },
-      {
-        title: 'Why it is safe',
-        text: 'The wristband is short-lived and never saved to disk. The stub is hidden from page scripts and stored scrambled on the server.',
-      },
-    ],
+    id: 'feed',
+    title: 'The live price feed',
+    tag: 'The live radio broadcast',
+    text: PARTS_TEXT.feed,
+    does: 'Brings real prices from Bybit to the server, as they change.',
+    without: 'The chart would have no live prices.',
+    words: [],
   },
 ] as const;
+
+/** The two roads between your browser and the server: what travels, and how it stays open */
+export const STACK_LINKS: readonly string[] = [
+  'HTTPS: a sealed envelope',
+  'WebSocket: a phone call that stays open',
+] as const;
+
+export const HOSTING =
+  "The website is served from Cloudflare Pages. The server runs on Fly.io. The database is PostgreSQL. The chart is drawn with TradingView Lightweight Charts, an open charting library. Prices come from Bybit's public market data. cryptopapertrade.com is independent: no partnership or endorsement is claimed.";
 
 /** The big numbers of the chart section: the counts are checked against the code in the test */
 export const CHART_STATS: readonly { value: string; label: string }[] = [
