@@ -5,36 +5,67 @@
  * indicators, 4 charts, $10,000, 10x) are the app's own and are checked by the page's test.
  */
 
-import type { Feature } from '@/lib/landingContent';
+import type { Feature, FeatureShot } from '@/lib/landingContent';
 
-export const WHY_POINTS: readonly Feature[] = [
+/** One slide of the Why section: a title, a few short bullets (a bold lead and, if needed, a few words more) */
+export interface WhySlideContent {
+  id: string;
+  title: string;
+  bullets: readonly { lead: string; text?: string }[];
+  /** One closing line under the bullets */
+  note?: string;
+}
+
+/** The Why section (owner 2026-11-24: short, bullet points, easy to read) */
+export const WHY_SLIDES: readonly WhySlideContent[] = [
   {
+    id: 'why-doing',
     title: 'Learn by doing',
-    text: 'Read a short lesson. Then try the idea on a real chart. Seeing it beats reading about it.',
+    bullets: [
+      { lead: 'Read a short lesson.' },
+      { lead: 'Try the idea on a real chart.' },
+      { lead: 'Seeing it beats reading about it.' },
+    ],
   },
   {
+    id: 'why-money',
     title: 'Pretend money',
-    text: 'You get $10,000 of pretend money. You can practise as often as you like. No real money is ever involved.',
+    bullets: [
+      { lead: '$10,000', text: 'of pretend money.' },
+      { lead: 'Practise as often as you like.' },
+      { lead: 'No real money, ever.' },
+    ],
   },
   {
+    id: 'why-prices',
     title: 'Real prices',
-    text: 'The prices are real and live, so the chart moves like the real thing. Only the money is pretend.',
+    bullets: [
+      { lead: 'Real, live prices.' },
+      { lead: 'The chart moves like the real thing.' },
+      { lead: 'Only the money is pretend.' },
+    ],
+  },
+  {
+    id: 'why-who',
+    title: 'Who is it for?',
+    bullets: [
+      { lead: 'Know nothing about crypto?', text: 'Perfect.' },
+      { lead: 'Curious, but scared of losing money?', text: 'Practise safely.' },
+      { lead: 'Want to learn the buttons and the words?' },
+    ],
+    note: 'Nothing to know first. Each new word is explained when you meet it.',
+  },
+  {
+    id: 'why-gets',
+    title: 'What a beginner gets',
+    bullets: [
+      { lead: 'Understanding before risk:', text: 'charts, buy and sell, fees, losses.' },
+      { lead: 'Free:', text: 'no card, no ads. The chart needs no account.' },
+      { lead: 'Honest limits:', text: 'not advice, no promise of profit.' },
+    ],
+    note: 'Practice is not proof you would do well with real money.',
   },
 ] as const;
-
-export const WHO_FOR: readonly string[] = [
-  'People who know nothing about crypto or trading.',
-  'People who are curious but scared of losing money.',
-  'Anyone who wants to learn the buttons and the words in a safe place.',
-] as const;
-
-export const BEGINNER_GETS = {
-  understanding:
-    'You learn what a chart shows, what buy and sell mean, what a fee costs, and what a loss feels like, before any real money is near.',
-  free: 'It is free: no card, no ads, nothing to cancel. The chart needs no account. A free account adds the lessons and the practice desk.',
-  limits:
-    'This is paper trading only. It is not financial advice and promises no profit. Practising helps you learn the buttons and the words, but it does not prove you would do well with real money, because people act differently when real cash is on the line. The $10,000 balance and the 10x leverage cap are small on purpose.',
-} as const;
 
 /** The two halves of the app */
 export const HALVES: readonly { title: string; points: readonly string[] }[] = [
@@ -70,6 +101,19 @@ export interface Tour {
   /** The tab label */
   tab: string;
   steps: readonly string[];
+  /** Where the clip zooms in on a click: seconds into the clip, the spot (put in the middle of the view) as 0-1 fractions of the frame,
+   *  and how long it stays zoomed (default 1.4 s). Sorted by `at`, kept inside the clip. */
+  zoom: readonly TourZoom[];
+}
+
+/** One zoom-in on a click in a tour clip */
+export interface TourZoom {
+  at: number;
+  x: number;
+  y: number;
+  /** Zoom factor; the default is 1.8 on a desktop clip and 1.4 on a phone one */
+  scale?: number;
+  hold?: number;
 }
 
 export const TOURS: readonly Tour[] = [
@@ -80,9 +124,14 @@ export const TOURS: readonly Tour[] = [
     tab: 'A lesson',
     steps: [
       'Open the path and pick the next stop.',
-      'Read the cards: one idea, short sentences. The clip is sped up.',
-      'Answer the quiz. A wrong answer shows you why, then you try again.',
-      'Finish the lesson and the next stop opens.',
+      'Read the cards: one idea, short sentences. The clip shows two of them.',
+      'Put the steps in order by dragging, or match each word to its meaning. Check your answer.',
+      'A wrong answer shows you why, then you try again. Finish the lesson and the next stop opens.',
+    ],
+    zoom: [
+      { at: 4.3, x: 0.87, y: 0.59, hold: 2.0 },
+      { at: 10.4, x: 0.5, y: 0.52, hold: 6.6 },
+      { at: 18.8, x: 0.5, y: 0.52, hold: 8.6 },
     ],
   },
   {
@@ -96,6 +145,13 @@ export const TOURS: readonly Tour[] = [
       'See the order in Order and Account Management.',
       'Watch your balance and your trade move with the live price.',
     ],
+    zoom: [
+      { at: 2.7, x: 0.92, y: 0.27, hold: 1.5 },
+      { at: 4.3, x: 0.86, y: 0.3, hold: 1.0 },
+      { at: 5.3, x: 0.92, y: 0.36, hold: 3.0 },
+      { at: 8.4, x: 0.93, y: 0.9, hold: 1.3 },
+      { at: 10.6, x: 0.2, y: 0.84, hold: 5.2 },
+    ],
   },
   {
     id: 'journal',
@@ -106,6 +162,11 @@ export const TOURS: readonly Tour[] = [
       'Open Orders and Account, then the Journal tab.',
       'Tap the pencil and write a note: why you took the trade.',
       'Press Enter. The note is saved with your trades.',
+    ],
+    zoom: [
+      { at: 3.2, x: 0.75, y: 0.25, hold: 1.6 },
+      { at: 5.2, x: 0.8, y: 0.33, hold: 1.6 },
+      { at: 6.8, x: 0.3, y: 0.33, hold: 3.8 },
     ],
   },
   {
@@ -118,6 +179,12 @@ export const TOURS: readonly Tour[] = [
       'Add an indicator, here a moving average of the price.',
       'Switch the timeframe, and the same chart zooms out.',
     ],
+    zoom: [
+      { at: 0.4, x: 0.03, y: 0.25, hold: 1.5 },
+      { at: 1.9, x: 0.3, y: 0.45, hold: 2.0 },
+      { at: 5.2, x: 0.72, y: 0.2, hold: 3.4 },
+      { at: 9.3, x: 0.85, y: 0.15, hold: 2.6 },
+    ],
   },
   {
     id: 'pnl',
@@ -128,6 +195,11 @@ export const TOURS: readonly Tour[] = [
       'Open the chart on your phone. The price moves live.',
       'Open Orders and Account to see your balance and your profit or loss.',
       'Slide the Assets table to read the profit or loss of each coin.',
+    ],
+    zoom: [
+      { at: 0.4, x: 0.35, y: 0.06, hold: 2.2 },
+      { at: 6.6, x: 0.15, y: 0.27, hold: 1.8 },
+      { at: 8.6, x: 0.6, y: 0.55, hold: 3.8 },
     ],
   },
 ] as const;
@@ -219,6 +291,14 @@ export const STACK: readonly StackLayer[] = [
   },
 ] as const;
 
+/** The technology on each layer, shown as logo tiles (names only: the drawings live in `TechLogos`) */
+export const STACK_TECH: Record<StackLayer['id'], readonly string[]> = {
+  browser: ['React', 'Vite', 'Tailwind CSS', 'TypeScript'],
+  server: ['Node.js', 'Fastify', 'Prisma', 'TypeScript'],
+  database: ['PostgreSQL', 'Redis'],
+  feed: ['Bybit'],
+} as const;
+
 /** The two roads between your browser and the server: what travels, and how it stays open */
 export const STACK_LINKS: readonly string[] = [
   'HTTPS: a sealed envelope',
@@ -228,63 +308,73 @@ export const STACK_LINKS: readonly string[] = [
 export const HOSTING =
   "The website is served from Cloudflare Pages. The server runs on Fly.io. The database is PostgreSQL. The chart is drawn with TradingView Lightweight Charts, an open charting library. Prices come from Bybit's public market data. cryptopapertrade.com is independent: no partnership or endorsement is claimed.";
 
-/** The big numbers of the chart section: the counts are checked against the code in the test */
-export const CHART_STATS: readonly { value: string; label: string }[] = [
-  { value: '9', label: 'coins: BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK' },
-  { value: '10', label: 'timeframes, 1m to 1M' },
-  { value: '9', label: 'indicators' },
-  { value: '4', label: 'charts at once, 5 layouts' },
-  { value: '$10k', label: 'pretend account' },
-] as const;
+/** One two-faced card of the chart section: a big figure in front, the plain explanation on the back */
+export interface FlipCard {
+  id: string;
+  /** The big figure on the front ('9', '10', '$10k'); a card with an icon instead leaves it empty */
+  value: string;
+  /** The words under the figure on the front */
+  label: string;
+  /** The back's heading and text */
+  title: string;
+  text: string;
+  /** A faded real capture of the app behind both faces (decorative) */
+  shot: FeatureShot | 'desk';
+  icon?: 'drawing';
+}
 
-export const GUIDES: readonly Feature[] = [
+/** The chart section's cards: the counts are checked against the code in the test */
+export const FLIP_CARDS: readonly FlipCard[] = [
   {
-    title: 'Pulin',
-    text: 'The green candle. Asks the questions a beginner would ask.',
+    id: 'coins',
+    value: '9',
+    label: 'coins: BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK',
+    title: '9 real coins',
+    text: 'BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX and LINK. More are planned. Prices come from a real crypto exchange feed (Bybit), and candles move as the market moves, with no page refresh.',
+    shot: 'live',
   },
   {
-    title: 'Berwyn',
-    text: 'The red candle. Answers, usually with an everyday analogy.',
-  },
-] as const;
-
-export const PATH_CHAPTERS: readonly { title: string; stops: readonly string[] }[] = [
-  {
-    title: 'Chapter 1: Start here: crypto and trading basics',
-    stops: [
-      'Lesson 1 · Up, down and your first trade',
-      'Lesson 2 · Money nobody controls',
-      'Practice: buy your first coin',
-      'Practice: sell and review',
-      'Lesson 3 · News, swings and traps',
-      'Lesson 4 · Trader or investor? Find your style',
-      'Checkpoint: 10 questions, pass at 8',
-    ],
+    id: 'timeframes',
+    value: '10',
+    label: 'timeframes, 1m to 1M',
+    title: '10 timeframes',
+    text: 'Zoom from one minute to one month: 1m, 5m, 15m, 30m, 1h, 2h, 4h, 1D, 1W, 1M. Each candle is one slice of that time.',
+    shot: 'timeframes',
   },
   {
-    title: 'Chapter 2: Your crypto toolbox: coins, wallets and the networks behind them',
-    stops: [
-      'Lesson 5 · Coins and tokens',
-      'Lesson 6 · Stablecoins',
-      'Lesson 7 · Your wallet, your keys',
-      'Lesson 8 · Why sending crypto costs a fee',
-      'More lessons are on the way.',
-    ],
+    id: 'indicators',
+    value: '9',
+    label: 'indicators',
+    title: '9 indicators',
+    text: 'An indicator is a line or number worked out from the price, to help you read it. EMA, SMA, Average Price, Median Price, Typical Price, VWAP, Momentum, Rate of Change and MACD. Turn each on or off and change its colour and settings.',
+    shot: 'indicators',
+  },
+  {
+    id: 'drawing',
+    value: '',
+    label: 'drawing tools',
+    title: 'Drawing tools',
+    text: 'Trend lines, Fibonacci levels, rectangles, text notes and freehand. Mark what you see, then come back to it.',
+    shot: 'drawing',
+    icon: 'drawing',
+  },
+  {
+    id: 'charts',
+    value: '4',
+    label: 'charts at once, 5 layouts',
+    title: 'Up to 4 charts at once',
+    text: 'Five layouts: single, 2 columns, 2 rows, 3 columns, and a 2×2 grid. Link the coin, the timeframe and the crosshair across charts, or keep them apart.',
+    shot: 'layouts',
+  },
+  {
+    id: 'account',
+    value: '$10k',
+    label: 'pretend account',
+    title: '$10,000 of pretend money',
+    text: 'Every account starts with the same balance. Reset it any time and start again.',
+    shot: 'desk',
   },
 ] as const;
-
-export const QUIZ_TYPES: readonly string[] = [
-  'Pick the right answer',
-  'Drag steps into the right order',
-  'Choose buy or sell',
-  'Match boxes: each word with its meaning',
-  'Draw a line on a chart',
-] as const;
-
-export const QUIZ_NOTE = 'A wrong answer shows you why, and you try again. No lives, no timers.';
-
-export const CHECKPOINT =
-  'Chapter 1 ends with ten mixed questions. Pass with 8 to open the next chapter. Already know it? You can take it early.';
 
 export const NOT_THIS: readonly Feature[] = [
   {
@@ -303,14 +393,6 @@ export const NOT_THIS: readonly Feature[] = [
     title: 'Small on purpose',
     text: 'Huge pretend balances and very high leverage build false confidence. Here you practise with the account you would really have, and leverage stops at 10x.',
   },
-] as const;
-
-export const REMEMBER: readonly string[] = [
-  'It is a practice app: pretend money, real prices.',
-  'It has two halves: lessons, and a live chart with a practice desk.',
-  'The server is the kitchen: it does the real work, even when you are away.',
-  'Your account is remembered in a database, and kept safe with scrambled passwords and short-lived tokens.',
-  'It is not advice and not real money. Learn first, risk nothing.',
 ] as const;
 
 export const WORD_LIST: readonly { word: string; plain: string; picture: string }[] = [

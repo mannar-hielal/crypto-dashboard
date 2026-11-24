@@ -82,6 +82,16 @@
   height: 100%;
   object-fit: cover;
   background: var(--color-bg-deep);
+  /* TourPlayer pans and zooms to each click by setting transform on the element */
+  transform-origin: 0 0;
+  transition: transform 800ms cubic-bezier(0.45, 0, 0.2, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video {
+    transition: none;
+  }
 }
 
 .playBtn {

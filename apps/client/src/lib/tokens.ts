@@ -41,6 +41,23 @@ export const color = {
   white: '#fcfcfd', // headline / bright text  (Exgen headline: #FCFCFD)
 } as const;
 
+// ─── Glass tints ─────────────────────────────────────────────────────────────
+// The slide colours of the How it works "Why" slider (owner 2026-11-24). Each `deep` is dark enough for
+// white text at 7:1 or more (WCAG AAA) even over a bright picture; each `edge` is its light rim and badge.
+
+export const tint = {
+  pinkDeep: '#7a1d58',
+  pinkEdge: '#ff9bd6',
+  tealDeep: '#0c5a57',
+  tealEdge: '#6ee7de',
+  amberDeep: '#7a4a05',
+  amberEdge: '#ffc766',
+  violetDeep: '#4a2fb5',
+  violetEdge: '#b9a8ff',
+  blueDeep: '#124f8a',
+  blueEdge: '#8cc8ff',
+} as const;
+
 // ─── Chart indicator colors ───────────────────────────────────────────────────
 // lightweight-charts renders to Canvas — it cannot read CSS variables.
 // All chart colors MUST be plain hex strings defined here.

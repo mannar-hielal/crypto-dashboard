@@ -2,6 +2,9 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import React from 'react';
 
+import { FEATURES_FAQ } from '@/lib/landingContent';
+import { CHECK_YOURSELF, WHY_SLIDES } from '@/lib/howItWorksContent';
+
 // The page's claims must match the code: INTERVALS (lib/markets.ts), LAYOUT_ORDER
 // (ChartLayoutPicker.tsx), ALLOWED_SYMBOLS (server constants.ts), PaperOrderStatus (SDK).
 
@@ -62,13 +65,16 @@ describe('HowItWorksPage', () => {
     for (const p of pairs) expect(p.textContent).not.toMatch(/DOT/);
   });
 
-  it('should describe leverage, history and the order types as built when rendered', async () => {
-    await renderPage();
-    expect(screen.getByText(/leverage from 1x to 10x/)).not.toBeNull();
-    expect(screen.getByText(/stop at 10x on purpose/)).not.toBeNull();
-    expect(screen.getByText(/filled, cancelled, and rejected orders/)).not.toBeNull();
+  it('should show the six two-faced chart cards and the reset post-it when rendered', async () => {
+    const { container } = await renderPage();
+    expect(
+      container.querySelectorAll(
+        'ul[aria-label="Facts about the chart and the practice account"] > li'
+      )
+    ).toHaveLength(6);
+    expect(screen.getByText('If you reset')).not.toBeNull();
+    expect(screen.getByText('Your lessons and progress')).not.toBeNull();
     expect(screen.queryByText(/expired/i)).toBeNull();
-    expect(screen.getByText('Three order types')).not.toBeNull();
   });
 
   it('should not make the unverified claims when rendered', async () => {
@@ -82,21 +88,29 @@ describe('HowItWorksPage', () => {
     expect(screen.queryByText(/guaranteed|get rich|passive income/i)).toBeNull();
   });
 
-  it('should have one h1 and open with why the app exists, ending on the recap', async () => {
+  it('should have one h1 and open with why the app exists, with no recap', async () => {
     await renderPage();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     const h2s = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(h2s[0]).toBe('Why this app exists');
     expect(h2s).not.toContain('Four flows, step by step');
-    expect(h2s).toContain('Remember 5 things');
+    expect(h2s).toContain('What it is not');
+    expect(h2s).not.toContain('Remember 5 things');
   });
 
-  it('should show the five things to remember and the eight self-check questions', async () => {
+  it('should drop the sections that repeated the page: no boxes of guides, chapters or quiz types', async () => {
+    await renderPage();
+    for (const t of ['Quiz types', 'The checkpoint', 'On your phone, too', 'Real market data']) {
+      expect(screen.queryByText(t)).toBeNull();
+    }
+  });
+
+  it('should give every Why slide its own phone capture', async () => {
     const { container } = await renderPage();
-    expect(container.querySelectorAll('ol[class*="remember"] > li')).toHaveLength(5);
-    expect(
-      container.querySelectorAll('details[class*="more"] summary').length
-    ).toBeGreaterThanOrEqual(9);
+    const slider = container.querySelector('[aria-label="Why this app exists"]')!;
+    const srcs = [...slider.querySelectorAll('img')].map((i) => i.getAttribute('src'));
+    expect(srcs).toHaveLength(WHY_SLIDES.length);
+    expect(new Set(srcs).size).toBe(WHY_SLIDES.length);
   });
 
   it('should keep the old Features page out: no link to /features', async () => {
@@ -120,10 +134,12 @@ describe('HowItWorksPage', () => {
     const { container } = await renderPage();
     const faq = container.querySelector('#questions') as HTMLElement;
     const buttons = within(faq).getAllByRole('button', { expanded: false });
-    expect(buttons.length).toBe(6);
+    // The quick answers, then the self-check questions in the same list
+    const total = FEATURES_FAQ.length + CHECK_YOURSELF.length;
+    expect(buttons.length).toBe(total);
     const json = JSON.parse(screen.getByTestId('seo').getAttribute('data-json') ?? '{}');
     expect(json['@type']).toBe('FAQPage');
-    expect(json.mainEntity).toHaveLength(6);
+    expect(json.mainEntity).toHaveLength(total);
     expect(json.mainEntity[0].acceptedAnswer.text.length).toBeGreaterThan(10);
   });
 

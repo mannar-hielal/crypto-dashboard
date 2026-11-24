@@ -7,9 +7,10 @@ import { CtaSection } from '@/components/CtaSection';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { CoinRibbon } from '@/components/landing/CoinRibbon';
 import { FaqList } from '@/components/landing/FaqList';
-import { FeatureGrid } from '@/components/landing/FeatureGrid';
+import { FlipCards } from '@/components/landing/FlipCards';
 import { LessonPreviewsLazy } from '@/components/landing/LessonPreviewsLazy';
-import { PictureAccordion, type AccordionItem } from '@/components/landing/PictureAccordion';
+import { NotCards } from '@/components/landing/NotCards';
+import { WhySlider, type WhySlide } from '@/components/landing/WhySlider';
 import { PictureCallouts } from '@/components/landing/PictureCallouts';
 import { PretendMoney } from '@/components/landing/PretendMoney';
 import { TourPlayer } from '@/components/landing/TourPlayer';
@@ -19,102 +20,54 @@ import { StartLink } from '@/components/landing/StartLink';
 import { StackDiagram } from '@/components/landing/StackDiagram';
 import { StepFlow } from '@/components/landing/StepFlow';
 import {
-  ACCOUNT_FEATURES,
-  CHART_FEATURES,
   CTA_CHART,
   CTA_REGISTER,
-  DATA_FEATURES,
-  DESK_FEATURES,
-  DEVICE_FEATURES,
   FEATURES_FAQ,
   LEARN_STEPS,
+  type FaqItem,
 } from '@/lib/landingContent';
 import {
-  BEGINNER_GETS,
-  CHART_STATS,
-  CHECKPOINT,
   CHECK_YOURSELF,
-  GUIDES,
   HALVES,
   HOSTING,
-  NOT_THIS,
-  PATH_CHAPTERS,
-  QUIZ_NOTE,
-  QUIZ_TYPES,
-  REMEMBER,
   TRICK,
-  WHO_FOR,
-  WHY_POINTS,
+  WHY_SLIDES,
   WORD_LIST,
 } from '@/lib/howItWorksContent';
-import chartShot from '@/assets/landing/shot-chart.webp';
-import deskShot from '@/assets/landing/shot-desk.webp';
-import lessonShot from '@/assets/landing/shot-lesson.webp';
-import pathDesktop from '@/assets/landing/shot-path-desktop.webp';
-import pretendPanel from '@/assets/landing/pretend-panel.webp';
+import phoneAccount from '@/assets/landing/phone-account.webp';
+import phoneChart from '@/assets/landing/phone-chart.webp';
+import phoneLesson from '@/assets/landing/phone-lesson.webp';
+import phonePath from '@/assets/landing/phone-path.webp';
+import phoneTrade from '@/assets/landing/phone-trade.webp';
 import shared from '@/components/landing/landing.module.css';
 import styles from './HowItWorksPage.module.css';
 
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
-// The Why section's five panels: a real capture of the app behind each one (decorative)
-const WHY_PICTURES = [lessonShot, pretendPanel, chartShot, pathDesktop, deskShot] as const;
-const WHY_SIZES = [
-  [1100, 657],
-  [1000, 170],
-  [1100, 510],
-  [1100, 688],
-  [1100, 657],
-] as const;
+// The Why section's five slides: a real phone capture of the app on each one (decorative, taken on a
+// throwaway account, 390 x 844 at 2x, scaled to 540 wide)
+const WHY_PICTURES: Record<string, string> = {
+  'why-doing': phoneLesson,
+  'why-money': phoneAccount,
+  'why-prices': phoneChart,
+  'why-who': phonePath,
+  'why-gets': phoneTrade,
+};
+const PHONE_SIZE = { width: 540, height: 1169 } as const;
 
-function whyItems(): AccordionItem[] {
-  const image = (i: number) => ({
-    src: WHY_PICTURES[i],
-    width: WHY_SIZES[i][0],
-    height: WHY_SIZES[i][1],
+function whyItems(): WhySlide[] {
+  return WHY_SLIDES.map((w) => {
+    const src = WHY_PICTURES[w.id];
+    // A slide without its capture would ship a broken image: fail at load, in the tests, instead
+    if (!src) throw new Error(`The Why slide "${w.id}" has no phone capture`);
+    return {
+      id: w.id,
+      title: w.title,
+      image: { src, ...PHONE_SIZE },
+      bullets: w.bullets,
+      note: w.note,
+    };
   });
-  return [
-    ...WHY_POINTS.map((p, i) => ({
-      id: `why-${i}`,
-      title: p.title,
-      image: image(i),
-      body: <p>{p.text}</p>,
-    })),
-    {
-      id: 'why-who',
-      title: 'Who is it for?',
-      image: image(3),
-      body: (
-        <>
-          <ul>
-            {WHO_FOR.map((t) => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-          <p>
-            You never need to know anything first. Each new word is explained the first time you
-            meet it.
-          </p>
-        </>
-      ),
-    },
-    {
-      id: 'why-gets',
-      title: 'What a beginner gets',
-      image: image(4),
-      body: (
-        <>
-          <p>
-            <strong>Understanding before risk.</strong> {BEGINNER_GETS.understanding}
-          </p>
-          <p>{BEGINNER_GETS.free}</p>
-          <p>
-            <strong>Honest limits.</strong> {BEGINNER_GETS.limits}
-          </p>
-        </>
-      ),
-    },
-  ];
 }
 
 const WHY_ITEMS = whyItems();
@@ -127,15 +80,24 @@ const SECTIONS = [
   { id: 'chart', label: 'On the chart' },
   { id: 'path', label: 'Learning path' },
   { id: 'not', label: 'What it is not' },
-  { id: 'recap', label: 'Recap' },
+  { id: 'words', label: 'Word list' },
   { id: 'questions', label: 'Questions' },
 ] as const;
+
+// The page's questions: the quick answers, then the self-check questions (owner 2026-11-24: one list).
+// A self-check answer is its yes or no and its reason, and has no "Start here" button.
+const SELF_CHECK: readonly FaqItem[] = CHECK_YOURSELF.map((c, i) => ({
+  id: `check-${i}`,
+  question: c.question,
+  answer: `${c.answer} ${c.why}`,
+}));
+const QUESTIONS: readonly FaqItem[] = [...FEATURES_FAQ, ...SELF_CHECK];
 
 // Structured data: the page's questions, the same text the accordion shows
 const FAQ_JSON_LD = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: FEATURES_FAQ.map((q) => ({
+  mainEntity: QUESTIONS.map((q) => ({
     '@type': 'Question',
     name: q.question,
     acceptedAnswer: { '@type': 'Answer', text: q.answer },
@@ -190,7 +152,7 @@ export function HowItWorksPage() {
       {/* Sticky anchor nav: docks below the top bar */}
       <nav className={styles.nav} aria-label="On this page">
         <div className={styles.navInner}>
-          {SECTIONS.filter((s) => isLive || s.id !== 'questions').map((s) => (
+          {SECTIONS.map((s) => (
             <a key={s.id} href={`#${s.id}`} className={styles.navLink}>
               {s.label}
             </a>
@@ -233,7 +195,7 @@ export function HowItWorksPage() {
             title="Why this app exists"
             lead="Most people meet trading with real money on the line. That is a bad way to learn. This app lets you learn first, and risk nothing."
           >
-            <PictureAccordion items={WHY_ITEMS} />
+            <WhySlider slides={WHY_ITEMS} />
           </Part>
 
           <Part
@@ -281,31 +243,11 @@ export function HowItWorksPage() {
             title="What you can do on the chart"
             lead="A real charting screen, with room to explore. The chart needs no sign up."
           >
-            <ul className={styles.stats}>
-              {CHART_STATS.map((s) => (
-                <li key={s.label} className={styles.stat}>
-                  <span className={styles.statValue}>{s.value}</span>
-                  <span className={styles.statLabel}>{s.label}</span>
-                </li>
-              ))}
-            </ul>
             <SingleShot id="chart" />
-            <FeatureGrid items={CHART_FEATURES} />
+            <FlipCards />
             <CoinRibbon />
-            <FeatureGrid items={DATA_FEATURES} />
             {isLive && <StartLink cta={CTA_CHART} live variant="text" />}
-
-            <h3 className={styles.sub2}>The practice desk and your account</h3>
-            <p className={styles.p}>
-              Make a free account and you get $10,000 of pretend money. Practise buying and selling
-              as many times as you like. Nothing you do here can cost real money.
-            </p>
-            <SingleShot id="desk" />
             <PretendMoney />
-            <FeatureGrid items={DESK_FEATURES} />
-            <FeatureGrid items={ACCOUNT_FEATURES} />
-            <h3 className={styles.sub2}>On your phone, too</h3>
-            <FeatureGrid items={DEVICE_FEATURES} headingLevel={4} />
           </Part>
 
           <Part
@@ -315,40 +257,7 @@ export function HowItWorksPage() {
             lead="A stop opens once the one before it is done. Open the map from the top bar once you have an account."
           >
             <StepFlow items={LEARN_STEPS} />
-            <LessonPreviewsLazy />
-            <div className={styles.twoCols}>
-              {GUIDES.map((g) => (
-                <div key={g.title} className={styles.box}>
-                  <h3 className={styles.boxTitle}>{g.title}</h3>
-                  <p className={styles.p}>{g.text}</p>
-                </div>
-              ))}
-            </div>
-            {PATH_CHAPTERS.map((c) => (
-              <div key={c.title} className={styles.box}>
-                <h3 className={styles.boxTitle}>{c.title}</h3>
-                <ol className={styles.stops}>
-                  {c.stops.map((t) => (
-                    <li key={t}>{t}</li>
-                  ))}
-                </ol>
-              </div>
-            ))}
-            <div className={styles.twoCols}>
-              <div className={styles.box}>
-                <h3 className={styles.boxTitle}>Quiz types</h3>
-                <ul className={styles.bullets}>
-                  {QUIZ_TYPES.map((t) => (
-                    <li key={t}>{t}</li>
-                  ))}
-                </ul>
-                <p className={styles.note}>{QUIZ_NOTE}</p>
-              </div>
-              <div className={styles.box}>
-                <h3 className={styles.boxTitle}>The checkpoint</h3>
-                <p className={styles.p}>{CHECKPOINT}</p>
-              </div>
-            </div>
+            <LessonPreviewsLazy carousel />
             <div className={styles.links}>
               <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
               <Link to="/blog" className={shared.ctaText}>
@@ -363,21 +272,15 @@ export function HowItWorksPage() {
             title="What it is not"
             lead="Said plainly, so there are no surprises."
           >
-            <FeatureGrid items={NOT_THIS} />
+            <NotCards />
           </Part>
 
           <Part
-            id="recap"
-            eyebrow="8 · Recap"
-            title="Remember 5 things"
-            lead="If you keep only these, you have the idea."
+            id="words"
+            eyebrow="8 · Word list"
+            title="The words, in plain English"
+            lead="The words you will meet in the app, each with a picture to hold on to."
           >
-            <ol className={styles.remember}>
-              {REMEMBER.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ol>
-            <h3 className={styles.sub2}>Word list</h3>
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
@@ -398,40 +301,33 @@ export function HowItWorksPage() {
                 </tbody>
               </table>
             </div>
-            <h3 className={styles.sub2}>Check yourself</h3>
-            <p className={styles.p}>Say your answer out loud, then open it to check.</p>
-            <ol className={styles.checks}>
-              {CHECK_YOURSELF.map((c) => (
-                <li key={c.question}>
-                  <details className={styles.more}>
-                    <summary>{c.question}</summary>
-                    <p className={styles.p}>
-                      <strong>{c.answer}</strong> {c.why}
-                    </p>
-                  </details>
-                </li>
-              ))}
-            </ol>
           </Part>
 
-          {/* ─── Questions: live only, as on the landing page (its answers say what launched) ── */}
-          {isLive && (
-            <section
-              id="questions"
-              className={`${shared.section} ${styles.anchor}`}
-              aria-labelledby="questions-title"
-            >
-              <SectionHead
-                id="questions-title"
-                eyebrow="Questions"
-                title="Quick answers"
-                lead="Tap a question to open it."
+          {/* ─── Questions: the quick answers say what launched, so before launch the section holds only the
+              self-check questions ───────────────────────────────────────────────────────────────── */}
+          <section
+            id="questions"
+            className={`${shared.section} ${styles.anchor}`}
+            aria-labelledby="questions-title"
+          >
+            <SectionHead
+              id="questions-title"
+              eyebrow="Questions"
+              title={isLive ? 'Quick answers' : 'Check yourself'}
+              lead={
+                isLive
+                  ? 'Tap a question to open it. The last few are for you to check yourself: say your answer, then open it.'
+                  : 'Say your answer out loud, then open it to check.'
+              }
+            />
+            <div className={styles.faqWrap}>
+              <FaqList
+                items={isLive ? QUESTIONS : SELF_CHECK}
+                live={isLive}
+                anchor="how.faq.start"
               />
-              <div className={styles.faqWrap}>
-                <FaqList items={FEATURES_FAQ} live anchor="how.faq.start" />
-              </div>
-            </section>
-          )}
+            </div>
+          </section>
 
           <div className={shared.section}>
             <p className={styles.legal}>
@@ -441,7 +337,7 @@ export function HowItWorksPage() {
           </div>
 
           <section className={`${shared.section} ${styles.cta}`} aria-label="Get started">
-            <CtaSection />
+            <CtaSection newsletterOnly />
           </section>
         </div>
       </AuthLayout>

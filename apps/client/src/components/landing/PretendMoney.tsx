@@ -1,3 +1,5 @@
+import { ArrowLeft, ArrowUp } from 'lucide-react';
+
 import { PRETEND_MONEY } from '@/lib/landingContent';
 import panel from '@/assets/landing/pretend-panel.webp';
 import panelNarrow from '@/assets/landing/pretend-panel-narrow.webp';
@@ -54,20 +56,41 @@ export function PretendMoney() {
             />
           </picture>
         </figure>
-        <figure className={styles.reset}>
-          <img
-            src={reset}
-            width={360}
-            height={300}
-            alt={PRETEND_MONEY.resetAlt}
-            loading="lazy"
-            decoding="async"
-            className={styles.resetImg}
-          />
-          <figcaption className={styles.resetText}>
-            <strong>{PRETEND_MONEY.resetTitle}.</strong> {PRETEND_MONEY.resetText}
-          </figcaption>
-        </figure>
+        <div className={styles.resetRow}>
+          <figure className={styles.reset}>
+            <img
+              src={reset}
+              width={360}
+              height={300}
+              alt={PRETEND_MONEY.resetAlt}
+              loading="lazy"
+              decoding="async"
+              className={styles.resetImg}
+            />
+            <figcaption className={styles.resetText}>
+              <strong>{PRETEND_MONEY.resetTitle}.</strong> {PRETEND_MONEY.resetText}
+            </figcaption>
+          </figure>
+          {/* An arrow from the reset window to the post-it: it nudges toward the window */}
+          <ArrowLeft className={`${styles.arrow} ${styles.arrowSide}`} aria-hidden="true" />
+          <ArrowUp className={`${styles.arrow} ${styles.arrowUp}`} aria-hidden="true" />
+          <div className={styles.postit}>
+            <span className={styles.tape} aria-hidden="true" />
+            <h4 className={styles.postTitle}>If you reset</h4>
+            <p className={styles.postLabel}>You lose</p>
+            <ul className={`${styles.postList} ${styles.lose}`}>
+              {PRETEND_MONEY.resetLose.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+            <p className={styles.postLabel}>You keep</p>
+            <ul className={`${styles.postList} ${styles.keep}`}>
+              {PRETEND_MONEY.resetKeep.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

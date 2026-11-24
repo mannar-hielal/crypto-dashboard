@@ -8,7 +8,7 @@
  * for the presenting guide.
  */
 
-import type { JSX } from 'react';
+import { useLayoutEffect, useRef, useState, type JSX } from 'react';
 import {
   ArrowsLeftRight,
   Bank,
@@ -2191,18 +2191,63 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */
-export function LessonArt({ id, presenter }: { id: LessonArtId; presenter?: Presenter }) {
+export function LessonArt({
+  id,
+  presenter,
+  center = false,
+}: {
+  id: LessonArtId;
+  presenter?: Presenter;
+  /** Slide the view so the drawing sits in the middle: the scenes leave room on the left for the
+   *  presenting guide, so without one (a card preview) they look pushed to the right */
+  center?: boolean;
+}) {
   const Picture = ART[id];
   const label = ART_LABELS[id];
+  const group = useRef<SVGGElement>(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const g = group.current;
+    if (!center || !g) {
+      setShift(0);
+      return;
+    }
+    // Measure now, and again whenever the svg's size changes (a card mounted while hidden has an empty
+    // box until it shows). jsdom has no getBBox or ResizeObserver: the view stays centred as drawn.
+    const measure = () => {
+      let next = 0;
+      if (typeof g.getBBox === 'function') {
+        try {
+          const b = g.getBBox();
+          if (b.width > 0) next = Math.max(-40, Math.min(60, b.x + b.width / 2 - 160));
+        } catch {
+          // not laid out yet
+        }
+      }
+      setShift(next);
+    };
+    measure();
+    const svg = g.ownerSVGElement;
+    if (!svg || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(svg);
+    return () => ro.disconnect();
+  }, [center, id]);
   return (
     <svg
-      viewBox="0 0 320 160"
+      viewBox={`${center ? shift : 0} 0 320 160`}
       className={styles.art}
       {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
       focusable="false"
       data-lesson-art={id}
     >
-      <Picture />
+      {center ? (
+        <g ref={group}>
+          <Picture />
+        </g>
+      ) : (
+        <Picture />
+      )}
       {presenter && (
         <g className={styles.presenter}>
           <Guide {...presenter} pose={presenter.pose ?? 'point'} x={0} y={56} scale={1.12} />

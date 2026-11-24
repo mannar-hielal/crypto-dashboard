@@ -506,16 +506,27 @@ sideways scroll at any width:
 5. `/how-it-works` → h1 "How cryptopapertrade.com works", the sticky anchor nav from 768 px (each link scrolls to its section, the
    heading clear of the bars), eight numbered sections, the questions as an accordion (live), and the links to `/blog`, `/register` and
    `/chart`; no sideways scroll at 375 px. `/features` no longer exists (it lands on the landing page).
-   **Visual sections (2026-11-23):** Why is a vertical picture accordion (hover or tap opens a panel, Enter or Space on its heading too, the arrow keys move between
-   panels, Tab only moves focus, below 768 px the open panel grows with its text); One picture has two post-its with arrows (side by side from 900 px, under the
-   picture on a phone); Tours are five muted looping clips, one per tab, desktop and phone frames, loaded only near the screen and
-   paused off it (a play button under reduced motion); Behind the scenes is the four-layer blueprint. No candle, three-words or flows
-   sections.
-   **Crypto path (a check):** Product ▾ → Crypto path signed in opens the dashboard with the learning map open at the side (a full
-   screen sheet on a phone); signed out it goes to the login page and, after signing in, lands on the same place.
-   **Lesson previews (a check):** on a phone width the eight cards are one row you swipe (the row is a labelled region and a tab stop; arrow
-   keys scroll it); from 768 px they are a grid (two columns, then four) and no landmark is added. With the network offline before the row
-   nears the screen, the section shows "The lesson previews did not load. Refresh the page to try again." (announced politely) and no gap.
+   **Visual sections (2026-11-24):**
+   - **Why** is a vertical slider of five slides, each on its own colour with a phone beside three short bullets. The mouse wheel, a
+     mouse drag up or down, a swipe, the arrows, the dots and Up / Down / Home / End change the slide. On the first slide scrolling up,
+     and on the last scrolling down, the page scrolls on; a pinch or a Ctrl + wheel zooms the page. Below 900 px the phone stands under
+     the words.
+   - **One picture** has two post-its with arrows (side by side from 900 px, under the picture on a phone).
+   - **Tours** are five muted looping clips, one per tab: each zooms in on its clicks, then back out (none with reduced motion). The
+     clips are loaded only near the screen and paused off it (a play button under reduced motion).
+   - **Behind the scenes** is the four-layer blueprint: logo tiles float on each layer, and the "Saves and reads" and "Prices come in"
+     roads animate (the price road streams upward).
+   - **On the chart** has six two-faced cards (hover or keyboard focus turns one over; a tap on a touch screen), then the coin ribbon
+     and the pretend-money panel with the reset post-it ("You lose" and "You keep").
+   - **What it is not** has four cards with a red stop sign. The word list follows. There is no recap and no "Check yourself" section:
+     those questions are in "Quick answers" (live); before launch that section is titled "Check yourself" and holds only them.
+   - The page ends on the e-mail sign-up (also when live). No candle, three-words or flows sections.
+     **Crypto path (a check):** Product ▾ → Crypto path signed in opens the dashboard with the learning map open at the side (a full
+     screen sheet on a phone); signed out it goes to the login page and, after signing in, lands on the same place.
+     **Lesson carousel (a check):** the eight lessons are a carousel: one card on a phone, two from 768 px, three from 1100 px, with left and right
+     arrows (they stay focusable at an end), a dot for each lesson, and a swipe or the arrow keys on the row. A card opens the Crypto path
+     (see above). With the network offline before the row nears the screen, the section shows "The lesson previews did not load. Refresh
+     the page to try again." (announced politely) and no gap. The landing page keeps the grid of previews.
 6. With `VITE_IS_LIVE=false` the landing page is the Launching Soon hero, the coin ribbon and the newsletter form: no sign-up, chart,
    questions or table.
 

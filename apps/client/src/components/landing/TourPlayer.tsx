@@ -21,6 +21,10 @@ function fileFor(id: Tour['id'], ext: string): string | undefined {
 const reducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+// How far the clip zooms in on a click: less on a phone, whose frame is already narrow
+const ZOOM_SCALE = { desktop: 1.8, phone: 1.4 } as const;
+const DEFAULT_HOLD = 1.4;
+
 const HAS_OBSERVER = typeof IntersectionObserver !== 'undefined';
 
 /** The clip of the open tour: muted, looping, loaded only when it nears the screen, paused when it leaves */
@@ -61,6 +65,39 @@ function Clip({ tour }: { tour: Tour }) {
       v.pause();
     }
   }, [onScreen, near, tour.id]);
+
+  // Zoom in on each click while the clip plays: the active point comes from the clip's time and goes
+  // straight onto the video's style (no React state, no re-render per frame). Not with reduced motion.
+  useEffect(() => {
+    const v = video.current;
+    if (!v || !playing || reducedMotion()) return;
+    const scale = ZOOM_SCALE[tour.device];
+    let raf = 0;
+    let shown = -1;
+    const tick = () => {
+      const t = v.currentTime;
+      const i = tour.zoom.findIndex((z) => t >= z.at && t < z.at + (z.hold ?? DEFAULT_HOLD));
+      if (i !== shown) {
+        shown = i;
+        if (i < 0) {
+          v.style.transform = '';
+        } else {
+          const z = tour.zoom[i];
+          // Pan as well as zoom: put the spot in the middle of the view, never past the clip's edge
+          const sc = z.scale ?? scale;
+          const tx = Math.min(0, Math.max(1 - sc, 0.5 - sc * z.x)) * 100;
+          const ty = Math.min(0, Math.max(1 - sc, 0.5 - sc * z.y)) * 100;
+          v.style.transform = `translate(${tx}%, ${ty}%) scale(${sc})`;
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      v.style.transform = '';
+    };
+  }, [playing, near, tour]);
 
   if (!mp4) {
     return <div className={styles.empty}>This tour's clip is on its way.</div>;

@@ -1,0 +1,198 @@
+/* Two-faced cards. Colours from tokens.ts via the @theme mirror in index.css. */
+
+.grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  perspective: 1200px;
+}
+
+.card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+/* The turning part is a plain box inside the button: a button is not a reliable 3D context everywhere */
+.flip {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Turned over by a mouse hover or by keyboard focus */
+@media (hover: hover) {
+  .item:hover .flip {
+    transform: rotateY(180deg);
+  }
+}
+
+.card:focus-visible .flip {
+  transform: rotateY(180deg);
+}
+
+/* A tap by a finger or a pen sets data-flipped (a mouse never does: hover decides) */
+.card[data-flipped='true'] .flip {
+  transform: rotateY(180deg);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border-card); /* border.card */
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.back {
+  border-color: var(--color-brand-purple-dark);
+  transform: rotateY(180deg);
+}
+
+/* The faded capture of the app behind a face */
+.shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+  opacity: 0.9;
+}
+
+.back .shot {
+  opacity: 0.5;
+}
+
+/* Keeps the words readable: the front only darkens toward its words at the bottom, so the picture
+   shows; the back is darker all over, because its words fill the card */
+.face::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 35%,
+    color-mix(in srgb, var(--color-bg-page) 82%, transparent) 100%
+  );
+  content: '';
+}
+
+.back::after {
+  background: color-mix(in srgb, var(--color-bg-page) 62%, transparent);
+}
+
+.frontBody,
+.backBody {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 22px;
+}
+
+.backBody {
+  justify-content: flex-start;
+}
+
+.value {
+  color: var(--color-brand-purple);
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  color: var(--color-brand-purple);
+}
+
+.label {
+  color: var(--color-brand-white);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.title {
+  color: var(--color-brand-white);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.text {
+  color: var(--color-brand-muted);
+  font-size: 0.9375rem;
+  line-height: 1.55; /* lineHeight.normal */
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .card {
+    min-height: 290px;
+  }
+}
+
+/* No turning: the faces cross-fade (a tap too, where there is no hover) */
+@media (prefers-reduced-motion: reduce) {
+  .flip {
+    transform: none !important;
+    transition: none;
+  }
+
+  .back {
+    transform: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .item:hover .back,
+  .card:focus-visible .back {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card[data-flipped='true'] .back {
+    opacity: 1;
+  }
+}

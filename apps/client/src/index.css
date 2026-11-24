@@ -94,6 +94,17 @@
   --color-brand-amber: #e7ab33;
   --color-brand-muted: #cac5d4;
   --color-brand-white: #fcfcfd;
+  /* tint (tokens.ts): the slide colours of the How it works Why slider */
+  --color-tint-pink-deep: #7a1d58;
+  --color-tint-pink-edge: #ff9bd6;
+  --color-tint-teal-deep: #0c5a57;
+  --color-tint-teal-edge: #6ee7de;
+  --color-tint-amber-deep: #7a4a05;
+  --color-tint-amber-edge: #ffc766;
+  --color-tint-violet-deep: #4a2fb5;
+  --color-tint-violet-edge: #b9a8ff;
+  --color-tint-blue-deep: #124f8a;
+  --color-tint-blue-edge: #8cc8ff;
   /* border.input (tokens.ts): a control's outline */
   --color-border-input: rgba(255, 255, 255, 0.1);
   /* border.divider, border.card and border.hover (tokens.ts): the public pages' lines and card edges */

@@ -24,13 +24,15 @@ export function FaqList({ items, live, anchor, defaultOpen }: FaqListProps) {
         content: (
           <>
             <p className={styles.answer}>{item.answer}</p>
-            <StartLink
-              cta={item.cta}
-              live={live}
-              variant="text"
-              anchor={anchor}
-              anchorKey={item.id}
-            />
+            {item.cta && (
+              <StartLink
+                cta={item.cta}
+                live={live}
+                variant="text"
+                anchor={anchor}
+                anchorKey={item.id}
+              />
+            )}
           </>
         ),
       })),
