@@ -16,7 +16,11 @@ const itemVariants: Variants = {
   },
 };
 
-export function CtaSection() {
+/**
+ * The closing call to action. `newsletterOnly` (the How it works page, owner 2026-11-24) always shows the
+ * e-mail sign-up for the latest updates, even after launch, instead of the account button.
+ */
+export function CtaSection({ newsletterOnly = false }: { newsletterOnly?: boolean }) {
   return (
     <div id="newsletter" className="relative w-full">
       <div
@@ -33,7 +37,8 @@ export function CtaSection() {
           src={ctaIllustration}
           alt=""
           loading="lazy"
-          className="h-full w-full object-contain opacity-100"
+          // Faint on a phone, on every page that shows this section: the coins sat on the words (sweep 2026-11-24)
+          className="h-full w-full object-contain opacity-30 sm:opacity-100"
           style={{ maxWidth: '1200px' }}
         />
       </div>
@@ -42,7 +47,7 @@ export function CtaSection() {
         variants={itemVariants}
         className="relative mx-auto flex max-w-2xl flex-col items-center gap-8 px-8 py-20 text-center sm:py-24"
       >
-        {isLive ? (
+        {isLive && !newsletterOnly ? (
           <div className="relative z-10 flex max-w-lg flex-col items-center gap-5">
             <h2 className="text-3xl font-bold text-white sm:text-4xl">
               Ready to trade? Create your free account
@@ -62,10 +67,12 @@ export function CtaSection() {
         ) : (
           <div className="relative z-10 flex max-w-lg flex-col items-center gap-5">
             <h2 className="text-3xl font-bold text-white sm:text-4xl">
-              Launching soon. Be the first to know.
+              {isLive ? 'Get the latest updates' : 'Launching soon. Be the first to know.'}
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
-              No spam, unsubscribe anytime. We'll notify you when we go live.
+              {isLive
+                ? 'New lessons and new features, now and then. One short e-mail, nothing else.'
+                : "No spam, unsubscribe anytime. We'll notify you when we go live."}
             </p>
             <NewsletterForm />
           </div>

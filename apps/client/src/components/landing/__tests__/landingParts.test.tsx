@@ -121,7 +121,7 @@ describe('FaqList and StartLink', () => {
   });
 
   it('should point the button at the newsletter form before launch', () => {
-    render(React.createElement(StartLink, { cta: BEGINNER_FAQ[0]!.cta, live: false }));
+    render(React.createElement(StartLink, { cta: BEGINNER_FAQ[0]!.cta!, live: false }));
     const link = screen.getByRole('link');
     expect(link.getAttribute('href')).toBe('#newsletter');
     expect(link.textContent).toBe('Start here: get notified');
@@ -284,11 +284,12 @@ describe('the figures on the pages come from the app', () => {
     const { INTERVALS } = await import('@/lib/markets');
     const { INDICATOR_CATALOG } = await import('@/lib/indicators/catalog');
     const { MAX_LEVERAGE, STARTING_BALANCE } = await import('@crypto-dashboard/sdk');
-    const { CHART_FEATURES, DESK_FEATURES, FEATURES_FAQ } = await import('@/lib/landingContent');
-    const titles = CHART_FEATURES.map((f) => f.title);
+    const { FEATURES_FAQ } = await import('@/lib/landingContent');
+    const { FLIP_CARDS } = await import('@/lib/howItWorksContent');
+    const titles = FLIP_CARDS.map((f) => f.title);
     expect(titles).toContain(`${INTERVALS.length} timeframes`);
     expect(titles).toContain(`${INDICATOR_CATALOG.length} indicators`);
-    const copy = JSON.stringify([DESK_FEATURES, FEATURES_FAQ, BEGINNER_FAQ]);
+    const copy = JSON.stringify([FLIP_CARDS, FEATURES_FAQ, BEGINNER_FAQ]);
     expect(copy).toContain(`${MAX_LEVERAGE}x`);
     expect(copy).toContain(`$${STARTING_BALANCE.toLocaleString('en-US')}`);
   });
@@ -326,12 +327,13 @@ describe('the steps flow, the card screenshots and the pretend money (owner 2026
     ).toBeNull();
   });
 
-  it('should fade a real screenshot behind each of the five chart cards, and nowhere else', async () => {
-    const { FeatureGrid } = await import('../FeatureGrid');
-    const { CHART_FEATURES, DESK_FEATURES } = await import('@/lib/landingContent');
-    const withShots = render(React.createElement(FeatureGrid, { items: CHART_FEATURES }));
-    const imgs = withShots.container.querySelectorAll('img');
-    expect(imgs).toHaveLength(CHART_FEATURES.length);
+  it('should fade a real capture behind both faces of each flip card, as decoration', async () => {
+    const { FlipCards } = await import('../FlipCards');
+    const { FLIP_CARDS } = await import('@/lib/howItWorksContent');
+    const { container } = render(React.createElement(FlipCards));
+    expect(container.querySelectorAll('li')).toHaveLength(FLIP_CARDS.length);
+    const imgs = container.querySelectorAll('img');
+    expect(imgs).toHaveLength(FLIP_CARDS.length * 2);
     for (const img of imgs) {
       // Decorative: the words say it all; sized, and loaded late
       expect(img.getAttribute('alt')).toBe('');
@@ -339,9 +341,44 @@ describe('the steps flow, the card screenshots and the pretend money (owner 2026
       expect(img.getAttribute('height')).toBeTruthy();
       expect(img.getAttribute('loading')).toBe('lazy');
     }
-    withShots.unmount();
-    const plain = render(React.createElement(FeatureGrid, { items: DESK_FEATURES }));
-    expect(plain.container.querySelectorAll('img')).toHaveLength(0);
+  });
+
+  it('should keep both faces of a flip card in the page and turn it over on a tap', async () => {
+    const { FlipCards } = await import('../FlipCards');
+    const { FLIP_CARDS } = await import('@/lib/howItWorksContent');
+    render(React.createElement(FlipCards));
+    // The front's figure and the back's words are both readable by a screen reader and a crawler
+    for (const c of FLIP_CARDS) expect(screen.getByText(c.text)).not.toBeNull();
+    const first = screen.getAllByRole('button')[0]!;
+    // A tap turns the card (where there is no hover); with a mouse, hover decides. Both faces stay in the
+    // page, so the button carries no pressed state
+    expect(first.hasAttribute('aria-pressed')).toBe(false);
+    const press = (type: string) =>
+      fireEvent(
+        first,
+        Object.assign(new MouseEvent('pointerdown', { bubbles: true }), { pointerType: type })
+      );
+    expect(first.getAttribute('data-flipped')).toBe('false');
+    // A mouse click does nothing (hover decides)
+    press('mouse');
+    fireEvent.click(first);
+    expect(first.getAttribute('data-flipped')).toBe('false');
+    // A finger's tap turns the card, and a second tap turns it back
+    press('touch');
+    fireEvent.click(first);
+    expect(first.getAttribute('data-flipped')).toBe('true');
+    press('touch');
+    fireEvent.click(first);
+    expect(first.getAttribute('data-flipped')).toBe('false');
+  });
+
+  it('should give each "not" card a stop sign, and the text', async () => {
+    const { NotCards } = await import('../NotCards');
+    const { NOT_THIS } = await import('@/lib/howItWorksContent');
+    const { container } = render(React.createElement(NotCards));
+    expect(container.querySelectorAll('li')).toHaveLength(NOT_THIS.length);
+    expect(container.querySelectorAll('li svg[aria-hidden="true"]')).toHaveLength(NOT_THIS.length);
+    for (const n of NOT_THIS) expect(screen.getByText(n.text)).not.toBeNull();
   });
 
   it('should show where the pretend money lives: the panel with its balance, a coin, and the reset window', async () => {

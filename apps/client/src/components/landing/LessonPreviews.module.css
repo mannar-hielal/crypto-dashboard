@@ -5,6 +5,11 @@
   min-height: 320px; /* keeps the page from jumping when the cards load */
 }
 
+/* The carousel is one row tall, at every width */
+.holder.holderCarousel {
+  min-height: 420px;
+}
+
 /* A failed chunk leaves nothing to wait for: close the gap (set from the component, not :has) */
 .holder.holderSettled {
   min-height: 0 !important; /* the cards are in, or the chunk failed: either way the reservation has done its job */

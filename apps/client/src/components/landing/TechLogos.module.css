@@ -1,0 +1,80 @@
+/* Floating logo tiles on a layer of the stack picture; --accent comes from the layer. */
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0;
+  padding: 0 0 8px;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  width: 84px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: bob 5s ease-in-out infinite;
+}
+
+/* A loose, uneven line: every other tile sits lower, and each bobs on its own beat */
+.tile:nth-child(even) {
+  margin-top: 14px;
+  animation-delay: -1.7s;
+  animation-duration: 6s;
+}
+
+.tile:nth-child(3n) {
+  animation-delay: -3.1s;
+}
+
+.mark {
+  box-sizing: content-box;
+  width: 32px;
+  height: 32px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--color-bg-deep));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.tile:nth-child(odd) .mark {
+  transform: rotate(-4deg);
+}
+
+.tile:nth-child(even) .mark {
+  transform: rotate(5deg);
+}
+
+.solid {
+  fill: currentColor;
+}
+
+.name {
+  color: var(--color-brand-white);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    animation: none;
+  }
+}

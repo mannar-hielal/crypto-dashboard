@@ -1,7 +1,14 @@
 import { ArrowDown, ArrowRight, ArrowUp } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { STACK, STACK_LINKS, WORDS_PICTURED, type StackLayer } from '@/lib/howItWorksContent';
+import {
+  STACK,
+  STACK_LINKS,
+  STACK_TECH,
+  WORDS_PICTURED,
+  type StackLayer,
+} from '@/lib/howItWorksContent';
+import { TechLogos } from './TechLogos';
 import styles from './StackDiagram.module.css';
 
 // One small line drawing per layer, in the layer's colour (currentColor)
@@ -61,6 +68,7 @@ function Layer({ layer }: { layer: StackLayer }) {
         </h3>
         <span className={styles.tag}>{layer.tag}</span>
       </header>
+      <TechLogos names={STACK_TECH[layer.id]} />
       <div className={styles.layerBody}>
         <div className={styles.copy}>
           <p className={styles.text}>{layer.text}</p>
@@ -92,9 +100,22 @@ function Layer({ layer }: { layer: StackLayer }) {
 }
 
 /** A road between two layers: a dashed line that carries the labels of what travels on it */
-function Link({ children, label }: { children?: ReactNode; label: string }) {
+function Link({
+  children,
+  label,
+  direction = 'down',
+}: {
+  children?: ReactNode;
+  label: string;
+  /** Which way the dashes stream: down to the next layer, or up from the feed */
+  direction?: 'down' | 'up';
+}) {
   return (
-    <div className={styles.link} role="group" aria-label={label}>
+    <div
+      className={`${styles.link}${direction === 'up' ? ` ${styles.linkUp}` : ''}`}
+      role="group"
+      aria-label={label}
+    >
       <span className={styles.linkLine} aria-hidden="true" />
       <ArrowUp className={`${styles.linkArrow} ${styles.arrowTop}`} aria-hidden="true" />
       <ArrowDown className={`${styles.linkArrow} ${styles.arrowBottom}`} aria-hidden="true" />
@@ -136,7 +157,7 @@ export function StackDiagram() {
           <Layer layer={database} />
         </div>
         <div className={styles.half}>
-          <Link label="Between the live price feed and the server">
+          <Link label="Between the live price feed and the server" direction="up">
             <span className={styles.roadLabel}>Prices come in</span>
           </Link>
           <Layer layer={feed} />

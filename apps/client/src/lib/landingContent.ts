@@ -39,8 +39,8 @@ export interface FaqItem {
   id: string;
   question: string;
   answer: string;
-  /** The "Start here" button under the answer */
-  cta: Cta;
+  /** The "Start here" button under the answer (none for a self-check answer) */
+  cta?: Cta;
 }
 
 export const BEGINNER_FAQ: readonly FaqItem[] = [
@@ -517,8 +517,6 @@ export type FeatureShot = 'timeframes' | 'indicators' | 'drawing' | 'layouts' | 
 export interface Feature {
   title: string;
   text: string;
-  /** Fades in behind the card's right side; decorative, the text says it all */
-  shot?: FeatureShot;
 }
 
 export const LEARN_STEPS: readonly Feature[] = [
@@ -537,118 +535,6 @@ export const LEARN_STEPS: readonly Feature[] = [
   {
     title: 'Check yourself',
     text: 'Chapter 1 ends with a ten-question checkpoint. Pass it to open the next chapter. Your progress is saved, so you can stop and come back.',
-  },
-] as const;
-
-export const CHART_FEATURES: readonly Feature[] = [
-  {
-    title: '10 timeframes',
-    text: 'Zoom from one minute to one month: 1m, 5m, 15m, 30m, 1h, 2h, 4h, 1D, 1W, 1M. Each candle is one slice of that time.',
-    shot: 'timeframes',
-  },
-  {
-    title: '9 indicators',
-    text: 'An indicator is a line or number worked out from the price, to help you read it. EMA, SMA, Average Price, Median Price, Typical Price, VWAP, Momentum, Rate of Change and MACD. Turn each on or off and change its colour and settings.',
-    shot: 'indicators',
-  },
-  {
-    title: 'Drawing tools',
-    text: 'Trend lines, Fibonacci levels, rectangles, text notes and freehand. Mark what you see, then come back to it.',
-    shot: 'drawing',
-  },
-  {
-    title: 'Up to 4 charts at once',
-    text: 'Five layouts: single, 2 columns, 2 rows, 3 columns, and a 2×2 grid. Link the coin, the timeframe and the crosshair across charts, or keep them apart.',
-    shot: 'layouts',
-  },
-  {
-    title: 'Live, not delayed',
-    text: 'Candles update as the market moves, with no page refresh. A small light shows if the connection is healthy, and it reconnects by itself.',
-    shot: 'live',
-  },
-] as const;
-
-export const DESK_FEATURES: readonly Feature[] = [
-  {
-    title: '$10,000 of pretend money',
-    text: 'Every account starts with the same balance. Reset it any time and start again.',
-  },
-  {
-    title: 'Three order types',
-    text: 'Market: buy or sell now. Limit: wait for the price you name. Stop: wait for a trigger price, then go.',
-  },
-  {
-    title: 'Take-profit and stop-loss',
-    text: 'Set an exit on every trade. One closes it when you are happy with the gain. The other closes it before a loss grows. You pick whether they watch the last, mark or index price.',
-  },
-  {
-    title: 'Spot or perpetual',
-    text: 'Spot: buy the coin itself. Perpetual: bet on up or down, long or short, with leverage from 1x to 10x.',
-  },
-  {
-    title: 'Leverage with a cap',
-    text: 'Leverage is a magnifying glass: 10x makes gains and losses ten times bigger. We stop at 10x on purpose, and show where liquidation would hit.',
-  },
-  {
-    title: 'It keeps working when you leave',
-    text: 'Orders and exits are checked by our server, around the clock, even with the tab closed.',
-  },
-] as const;
-
-export const ACCOUNT_FEATURES: readonly Feature[] = [
-  {
-    title: 'Open positions',
-    text: 'See each trade with its live profit or loss, its entry price and its liquidation price.',
-  },
-  {
-    title: 'Order history',
-    text: 'A list of every order you made: filled, cancelled, and rejected orders, with the fee on each.',
-  },
-  {
-    title: 'Balance history',
-    text: 'Every credit and debit is written down, so you can follow your balance step by step.',
-  },
-  {
-    title: 'Your notes',
-    text: 'Add a note to any trade: why you made it, and what you learned. The app writes its own lines too, and those stay as written.',
-  },
-  {
-    title: 'Settings and sign-in',
-    text: 'Change your name, email or password, download your data, or delete your account for good. You are in charge of it.',
-  },
-  {
-    title: 'Your progress follows you',
-    text: 'Your lessons, your balance and your orders live in your account, so you can sign in on another device and pick up where you stopped.',
-  },
-] as const;
-
-export const DATA_FEATURES: readonly Feature[] = [
-  {
-    title: '9 real coins',
-    text: 'BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX and LINK. More are planned.',
-  },
-  {
-    title: 'Real market data',
-    text: 'Prices and candles come from a real crypto exchange feed (Bybit), so what you see moves like the real thing.',
-  },
-  {
-    title: 'See the spread',
-    text: 'The gap between the best buy price and the best sell price is shown for every coin. It is a small cost of every trade, so see it before you click.',
-  },
-] as const;
-
-export const DEVICE_FEATURES: readonly Feature[] = [
-  {
-    title: 'Add it to your home screen',
-    text: 'On iPhone, Android and desktop you can install it from the browser. It opens like an app.',
-  },
-  {
-    title: 'Works on small screens',
-    text: 'The chart, the order form and your account fit a phone, a tablet and a big monitor.',
-  },
-  {
-    title: 'Nothing to download',
-    text: 'Open the page and go. It is served over HTTPS, and sign-in uses a secure cookie.',
   },
 ] as const;
 
@@ -724,6 +610,14 @@ export const PRETEND_MONEY = {
   resetTitle: 'Start again any time',
   resetText:
     'Open the account settings and press Reset account. It asks you twice, so you cannot do it by accident. Your balance goes back to $10,000.',
+  /** The post-it beside the reset window: what a reset wipes, and what it leaves alone */
+  resetLose: [
+    'Your open trades and orders',
+    'Your trade history, balance history and journal notes',
+    'The coins you hold: your balance goes back to $10,000',
+    'Your per-coin leverage settings',
+  ],
+  resetKeep: ['Your lessons and progress', 'Your account, name and sign-in'],
   panelAlt:
     'The Order and Account panel under the chart: a balance of $10,000.00, and one asset, USDT, 10,000.00.',
   resetAlt: 'The Account Settings window with a Reset account button and a Done button.',

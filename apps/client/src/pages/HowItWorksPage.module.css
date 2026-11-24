@@ -95,14 +95,6 @@
   }
 }
 
-.sub2 {
-  width: 100%;
-  margin: 0;
-  color: var(--color-brand-white);
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
 /* Pre-launch: a short line above the headline saying the page shows what is coming */
 .soon {
   margin: 0;
@@ -164,36 +156,7 @@
   color: var(--color-brand-white);
 }
 
-.twoCols {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
-
-.box {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 10px;
-  padding: 20px;
-  border: 1px solid var(--color-border-card); /* border.card */
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
-}
-
-.boxTitle {
-  margin: 0;
-  color: var(--color-brand-white);
-  font-size: 1.0625rem;
-  font-weight: 700;
-}
-
-.p,
-.note,
-.bullets,
-.stops,
-.remember {
+.p {
   margin: 0;
   color: var(--color-brand-muted);
   font-size: 0.9375rem;
@@ -204,62 +167,12 @@
   color: var(--color-brand-white);
 }
 
-.note {
-  font-size: 0.875rem;
-}
-
-.bullets,
-.stops,
-.remember {
-  padding-left: 20px;
-}
-
 .trick {
   margin: 0;
   color: var(--color-brand-white);
   font-size: 1.125rem;
   font-weight: 700;
   text-align: center;
-}
-
-.flow {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.stats {
-  display: grid;
-  width: 100%;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-border-card); /* border.card */
-  border-radius: 14px;
-  background: var(--color-bg-panel);
-}
-
-.statValue {
-  color: var(--color-brand-purple);
-  font-size: 1.75rem;
-  font-weight: 900;
-  line-height: 1.1;
-}
-
-.statLabel {
-  color: var(--color-brand-muted);
-  font-size: 0.875rem;
-  line-height: 1.4;
 }
 
 .more {
@@ -283,16 +196,6 @@
 
 .more[open] summary {
   margin-bottom: 8px;
-}
-
-.checks {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .tableWrap {
@@ -328,14 +231,4 @@
 .table tbody tr:last-child th,
 .table tbody tr:last-child td {
   border-bottom: 0;
-}
-
-@media (min-width: 768px) {
-  .twoCols {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .stats {
-    grid-template-columns: repeat(5, 1fr);
-  }
 }
