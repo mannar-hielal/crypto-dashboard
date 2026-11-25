@@ -58,6 +58,7 @@ import {
 import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
 import { getTour, runsHere } from './tours';
+import { ReportBugButton } from '@/components/report/ReportBugButton';
 
 const NOTE_MAX = 500;
 
@@ -890,6 +891,7 @@ export function LessonSheet() {
           <span className={styles.counter}>
             {screenIndex + 1} / {screens.length}
           </span>
+          <ReportBugButton variant="sheet" anchor="lesson.report" />
         </div>
 
         <p className={styles.kicker}>

@@ -495,18 +495,10 @@ sideways scroll at any width:
 1. `/` → Expect one h1 ("Learn crypto trading. Practise on a real chart."), then two path cards side by side from 768 px (stacked
    below): [landing.hero.chart] → `/chart`, [landing.hero.register] → `/register`; the candles draw themselves once behind the
    headline, then the last one breathes.
-2. Under the cards, "Questions every beginner asks": Tab to a question, Enter or Space opens it, Up / Down / Home / End move between
+2. Under the cards (live): the **Why** slider, "What it is, in one picture" and "Little tours of the real app" (moved here from `/how-it-works`
+   2026-11-25; see the three notes below), then "Questions every beginner asks": Tab to a question, Enter or Space opens it, Up / Down / Home / End move between
    questions; each answer ends in a [landing.faq.start] "Start here" link. Expect a visible focus ring on each.
-3. The coin ribbon slides slowly and pauses on hover; with the system's reduced-motion setting on, the candles are drawn still and
-   the ribbon is a still, wrapped row.
-4. Scroll down: the timeline (8 steps), "Learn it. Then try it on real candles." (six lesson cards load as they near the screen; a
-   row you swipe on a phone), three screenshots in frames, six "where we do better" sections, and the table. The table scrolls inside
-   its own box on a phone with the feature column pinned; every cell is a tick, a tilde or a cross with a word for screen readers; the
-   three "small on purpose" rows show our crosses; the competitor columns carry blurred shapes, never a logo.
-5. `/how-it-works` → h1 "How cryptopapertrade.com works", the sticky anchor nav from 768 px (each link scrolls to its section, the
-   heading clear of the bars), eight numbered sections, the questions as an accordion (live), and the links to `/blog`, `/register` and
-   `/chart`; no sideways scroll at 375 px. `/features` no longer exists (it lands on the landing page).
-   **Visual sections (2026-11-24):**
+   Notes on the three moved sections:
    - **Why** is a vertical slider of five slides, each on its own colour with a phone beside three short bullets. The mouse wheel, a
      mouse drag up or down, a swipe, the arrows, the dots and Up / Down / Home / End change the slide. On the first slide scrolling up,
      and on the last scrolling down, the page scrolls on; a pinch or a Ctrl + wheel zooms the page. Below 900 px the phone stands under
@@ -514,6 +506,16 @@ sideways scroll at any width:
    - **One picture** has two post-its with arrows (side by side from 900 px, under the picture on a phone).
    - **Tours** are five muted looping clips, one per tab: each zooms in on its clicks, then back out (none with reduced motion). The
      clips are loaded only near the screen and paused off it (a play button under reduced motion).
+3. The coin ribbon slides slowly and pauses on hover; with the system's reduced-motion setting on, the candles are drawn still and
+   the ribbon is a still, wrapped row.
+4. Scroll down: the timeline (8 steps), "Short lessons, then practice, then a checkpoint" (the path walk, see below), six "where we do better"
+   sections, and the table. The lesson cards and the three screenshots in frames are gone. The table scrolls inside
+   its own box on a phone with the feature column pinned; every cell is a tick, a tilde or a cross with a word for screen readers; the
+   three "small on purpose" rows show our crosses; the competitor columns carry blurred shapes, never a logo.
+5. `/how-it-works` → h1 "How cryptopapertrade.com works", the sticky anchor nav from 768 px (each link scrolls to its section, the
+   heading clear of the bars), eight numbered sections, the questions as an accordion (live), and the links to `/blog`, `/register` and
+   `/chart`; no sideways scroll at 375 px. `/features` no longer exists (it lands on the landing page).
+   **Visual sections (2026-11-24):**
    - **Behind the scenes** is the four-layer blueprint: logo tiles float on each layer, and the "Saves and reads" and "Prices come in"
      roads animate (the price road streams upward).
    - **On the chart** has six two-faced cards (hover or keyboard focus turns one over; a tap on a touch screen), then the coin ribbon
@@ -523,10 +525,12 @@ sideways scroll at any width:
    - The page ends on the e-mail sign-up (also when live). No candle, three-words or flows sections.
      **Crypto path (a check):** Product ▾ → Crypto path signed in opens the dashboard with the learning map open at the side (a full
      screen sheet on a phone); signed out it goes to the login page and, after signing in, lands on the same place.
-     **Lesson carousel (a check):** the eight lessons are a carousel: one card on a phone, two from 768 px, three from 1100 px, with left and right
-     arrows (they stay focusable at an end), a dot for each lesson, and a swipe or the arrow keys on the row. A card opens the Crypto path
-     (see above). With the network offline before the row nears the screen, the section shows "The lesson previews did not load. Refresh
-     the page to try again." (announced politely) and no gap. The landing page keeps the grid of previews.
+     **Path walk (a check, on `/`, live):** "Short lessons, then practice, then a checkpoint" starts when it scrolls into view: Pulin and
+     Berwyn walk the open stops in order, each stop turns into a check and its title goes from dim to full, a chapter's title flashes
+     with a check at its last stop, and the road runs on as fading dots under "More chapters on the way". Pause / Play under the
+     picture (Replay at the end). With reduced motion it is drawn finished and has no button. From 760 px: two rows, the chapter cards
+     tilted 10 degrees (the second the other way); below that one column with upright cards. At 375, 412, 820 and 1440 px: no sideways
+     scroll and nothing cut off (the caption under the dots included).
 6. With `VITE_IS_LIVE=false` the landing page is the Launching Soon hero, the coin ribbon and the newsletter form: no sign-up, chart,
    questions or table.
 
@@ -536,6 +540,31 @@ their pages, the current one underlined; at 375 px [nav.menu] opens a full-width
 expanding. `/about` and `/support` say "Coming soon." and are not indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the
 bubble (2026-11-17). Frequency: per release touching `learn/Path*`, `learn/CheckpointSheet.tsx` or `guide/tours.ts`.
+
+### Report a bug (2026-11-25)
+
+**Manual check (M).** Signed in, on `/chart` or `/dashboard`: a bug icon [nav.report] sits in the top bar beside the learning-path icon
+(signed out there is no icon). It opens "Found a bug?": a card under the top bar from 640 px, a sheet from the bottom on a phone
+(375 and 412 px: nothing clipped, the keyboard does not hide Submit). Check, in order:
+
+1. The e-mail is the account's own, shown read only (a dashed field, not editable) with "We will write to this address if we need more detail."; the cursor is in the description. "Sent with it:" names the page, the chart's
+   symbol and interval, and, inside a lesson, its screen.
+2. Submit with a description under 10 characters: a red line under it, nothing is sent.
+3. [report.screenshot] picks up to three PNG, JPEG or WebP files, and a screenshot on the clipboard pastes in with Ctrl + V (⌘ V on a Mac) from
+   anywhere in the panel, with the same limits (text pasted into a field still pastes as text) (a fourth is refused with "Three screenshots at most."; a GIF is refused
+   in words); the chip shows the count and its x removes them all.
+4. Submit: "Thanks, we got your report." and the owner's mailbox gets "[Bug report] ..." with Reply-To set to the account's own address (the request carries none), the
+   screenshots attached as `screenshot-N.jpg`, and the context table. With the API offline: "Could not send the report. Check your
+   connection and try again.", and what was typed is still there (close and reopen the panel to see).
+5. The same icon is in the header of a lesson [lesson.report], a checkpoint [checkpoint.report] and the learning map [path.report]. Open
+   it from a lesson: the report names that lesson and screen; Esc closes only the panel (the lesson stays open) and the focus returns
+   to the icon. Tab stays inside the panel.
+6. Limits: one account may send 3 reports in 10 minutes and 5 a day (then "Too many reports. Try again in a while."), and the site as a
+   whole 8 an hour and 20 a day, so reports never use up the e-mail quota that sign-up and reset mail share. An account that has
+   not verified its e-mail is told to verify it first. The subject of the e-mail the owner gets is "[Bug report] from" the account's own
+   address, read from the database.
+
+Frequency: per release touching `components/report/`, `routes/reports/` or `EmailService`.
 
 ### PWA — install, the notch and home bar, offline (no Part B rows yet)
 

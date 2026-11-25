@@ -220,75 +220,6 @@ export const TIMELINE: readonly Milestone[] = [
   },
 ] as const;
 
-// ─── Lesson previews (the learning side is real) ─────────────────────────────
-// `art` ids are LessonArt ids (guide/lessons.ts); titles are the lessons' own (learn/path.ts order).
-
-export interface LessonPreview {
-  number: number;
-  title: string;
-  blurb: string;
-  art:
-    | 'threePaths'
-    | 'hashChain'
-    | 'staircase'
-    | 'friends'
-    | 'keyRing'
-    | 'busBlock'
-    | 'twoRoads'
-    | 'cloakroom';
-}
-
-export const LESSON_PREVIEWS: readonly LessonPreview[] = [
-  {
-    number: 1,
-    title: 'Up, down and your first trade',
-    blurb: 'Buy and sell, going long and short, and a first real practice trade.',
-    art: 'threePaths',
-  },
-  {
-    number: 2,
-    title: 'Money nobody controls',
-    blurb: 'What a ledger is, and how a chain of blocks keeps it honest.',
-    art: 'hashChain',
-  },
-  {
-    number: 3,
-    title: 'News, swings and traps',
-    blurb: 'Why prices jump around, and how to spot a trap.',
-    art: 'staircase',
-  },
-  {
-    number: 4,
-    title: 'Trader or investor? Find your style',
-    blurb: 'Two people, two styles. Find the one that fits you.',
-    art: 'friends',
-  },
-  {
-    number: 5,
-    title: 'Coins and tokens: who has their own road',
-    blurb: 'A coin has its own road, a token uses one. What each is for.',
-    art: 'twoRoads',
-  },
-  {
-    number: 6,
-    title: 'Stablecoins: the coins that try to sit still',
-    blurb: 'Coins that try to sit still, and why traders keep them.',
-    art: 'cloakroom',
-  },
-  {
-    number: 7,
-    title: 'Your wallet, your keys: who holds them?',
-    blurb: 'Who really holds your crypto, and how to keep it safe.',
-    art: 'keyRing',
-  },
-  {
-    number: 8,
-    title: 'Why sending crypto costs a fee',
-    blurb: 'A block is a bus, and the fee is the offer for a seat.',
-    art: 'busBlock',
-  },
-] as const;
-
 // ─── The nine coins (ALLOWED_SYMBOLS, apps/server/src/constants.ts) ──────────
 
 export const COINS = [
@@ -306,7 +237,7 @@ export const COINS = [
 // ─── Screenshots ─────────────────────────────────────────────────────────────
 
 export interface Shot {
-  id: 'chart' | 'desk' | 'lesson';
+  id: 'chart';
   title: string;
   caption: string;
   alt: string;
@@ -319,35 +250,7 @@ export const SHOTS: readonly Shot[] = [
     caption: 'Candles, indicators and drawing tools. This one needs no account.',
     alt: 'Screenshot of the chart page with a drawing toolbar on the left.',
   },
-  {
-    id: 'desk',
-    title: 'The practice desk',
-    caption: 'Pretend money to practise with. Buy, sell, and watch your balance below.',
-    alt: 'Screenshot of the trading screen: chart, order form and account panel.',
-  },
-  {
-    id: 'lesson',
-    title: 'A lesson',
-    caption:
-      'Short cards on top of the live chart, with a picture and a button to try it for real.',
-    alt: 'Screenshot of a lesson card with a drawing, floating over the chart.',
-  },
 ] as const;
-
-/** The Crypto path, opened (owner 2026-11-22): beside the chart on a desktop, full screen on a phone */
-export const PATH_SHOTS = {
-  desktop: {
-    title: 'The Crypto path, beside the chart',
-    caption:
-      'On a computer the map opens at the side, so the chart stays in view. Your next step is highlighted.',
-    alt: 'Screenshot of the trading screen with the Crypto trading path open on the right: Chapter 1, the first lesson ready to continue and the next stops locked.',
-  },
-  phone: {
-    title: 'And on a phone',
-    caption: 'It fills the screen, and the same map, the same stops and the same Continue button.',
-    alt: 'Screenshot of the Crypto trading path on a phone: Chapter 1 with the first lesson ready to continue.',
-  },
-} as const;
 
 // ─── Where we are different: the six competitor groups ───────────────────────
 // Groups, never brand names. Strengths and weaknesses come from the business-strategy report's
@@ -518,25 +421,6 @@ export interface Feature {
   title: string;
   text: string;
 }
-
-export const LEARN_STEPS: readonly Feature[] = [
-  {
-    title: 'Read a short card',
-    text: 'One idea at a time, in short sentences. A new word is explained the first time it shows up.',
-  },
-  {
-    title: 'Answer a small quiz',
-    text: 'Pick an answer, drag a tile, or draw a line on a chart. If you are wrong, you see why and try again.',
-  },
-  {
-    title: 'Try it for real',
-    text: 'Many lessons end with a practice trade on the live chart. Then you look at what just happened.',
-  },
-  {
-    title: 'Check yourself',
-    text: 'Chapter 1 ends with a ten-question checkpoint. Pass it to open the next chapter. Your progress is saved, so you can stop and come back.',
-  },
-] as const;
 
 export const FEATURES_FAQ: readonly FaqItem[] = [
   {

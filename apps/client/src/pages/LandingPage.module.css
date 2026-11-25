@@ -124,30 +124,6 @@
   gap: 24px;
 }
 
-.valueList {
-  display: flex;
-  max-width: 44rem;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  color: var(--color-brand-muted);
-  font-size: 1rem;
-  line-height: 1.5;
-  list-style: none;
-}
-
-.valueList li {
-  display: flex;
-  gap: 10px;
-}
-
-.valueList li::before {
-  flex-shrink: 0;
-  color: var(--color-brand-purple);
-  content: '→';
-}
-
 .legal {
   max-width: 44rem;
   margin: 0;
@@ -171,4 +147,19 @@
   .h1 {
     font-size: 3.75rem;
   }
+}
+
+.trick {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 24px;
 }

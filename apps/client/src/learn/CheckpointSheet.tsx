@@ -26,6 +26,7 @@ import {
   type TaughtIn,
 } from './checkpoints';
 import { usePathStore } from './pathStore';
+import { ReportBugButton } from '@/components/report/ReportBugButton';
 
 /**
  * Where a Review goes: the place it was taught, unless that's a tour locked behind another (Sell
@@ -178,6 +179,7 @@ export function CheckpointSheet() {
               {index + 1} / {total}
             </span>
           )}
+          <ReportBugButton variant="sheet" anchor="checkpoint.report" />
         </div>
 
         <p className={styles.kicker}>{checkpoint.title}</p>

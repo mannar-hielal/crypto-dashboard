@@ -46,6 +46,47 @@ export interface ApiError {
   error: string;
 }
 
+// ─── Bug reports ──────────────────────────────────────────────────────────────
+
+export type BugReportArea = 'chart' | 'learning' | 'other';
+
+export interface BugReportContext {
+  area: BugReportArea;
+  /** window.location.pathname */
+  path: string;
+  symbol?: string;
+  interval?: string;
+  layout?: string;
+  lessonId?: string;
+  lessonScreen?: number;
+  checkpointId?: string;
+  /** e.g. "390x844@3" */
+  viewport: string;
+  userAgent: string;
+}
+
+export interface BugReportScreenshot {
+  name: string;
+  type: 'image/png' | 'image/jpeg' | 'image/webp';
+  /** Base64 WITHOUT a `data:` prefix */
+  data: string;
+}
+
+/**
+ * The reporter is the signed-in account: the server uses the account's own verified e-mail address for the
+ * subject and the Reply-To, so the request carries no address (owner 2026-11-25).
+ */
+export interface BugReportRequest {
+  description: string;
+  context: BugReportContext;
+  /** At most 3 */
+  screenshots: BugReportScreenshot[];
+}
+
+export interface BugReportResponse {
+  ok: true;
+}
+
 // ─── Newsletter ───────────────────────────────────────────────────────────────
 
 export interface SubscriberInfo {

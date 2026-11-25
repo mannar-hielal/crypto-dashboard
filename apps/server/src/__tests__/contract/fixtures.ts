@@ -13,6 +13,8 @@
 
 import type {
   AuthResponse,
+  BugReportRequest,
+  BugReportResponse,
   HealthResponse,
   CandleHistoryResponse,
   EditPendingOrderRequest,
@@ -39,6 +41,29 @@ import type {
 } from '@crypto-dashboard/sdk';
 
 // ─── Requests ─────────────────────────────────────────────────────────────────
+
+export const minBugReport: BugReportRequest = {
+  description: 'The chart freezes when I switch interval',
+  context: { area: 'chart', path: '/dashboard', viewport: '390x844@3', userAgent: 'test' },
+  screenshots: [],
+};
+export const fullBugReport: BugReportRequest = {
+  ...minBugReport,
+  context: {
+    area: 'learning',
+    path: '/learn',
+    symbol: 'BTCUSDT',
+    interval: '1m',
+    layout: '1',
+    lessonId: 'l1',
+    lessonScreen: 3,
+    checkpointId: 'c1',
+    viewport: '390x844@3',
+    userAgent: 'test',
+  },
+  screenshots: [{ name: 'a.png', type: 'image/png', data: 'iVBORw0KGgo=' }],
+};
+export const bugReportResponse: BugReportResponse = { ok: true };
 
 export const registerBody: Parameters<typeof authApi.register>[0] = {
   email: 'contract@example.test',

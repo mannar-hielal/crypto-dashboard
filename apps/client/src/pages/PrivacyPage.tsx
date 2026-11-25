@@ -13,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="November 17, 2026" version="1.6">
+      <LegalLayout title="Privacy Policy" lastUpdated="November 25, 2026" version="1.7">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -144,6 +144,21 @@ export function PrivacyPage() {
                 </td>
               </tr>
               <tr>
+                <td>Bug reports (only if you send one)</td>
+                <td>
+                  Reading and fixing the problem you describe, and writing back to you if we need
+                  more detail
+                </td>
+                <td>
+                  Your account's e-mail address (it is not typed, and you cannot change it in the
+                  form), your description, the screenshots you choose to attach, your account's user
+                  ID, and where you were in the app (the page, the chart's symbol and interval, the
+                  lesson or checkpoint, your device and screen size). It reaches us by e-mail and is
+                  not kept in our database. A screenshot can show whatever was on your screen, so
+                  attach only what you are happy to share.
+                </td>
+              </tr>
+              <tr>
                 <td>Newsletter subscription data</td>
                 <td>Double opt-in verification, sending newsletters</td>
                 <td>
@@ -183,6 +198,11 @@ export function PrivacyPage() {
               prevention, platform stability, and counting in aggregate how often people return and
               where they stop in the guided tours (activity days and learning events). You may
               object to this (Section 11).
+            </li>
+            <li>
+              <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: reading and answering a bug
+              report you choose to send, so we can fix the problem. You may object to this (Section
+              11).
             </li>
             <li>
               <strong>Consent (Art. 6(1)(a) GDPR)</strong>: newsletter subscription — you explicitly
@@ -260,6 +280,12 @@ export function PrivacyPage() {
               <strong>Edge / CDN logs (Cloudflare)</strong>: retained for <strong>7 days</strong> on
               Cloudflare's infrastructure per their standard log retention policy. We do not export
               or store these logs independently.
+            </li>
+            <li>
+              <strong>Bug reports</strong>: a report reaches us as an e-mail and stays in our e-mail
+              inbox for as long as we need it to look into the problem and answer you. We do not
+              keep it in our own database; the e-mail provider in Section 9 handles it on its way to
+              us. We delete a report when you ask us to (Section 11).
             </li>
             <li>
               <strong>Newsletter subscriber data</strong>: pending (unverified) subscribers are
@@ -413,7 +439,10 @@ export function PrivacyPage() {
               </tr>
               <tr>
                 <td>Resend</td>
-                <td>Transactional email (password reset, newsletter confirmation)</td>
+                <td>
+                  Transactional email (password reset, newsletter confirmation) and the bug reports
+                  you send us
+                </td>
                 <td>US</td>
                 <td>
                   <a

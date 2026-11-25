@@ -18,6 +18,7 @@ import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth/index.js';
 import { paperRoutes } from './routes/paper/index.js';
 import { newsletterRoutes } from './routes/newsletter/index.js';
+import { reportsRoutes } from './routes/reports/index.js';
 import { adminRoutes } from './routes/admin/index.js';
 import { learnRoutes } from './routes/learn/index.js';
 import { notificationsRoutes } from './routes/notifications/index.js';
@@ -216,6 +217,7 @@ export async function buildApp() {
   await app.register(marketRoutes, { prefix: '/api/market' });
   await app.register(paperRoutes, { prefix: '/api/paper' });
   await app.register(newsletterRoutes, { prefix: '/api/newsletter' });
+  await app.register(reportsRoutes, { prefix: '/api/reports' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
   await app.register(learnRoutes, { prefix: '/api/learn' });
   await app.register(notificationsRoutes, { prefix: '/api/notifications' });

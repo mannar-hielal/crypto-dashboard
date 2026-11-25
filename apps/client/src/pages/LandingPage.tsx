@@ -9,13 +9,17 @@ import { CoinRibbon } from '@/components/landing/CoinRibbon';
 import { ComparisonTable } from '@/components/landing/ComparisonTable';
 import { FaqList } from '@/components/landing/FaqList';
 import { GroupSections } from '@/components/landing/GroupSections';
-import { LessonPreviewsLazy } from '@/components/landing/LessonPreviewsLazy';
 import { PathCards } from '@/components/landing/PathCards';
+import { PathWalk } from '@/components/landing/PathWalk';
+import { PictureCallouts } from '@/components/landing/PictureCallouts';
 import { SectionHead } from '@/components/landing/SectionHead';
-import { ShotShowcase } from '@/components/landing/ShotShowcase';
 import { StartLink } from '@/components/landing/StartLink';
+import { TourPlayer } from '@/components/landing/TourPlayer';
+import { WhySlider } from '@/components/landing/WhySlider';
 import { Timeline } from '@/components/landing/Timeline';
+import { HALVES, TRICK } from '@/lib/howItWorksContent';
 import { BEGINNER_FAQ, CTA_REGISTER } from '@/lib/landingContent';
+import { WHY_ITEMS } from '@/lib/whyItems';
 import shared from '@/components/landing/landing.module.css';
 import styles from './LandingPage.module.css';
 
@@ -24,8 +28,9 @@ const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 /**
  * The landing page (owner's rewrite, 2026-11-22): a total beginner should see within seconds that
  * this is a learning app AND a real-data chart with virtual money. Live: the hero offers two paths
- * (the live chart, no sign up; lessons, free account), then the questions every beginner asks, the
- * first steps, the value of learning on the real chart, real screenshots, where we differ from six
+ * (the live chart, no sign up; lessons, free account), then why the app exists, the one picture and
+ * the tours (moved from How it works, 2026-11-25), the questions every beginner asks, the
+ * first steps, the value of learning on the real chart, where we differ from six
  * kinds of competitor and one comparison table. Before launch there is no sign-up and no chart link,
  * so the page is the hero, the coin ribbon and the newsletter form.
  */
@@ -90,6 +95,51 @@ export function LandingPage() {
 
         <div className={styles.page}>
           {isLive && (
+            <>
+              {/* ─── Why this app exists (moved from How it works, owner 2026-11-25) ─── */}
+              <section className={shared.section} aria-labelledby="why-title">
+                <SectionHead
+                  id="why-title"
+                  eyebrow="Why"
+                  title="Why this app exists"
+                  lead="Most people meet trading with real money on the line. That is a bad way to learn. This app lets you learn first, and risk nothing."
+                />
+                <WhySlider slides={WHY_ITEMS} />
+              </section>
+
+              {/* ─── What it is, in one picture ───────────────────────────── */}
+              <section className={shared.section} aria-labelledby="picture-title">
+                <SectionHead
+                  id="picture-title"
+                  eyebrow="The big picture"
+                  title="What it is, in one picture"
+                  lead="Two halves that work together. One teaches. One lets you practise."
+                />
+                <PictureCallouts
+                  learn={HALVES[0]}
+                  chart={HALVES[1]}
+                  alt="The first lesson card open over the live chart"
+                />
+                <p className={styles.trick}>{TRICK}</p>
+              </section>
+
+              {/* ─── Little tours of the real app ─────────────────────────── */}
+              <section className={shared.section} aria-labelledby="tours-title">
+                <SectionHead
+                  id="tours-title"
+                  eyebrow="Tours"
+                  title="Little tours of the real app"
+                  lead="Short clips of the app in use, each one a few steps a new person takes."
+                />
+                <TourPlayer />
+                <div className={styles.links}>
+                  <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
+                </div>
+              </section>
+            </>
+          )}
+
+          {isLive && (
             <section className={shared.section} aria-labelledby="questions-title">
               <SectionHead
                 id="questions-title"
@@ -128,33 +178,21 @@ export function LandingPage() {
                 </div>
               </section>
 
-              {/* ─── Learn it, then try it ──────────────────────────────── */}
+              {/* ─── The learning path, walked (moved from How it works, owner 2026-11-25) ─── */}
               <section className={shared.section} aria-labelledby="learn-title">
                 <SectionHead
                   id="learn-title"
-                  eyebrow="Why it works"
-                  title="Learn it. Then try it on real candles."
-                  lead="Most chart apps hand you a chart and wish you luck. Most courses hand you words and no chart. Here they sit together: read a short card, then open the real chart and see it happen, with pretend money on the line."
+                  eyebrow="The learning path"
+                  title="Short lessons, then practice, then a checkpoint"
+                  lead="A stop opens once the one before it is done. Open the map from the top bar once you have an account."
                 />
-                <LessonPreviewsLazy />
-                <ul className={styles.valueList}>
-                  <li>Each lesson is short, and every new word is explained the first time.</li>
-                  <li>Quizzes tell you why an answer is right, then let you try again.</li>
-                  <li>
-                    Practical lessons end with a real practice trade, and a look at what happened.
-                  </li>
-                </ul>
-              </section>
-
-              {/* ─── Real screenshots ───────────────────────────────────── */}
-              <section className={shared.section} aria-labelledby="screens-title">
-                <SectionHead
-                  id="screens-title"
-                  eyebrow="See it for real"
-                  title="This is what you will use"
-                  lead="Screens taken from the app itself, not mock-ups. Prices in a picture are just a snapshot."
-                />
-                <ShotShowcase />
+                <PathWalk />
+                <div className={styles.links}>
+                  <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
+                  <Link to="/blog" className={shared.ctaText}>
+                    Read the articles on the blog
+                  </Link>
+                </div>
               </section>
 
               {/* ─── Where we are different ─────────────────────────────── */}

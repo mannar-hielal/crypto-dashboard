@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, within, act } from '@testing-library/react';
 
 import {
@@ -9,8 +9,6 @@ import {
   TOURS,
   WORDS_PICTURED,
 } from '@/lib/howItWorksContent';
-import { MemoryRouter } from 'react-router';
-import LessonCarousel from '../LessonCarousel';
 import { WhySlider } from '../WhySlider';
 import { PictureCallouts } from '../PictureCallouts';
 import { StackDiagram } from '../StackDiagram';
@@ -267,63 +265,6 @@ describe('the stack picture’s tech tiles', () => {
     expect(up?.className).toMatch(/linkUp/);
     const down = container.querySelector('[aria-label="Between the server and the database"]');
     expect(down?.className).not.toMatch(/linkUp/);
-  });
-});
-
-describe('the lesson carousel', () => {
-  // jsdom has no layout: give every element a row that is wider than its box, so the carousel has room to move
-  const sized = (name: 'scrollWidth' | 'clientWidth', value: number) =>
-    vi.spyOn(HTMLElement.prototype, name, 'get').mockReturnValue(value);
-  beforeEach(() => {
-    sized('scrollWidth', 1000);
-    sized('clientWidth', 300);
-  });
-  afterEach(() => vi.restoreAllMocks());
-
-  const renderCarousel = () =>
-    render(
-      <MemoryRouter>
-        <LessonCarousel />
-      </MemoryRouter>
-    );
-
-  it('should open the Crypto path from every lesson card', () => {
-    const { container } = renderCarousel();
-    const links = container.querySelectorAll('a[href="/path"]');
-    expect(links).toHaveLength(8);
-  });
-
-  it('should offer arrows and a dot for each lesson, starting at the first', () => {
-    renderCarousel();
-    expect(
-      screen.getByRole('button', { name: 'Previous lesson' }).getAttribute('aria-disabled')
-    ).toBe('true');
-    expect(screen.getByRole('button', { name: 'Next lesson' }).getAttribute('aria-disabled')).toBe(
-      'false'
-    );
-    const dots = within(screen.getByRole('list', { name: 'Pick a lesson' })).getAllByRole('button');
-    expect(dots).toHaveLength(8);
-    expect(dots[0]?.getAttribute('aria-current')).toBe('true');
-  });
-
-  it('should keep an arrow at an end focusable (aria-disabled, not disabled), so keyboard focus is not lost', () => {
-    renderCarousel();
-    const prev = screen.getByRole('button', { name: 'Previous lesson' });
-    expect(prev.hasAttribute('disabled')).toBe(false);
-    prev.focus();
-    fireEvent.click(prev);
-    expect(document.activeElement).toBe(prev);
-  });
-
-  it('should move the row by one card from where it is when an arrow is pressed', () => {
-    const { container } = renderCarousel();
-    const track = container.querySelector('ul[role="list"]') as HTMLElement;
-    const scrollBy = vi.fn();
-    track.scrollBy = scrollBy;
-    fireEvent.click(screen.getByRole('button', { name: 'Next lesson' }));
-    expect(scrollBy).toHaveBeenCalledTimes(1);
-    // A positive step: forward, from the current place (never to a card index)
-    expect(scrollBy.mock.calls[0]?.[0].left).toBeGreaterThanOrEqual(0);
   });
 });
 

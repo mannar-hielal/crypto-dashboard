@@ -3,6 +3,7 @@ import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
+import { ReportBugButton } from '@/components/report/ReportBugButton';
 import { LogOut, ChevronDown, Settings, ShieldCheck, BarChart3, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
@@ -98,14 +99,21 @@ export function TopBar({ marketing = false }: TopBarProps) {
     >
       {/* ── Left: Logo + name + badge ──────────────────────────────────── */}
       <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-        <motion.div whileHover={{ scale: 1.08 }} className="h-7 w-7 overflow-hidden rounded-md">
-          <img src="/logo.svg" alt="CPT" className="h-full w-full" />
-        </motion.div>
+        {/* The logo and the name go home: the landing page */}
+        <Link
+          to="/"
+          aria-label="cryptopapertrade.com, home"
+          className="flex items-center gap-2 sm:gap-2.5"
+        >
+          <motion.div whileHover={{ scale: 1.08 }} className="h-7 w-7 overflow-hidden rounded-md">
+            <img src="/logo.svg" alt="" className="h-full w-full" />
+          </motion.div>
 
-        {/* The wordmark needs ~170 px: phones keep the CPT logo only (owner, 2026-09-29) */}
-        <span className="hidden text-sm font-bold tracking-tight text-white sm:inline">
-          cryptopapertrade.com
-        </span>
+          {/* The wordmark needs ~170 px: phones keep the CPT logo only (owner, 2026-09-29) */}
+          <span className="hidden text-sm font-bold tracking-tight text-white sm:inline">
+            cryptopapertrade.com
+          </span>
+        </Link>
 
         <span
           className="rounded px-1.5 py-0.5 font-bold uppercase tracking-widest"
@@ -141,6 +149,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
         ) : user ? (
           <div className="flex items-center gap-1 sm:gap-2">
             <LearningPathButton />
+            <ReportBugButton variant="bar" anchor="nav.report" />
             <motion.button
               onClick={() => setMenuOpen((p) => !p)}
               aria-expanded={menuOpen}
