@@ -24,6 +24,7 @@ import {
   newsletterApi,
   notificationsApi,
   paperApi,
+  reportBug,
 } from '@crypto-dashboard/sdk';
 
 // The route schemas are all this needs: Prisma is never reached
@@ -348,6 +349,19 @@ const CALLS: Call[] = [
     run: () => newsletterApi.unsubscribe('t'),
     status: 200,
     response: f.messageResponse,
+  },
+  // reports
+  {
+    name: 'reportBug',
+    run: () => reportBug(f.minBugReport, T),
+    status: 200,
+    response: f.bugReportResponse,
+  },
+  {
+    name: 'reportBug (every field)',
+    run: () => reportBug(f.fullBugReport, T),
+    status: 200,
+    response: f.bugReportResponse,
   },
   // learn
   {

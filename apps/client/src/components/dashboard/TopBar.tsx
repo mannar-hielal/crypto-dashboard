@@ -3,6 +3,7 @@ import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
+import { ReportBugButton } from '@/components/report/ReportBugButton';
 import { LogOut, ChevronDown, Settings, ShieldCheck, BarChart3, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
@@ -148,6 +149,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
         ) : user ? (
           <div className="flex items-center gap-1 sm:gap-2">
             <LearningPathButton />
+            <ReportBugButton variant="bar" anchor="nav.report" />
             <motion.button
               onClick={() => setMenuOpen((p) => !p)}
               aria-expanded={menuOpen}

@@ -1,0 +1,38 @@
+/* The bug icon: a 32 px square in the top bar, and a small one beside a sheet's close button. */
+
+.bar {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.bar:hover {
+  color: var(--color-brand-white) !important; /* beats the open state's inline colour */
+}
+
+.sheet {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+}
+
+.sheet:hover {
+  color: var(--color-brand-white);
+}
+
+.bar:focus-visible,
+.sheet:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}

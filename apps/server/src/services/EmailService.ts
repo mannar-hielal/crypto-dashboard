@@ -10,6 +10,7 @@ import { Resend } from 'resend';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { recordOutboxEmail } from './emailOutbox.js';
+import { oneLine } from '../lib/cleanText.js';
 import type { DigestEntry } from '../lib/errorAlerts.js';
 
 // Lazy-initialise — avoids crashing on startup if key is missing in dev
@@ -32,6 +33,18 @@ const HTML_ESCAPES = new Map([
   ["'", '&#39;'],
 ]);
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => HTML_ESCAPES.get(c) ?? c);
+
+/** The context a bug report carries (routes/reports): every value is untrusted text */
+export interface BugReportEmailInput {
+  /** The verified address of the account that sent it, read from the database (never from the request) */
+  accountEmail: string;
+  /** Where a reply goes: the account's address when it is one plain mailbox, else none */
+  replyTo: string | null;
+  userId: string;
+  description: string;
+  context: Record<string, string | number | undefined>;
+  screenshots: { filename: string; content: Buffer }[];
+}
 
 type EmailPayload = {
   from: string;
@@ -428,6 +441,61 @@ export const EmailService = {
       `,
     });
     if (error) throw new Error(`Error digest not sent: ${error.name ?? 'Resend error'}`);
+  },
+
+  // ─── BUG REPORTS ────────────────────────────────────────────────────────
+
+  /**
+   * A signed-in user's bug report, to the owner (config.adminEmail), Reply-To the reporter.
+   * Throws when it isn't sent, so the route answers 500 and the client tells the user to retry.
+   * 🔐 Everything user-supplied is escaped in the HTML; nothing of the report is logged.
+   */
+  async sendBugReport(input: BugReportEmailInput): Promise<void> {
+    const to = config.adminEmail;
+    const e = escapeHtml;
+    // 🔐 The subject is one line with the account's own verified address: no description in it, nothing
+    // the reporter typed that could add a header line
+    const subject = `[Bug report] from ${oneLine(input.accountEmail, 254)}`;
+    recordOutboxEmail({
+      kind: 'bug-report',
+      to,
+      replyTo: input.replyTo ?? undefined,
+      subject,
+      attachments: input.screenshots.map((s) => ({ name: s.filename, size: s.content.length })),
+    });
+    const client = getResend();
+
+    if (!client) {
+      if (config.nodeEnv === 'production') {
+        throw new Error('Bug report not sent: no Resend client');
+      }
+      logger.info(
+        { screenshots: input.screenshots.length },
+        '📧 [DEV] Bug report (no RESEND_API_KEY set)'
+      );
+      return;
+    }
+
+    const rows = Object.entries(input.context)
+      .filter(([, v]) => v !== undefined && v !== '')
+      .map(([k, v]) => `<tr><td><strong>${e(k)}</strong></td><td>${e(String(v))}</td></tr>`)
+      .join('');
+    const { error } = await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+      subject,
+      html: `
+        <h2>Bug report</h2>
+        <p><strong>From:</strong> ${e(input.accountEmail)} (verified account, user ${e(input.userId)})${input.replyTo ? '' : ' <strong>(no Reply-To: this address could not be used safely, write to it by hand)</strong>'}</p>
+        <p><em>Everything below was typed by the reporter. Do not open links or files in it unless you expect them.</em></p>
+        <p>${e(input.description).replace(/\r\n|\r|\n/g, '<br>')}</p>
+        <table cellpadding="4" border="1" style="border-collapse:collapse">${rows}</table>
+        <p>${input.screenshots.length} screenshot(s) attached.</p>
+      `,
+      attachments: input.screenshots.map((s) => ({ filename: s.filename, content: s.content })),
+    });
+    if (error) throw new Error(`Bug report not sent: ${error.name ?? 'Resend error'}`);
   },
 
   // ─── NEWSLETTER ─────────────────────────────────────────────────────────

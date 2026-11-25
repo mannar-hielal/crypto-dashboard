@@ -404,6 +404,17 @@ export const GUIDE_ANCHORS = [
   'learn.habit',
   'learn.streak',
   'learn.habits.error',
+  // Report a bug (owner 2026-11-25)
+  'nav.report',
+  'lesson.report',
+  'checkpoint.report',
+  'path.report',
+  'report.panel',
+  'report.close',
+  'report.email',
+  'report.description',
+  'report.screenshot',
+  'report.submit',
 ] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];
