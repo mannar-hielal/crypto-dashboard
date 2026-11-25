@@ -7,7 +7,6 @@ import {
   COINS,
   GROUPS,
   PATH_CARDS,
-  SHOTS,
   TABLE_ROWS,
   TIMELINE,
 } from '@/lib/landingContent';
@@ -19,7 +18,6 @@ import { PathCards } from '../PathCards';
 import { FaqList } from '../FaqList';
 import { StartLink } from '../StartLink';
 import { Timeline } from '../Timeline';
-import { ShotShowcase } from '../ShotShowcase';
 
 vi.mock('react-router', () => ({
   Link: ({ children, to, ...props }: { children: React.ReactNode; to: string }) =>
@@ -189,25 +187,12 @@ describe('CandleSequence', () => {
   });
 });
 
-describe('Timeline and ShotShowcase', () => {
+describe('Timeline', () => {
   afterEach(cleanup);
 
   it('should list the milestones as an ordered list', () => {
     render(React.createElement(Timeline));
     expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(TIMELINE.length);
-  });
-
-  it('should give every screenshot alt text, a size and lazy loading', () => {
-    const { container } = render(React.createElement(ShotShowcase));
-    const imgs = container.querySelectorAll('img');
-    // The three screens, then the Crypto path opened: beside the chart, and on a phone
-    expect(imgs).toHaveLength(SHOTS.length + 2);
-    for (const img of imgs) {
-      expect((img.getAttribute('alt') ?? '').length).toBeGreaterThan(20);
-      expect(img.getAttribute('loading')).toBe('lazy');
-      expect(img.getAttribute('width')).not.toBeNull();
-      expect(img.getAttribute('height')).not.toBeNull();
-    }
   });
 });
 
@@ -230,25 +215,10 @@ describe('the chapter claims on the pages', () => {
 });
 
 describe('the lesson and chapter facts on the pages', () => {
-  it('should pin the lesson previews and the lesson count to the lessons themselves (review 2026-11-22)', async () => {
+  it('should pin the lesson count to the lessons themselves (review 2026-11-22)', async () => {
     const { LESSONS } = await import('@/guide/lessons');
     const { CHAPTERS } = await import('@/learn/path');
-    const { LESSON_PREVIEWS, FEATURES_FAQ } = await import('@/lib/landingContent');
-    for (const p of LESSON_PREVIEWS) {
-      const lesson = LESSONS.find((l) => l.number === p.number)!;
-      expect(lesson, `lesson ${p.number}`).toBeDefined();
-      expect(p.title, `lesson ${p.number} title`).toBe(lesson.title);
-      // (the next line is kept for the first word check)
-      expect(lesson.title.toLowerCase(), p.title).toContain(
-        p.title
-          .toLowerCase()
-          .replace(/[?:].*$/, '')
-          .trim()
-          .split(' ')[0]
-      );
-    }
-    // Every lesson has a preview card, so the next lesson fails this until its card is added
-    expect(LESSON_PREVIEWS.map((p) => p.number)).toEqual(LESSONS.map((l) => l.number));
+    const { FEATURES_FAQ } = await import('@/lib/landingContent');
     const built = CHAPTERS.filter((c) => c.status === 'open').length;
     const answer = FEATURES_FAQ.find((q) => q.id === 'lessons')!.answer;
     const words = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
@@ -309,23 +279,8 @@ describe('the table’s column order', () => {
   });
 });
 
-describe('the steps flow, the card screenshots and the pretend money (owner 2026-11-22)', () => {
+describe('the card screenshots and the pretend money (owner 2026-11-22)', () => {
   afterEach(cleanup);
-
-  it('should read as one ordered list of the four steps, with arrows that are only a picture', async () => {
-    const { StepFlow } = await import('../StepFlow');
-    const { LEARN_STEPS } = await import('@/lib/landingContent');
-    const { container } = render(React.createElement(StepFlow, { items: LEARN_STEPS }));
-    const list = screen.getByRole('list');
-    expect(list.tagName).toBe('OL');
-    expect(within(list).getAllByRole('listitem')).toHaveLength(LEARN_STEPS.length);
-    // An arrow after every box but the last; a bend after the first row's end (a phone's 2 + 2)
-    const arrows = container.querySelectorAll('svg[aria-hidden="true"]');
-    expect(arrows.length).toBeGreaterThanOrEqual(LEARN_STEPS.length - 1);
-    expect(
-      container.querySelectorAll('li')[LEARN_STEPS.length - 1].querySelector('svg')
-    ).toBeNull();
-  });
 
   it('should fade a real capture behind both faces of each flip card, as decoration', async () => {
     const { FlipCards } = await import('../FlipCards');

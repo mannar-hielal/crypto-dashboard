@@ -1,12 +1,5 @@
 /* Screenshots in a device frame. Colours from tokens.ts via the @theme mirror in index.css. */
 
-.grid {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 1fr;
-  gap: 32px 24px;
-}
-
 .single {
   width: 100%;
   max-width: 48rem;
@@ -57,42 +50,4 @@
 
 .caption strong {
   color: var(--color-brand-white);
-}
-
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .wide {
-    grid-column: 1 / -1;
-    max-width: 52rem;
-    justify-self: center;
-  }
-}
-
-/* The Crypto path row: the desktop frame and a phone beside it (a phone's screen is tall, so it is narrow) */
-.pathRow {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: 1fr;
-  align-items: start;
-  gap: 32px 24px;
-}
-
-.pathPhone {
-  width: 100%;
-  max-width: 16rem;
-  justify-self: center;
-}
-
-.phoneBody {
-  border-radius: 28px; /* a phone's rounded corners */
-  border-width: 4px;
-}
-
-@media (min-width: 768px) {
-  .pathRow {
-    grid-template-columns: minmax(0, 1fr) 15rem;
-  }
 }

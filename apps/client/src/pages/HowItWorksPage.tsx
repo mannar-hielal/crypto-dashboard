@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router';
 
 import { SeoHead } from '@/components/SeoHead';
 import { AuthLayout } from '@/components/AuthLayout';
@@ -8,77 +7,22 @@ import { TopBar } from '@/components/dashboard/TopBar';
 import { CoinRibbon } from '@/components/landing/CoinRibbon';
 import { FaqList } from '@/components/landing/FaqList';
 import { FlipCards } from '@/components/landing/FlipCards';
-import { LessonPreviewsLazy } from '@/components/landing/LessonPreviewsLazy';
 import { NotCards } from '@/components/landing/NotCards';
-import { WhySlider, type WhySlide } from '@/components/landing/WhySlider';
-import { PictureCallouts } from '@/components/landing/PictureCallouts';
 import { PretendMoney } from '@/components/landing/PretendMoney';
-import { TourPlayer } from '@/components/landing/TourPlayer';
 import { SectionHead } from '@/components/landing/SectionHead';
 import { SingleShot } from '@/components/landing/ShotShowcase';
 import { StartLink } from '@/components/landing/StartLink';
 import { StackDiagram } from '@/components/landing/StackDiagram';
-import { StepFlow } from '@/components/landing/StepFlow';
-import {
-  CTA_CHART,
-  CTA_REGISTER,
-  FEATURES_FAQ,
-  LEARN_STEPS,
-  type FaqItem,
-} from '@/lib/landingContent';
-import {
-  CHECK_YOURSELF,
-  HALVES,
-  HOSTING,
-  TRICK,
-  WHY_SLIDES,
-  WORD_LIST,
-} from '@/lib/howItWorksContent';
-import phoneAccount from '@/assets/landing/phone-account.webp';
-import phoneChart from '@/assets/landing/phone-chart.webp';
-import phoneLesson from '@/assets/landing/phone-lesson.webp';
-import phonePath from '@/assets/landing/phone-path.webp';
-import phoneTrade from '@/assets/landing/phone-trade.webp';
+import { CTA_CHART, CTA_REGISTER, FEATURES_FAQ, type FaqItem } from '@/lib/landingContent';
+import { CHECK_YOURSELF, HOSTING, WORD_LIST } from '@/lib/howItWorksContent';
 import shared from '@/components/landing/landing.module.css';
 import styles from './HowItWorksPage.module.css';
 
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
-// The Why section's five slides: a real phone capture of the app on each one (decorative, taken on a
-// throwaway account, 390 x 844 at 2x, scaled to 540 wide)
-const WHY_PICTURES: Record<string, string> = {
-  'why-doing': phoneLesson,
-  'why-money': phoneAccount,
-  'why-prices': phoneChart,
-  'why-who': phonePath,
-  'why-gets': phoneTrade,
-};
-const PHONE_SIZE = { width: 540, height: 1169 } as const;
-
-function whyItems(): WhySlide[] {
-  return WHY_SLIDES.map((w) => {
-    const src = WHY_PICTURES[w.id];
-    // A slide without its capture would ship a broken image: fail at load, in the tests, instead
-    if (!src) throw new Error(`The Why slide "${w.id}" has no phone capture`);
-    return {
-      id: w.id,
-      title: w.title,
-      image: { src, ...PHONE_SIZE },
-      bullets: w.bullets,
-      note: w.note,
-    };
-  });
-}
-
-const WHY_ITEMS = whyItems();
-
 const SECTIONS = [
-  { id: 'why', label: 'Why' },
-  { id: 'picture', label: 'One picture' },
-  { id: 'day', label: 'Tours' },
   { id: 'behind', label: 'Behind the scenes' },
   { id: 'chart', label: 'On the chart' },
-  { id: 'path', label: 'Learning path' },
   { id: 'not', label: 'What it is not' },
   { id: 'words', label: 'Word list' },
   { id: 'questions', label: 'Questions' },
@@ -131,9 +75,9 @@ function Part({
 }
 
 /**
- * The "How it works" page (owner 2026-11-22, built from his tour page; it replaced Features): why
- * the app exists, what it is, a day in it, what runs behind the screen, four flows step by step, what
- * the chart and desk do, the learning path, what it is not, and a recap. Plain English, a picture for
+ * The "How it works" page (owner 2026-11-22, built from his tour page; it replaced Features): what
+ * runs behind the screen, what the chart and desk do, what it is not and the word list. Why the app exists, the one picture and the tours moved to the landing page (owner
+ * 2026-11-25). Plain English, a picture for
  * every technical word. The questions are an accordion with FAQ structured data.
  */
 export function HowItWorksPage() {
@@ -190,43 +134,8 @@ export function HowItWorksPage() {
 
         <div className={styles.page}>
           <Part
-            id="why"
-            eyebrow="1 · Why"
-            title="Why this app exists"
-            lead="Most people meet trading with real money on the line. That is a bad way to learn. This app lets you learn first, and risk nothing."
-          >
-            <WhySlider slides={WHY_ITEMS} />
-          </Part>
-
-          <Part
-            id="picture"
-            eyebrow="2 · The big picture"
-            title="What it is, in one picture"
-            lead="Two halves that work together. One teaches. One lets you practise."
-          >
-            <PictureCallouts
-              learn={HALVES[0]}
-              chart={HALVES[1]}
-              alt="The first lesson card open over the live chart"
-            />
-            <p className={styles.trick}>{TRICK}</p>
-          </Part>
-
-          <Part
-            id="day"
-            eyebrow="3 · Tours"
-            title="Little tours of the real app"
-            lead="Short clips of the app in use, each one a few steps a new person takes."
-          >
-            <TourPlayer />
-            <div className={styles.links}>
-              <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
-            </div>
-          </Part>
-
-          <Part
             id="behind"
-            eyebrow="4 · Behind the scenes"
+            eyebrow="1 · Behind the scenes"
             title="How it works behind the scenes"
             lead="Every technical word gets an everyday picture. Think of a busy little restaurant."
           >
@@ -239,7 +148,7 @@ export function HowItWorksPage() {
 
           <Part
             id="chart"
-            eyebrow="5 · On the chart"
+            eyebrow="2 · On the chart"
             title="What you can do on the chart"
             lead="A real charting screen, with room to explore. The chart needs no sign up."
           >
@@ -251,24 +160,8 @@ export function HowItWorksPage() {
           </Part>
 
           <Part
-            id="path"
-            eyebrow="6 · The learning path"
-            title="Short lessons, then practice, then a checkpoint"
-            lead="A stop opens once the one before it is done. Open the map from the top bar once you have an account."
-          >
-            <StepFlow items={LEARN_STEPS} />
-            <LessonPreviewsLazy carousel />
-            <div className={styles.links}>
-              <StartLink cta={CTA_REGISTER} live={isLive} variant="text" />
-              <Link to="/blog" className={shared.ctaText}>
-                Read the articles on the blog
-              </Link>
-            </div>
-          </Part>
-
-          <Part
             id="not"
-            eyebrow="7 · What it is not"
+            eyebrow="3 · What it is not"
             title="What it is not"
             lead="Said plainly, so there are no surprises."
           >
@@ -277,7 +170,7 @@ export function HowItWorksPage() {
 
           <Part
             id="words"
-            eyebrow="8 · Word list"
+            eyebrow="4 · Word list"
             title="The words, in plain English"
             lead="The words you will meet in the app, each with a picture to hold on to."
           >
