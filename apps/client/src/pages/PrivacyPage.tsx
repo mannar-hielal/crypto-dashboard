@@ -282,9 +282,10 @@ export function PrivacyPage() {
               or store these logs independently.
             </li>
             <li>
-              <strong>Bug reports</strong>: kept in our mailbox while we look into the problem, and
-              deleted within <strong>12 months</strong> of our last reply. You can ask us to delete
-              a report sooner (Section 11).
+              <strong>Bug reports</strong>: a report reaches us as an e-mail and stays in our e-mail
+              inbox for as long as we need it to look into the problem and answer you. We do not
+              keep it in our own database; the e-mail provider in Section 9 handles it on its way to
+              us. We delete a report when you ask us to (Section 11).
             </li>
             <li>
               <strong>Newsletter subscriber data</strong>: pending (unverified) subscribers are
