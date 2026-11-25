@@ -3,7 +3,7 @@ import { render, screen, cleanup, within } from '@testing-library/react';
 import React from 'react';
 
 import { FEATURES_FAQ } from '@/lib/landingContent';
-import { CHECK_YOURSELF, WHY_SLIDES } from '@/lib/howItWorksContent';
+import { CHECK_YOURSELF } from '@/lib/howItWorksContent';
 
 // The page's claims must match the code: INTERVALS (lib/markets.ts), LAYOUT_ORDER
 // (ChartLayoutPicker.tsx), ALLOWED_SYMBOLS (server constants.ts), PaperOrderStatus (SDK).
@@ -18,9 +18,6 @@ vi.mock('@/components/SeoHead', () => ({
 }));
 vi.mock('@/components/dashboard/TopBar', () => ({ TopBar: () => null }));
 vi.mock('@/components/CtaSection', () => ({ CtaSection: () => null }));
-vi.mock('@/components/landing/LessonPreviewsLazy', () => ({
-  LessonPreviewsLazy: () => null,
-}));
 vi.mock('@/components/AuthLayout', () => ({
   AuthLayout: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
@@ -88,11 +85,20 @@ describe('HowItWorksPage', () => {
     expect(screen.queryByText(/guaranteed|get rich|passive income/i)).toBeNull();
   });
 
-  it('should have one h1 and open with why the app exists, with no recap', async () => {
+  it('should have one h1 and open with the behind-the-scenes section, with no recap', async () => {
     await renderPage();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     const h2s = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(h2s[0]).toBe('Why this app exists');
+    expect(h2s[0]).toBe('How it works behind the scenes');
+    // These four moved to the landing page (owner 2026-11-25)
+    for (const t of [
+      'Why this app exists',
+      'What it is, in one picture',
+      'Little tours of the real app',
+      'Short lessons, then practice, then a checkpoint',
+    ]) {
+      expect(h2s).not.toContain(t);
+    }
     expect(h2s).not.toContain('Four flows, step by step');
     expect(h2s).toContain('What it is not');
     expect(h2s).not.toContain('Remember 5 things');
@@ -105,14 +111,6 @@ describe('HowItWorksPage', () => {
     }
   });
 
-  it('should give every Why slide its own phone capture', async () => {
-    const { container } = await renderPage();
-    const slider = container.querySelector('[aria-label="Why this app exists"]')!;
-    const srcs = [...slider.querySelectorAll('img')].map((i) => i.getAttribute('src'));
-    expect(srcs).toHaveLength(WHY_SLIDES.length);
-    expect(new Set(srcs).size).toBe(WHY_SLIDES.length);
-  });
-
   it('should keep the old Features page out: no link to /features', async () => {
     const { container } = await renderPage();
     expect(container.querySelector('a[href="/features"]')).toBeNull();
@@ -123,9 +121,9 @@ describe('HowItWorksPage', () => {
     expect(screen.getByText(/Paper trading only: no real money is involved/)).not.toBeNull();
   });
 
-  it('should link to the blog, the sign-up and the live chart', async () => {
+  it('should link to the sign-up and the live chart, and not to the blog (that link moved with the path)', async () => {
     const { container } = await renderPage();
-    expect(container.querySelector('a[href="/blog"]')).not.toBeNull();
+    expect(container.querySelector('a[href="/blog"]')).toBeNull();
     expect(container.querySelector('a[href="/register"]')).not.toBeNull();
     expect(container.querySelector('a[href="/chart"]')).not.toBeNull();
   });
@@ -146,7 +144,7 @@ describe('HowItWorksPage', () => {
   it('should link every section in the anchor nav to a section that exists', async () => {
     const { container } = await renderPage();
     const links = container.querySelectorAll('nav[aria-label="On this page"] a');
-    expect(links.length).toBeGreaterThanOrEqual(6);
+    expect(links.length).toBeGreaterThanOrEqual(5);
     for (const a of links) {
       const id = a.getAttribute('href')?.slice(1) ?? '';
       expect(container.querySelector(`#${id}`)).not.toBeNull();

@@ -110,13 +110,6 @@
   max-width: 48rem;
 }
 
-.links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 24px;
-}
-
 .legal {
   max-width: 44rem;
   margin: 0;
@@ -165,14 +158,6 @@
 
 .p strong {
   color: var(--color-brand-white);
-}
-
-.trick {
-  margin: 0;
-  color: var(--color-brand-white);
-  font-size: 1.125rem;
-  font-weight: 700;
-  text-align: center;
 }
 
 .more {
@@ -231,4 +216,25 @@
 .table tbody tr:last-child th,
 .table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+/* Row hover (owner 2026-11-25, the same as the comparison table's): a quick white flash on entering
+   the row, then a steady soft highlight while the pointer stays. Pointer devices only; with reduced
+   motion, only the steady highlight. */
+@media (hover: hover) {
+  .table tbody tr:hover > * {
+    background-color: color-mix(in srgb, var(--color-brand-white) 10%, transparent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .table tbody tr:hover > * {
+      animation: rowFlash 0.7s ease-out;
+    }
+  }
+}
+
+@keyframes rowFlash {
+  from {
+    background-color: color-mix(in srgb, var(--color-brand-white) 35%, transparent);
+  }
 }
