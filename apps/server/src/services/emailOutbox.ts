@@ -17,13 +17,18 @@ export type OutboxKind =
   | 'deletion-warning'
   | 'deletion-completed'
   | 'newsletter-confirmation'
-  | 'order-filled';
+  | 'order-filled'
+  | 'bug-report';
 
 export interface OutboxEmail {
   to: string;
   kind: OutboxKind;
   /** The link the email carries, if any */
   url?: string;
+  /** A bug report: the Reply-To (the reporter) and the attachments' sanitised names and byte sizes */
+  replyTo?: string;
+  subject?: string;
+  attachments?: { name: string; size: number }[];
   /** Unix ms */
   sentAt: number;
 }
