@@ -27,6 +27,7 @@ import { NodeIcon, PathNode } from './PathNode';
 import { usePathStore } from './pathStore';
 import { usePathView } from './usePathView';
 import styles from './PathDrawer.module.css';
+import { ReportBugButton } from '@/components/report/ReportBugButton';
 
 type Tab = 'path' | 'habits';
 
@@ -367,6 +368,7 @@ export function PathDrawer() {
               <span className={styles.srOnly}> -day learning streak</span>
             </span>
           )}
+          <ReportBugButton variant="sheet" anchor="path.report" />
           <button
             type="button"
             className={styles.close}

@@ -238,6 +238,7 @@ export const zIndex = {
   dropdown: 50,
   tooltip: 100,
   modal: 200,
+  report: 220, // the bug-report panel: over a lesson, checkpoint or the map (all 200), under the tour
   tour: 250, // guided-tour ring + bubble: above dialogs, below toasts
   toast: 300,
   drawingOverlay: 400,

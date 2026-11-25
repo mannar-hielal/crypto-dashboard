@@ -537,6 +537,31 @@ expanding. `/about` and `/support` say "Coming soon." and are not indexed. The m
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the
 bubble (2026-11-17). Frequency: per release touching `learn/Path*`, `learn/CheckpointSheet.tsx` or `guide/tours.ts`.
 
+### Report a bug (2026-11-25)
+
+**Manual check (M).** Signed in, on `/chart` or `/dashboard`: a bug icon [nav.report] sits in the top bar beside the learning-path icon
+(signed out there is no icon). It opens "Found a bug?": a card under the top bar from 640 px, a sheet from the bottom on a phone
+(375 and 412 px: nothing clipped, the keyboard does not hide Submit). Check, in order:
+
+1. The e-mail is the account's own, shown read only (a dashed field, not editable) with "We will write to this address if we need more detail."; the cursor is in the description. "Sent with it:" names the page, the chart's
+   symbol and interval, and, inside a lesson, its screen.
+2. Submit with a description under 10 characters: a red line under it, nothing is sent.
+3. [report.screenshot] picks up to three PNG, JPEG or WebP files, and a screenshot on the clipboard pastes in with Ctrl + V (⌘ V on a Mac) from
+   anywhere in the panel, with the same limits (text pasted into a field still pastes as text) (a fourth is refused with "Three screenshots at most."; a GIF is refused
+   in words); the chip shows the count and its x removes them all.
+4. Submit: "Thanks, we got your report." and the owner's mailbox gets "[Bug report] ..." with Reply-To set to the account's own address (the request carries none), the
+   screenshots attached as `screenshot-N.jpg`, and the context table. With the API offline: "Could not send the report. Check your
+   connection and try again.", and what was typed is still there (close and reopen the panel to see).
+5. The same icon is in the header of a lesson [lesson.report], a checkpoint [checkpoint.report] and the learning map [path.report]. Open
+   it from a lesson: the report names that lesson and screen; Esc closes only the panel (the lesson stays open) and the focus returns
+   to the icon. Tab stays inside the panel.
+6. Limits: one account may send 3 reports in 10 minutes and 5 a day (then "Too many reports. Try again in a while."), and the site as a
+   whole 8 an hour and 20 a day, so reports never use up the e-mail quota that sign-up and reset mail share. An account that has
+   not verified its e-mail is told to verify it first. The subject of the e-mail the owner gets is "[Bug report] from" the account's own
+   address, read from the database.
+
+Frequency: per release touching `components/report/`, `routes/reports/` or `EmailService`.
+
 ### PWA — install, the notch and home bar, offline (no Part B rows yet)
 
 **Automated:** `apps/e2e/tests-prod/pwa.spec.ts` runs in the production smoke (the only build with the service worker):
