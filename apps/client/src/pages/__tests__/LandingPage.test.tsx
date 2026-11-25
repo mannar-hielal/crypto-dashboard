@@ -3,14 +3,11 @@ import { render, screen, cleanup, within, fireEvent } from '@testing-library/rea
 import React from 'react';
 
 import { guideSelector } from '@/lib/guideAnchors';
+import { WHY_SLIDES } from '@/lib/howItWorksContent';
 
 vi.mock('@/components/SeoHead', () => ({ SeoHead: () => null }));
 vi.mock('@/components/dashboard/TopBar', () => ({ TopBar: () => null }));
 vi.mock('@/components/CtaSection', () => ({ CtaSection: () => null }));
-// The lessons' picture module is large; its own test covers the row
-vi.mock('@/components/landing/LessonPreviewsLazy', () => ({
-  LessonPreviewsLazy: () => React.createElement('div', { 'data-testid': 'lesson-previews' }),
-}));
 vi.mock('@/components/AuthLayout', () => ({
   AuthLayout: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
@@ -71,7 +68,26 @@ describe('LandingPage', () => {
       expect(link?.getAttribute('href')).toBe('/register');
     });
 
-    it('should put the beginner questions right after the hero, as an accordion', async () => {
+    it('should show the Why slider, the one picture and the tours between the hero and the questions', async () => {
+      const { container } = await renderLanding();
+      const order = [
+        'Why this app exists',
+        'What it is, in one picture',
+        'Little tours of the real app',
+        'Questions every beginner asks',
+      ];
+      const h2s = screen
+        .getAllByRole('heading', { level: 2 })
+        .map((h) => h.textContent ?? '')
+        .filter((t) => order.includes(t));
+      expect(h2s).toEqual(order);
+      const slider = container.querySelector('[aria-label="Why this app exists"]')!;
+      const srcs = [...slider.querySelectorAll('img')].map((i) => i.getAttribute('src'));
+      expect(srcs).toHaveLength(WHY_SLIDES.length);
+      expect(new Set(srcs).size).toBe(WHY_SLIDES.length);
+    });
+
+    it('should put the beginner questions after those sections, as an accordion', async () => {
       await renderLanding();
       const heading = screen.getByRole('heading', { name: 'Questions every beginner asks' });
       expect(heading.tagName).toBe('H2');
@@ -101,11 +117,19 @@ describe('LandingPage', () => {
       expect(steps.length).toBeGreaterThan(0);
     });
 
-    it('should bring the value of learning on real candles, in place of Advanced Charts', async () => {
-      await renderLanding();
-      expect(screen.getByRole('heading', { name: 'Learn it. Then try it on real candles.' }));
+    it('should walk the learning path, in place of the lesson cards', async () => {
+      const { container } = await renderLanding();
+      const heading = screen.getByRole('heading', {
+        name: 'Short lessons, then practice, then a checkpoint',
+      });
+      expect(heading.tagName).toBe('H2');
+      expect(
+        screen.queryByRole('heading', { name: 'Learn it. Then try it on real candles.' })
+      ).toBeNull();
       expect(screen.queryByText('Advanced Charts')).toBeNull();
-      expect(screen.getByTestId('lesson-previews')).not.toBeNull();
+      // The path walk, with its plain-text list of the chapters
+      expect(screen.getByText(/Chapter 1: Start here: crypto and trading basics/)).not.toBeNull();
+      expect(container.querySelector('a[href="/blog"]')).not.toBeNull();
     });
 
     it('should give each competitor group its own section, with where they win', async () => {

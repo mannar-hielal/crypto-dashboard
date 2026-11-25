@@ -1,0 +1,432 @@
+/* The learning path as a walk. Colours from tokens.ts via the @theme mirror in index.css. The
+   raised buttons' darker edges are the same tokens mixed with black (no token of their own). */
+
+.holder {
+  width: 100%;
+}
+
+.walk {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ─── The road ─────────────────────────────────────────────────────────── */
+
+.road {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.2); /* a dashed line in the map's own style */
+  stroke-dasharray: 7 9;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.lit {
+  fill: none;
+  stroke: var(--color-brand-grad-from);
+  stroke-linecap: round;
+  stroke-width: 4;
+  /* The dash grows with the walk (set from the frame loop) */
+  stroke-dasharray: 0 100000;
+}
+
+/* ─── Chapter cards: raised, like the map's chapter bands ──────────────── */
+
+.cardPurple {
+  --card-top: var(--color-brand-purple-dark);
+  --card-edge: color-mix(in srgb, var(--color-brand-purple-dark) 70%, black);
+  --card-ink: var(--color-brand-white);
+}
+
+.cardGreen {
+  --card-top: var(--color-brand-green);
+  --card-edge: color-mix(in srgb, var(--color-brand-green) 70%, black);
+  --card-ink: var(--color-bg-page); /* dark text on green: white is ~2:1 on it */
+}
+
+.cardEdge {
+  fill: var(--card-edge);
+}
+
+.cardTop {
+  fill: var(--card-top);
+}
+
+.cardTitle {
+  fill: var(--card-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cardSub {
+  fill: var(--card-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cardDivider {
+  stroke: var(--card-ink);
+  stroke-opacity: 0.25;
+  stroke-width: 1.5;
+}
+
+.cardBook {
+  fill: none;
+  stroke: var(--card-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.cardCheck {
+  animation: pop 0.5s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.cardCheckDisc {
+  fill: var(--color-brand-white);
+}
+
+.cardCheckMark {
+  fill: none;
+  stroke: var(--card-edge);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3.2;
+}
+
+/* ─── Stops: a raised round button with a darker edge ──────────────────── */
+
+.base {
+  fill: color-mix(in srgb, var(--color-bg-panel) 70%, black);
+}
+
+.top {
+  fill: color-mix(in srgb, var(--color-bg-panel) 60%, var(--color-bg-surface));
+  transition: fill 0.25s;
+}
+
+.icon {
+  fill: none;
+  stroke: var(--color-brand-muted);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+  transition: opacity 0.2s;
+}
+
+.tick {
+  fill: none;
+  opacity: 0;
+  stroke: var(--color-brand-white);
+  stroke-dasharray: 26;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3.6;
+}
+
+.body {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Where the walk has been: the stop is a check, and its title is fully there */
+.done .base {
+  fill: color-mix(in srgb, var(--color-brand-purple-dark) 70%, black);
+}
+
+.done .top {
+  fill: var(--color-brand-purple-dark);
+}
+
+.done .icon {
+  opacity: 0;
+}
+
+.done .tick {
+  animation: draw 0.35s ease-out both;
+  opacity: 1;
+}
+
+/* Not open yet */
+.locked .base {
+  fill: var(--color-bg-page);
+}
+
+.locked .top {
+  fill: color-mix(in srgb, var(--color-bg-panel) 55%, var(--color-bg-page));
+}
+
+.locked .icon {
+  stroke: rgba(255, 255, 255, 0.4);
+}
+
+.pop .body {
+  animation: pop 0.5s ease-out;
+}
+
+.glow {
+  fill: none;
+  opacity: 0;
+  stroke: var(--color-brand-purple);
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.pop .glow {
+  animation: glow 0.7s ease-out;
+}
+
+/* The next stop: a ring with a short arc turning on it, like the map's */
+.track {
+  fill: none;
+  opacity: 0;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 5;
+}
+
+.arc {
+  fill: none;
+  opacity: 0;
+  stroke: var(--color-brand-purple-dark);
+  stroke-dasharray: 64 200;
+  stroke-linecap: round;
+  stroke-width: 5;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.next .track,
+.next .arc {
+  opacity: 1;
+}
+
+.next .arc {
+  animation: spin 2.4s linear infinite;
+}
+
+/* A stop's title is dim until the guides have passed it (owner 2026-11-25). The halo keeps the
+   road from running through the words. */
+.label {
+  fill: var(--color-brand-white);
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.55;
+  paint-order: stroke fill;
+  stroke: var(--color-bg-page);
+  stroke-linejoin: round;
+  stroke-width: 7px;
+  transition: opacity 0.4s;
+}
+
+.done .label {
+  opacity: 1;
+}
+
+.locked .label {
+  opacity: 0.4;
+}
+
+/* ─── More chapters are coming: fading dots and a line under them ──────── */
+
+.dot {
+  fill: var(--color-brand-purple-dark);
+}
+
+.caption {
+  fill: var(--color-brand-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ─── The chapter flash: its title and a check, then gone ──────────────── */
+
+.flash {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  width: max-content;
+  max-width: min(340px, calc(100% - 16px));
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 10px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  animation: flash 1.6s ease both;
+  background: var(--color-bg-panel);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 0);
+}
+
+.flashCheck {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--color-brand-grad-from), var(--color-brand-grad-to));
+}
+
+.flashCheck svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--color-brand-white);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3.2;
+}
+
+.flashNumber {
+  display: block;
+  color: var(--color-brand-purple);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.flashTitle {
+  display: block;
+  color: var(--color-brand-white);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.control {
+  padding: 8px 18px;
+  border: 1px solid var(--color-border-hover);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.control:hover {
+  color: var(--color-brand-white);
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 26;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.22);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes glow {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A quick white flash on arriving, then it holds, then it is gone */
+@keyframes flash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.9);
+  }
+
+  10% {
+    box-shadow:
+      0 0 34px 4px rgba(255, 255, 255, 0.55),
+      0 12px 32px rgba(0, 0, 0, 0.5);
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.05);
+  }
+
+  18% {
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  78% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .done .tick,
+  .pop .body,
+  .pop .glow,
+  .next .arc,
+  .cardCheck {
+    animation: none;
+  }
+
+  .flash {
+    display: none;
+  }
+}

@@ -21,7 +21,7 @@ test('[20.1][20.2] phone: no sideways scroll, the logo without the wordmark, Sel
     () => document.documentElement.scrollWidth - window.innerWidth
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  await expect(page.getByAltText('CPT')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'cryptopapertrade.com, home' })).toBeVisible();
   await expect(page.getByText('cryptopapertrade.com', { exact: true })).toBeHidden();
   await expect(at(page, 'nav.user-menu')).toBeInViewport();
 

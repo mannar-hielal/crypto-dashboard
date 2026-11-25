@@ -203,7 +203,9 @@ export function TourPlayer() {
           <Clip key={tour.id} tour={tour} />
         </div>
         <div className={styles.copy}>
-          <p className={styles.device}>{tour.device === 'phone' ? 'On a phone' : 'On a desktop'}</p>
+          <p className={styles.device}>
+            {tour.device === 'phone' ? 'On a phone' : 'Better viewed on desktop'}
+          </p>
           <h3 className={styles.title}>{tour.title}</h3>
           <ol className={styles.steps}>
             {tour.steps.map((s) => (
