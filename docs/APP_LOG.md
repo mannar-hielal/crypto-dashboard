@@ -5923,6 +5923,8 @@ Lesson 9 and the checkpoint. Its own PR.
   text, so nothing asks for or accepts an address or a recovery phrase (a test holds this). In memory only, reset each time;
   the paper account is untouched. The numbers are Lesson 9's pool (10 ETH, 20,000 USDC, x × y = k, fee 0.3% from the input),
   start 500 USDC and 0.02 ETH, a pretend network fee of 0.0001 ETH a signature.
+- **USDC, not the paper account's USDT (owner, 2026-11-28):** kept so the wallet's money isn't mixed up with the practice
+  money, and the panel's warning line also says "Separate from your paper account."
 - **The panel** (`SwapPanel`, docked by `SwapDock` in place of the order form and edit panels): the App tab (connect, 100 or 200
   USDC, the quote, Review swap), the Wallet tab (balances, the swap's costs, permissions with Revoke), the request sheet (its own
   dialog: focus inside, Tab kept, Esc rejects and the guide stays; "Rejected" offers the request again). Focus goes back to the

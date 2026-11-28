@@ -435,7 +435,8 @@ export function SwapPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <p className={styles.practice}>
-        <AlertTriangle size={14} aria-hidden="true" /> Practice only: nothing here is real.
+        <AlertTriangle size={14} aria-hidden="true" /> Practice only: nothing here is real. Separate
+        from your paper account.
       </p>
       <div className={styles.tabs} role="tablist" aria-label="App or wallet">
         {TABS.map(({ id, label }) => (

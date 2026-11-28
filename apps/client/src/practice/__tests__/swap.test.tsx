@@ -133,7 +133,9 @@ describe('SwapPanel', () => {
       expect(
         document.querySelectorAll('textarea, input:not([type="radio"]), [contenteditable]')
       ).toHaveLength(0);
-    expect(screen.getByText(/Practice only: nothing here is real/)).toBeTruthy();
+    expect(
+      screen.getByText(/Practice only: nothing here is real\. Separate from your paper account\./)
+    ).toBeTruthy();
     noText();
     walkToRequest();
     noText();

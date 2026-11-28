@@ -80,6 +80,11 @@
   font-size: 0.8125rem; /* fontSize.xs11 */
 }
 
+/* The line wraps in the narrow panel: the icon keeps its size */
+.practice svg {
+  flex-shrink: 0;
+}
+
 .tabs {
   display: flex;
   flex-shrink: 0;

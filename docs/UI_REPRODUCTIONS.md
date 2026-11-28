@@ -498,8 +498,8 @@ wallet, chain or paper account is touched. At 390, 820 and 1280 px. Since 2026-1
 
 1. Open the map → Expect the dumbbell stop **Try a swap with a practice wallet** between Lesson 9 and the checkpoint, read out as
    "Practice" (not "on the real chart"). [path.node `tour:try-a-swap`] → Expect [swap.panel] where the order form sits (a phone:
-   full screen; a tablet: a right-hand sheet), "Practice only: nothing here is real.", tabs **App** and **Wallet**, and no field
-   that takes text. The Buy / Sell bar is hidden on a phone.
+   full screen; a tablet: a right-hand sheet), "Practice only: nothing here is real. Separate from your paper account.",
+   tabs **App** and **Wallet**, and no field that takes text. The Buy / Sell bar is hidden on a phone.
 2. [swap.connect] → [swap.amount `100` or `200`], read You get, Pool fee (0.30%), Price impact (0.50% / 0.99%), Minimum you get,
    Network fees (2 × 0.0001 ETH) →
    [swap.review] → Expect the sheet **Your wallet asks** rising at once over the dimmed app, a dot on **Wallet** ("wants an
