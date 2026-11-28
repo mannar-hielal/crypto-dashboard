@@ -1,6 +1,6 @@
 /**
  * The Support page until it is written (owner 2026-11-18): a title, one sentence and a way home.
- * Not indexed, and not in the sitemap. (About us is written: `AboutPage`.)
+ * Not indexed, and not in the sitemap. (About is written: `AboutPage`.)
  */
 
 import { Link } from 'react-router';

@@ -15,14 +15,14 @@ import styles from './AboutPage.module.css';
 const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
 /**
- * The About us page (owner 2026-11-22; the words are in `lib/aboutContent.ts`, in the first person):
+ * The About page (owner 2026-11-22; the words are in `lib/aboutContent.ts`, in the first person):
  * what the site is, why it was built, what it stands for, who is behind it and how to write to them.
  * Kept out of search results until the owner says otherwise, and out of the sitemap.
  */
 export function AboutPage() {
   return (
     <>
-      <SeoHead title="About us" description={ABOUT.description} path="/about" noIndex />
+      <SeoHead title="About" description={ABOUT.description} path="/about" noIndex />
       <TopBar marketing />
       <AuthLayout marketingFooter>
         <div className={styles.page}>

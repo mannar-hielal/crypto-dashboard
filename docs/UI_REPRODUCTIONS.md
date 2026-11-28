@@ -623,7 +623,8 @@ sideways scroll at any width:
 **Manual check (M).** The public header (2026-11-18): on `/`, `/how-it-works`, `/blog` and `/about` at 1440 px [nav.product]
 opens Chart and Crypto path ([nav.how] sits between Product and Blog) (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
 their pages, the current one underlined; at 375 px [nav.menu] opens a full-width sheet of 44 px rows with Product
-expanding. `/about` and `/support` say "Coming soon." and are not indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
+expanding. [nav.about] reads **About** (since 2026-11-28); `/about` begins its "Hi, I am Mannar Hielal." part with "I am
+a frontend developer, and I live and work in Switzerland.…". `/support` says "Coming soon."; neither is indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the
 bubble (2026-11-17). Frequency: per release touching `learn/Path*`, `learn/CheckpointSheet.tsx` or `guide/tours.ts`.
 

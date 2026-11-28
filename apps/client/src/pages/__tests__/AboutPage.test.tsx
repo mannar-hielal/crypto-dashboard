@@ -39,6 +39,9 @@ describe('AboutPage (owner 2026-11-22)', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 2, name: ABOUT.whoTitle })).toBeTruthy();
     expect(ABOUT.whoTitle).toContain('Mannar Hielal');
+    // The owner’s own introduction comes first (2026-11-28)
+    expect(ABOUT.who[0]).toMatch(/frontend developer.*Switzerland.*inline skating/);
+    expect(screen.getByText(ABOUT.who[0])).toBeTruthy();
     const mail = container.querySelector('a[href^="mailto:"]');
     expect(mail?.getAttribute('href')).toBe('mailto:info@cryptopapertrade.com');
     // Written in "I", never "we"

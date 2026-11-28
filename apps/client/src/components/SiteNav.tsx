@@ -1,6 +1,6 @@
 /**
  * The public pages' header links (owner's visual Q&A 2026-11-18), beside the logo in the marketing
- * `TopBar`: Product ▾ (Chart, Crypto path), How it works, Blog, About us and Support. From md up they are text links
+ * `TopBar`: Product ▾ (Chart, Crypto path), How it works, Blog, About and Support. From md up they are text links
  * with a dropdown panel; below it one menu button opens a full-width sheet (rows of 44 px). Esc and a
  * click outside close what is open, and a link closes it too. The dashboard's bar has no nav.
  */
@@ -19,7 +19,7 @@ const PRODUCT = [
 const LINKS = [
   { to: '/how-it-works', label: 'How it works', anchor: 'nav.how' },
   { to: '/blog', label: 'Blog', anchor: 'nav.blog' },
-  { to: '/about', label: 'About us', anchor: 'nav.about' },
+  { to: '/about', label: 'About', anchor: 'nav.about' },
   { to: '/support', label: 'Support', anchor: 'nav.support' },
 ] as const;
 

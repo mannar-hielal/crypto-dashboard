@@ -1,6 +1,7 @@
 /**
- * The words of the About us page (owner 2026-11-22: "use I", the name Mannar Hielal, the contact
- * info@cryptopapertrade.com). Only things the project itself says: no personal history is invented.
+ * The words of the About page (owner 2026-11-22: "use I", the name Mannar Hielal, the contact
+ * info@cryptopapertrade.com). Only things the project or the owner says: no personal history is
+ * invented. The first paragraph about the owner is theirs (2026-11-28).
  * The paper-trading limits repeat the landing and How it works pages.
  */
 
@@ -33,6 +34,7 @@ export const ABOUT = {
   ],
   whoTitle: 'Hi, I am Mannar Hielal.',
   who: [
+    'I am a frontend developer, and I live and work in Switzerland. In my free time I am out in nature or inline skating (or both, if there is asphalt :) ).',
     'I am the person behind cryptopapertrade.com, and I look after it myself: what it teaches, how it looks, and what it will never do. There are no ads, and no push to put real money in.',
   ],
   independence:

@@ -128,7 +128,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
         </span>
 
         {!marketing && <TradeMenu />}
-        {/* The public pages' links: Product, Blog, About us, Support (owner 2026-11-18) */}
+        {/* The public pages' links: Product, Blog, About, Support (owner 2026-11-18) */}
         {marketing && <SiteNav />}
       </div>
 
