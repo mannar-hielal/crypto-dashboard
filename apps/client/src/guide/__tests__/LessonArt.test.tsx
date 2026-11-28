@@ -69,6 +69,19 @@ const ARTS: LessonArtId[] = [
   'chainsCompare',
   'simpleComplex',
   'feeCheck',
+  'cexMiddle',
+  'handOver',
+  'vending',
+  'dappParts',
+  'webTwoThree',
+  'swapSteps',
+  'twoJars',
+  'jarPrice',
+  'jarFillers',
+  'swapCosts',
+  'otherChains',
+  'siteCheck',
+  'approveAsk',
   'peekOwnership',
   'peekSwings',
   'peekStyle',
@@ -76,6 +89,7 @@ const ARTS: LessonArtId[] = [
   'peekStable',
   'peekWallets',
   'peekFees',
+  'peekDapps',
 ];
 
 /** The pictures drawn to tell most of their card (owner 2026-11-17): each says what it shows */
@@ -127,6 +141,19 @@ const TELLING: LessonArtId[] = [
   'chainsCompare',
   'simpleComplex',
   'feeCheck',
+  'cexMiddle',
+  'handOver',
+  'vending',
+  'dappParts',
+  'webTwoThree',
+  'swapSteps',
+  'twoJars',
+  'jarPrice',
+  'jarFillers',
+  'swapCosts',
+  'otherChains',
+  'siteCheck',
+  'approveAsk',
   'peekOwnership',
   'peekSwings',
   'peekStyle',
@@ -134,6 +161,7 @@ const TELLING: LessonArtId[] = [
   'peekStable',
   'peekWallets',
   'peekFees',
+  'peekDapps',
 ];
 
 describe('the guides', () => {
@@ -276,6 +304,22 @@ describe('LessonArt', () => {
     );
     expect(words('simpleComplex')).toMatch(/a plain send.*lower fee.*a swap.*higher fee/);
     expect(words('feeCheck')).toMatch(/\$40.*\$12.*look at the fee before you confirm/);
+    // Chapter 2, Lesson 9: the DApp scenes carry their cards
+    expect(words('cexMiddle')).toMatch(/you buy.*they sell.*a company matches you/);
+    expect(words('handOver')).toMatch(/you give.*ID and control.*you get.*easy use, help.*trust/);
+    expect(words('vending')).toMatch(/coins in.*result out.*no clerk/);
+    expect(words('dappParts')).toMatch(/wallet.*website.*contract.*on the blockchain/);
+    expect(words('webTwoThree')).toMatch(/Web2.*a company keeps.*Web3.*your wallet.*login/);
+    expect(words('swapSteps')).toMatch(/connect.*check.*sign.*the contract swaps/);
+    expect(words('twoJars')).toMatch(/put in.*take out.*two jars.*the mix sets the price/);
+    // The pool's figures, as the math card works them
+    expect(words('jarPrice')).toMatch(/before.*10.*20,000.*after.*9.*22,222/);
+    expect(words('jarFillers')).toMatch(/providers.*fill.*fees.*less than holding/);
+    expect(words('swapCosts')).toMatch(/pool fee.*mostly to providers.*network fee.*price impact/);
+    expect(words('otherChains')).toMatch(/same app.*bridge.*chain A.*chain B.*check your network/);
+    // Made-up addresses on the reserved .example ending, one letter apart, never colour alone
+    expect(words('siteCheck')).toMatch(/swapdesk\.example.*✓.*swapdesc\.example.*✕/);
+    expect(words('approveAsk')).toMatch(/Approve USDC\?.*no limit.*Reject.*Sign/);
     // The sneak peek graphics: a numbered path, one stop per line of the card below it
     expect(words('peekCoins')).toMatch(
       /in this lesson.*1.*Coin or.*token.*2.*Token.*kinds.*3.*Altcoin.*swings.*4.*Check fast.*gains/
@@ -287,6 +331,7 @@ describe('LessonArt', () => {
       'peekStable',
       'peekWallets',
       'peekFees',
+      'peekDapps',
     ] as const) {
       expect(words(id), id).toMatch(/in this lesson.*1.*2.*3.*4/);
     }
@@ -307,6 +352,9 @@ describe('LessonArt', () => {
     expect(logos('tickerBadges')).toBe(9); // the eight coins and LINK
     expect(logos('usdtPair')).toBe(2); // BTC and USDT
     expect(logos('parkProfit')).toBe(1); // USDT
+    expect(logos('twoJars')).toBe(2); // ETH and USDC
+    expect(logos('jarPrice')).toBe(4);
+    expect(logos('jarFillers')).toBe(2);
   });
 
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {

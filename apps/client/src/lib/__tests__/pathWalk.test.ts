@@ -99,7 +99,7 @@ describe('layoutWalk', () => {
     const l = layoutWalk(1100);
     const open = PATH_WALK_CHAPTERS.reduce((n, c) => n + c.stops.length, 0);
     expect(l.built).toHaveLength(open);
-    expect(l.nodes.filter((n) => n.soon)).toHaveLength(2);
+    expect(l.nodes.filter((n) => n.soon)).toHaveLength(1);
     expect(l.nodes[l.built[l.built.length - 1] + 1].soon).toBe(true);
   });
 
@@ -232,6 +232,6 @@ describe('PathRun', () => {
   });
 
   it('should end a chapter at its last open stop', () => {
-    expect(chapterEnds()).toEqual({ 6: 0, 11: 1 });
+    expect(chapterEnds()).toEqual({ 6: 0, 12: 1 });
   });
 });

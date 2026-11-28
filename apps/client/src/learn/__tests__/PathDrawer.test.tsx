@@ -147,15 +147,15 @@ describe('PathDrawer', () => {
   it('should never make a coming-soon stop focusable', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const stop = screen.getByText('Trading without a middleman: DApps and pools').closest('li')!;
+    const stop = screen.getByText('Checkpoint: wallets, fees and the networks').closest('li')!;
     expect(stop.querySelectorAll('button')).toHaveLength(0);
   });
 
   it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
-    // Review fix 2026-11-19: chapter 2 is open with five built stops and two stops still to come
+    // Review fix 2026-11-19: chapter 2 is open with six built stops and one stop still to come
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const stop = screen.getByText('Trading without a middleman: DApps and pools').closest('li')!;
+    const stop = screen.getByText('Checkpoint: wallets, fees and the networks').closest('li')!;
     expect(stop.textContent).toContain('(coming soon)');
     expect(screen.getByText(/Chapter 2 · 0 of 7 done/)).toBeTruthy();
   });
