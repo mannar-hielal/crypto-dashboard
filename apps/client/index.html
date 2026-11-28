@@ -54,9 +54,10 @@
       content="Free, real-time crypto paper trading — live charts, 9 indicators, and a full trading toolkit. No signup required to try the chart."
       data-rh="true"
     />
-    <link rel="canonical" href="https://cryptopapertrade.com/" data-rh="true" />
 
-    <!-- Open Graph — fallback defaults; per-page overrides via react-helmet-async -->
+    <!-- Open Graph — fallbacks for readers that run no JavaScript. This file answers every -->
+    <!-- address, so it names no canonical and no og:url; main.tsx removes the data-rh tags and -->
+    <!-- each page writes its own (SeoHead). A new static tag that SeoHead also writes needs data-rh -->
     <meta property="og:title" content="cryptopapertrade.com" data-rh="true" />
     <meta
       property="og:description"
@@ -64,7 +65,6 @@
       data-rh="true"
     />
     <meta property="og:image" content="https://cryptopapertrade.com/og-image.svg" data-rh="true" />
-    <meta property="og:url" content="https://cryptopapertrade.com/" data-rh="true" />
     <meta property="og:type" content="website" data-rh="true" />
     <meta property="og:site_name" content="cryptopapertrade.com" />
 
