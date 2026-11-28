@@ -24,6 +24,6 @@ export const HABIT_COPY: Record<HabitBadgeId, { title: string; text: string }> =
   },
   'all-tours': {
     title: 'The whole path',
-    text: 'Finished all three guided tours',
+    text: 'Finished chapter 1’s three guided tours',
   },
 };

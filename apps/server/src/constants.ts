@@ -40,6 +40,7 @@ export const LEARN_ITEM_IDS = [
   'primer',
   'buy-first-coin',
   'sell-and-review',
+  'find-the-fee',
   'welcome-card',
   'fill-email-offer',
   'lesson-01',
@@ -55,7 +56,18 @@ export const LEARN_ITEM_IDS = [
 ] as const;
 
 /** The guided tours (the offers have no steps) */
-export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
+export const LEARN_TOUR_IDS = [
+  'primer',
+  'buy-first-coin',
+  'sell-and-review',
+  'find-the-fee',
+] as const;
+
+/**
+ * The tours the `all-tours` badge asks for: the three it asked for before chapter 2's practical stops
+ * (2026-11-28). Whether those count too is the owner's open call; until then an earned badge stays.
+ */
+export const ALL_TOURS_BADGE_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
 
 /** The lessons (cards → a tour → questions → a journal line); mirrors `LESSON_IDS` in the client */
 export const LEARN_LESSON_IDS = [

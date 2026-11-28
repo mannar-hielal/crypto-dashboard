@@ -51,6 +51,7 @@ export const PATH_WALK_CHAPTERS: readonly WalkChapter[] = [
       { kind: 'lesson', title: 'Stablecoins: the coins that try to sit still' },
       { kind: 'lesson', title: 'Your wallet, your keys: who holds them?' },
       { kind: 'lesson', title: 'Why sending crypto costs a fee' },
+      { kind: 'practice', title: 'Find the fee on your trade' },
     ],
     soon: [
       { kind: 'lesson', title: 'Trading without a middleman: DApps and pools' },
@@ -181,7 +182,11 @@ export function layoutWalk(
 
   if (wide) {
     const margin = 70;
-    const columns = 7;
+    // One column a stop of the longest chapter, and one more kept free past the last chapter's last
+    // stop for the "more chapters" dots, so a chapter that grows never pushes them off the picture
+    const longest = Math.max(...chapters.map((c) => c.stops.length + c.soon.length));
+    const lastRow = chapters[chapters.length - 1];
+    const columns = Math.max(7, longest, lastRow.stops.length + lastRow.soon.length + 1);
     const step = (width - 2 * margin) / (columns - 1);
     let y = 8;
     chapters.forEach((chapter, ci) => {

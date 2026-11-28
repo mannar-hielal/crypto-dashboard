@@ -43,8 +43,10 @@ export function placeBubble(
     maxLeft
   );
 
-  // A control that fills most of the screen (the chart): the bubble sits inside it, near the top
-  if (target.height > viewport.height * 0.5 || target.width > viewport.width * 0.7) {
+  // A control that fills most of the screen (the chart): the bubble sits inside it, near the top.
+  // By height only (2026-11-28): a wide, short control (a phone's full-width Buy button, a table row)
+  // has room above or below, and a bubble inside it covered the very button the step asked for
+  if (target.height > viewport.height * 0.5) {
     return {
       top: clamp(target.top + 24, VIEWPORT_MARGIN, maxTop),
       left: centredLeft,

@@ -152,12 +152,12 @@ describe('PathDrawer', () => {
   });
 
   it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
-    // Review fix 2026-11-19: chapter 2 is open with four built lessons and two stops still to come
+    // Review fix 2026-11-19: chapter 2 is open with five built stops and two stops still to come
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
     const stop = screen.getByText('Trading without a middleman: DApps and pools').closest('li')!;
     expect(stop.textContent).toContain('(coming soon)');
-    expect(screen.getByText(/Chapter 2 · 0 of 6 done/)).toBeTruthy();
+    expect(screen.getByText(/Chapter 2 · 0 of 7 done/)).toBeTruthy();
   });
 
   it('should offer the checkpoint under the first locked stop, and open it', () => {

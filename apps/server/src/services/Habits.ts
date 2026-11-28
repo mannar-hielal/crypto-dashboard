@@ -7,7 +7,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import type { HabitBadge, HabitBadgeId, HabitsResponse } from '@crypto-dashboard/sdk';
-import { LEARN_TOUR_IDS } from '../constants.js';
+import { ALL_TOURS_BADGE_IDS, LEARN_TOUR_IDS } from '../constants.js';
 import { USER_ORDER_TYPES } from './RetentionMetrics.js';
 
 type Prisma = FastifyInstance['prisma'];
@@ -165,6 +165,8 @@ export interface HabitInput {
   tourTimes: Date[];
   /** Tours finished */
   toursCompleted: number;
+  /** Of those the `all-tours` badge asks for, the ones finished */
+  badgeToursCompleted: number;
 }
 
 const BADGES: ReadonlyArray<{ id: HabitBadgeId; target: number }> = [
@@ -172,7 +174,7 @@ const BADGES: ReadonlyArray<{ id: HabitBadgeId; target: number }> = [
   { id: 'ten-stop-losses', target: 10 },
   { id: 'journal-week', target: 7 },
   { id: 'first-tour', target: 1 },
-  { id: 'all-tours', target: LEARN_TOUR_IDS.length },
+  { id: 'all-tours', target: ALL_TOURS_BADGE_IDS.length },
 ];
 
 /** Consecutive days ending today — or yesterday, so a streak is alive until midnight */
@@ -210,7 +212,7 @@ export function computeHabits(input: HabitInput, now: Date, zone = 'UTC'): Habit
     'ten-stop-losses': input.stopLossOrders,
     'journal-week': noteDays.size,
     'first-tour': input.toursCompleted,
-    'all-tours': input.toursCompleted,
+    'all-tours': input.badgeToursCompleted,
   };
   const badges: HabitBadge[] = BADGES.map(({ id, target }) => {
     // eslint-disable-next-line security/detect-object-injection -- id is from the fixed list above
@@ -232,7 +234,11 @@ export async function loadHabits(
   now: Date = new Date(),
   zone = 'UTC'
 ): Promise<HabitsResponse> {
-  const [stopLossOrders, notes, events, toursCompleted] = await Promise.all([
+  const finishedAmong = (ids: readonly string[]) =>
+    prisma.learningProgress.count({
+      where: { userId, status: 'completed', itemId: { in: [...ids] } },
+    });
+  const [stopLossOrders, notes, events, toursCompleted, badgeToursCompleted] = await Promise.all([
     prisma.order.count({
       where: {
         userId,
@@ -259,9 +265,8 @@ export async function loadHabits(
       take: MAX_ROWS,
       select: { at: true },
     }),
-    prisma.learningProgress.count({
-      where: { userId, status: 'completed', itemId: { in: [...LEARN_TOUR_IDS] } },
-    }),
+    finishedAmong(LEARN_TOUR_IDS),
+    finishedAmong(ALL_TOURS_BADGE_IDS),
   ]);
 
   return computeHabits(
@@ -270,6 +275,7 @@ export async function loadHabits(
       noteTimes: notes.map((n) => n.createdAt),
       tourTimes: events.map((e) => e.at),
       toursCompleted,
+      badgeToursCompleted,
     },
     now,
     zone
