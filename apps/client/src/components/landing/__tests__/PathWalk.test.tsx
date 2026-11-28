@@ -25,18 +25,18 @@ describe('PathWalk, drawn finished (no observer: a still browser, or reduced mot
     vi.unstubAllGlobals();
   });
 
-  it('should show every open stop done, and the two coming-soon ones locked', async () => {
+  it('should show every open stop done, and the coming-soon one locked', async () => {
     const { container } = await renderWalk();
-    expect(stops(container)).toHaveLength(OPEN + 2);
+    expect(stops(container)).toHaveLength(OPEN + 1);
     expect(done(container)).toHaveLength(OPEN);
-    expect(container.querySelectorAll('[class*="locked"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[class*="locked"]')).toHaveLength(1);
   });
 
   it('should count each chapter as complete on its card', async () => {
     const { container } = await renderWalk();
     const text = container.querySelector('svg')?.textContent ?? '';
     expect(text).toContain('Chapter 1 · 7 of 7 done');
-    expect(text).toContain('Chapter 2 · 5 of 5 done');
+    expect(text).toContain('Chapter 2 · 6 of 6 done');
   });
 
   it('should draw both guides, Pulin and Berwyn', async () => {
@@ -59,7 +59,7 @@ describe('PathWalk, drawn finished (no observer: a still browser, or reduced mot
       for (const s of c.stops) expect(screen.getAllByText(s.title).length).toBeGreaterThan(0);
     }
     expect(
-      screen.getByText('Trading without a middleman: DApps and pools (coming soon)')
+      screen.getByText('Checkpoint: wallets, fees and the networks (coming soon)')
     ).not.toBeNull();
   });
 
@@ -125,7 +125,7 @@ describe('PathWalk, played when it scrolls into view', () => {
     expect(early).toBeLessThan(OPEN);
     play(60000);
     expect(done(container)).toHaveLength(OPEN);
-    expect(container.querySelector('svg')?.textContent).toContain('Chapter 2 · 5 of 5 done');
+    expect(container.querySelector('svg')?.textContent).toContain('Chapter 2 · 6 of 6 done');
     expect(screen.getByRole('button', { name: 'Replay' })).not.toBeNull();
   });
 

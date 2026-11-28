@@ -67,7 +67,7 @@ describe('pathState', () => {
       'current',
       'open',
     ]);
-    expect(view.percent).toBe(25);
+    expect(view.percent).toBe(23);
   });
 
   it('should keep Sell locked until Buy is done, then make it the next step (owner 2026-11-17)', () => {
@@ -155,11 +155,12 @@ describe('pathState', () => {
       'lesson:lesson-wallets=locked',
       'lesson:lesson-fees=locked',
       'tour:find-the-fee=locked',
+      'lesson:lesson-dapps=locked',
     ]);
     expect(two.firstIndex).toBe(7);
     const ch = two.chapter as Chapter & { status: 'open' };
-    // One lesson and the checkpoint are still to write, so the map shows them as titles only
-    expect(ch.soon?.map((n) => n.kind)).toEqual(['lesson', 'checkpoint']);
+    // The checkpoint is still to write, so the map shows it as a title only
+    expect(ch.soon?.map((n) => n.kind)).toEqual(['checkpoint']);
   });
 
   it('should lock a later chapter until the one before it has its checkpoint passed', () => {

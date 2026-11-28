@@ -226,7 +226,8 @@ describe('lessons', () => {
           lesson.id === 'lesson-coins' ||
           lesson.id === 'lesson-stablecoins' ||
           lesson.id === 'lesson-wallets' ||
-          lesson.id === 'lesson-fees'
+          lesson.id === 'lesson-fees' ||
+          lesson.id === 'lesson-dapps'
         ) {
           expect([lesson.tour, lesson.tryWidget, lesson.tryIntro]).toEqual([
             undefined,
@@ -310,7 +311,7 @@ describe('lessons', () => {
     });
   }
 
-  it('should number the lessons 1 to 6, keeping the stored ids (owner 2026-11-08)', () => {
+  it('should number the lessons in order, keeping the stored ids (owner 2026-11-08)', () => {
     expect(LESSONS.map((l) => [l.id, l.number, l.title])).toEqual([
       ['lesson-01', 1, 'Up, down and your first trade'],
       ['lesson-ownership', 2, 'Money nobody controls'],
@@ -320,6 +321,7 @@ describe('lessons', () => {
       ['lesson-stablecoins', 6, 'Stablecoins: the coins that try to sit still'],
       ['lesson-wallets', 7, 'Your wallet, your keys: who holds them?'],
       ['lesson-fees', 8, 'Why sending crypto costs a fee'],
+      ['lesson-dapps', 9, 'Trading without a middleman: DApps and pools'],
     ]);
   });
 
@@ -427,6 +429,7 @@ describe('lessons', () => {
       'Two assets, one week',
       'Park your profit',
       'Is it worth it?',
+      'Scoop a token, move the price',
     ]);
   });
 
@@ -1236,6 +1239,102 @@ describe('lessons', () => {
     expect(l.cards[0].preview).toHaveLength(4);
     expect(l.recap?.points).toHaveLength(4);
     expect(l.recap?.highlight?.text).toMatch(/Next up: trading without a middleman/);
+  });
+
+  it('should teach DApps and pools in the approved order, with the vending machine and jars (owner 2026-11-28)', () => {
+    const l = getLesson('lesson-dapps');
+    expect(l.cards.map((c) => c.title)).toEqual([
+      'What you will learn',
+      'The exchange in the middle',
+      'What you hand over',
+      'Withdrawals paused',
+      'A machine with no shopkeeper',
+      'What is a DApp?',
+      'Web2 and Web3',
+      'A swap with no order desk',
+      'Your swap, in order',
+      'Two jars instead of a queue',
+      'Scoop a token, move the price',
+      'Who fills the jars?',
+      'What a swap costs',
+      'Who does what?',
+      'Big pool, tiny pool',
+      'Same app, other chains',
+      'No help desk',
+      'Read before you sign',
+      'What should make you stop?',
+    ]);
+    // 22 screens: 19 cards, Your call after "Read before you sign", the summary and the close
+    expect(lessonScreens(l)).toHaveLength(22);
+    expect(l.cards[l.momentAfter!].title).toBe('Read before you sign');
+    expect(l.moment.options[l.moment.correct]).toMatch(/^Close it, and check/);
+    const quiz = (title: string) => l.cards.find((c) => c.title === title)!.quiz!;
+    expect(quiz('Withdrawals paused').options[quiz('Withdrawals paused').correct]).toMatch(
+      /^No: the company holds the keys/
+    );
+    expect(quiz('Your swap, in order').format).toBe('order');
+    expect(quiz('Your swap, in order').steps).toHaveLength(4);
+    expect(quiz('Who does what?').format).toBe('match');
+    expect(quiz('Who does what?').pairs).toHaveLength(4);
+    expect(quiz('Big pool, tiny pool').options[0]).toBe('The tiny pool moves your price more');
+    const pick = quiz('What should make you stop?');
+    expect(pick.format).toBe('pick');
+    expect(pick.tiles).toHaveLength(6);
+    expect(pick.tiles!.filter((t) => t.right)).toHaveLength(3);
+    // No practice trade on a card: the paper account has no wallet and no swap
+    expect(l.cards.filter((c) => c.practice)).toEqual([]);
+    // Two analogies, Berwyn's, each saying where it stops matching
+    for (const title of ['A machine with no shopkeeper', 'Two jars instead of a queue']) {
+      const analogy = l.cards.find((c) => c.title === title)!.analogy;
+      expect(analogy?.who, title).toBe('tock');
+      expect(analogy?.text, title).toMatch(/^Think of it as .*Where it stops matching/);
+    }
+    // The new terms; a reused one names its lesson (the "Lesson N" rule checks it)
+    expect(l.cards.flatMap((c) => cardTermIds(c))).toEqual([
+      'custody',
+      'smart-contract',
+      'dapp',
+      'wallet',
+      'liquidity-pool',
+      'liquidity-provider',
+      'network-fee',
+    ]);
+    // Fact check 2026-11-28: tokens in pools, a permit can approve, disconnecting revokes nothing,
+    // a confirmed payment, and no phrase ever on a website
+    const text = (title: string) => l.cards.find((c) => c.title === title)!.text!;
+    expect(text('Read before you sign')).toMatch(
+      /free signature.*permit.*Disconnecting does not cancel an approval.*revoke/
+    );
+    expect(text('No help desk')).toMatch(
+      /never type it into a website\. A confirmed payment usually cannot be reversed/
+    );
+    expect(text('Who fills the jars?')).toMatch(/impermanent loss.*fees may not cover it/);
+    // The coverage check: other chains, and switching between them
+    expect(text('Same app, other chains')).toMatch(/you can switch.*bridge/);
+    expect(text('What a swap costs')).toMatch(/between 0\.01% and 1%.*slippage/);
+    // The sneak peek matches the summary: four lines each, and the way on is what the map shows next
+    expect(l.cards[0].preview).toHaveLength(4);
+    expect(l.recap?.points).toHaveLength(4);
+    expect(l.recap?.highlight?.text).toMatch(/Next up: the chapter checkpoint/);
+    expect(l.next).toBeUndefined();
+  });
+
+  it('should work out the pool’s price from x × y = k, on the card’s own pool (2026-11-28)', () => {
+    const math = getLesson('lesson-dapps').cards.find(
+      (c) => c.title === 'Scoop a token, move the price'
+    )!.math!;
+    const [eth, usdc] = [10, 20_000];
+    const k = eth * usdc;
+    const needed = Math.round(k / (eth - 1));
+    const fmt = (n: number) => n.toLocaleString('en-US');
+    expect(math.steps.map((s) => s.sum)).toEqual([
+      `${eth} × ${fmt(usdc)} = ${fmt(k)}`,
+      `${eth} − 1 = ${eth - 1}`,
+      `${fmt(k)} ÷ ${eth - 1} ≈ ${fmt(needed)}`,
+      `${fmt(needed)} − ${fmt(usdc)} = ${fmt(needed - usdc)}`,
+    ]);
+    expect(math.answer).toContain(`**${fmt(needed - usdc)} USDC**`);
+    expect(math.answer).toMatch(/price impact.*Fees are left out/);
   });
 
   it('should keep every funnel step id within the server’s pattern, past each earlier version', () => {

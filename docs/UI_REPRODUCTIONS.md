@@ -362,7 +362,8 @@ Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the 
 
 1. Open the map ([nav.learn]) → Expect chapter 2 **Your crypto toolbox: coins, wallets and the networks behind them**: the
    lessons **Coins and tokens: who has their own road** and **Stablecoins: the coins that try to sit still** (open after the
-   checkpoint, one after the other), then three lesson titles and a checkpoint title as grey "coming soon" stops that can't be focused.
+   checkpoint, one after the other), then the chapter's later stops; one still to be written shows as a grey "coming soon" stop
+   that can't be focused.
 2. [learn.card.start] the lesson → Expect screen 1 of 18, **What you will learn**: a numbered path of four stops (Coin or token, Token kinds, Altcoins and swings, Check fast gains), Pulin pointing, and four numbered lines (since 2026-11-22; it was the guides' chat). Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
    word _coin_ is a tappable term opening a peek), **The road needs upkeep** (a coin at a toll booth, "paid in the coin"),
    **The coins in our market** (eight purple ticker badges BTC ETH SOL BNB XRP ADA AVAX DOGE; LINK in an amber ring, "a token").
@@ -404,7 +405,7 @@ real feed for the practice buy.
 **UI reproduction** — as for Lesson 6 (a new account, chapter 1 passed, Lessons 5 and 6 done: Lesson 7 opens after them). No practice
 trade: nothing here starts a tour.
 
-1. Open the map → Expect Lesson 7 next after Lesson 6, and "Why sending crypto costs a fee" still a locked "coming soon" stop.
+1. Open the map → Expect Lesson 7 next after Lesson 6.
    [learn.card.start] it → Expect screen 1 of 25, **What you will learn**: a numbered path of four stops (Keys not coins, Who holds the key, Recovery phrase, Hot and cold), Pulin pointing, and four numbered lines.
 2. **A wallet holds keys, not coins** (a key ring beside mailboxes; the word _wallet_ a tappable term; Berwyn in glasses: "Think of it
    as a key ring…"), **Address and private key** (an address panel and a private key panel), **Who is who?** (Match boxes, four pairs).
@@ -428,7 +429,7 @@ trade: nothing here starts a tour.
 
 **UI reproduction** — as for Lesson 7 (a new account, chapter 1 passed, Lessons 5 to 7 done: Lesson 8 opens after them). No practice trade.
 
-1. Open the map → Expect Lesson 8 next after Lesson 7, and "Trading without a middleman: DApps and pools" still a locked "coming soon" stop.
+1. Open the map → Expect Lesson 8 next after Lesson 7.
    [learn.card.start] it → Expect screen 1 of 20, **What you will learn**: a numbered path of four stops (Send to confirmed, Why fees move, A real fee spike, Check the fee), Berwyn pointing, and four numbered lines.
 2. **Sending has a price** (coins to a mailbox with a "+ fee" tag; the words _network fee_ a tappable term), **A block is a bus** (a bus
    with six seats, five taken; Berwyn in glasses: "Think of it as a bus with limited seats…"), **Who picks the passengers?** (payments
@@ -452,8 +453,8 @@ trade: nothing here starts a tour.
 **UI reproduction** — as for Lesson 8 (a new account, chapter 1 passed, Lessons 5 to 8 done: the stop opens after them), with
 the real feed. Also at 390 px. Since 2026-11-28.
 
-1. Open the map → Expect the dumbbell stop **Find the fee on your trade** next after Lesson 8, and "Trading without a middleman:
-   DApps and pools" still a locked "coming soon" stop. [path.node `tour:find-the-fee`] → Expect the Spot BTC/USDT page and the
+1. Open the map → Expect the dumbbell stop **Find the fee on your trade** next after Lesson 8, and Lesson 9 "Trading without a
+   middleman: DApps and pools" locked under it. [path.node `tour:find-the-fee`] → Expect the Spot BTC/USDT page and the
    first bubble (a phone: **Buy / Long**; a larger screen: the form's Buy).
 2. [trade.type.market] → [trade.amount-unit `usdt`] → type 100 in [trade.amount] → [trade.submit] (the bubble ends "Next, we find
    what it cost you."; under it, what to do when the order is refused: Skip tour, free some USDT, start the stop again).
@@ -466,6 +467,30 @@ the real feed. Also at 390 px. Since 2026-11-28.
 4. Hide Commission with [account.columns] and replay the stop → the Commission step shows "…No Commission column? Turn it on with
    the Customize columns button." and no ring. Phone: the ring brings the Commission cell into view inside the table, with no
    sideways page scroll.
+
+### Learning path — Chapter 2, Lesson 9 "Trading without a middleman: DApps and pools" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 8 (a new account, chapter 1 passed, Lessons 5 to 8 and "Find the fee on your trade" done:
+Lesson 9 opens after them). No practice trade. Since 2026-11-28.
+
+1. Open the map → Expect Lesson 9 next after the fee practice. [learn.card.start] it → Expect screen 1 of 22, **What you will
+   learn**: a numbered path of four stops (Using an exchange, DApps and swaps, Pools set prices, Stay safe), Pulin pointing, and
+   four numbered lines.
+2. **The exchange in the middle** (a company between "you buy" and "they sell"), **What you hand over** (two panels; the word
+   _custody_ tappable), **Withdrawals paused** → **No: the company holds the keys, so she cannot for now**.
+3. **A machine with no shopkeeper** (a vending machine; _smart contract_ tappable; Berwyn in glasses: "Think of it as a vending
+   machine…"), **What is a DApp?** (wallet, website, contract; _DApp_ and _wallet_ tappable), **Web2 and Web3** (two panels),
+   **A swap with no order desk** (connect, check, sign), **Your swap, in order** (Drag and drop, four steps).
+4. **Two jars instead of a queue** (jars with the ETH and USDC logos; _liquidity pool_ tappable), **Scoop a token, move the
+   price** (before 10 and 20,000, after 9 and 22,222; Pulin's four steps: 10 × 20,000 = 200,000, 10 − 1 = 9,
+   200,000 ÷ 9 ≈ 22,222, 22,222 − 20,000 = 2,222), **Who fills the jars?** (_liquidity provider_ tappable), **What a swap
+   costs** (pool fee, network fee, price impact), **Who does what?** (Match boxes, four pairs), **Big pool, tiny pool** → **The
+   tiny pool moves your price more**.
+5. **Same app, other chains** (two roads and a bridge), **No help desk** (swapdesk.example ✓ and swapdesc.example ✕; the guide
+   looks worried), **Read before you sign** (a wallet asking for "no limit"). Then **Your call** → **Close it, and check on the
+   project's official site**, **What should make you stop?** (Pick, six tiles, pick three: the changed address, the recovery
+   phrase, the unknown site asking for all of a token), the summary, the journal line and the rating.
+6. Phone (390 px): no sideways scroll; the pictures sit inside the picture box.
 
 ### Learning path — the learning map (no Part B rows yet)
 

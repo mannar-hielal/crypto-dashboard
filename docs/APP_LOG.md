@@ -5850,3 +5850,39 @@ to 8, this stop, Lesson 9, a practice wallet and swap, the checkpoint.
 - **Rollback:** the web app alone may be rolled back (an older app ignores the new item's progress). The API alone may not: an
   older API refuses `find-the-fee` (400) and a tour's finish is not queued, so the stop shows undone again. Roll back both, or
   the web app only.
+
+### 2026-11-28 — Chapter 2, Lesson 9 "Trading without a middleman: DApps and pools"
+
+The chapter's fifth and last lesson (owner 2026-11-28: build now, review the outline, text and pictures later; its own PR).
+`lesson-dapps`, 9 min, 22 screens, step base 60; first step 61. Comparison rows T17 to T21, all taken.
+
+- **One metaphor:** a smart contract is a vending machine, and a pool is two jars inside it. Berwyn's two analogies say where
+  they stop matching.
+- **Cards:** the sneak peek, the exchange in the middle, what you hand over (custody, Lesson 7), a multiple-choice question
+  (withdrawals paused), smart contracts, DApps, Web2 and Web3, a swap on a DEX, **Drag and drop** (a swap in order), two jars
+  (the pool and the automated market maker), **Do the math** (10 ETH and 20,000 USDC; taking 1 ETH costs about 2,222 USDC),
+  liquidity providers (impermanent loss), what a swap costs (pool fee, network fee, price impact, slippage), **Match boxes**,
+  a multiple-choice question (a big and a tiny pool), other chains and bridges, no help desk (the address, never the
+  phrase), read before you sign (approvals, permits, revoking), then **Your call** (free tokens for an approval: close it and
+  check the official site), **Pick the right ones** (what should make you stop), summary, close. No practice trade on a card:
+  the paper account has no wallet or swap (the practical stop after this lesson).
+- **Text:** fact checked twice by a technical-writer agent. From the draft: tokens (not coins) go in pools; "usually two
+  tokens held in a smart contract", not "locked"; no website needs a recovery phrase (a wallet app takes it only to restore);
+  a free signature (permit) can give the same power as an approval; the swap's first approval and a failed swap's fee; pool
+  fees "often between 0.01% and 1%"; impermanent loss explained and fees may not cover it; price impact told apart from
+  slippage; moving tokens between chains "usually" needs a bridge. From the built text: not every pool wraps ETH; slippage
+  as a gap that opens, not the price move itself; an exchange holds your keys (custody, Lesson 7); the approval comes before
+  the swap's signature; the pool fee goes "mostly" to providers.
+- **Pictures:** thirteen new flat drawings in the Lesson 7 and 8 style, and the sneak peek's graphic (`LessonArt.tsx`); the
+  jars carry the real ETH and USDC logos (cryptocurrency-icons, CC0). The two web addresses end in `.example`, so neither can
+  be a real site; no app or wallet is named.
+- **Concepts:** `smart-contract`, `dapp`, `liquidity-pool`, `liquidity-provider` (peeks, no article). Proposed Blog posts (not
+  linked from the lesson): "Swapping without an order book" and "Before you sign: approvals".
+- **Ids:** `lesson-dapps` in the client's `LESSON_IDS`, the server's `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and
+  `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The public FAQ says nine lessons. The
+  map's chapter 2 now has only the checkpoint still "coming soon".
+- **Review:** `/code-review high` found no logic or id fault; its text points were applied. The summary's "Next up" names
+  what the map shows next (the checkpoint); the practice swap's change brings its own line. Left for the owner: Lesson 8
+  (approved) still says "Next up: trading without a middleman", though the fee practice now sits between.
+- **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses the new lesson's saves
+  (400). A finish is kept on the device and sent again once the API is back; part-way progress can be lost on a reload.
