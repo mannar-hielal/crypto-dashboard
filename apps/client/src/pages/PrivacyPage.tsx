@@ -13,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="November 25, 2026" version="1.7">
+      <LegalLayout title="Privacy Policy" lastUpdated="November 28, 2026" version="1.8">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -173,7 +173,10 @@ export function PrivacyPage() {
         <section>
           <h2>4. What We Do NOT Collect</h2>
           <ul>
-            <li>Real financial data or payment information of any kind</li>
+            <li>
+              Real financial data or payment information of any kind through the Service. A
+              voluntary tip is paid on PayPal's site (see Section 9)
+            </li>
             <li>Social media profiles or third-party login data</li>
             <li>Device fingerprints or persistent tracking identifiers</li>
             <li>Advertising or marketing cookies</li>
@@ -203,6 +206,13 @@ export function PrivacyPage() {
               <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: reading and answering a bug
               report you choose to send, so we can fix the problem. You may object to this (Section
               11).
+            </li>
+            <li>
+              <strong>
+                Legitimate interest (Art. 6(1)(f) GDPR) and legal obligation (Art. 6(1)(c) GDPR)
+              </strong>
+              : receiving a voluntary tip you choose to send, and keeping the accounting and tax
+              records of it.
             </li>
             <li>
               <strong>Consent (Art. 6(1)(a) GDPR)</strong>: newsletter subscription — you explicitly
@@ -481,6 +491,21 @@ export function PrivacyPage() {
               </tr>
             </tbody>
           </table>
+          <p>
+            <strong>Voluntary tips.</strong> If you open the tip link, you leave this site for
+            PayPal, which processes your data under its own{' '}
+            <a
+              href="https://www.paypal.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-brand"
+            >
+              privacy statement
+            </a>
+            . If you send a tip, PayPal shows us details of the payment, which can include your
+            name, e-mail address, the amount and any note you add. We use them only to receive and
+            account for the tip, and keep them as long as accounting and tax law require.
+          </p>
         </section>
 
         <section>

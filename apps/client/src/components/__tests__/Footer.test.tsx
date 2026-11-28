@@ -35,10 +35,16 @@ describe('Footer', () => {
     expect(container.querySelector('a[href="/how-it-works"]')).not.toBeNull();
   });
 
+  it('should link the tip section of the About page, before launch too (owner 2026-11-28)', async () => {
+    vi.stubEnv('VITE_IS_LIVE', 'false');
+    const { container } = await renderFooter();
+    expect(container.querySelector('a[href="/about#tip"]')?.textContent).toBe('Support the app');
+  });
+
   it('should keep the plain footer on sign-in, register and the legal pages (review 2026-11-22)', async () => {
     vi.stubEnv('VITE_IS_LIVE', 'true');
     const { container } = await renderFooter(false);
-    for (const href of ['/how-it-works', '/chart', '/blog']) {
+    for (const href of ['/how-it-works', '/chart', '/blog', '/about#tip']) {
       expect(container.querySelector(`a[href="${href}"]`), href).toBeNull();
     }
     expect(container.querySelector('a[href="/terms"]')).not.toBeNull();

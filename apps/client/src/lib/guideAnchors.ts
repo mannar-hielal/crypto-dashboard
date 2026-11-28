@@ -40,7 +40,7 @@ export const GUIDE_ANCHORS = [
   'nav.trade-menu',
   'nav.trade-menu.option',
   // The public pages' header links (owner 2026-11-18): Product ▾ with Chart and Crypto path (key), How it works, Blog,
-  // About us, Support, and the phone menu with its sheet
+  // About, Support, and the phone menu with its sheet
   'nav.product',
   'nav.product.item',
   'nav.how',
@@ -50,7 +50,7 @@ export const GUIDE_ANCHORS = [
   'nav.menu',
   'nav.menu.sheet',
   // The Blog (owner 2026-11-18): the card list, a card (key: the article), the back link, a "More
-  // articles" card, and the About us / Support placeholder (key: which)
+  // articles" card, and the About / Support placeholder (key: which)
   'blog.list',
   'blog.card',
   'blog.back',
@@ -270,6 +270,7 @@ export const GUIDE_ANCHORS = [
   'landing.faq.start',
   'about.register',
   'about.chart',
+  'about.tip',
   'how.hero.chart',
   'how.hero.register',
   'how.faq.start',
@@ -305,7 +306,27 @@ export const GUIDE_ANCHORS = [
   'path.legend',
   'path.test-out',
   'path.tour.skip',
-  // checkpoint (a chapter's five mixed questions)
+  // the practice wallet and swap (practice/SwapPanel.tsx): chapter 2's simulated stop
+  'swap.panel',
+  'swap.close',
+  'swap.tab',
+  'swap.connect',
+  'swap.offer',
+  'swap.amounts',
+  'swap.amount',
+  'swap.review',
+  'swap.status',
+  'swap.balances',
+  'swap.receipt',
+  'swap.permissions',
+  'swap.revoke',
+  'swap.request',
+  'swap.limit',
+  'swap.reject',
+  'swap.sign',
+  'swap.ask-again',
+  'swap.dismiss',
+  // checkpoint (a chapter's ten mixed questions)
   'checkpoint.sheet',
   'checkpoint.close',
   'checkpoint.next',

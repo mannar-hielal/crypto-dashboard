@@ -29,6 +29,7 @@ export const LESSON_IDS = [
   'lesson-stablecoins',
   'lesson-wallets',
   'lesson-fees',
+  'lesson-dapps',
 ] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
@@ -117,6 +118,20 @@ export type LessonArtId =
   | 'chainsCompare'
   | 'simpleComplex'
   | 'feeCheck'
+  // Chapter 2, Lesson 9 (2026-11-28): a smart contract is a vending machine, a pool two jars
+  | 'cexMiddle'
+  | 'handOver'
+  | 'vending'
+  | 'dappParts'
+  | 'webTwoThree'
+  | 'swapSteps'
+  | 'twoJars'
+  | 'jarPrice'
+  | 'jarFillers'
+  | 'swapCosts'
+  | 'otherChains'
+  | 'siteCheck'
+  | 'approveAsk'
   // The sneak peek's own graphic, one per lesson (owner 2026-11-22)
   | 'peekOwnership'
   | 'peekSwings'
@@ -124,7 +139,8 @@ export type LessonArtId =
   | 'peekCoins'
   | 'peekStable'
   | 'peekWallets'
-  | 'peekFees';
+  | 'peekFees'
+  | 'peekDapps';
 
 /**
  * What a picture shows, for screen readers. `null`: decorative (the card's text carries it all).
@@ -219,6 +235,28 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
   simpleComplex: 'A plain send is less work and a lower fee; a swap is more work and a higher fee.',
   feeCheck:
     'A send of $40 showing a $12 network fee beside a magnifying glass: look before you confirm.',
+  cexMiddle: 'A company stands between a buyer and a seller and matches them.',
+  handOver:
+    'To an exchange you give your ID and control; you get easy use and help, and you trust the company.',
+  vending:
+    'A smart contract drawn as a vending machine: coins go in, the result comes out, with no clerk.',
+  dappParts:
+    'A DApp in three parts: your wallet, a website and a contract; the main rules live on the blockchain.',
+  webTwoThree:
+    'Two panels: in Web2 a company keeps your account; in Web3 your wallet is your login.',
+  swapSteps: 'A swap in three moves: connect, check, sign; then the contract swaps.',
+  twoJars:
+    'A pool as two jars, one of ETH and one of USDC: you put one coin in and take the other out.',
+  jarPrice:
+    'The pool before and after taking 1 ETH: 10 ETH and 20,000 USDC become 9 ETH and 22,222 USDC.',
+  jarFillers:
+    'Providers fill both jars of a pool and earn a share of the fees, and can end with less than by holding.',
+  swapCosts:
+    'A swap’s costs: the pool fee mostly to providers, the network fee to the network, and price impact.',
+  otherChains: 'The same app on two chains, with a bridge between them: check your network.',
+  siteCheck: 'Two web addresses one letter apart: the official one ticked, the copy crossed out.',
+  approveAsk:
+    'A wallet asks to approve USDC with no limit, with Reject and Sign: read it before you sign.',
   peekOwnership:
     'The lesson’s four topics as a numbered path: why Bitcoin exists, one ledger copied, nodes and blocks, no one in charge.',
   peekSwings:
@@ -233,6 +271,8 @@ export const ART_LABELS: Record<LessonArtId, string | null> = {
     'The lesson’s four topics as a numbered path: keys not coins, who holds the key, the recovery phrase, hot and cold.',
   peekFees:
     'The lesson’s four topics as a numbered path: send to confirmed, why fees move, a real fee spike, check the fee.',
+  peekDapps:
+    'The lesson’s four topics as a numbered path: using an exchange, DApps and swaps, pools set prices, stay safe.',
 };
 
 export type Speaker = 'tick' | 'tock';
@@ -2655,6 +2695,255 @@ const lessonFees: Lesson = {
   access: FREE,
 };
 
+// ─── Lesson 9 — Trading without a middleman: DApps and pools ────────────────
+// Chapter 2, one PR a stop (owner 2026-11-19). Built 2026-11-28 under the owner's "approved to build now
+// and review later": outline and draft in the git-ignored notes (files 27 and 28), fact checked by a
+// technical-writer agent (the draft, then the built lesson), to be read by the owner. One metaphor: a
+// smart contract is a vending machine, and a pool is two jars inside it. The pool in the math card is
+// ours: 10 ETH and 20,000 USDC under the constant-product rule (x × y stays the same), fees left out:
+// 10 × 20,000 = 200,000; buying 1 ETH leaves 9, so 200,000 ÷ 9 = 22,222.2 USDC; the buyer pays 2,222.2.
+// The pool fee range (0.01% to 1%) is Uniswap's standard tiers, read 2026-11-28. No practice trade on a
+// card: the paper account has no wallet and no swap (that is the next stop's job).
+const lessonDapps: Lesson = {
+  id: 'lesson-dapps',
+  number: 9,
+  title: 'Trading without a middleman: DApps and pools',
+  stage: 'Your crypto toolbox',
+  minutes: 9,
+  stepBase: 60, // the SDK's LESSON_FIRST_STEPS − 1 (see the note above Lesson 1)
+  // Your call follows "Read before you sign" (index 17)
+  momentAfter: 17,
+  cards: [
+    {
+      title: 'What you will learn',
+      art: 'peekDapps',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      preview: [
+        'What an exchange does for you, and what you hand over',
+        'What a DApp is, and how a swap works',
+        'How a pool of two tokens sets a price',
+        'What to check before you connect or sign',
+      ],
+    },
+    {
+      title: 'The exchange in the middle',
+      art: 'cexMiddle',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'On an exchange, you say what you want to buy or sell, and the exchange matches you with someone on the other side. It keeps the list of offers and does the matching, usually in a split second. One company runs the whole thing, so it is called a **centralized exchange**.',
+    },
+    {
+      title: 'What you hand over',
+      art: 'handOver',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Easy trading comes with conditions. A regulated exchange usually asks for your name and an ID check. It holds the keys to your coins, which is [[custody|custody]] from Lesson 7. And it makes the rules: it can pause withdrawals or close an account. You get a help desk and a simple screen, and you trust the company.',
+    },
+    {
+      title: 'Withdrawals paused',
+      quiz: {
+        question:
+          'Emi keeps her coins in an exchange account. One morning the exchange pauses all withdrawals. Can she move them to her own wallet right now?',
+        options: [
+          'Yes: her password is enough',
+          'No: the company holds the keys, so she cannot for now',
+          'Yes: the blockchain moves them if she asks it',
+        ],
+        correct: 1,
+        explain:
+          'Coins in an exchange account sit under the company’s keys. While withdrawals are paused, only the company can move them.',
+      },
+    },
+    {
+      title: 'A machine with no shopkeeper',
+      art: 'vending',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Some blockchains can run small programs, as you saw in Lesson 2. Such a program is a [[smart contract|smart-contract]]. It does what its code says each time someone uses it, with no clerk to approve each step.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as a vending machine: put in the right coins, press a button, and the machine does the rest. Where it stops matching: a mistake in the code can lose money, and often nobody can undo it.',
+      },
+    },
+    {
+      title: 'What is a DApp?',
+      art: 'dappParts',
+      presenter: { who: 'tick', mood: 'smile', pose: 'point' },
+      text: 'A [[DApp|dapp]], short for decentralized app, is an app whose main rules run as smart contracts on a blockchain. You usually do not need an account: you connect your [[wallet]] from Lesson 7 and sign what you want done. People still build and run it. A team often runs the website, and some teams can pause or change the contracts.',
+    },
+    {
+      title: 'Web2 and Web3',
+      art: 'webTwoThree',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Most apps you know work the Web2 way: a company keeps your account and your data on its own computers. **Web3** is a name for apps built another way: your wallet is your login, and a blockchain records who owns which coins and tokens. It is a young idea, and some apps use the name but still depend on one company.',
+    },
+    {
+      title: 'A swap with no order desk',
+      art: 'swapSteps',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A **decentralized exchange**, or DEX, is a DApp for swapping tokens, and no company holds them for you. Open its website, connect your wallet, pick the token to give and the token to get, and check the price and fees. The first time, your wallet may ask you to approve the token. Then you sign the swap. The contract swaps, and the new tokens arrive at your address. A failed swap can still cost a network fee.',
+    },
+    {
+      title: 'Your swap, in order',
+      quiz: {
+        format: 'order',
+        question: 'Put the steps of a swap on a DEX in order.',
+        steps: [
+          'You open the app’s real web address',
+          'You choose the tokens and check the price and fees',
+          'You sign the swap in your wallet',
+          'A block confirms it and the new tokens arrive',
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'Check first, sign second. After you sign and the network confirms the swap, there is usually no taking it back.',
+      },
+    },
+    {
+      title: 'Two jars instead of a queue',
+      art: 'twoJars',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'point' },
+      text: 'Many DEXs keep no list of buyers and sellers. They use a [[liquidity pool|liquidity-pool]]: usually two tokens held in a smart contract. A formula sets the price from the mix. This is an **automated market maker**, or AMM.',
+      analogy: {
+        who: 'tock',
+        text: 'Think of it as two jars inside the vending machine: you pour one token in and scoop the other out. Where it stops matching: here every scoop changes the price.',
+      },
+    },
+    {
+      title: 'Scoop a token, move the price',
+      art: 'jarPrice',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'point' },
+      text: 'A pool holds 10 ETH and 20,000 USDC, so 1 ETH looks like 2,000 USDC. (Many real pools hold a token form of ETH, called wrapped ETH.) A common rule: the two amounts, multiplied, must stay the same after a swap. You want 1 ETH.',
+      math: {
+        who: 'tick',
+        steps: [
+          { label: 'Multiply the two jars', sum: '10 × 20,000 = 200,000' },
+          { label: 'ETH left in the pool', sum: '10 − 1 = 9' },
+          { label: 'USDC the pool needs', sum: '200,000 ÷ 9 ≈ 22,222' },
+          { label: 'What you pay in', sum: '22,222 − 20,000 = 2,222' },
+        ],
+        answer:
+          'You pay about **2,222 USDC** for that ETH, not 2,000. Your own trade moved the price: apps call this **price impact**. The more you take, the worse it gets. This pool is tiny, so the impact is big. Fees are left out.',
+      },
+    },
+    {
+      title: 'Who fills the jars?',
+      art: 'jarFillers',
+      presenter: { who: 'tick', mood: 'frank', pose: 'point' },
+      text: 'A [[liquidity provider|liquidity-provider]] puts two tokens into a pool and earns a share of the swap fees. It is not free money. When one token’s price changes compared with the other’s, the provider can end up with less value than by just holding both. This gap is called **impermanent loss**, and fees may not cover it. It can shrink if prices return. Taking the tokens out makes it final. A faulty or dishonest contract can cost you even more.',
+    },
+    {
+      title: 'What a swap costs',
+      art: 'swapCosts',
+      presenter: { who: 'tock', mood: 'calm', pose: 'point' },
+      text: 'A swap has several costs. The **pool fee**, often between 0.01% and 1%, goes mostly to the providers. The [[network fee|network-fee]] from Lesson 8 goes toward running the blockchain, and a swap is more work than a plain send. Some apps add their own fee. Price impact lowers what you get. So can slippage, a gap that opens if the price moves while your swap waits. Check the amount you will get, and the minimum, before you sign.',
+    },
+    {
+      title: 'Who does what?',
+      quiz: {
+        format: 'match',
+        question: 'Match each word to what it does.',
+        pairs: [
+          {
+            term: 'Centralized exchange',
+            meaning: 'A company that holds coins and matches orders',
+          },
+          { term: 'Smart contract', meaning: 'A program on a blockchain that runs its code' },
+          { term: 'Liquidity provider', meaning: 'Puts tokens into a pool and earns from fees' },
+          { term: 'Your own wallet', meaning: 'Keeps your key and signs what you approve' },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'The exchange is a company, the contract is code, providers fill the pool, and your wallet signs what you approve.',
+      },
+    },
+    {
+      title: 'Big pool, tiny pool',
+      quiz: {
+        question:
+          'Two pools use the same rule and hold the same two tokens at the same starting price. One is huge, one is tiny. You make the same swap in each. Which is true?',
+        options: [
+          'The tiny pool moves your price more',
+          'The huge pool moves your price more',
+          'Both give you exactly the same price',
+        ],
+        correct: 0,
+        explain:
+          'Your swap takes a bigger share of the tiny pool, so its mix shifts more. It is the thin market from Lesson 3 again.',
+      },
+    },
+    {
+      title: 'Same app, other chains',
+      art: 'otherChains',
+      presenter: { who: 'tick', mood: 'curious', pose: 'point' },
+      text: 'Many DApps run on several blockchains under the same name. Fees and speed differ between them, and you can switch. Check which network your wallet and the app are using. Tokens on one chain do not appear on another by themselves. Moving them usually needs a **bridge**, an extra service with its own fees and risks, or an exchange that supports both.',
+    },
+    {
+      title: 'No help desk',
+      art: 'siteCheck',
+      // A warning: a copied app is a scam, and a phrase is never shared
+      presenter: { who: 'tock', mood: 'worried', pose: 'point' },
+      text: 'A scam can copy a real app’s look exactly, and a DApp often has no help desk to undo a mistake. Check the web address letter by letter, and reach it through the project’s own official links, not an advert or a message. No DApp or website needs your recovery phrase: never share it, and never type it into a website. A confirmed payment usually cannot be reversed.',
+    },
+    {
+      title: 'Read before you sign',
+      art: 'approveAsk',
+      presenter: { who: 'tock', mood: 'frank', pose: 'point' },
+      text: 'Before an app’s contract can move your token, your wallet may ask you to **approve** it. Many requests have no limit, so that contract could take all of that token, now or later. A free signature, often called a **permit**, can give the same power. Read each request, set a limit if you can, and refuse what you do not understand. Disconnecting does not cancel an approval. To remove one you **revoke** it, for a network fee.',
+    },
+    {
+      title: 'What should make you stop?',
+      quiz: {
+        format: 'pick',
+        question: 'Which should make you stop? Pick three.',
+        tiles: [
+          { label: 'A web address with one letter changed', icon: 'link', right: true },
+          { label: 'A request for your recovery phrase', icon: 'note', right: true },
+          { label: 'An unknown site asking to spend all of a token', icon: 'coins', right: true },
+          { label: 'A button to connect your wallet', icon: 'pin', right: false },
+          { label: 'The price and fees shown before you sign', icon: 'eye', right: false },
+          { label: 'A list of tokens to choose from', icon: 'repeat', right: false },
+        ],
+        options: [],
+        correct: 0,
+        explain:
+          'A look-alike web address, a request for your phrase and a stranger asking for all of a token are reasons to stop. Connecting, seeing fees and picking tokens are everyday steps, on a site you have checked.',
+      },
+    },
+  ],
+  // Your call, after the card on approvals: the honest answer is the praised one
+  moment: {
+    art: 'approveAsk',
+    context:
+      'A message says you have won free tokens. The link opens a page that looks like a swap app you know. It asks you to approve all of your USDC, “to claim”.',
+    question: 'What do you do?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: [
+      'Approve it: claiming is free',
+      'Approve it, then disconnect right away',
+      'Close it, and check on the project’s official site',
+    ],
+    correct: 2,
+    explain:
+      'A gift never needs permission to spend your tokens. Disconnecting afterwards does not cancel an approval. Closing the page costs you nothing.',
+  },
+  checks: [],
+  notePrompt: 'What will you check before you connect a wallet to any app?',
+  canDo: [],
+  recap: {
+    title: 'DApps and pools',
+    points: [
+      { text: 'A centralized exchange matches orders and holds your coins for you.' },
+      { text: 'A DApp runs on smart contracts: you connect your wallet and sign.' },
+      { text: 'In a pool the mix of two tokens sets the price; providers earn fees and can lose.' },
+      { text: 'Check the web address, read what you sign, and never share your phrase.' },
+    ],
+    highlight: {
+      text: 'You can now say what an exchange does for you, how a swap on a DApp works, how a pool sets a price, and what to check before you sign. Next up: try a swap with a practice wallet.',
+    },
+  },
+  access: FREE,
+};
+
 export const LESSONS: readonly Lesson[] = [
   lesson01,
   lessonOwnership,
@@ -2664,6 +2953,7 @@ export const LESSONS: readonly Lesson[] = [
   lessonStablecoins,
   lessonWallets,
   lessonFees,
+  lessonDapps,
 ];
 
 export function getLesson(id: LessonId): Lesson {

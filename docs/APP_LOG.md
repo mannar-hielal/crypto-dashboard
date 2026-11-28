@@ -2019,7 +2019,7 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 **Other fixes:**
 
-- `index.html` — extended `data-rh="true"` to all OG/Twitter/description/canonical fallback tags so react-helmet-async replaces them in-place
+- `index.html` — extended `data-rh="true"` to all OG/Twitter/description/canonical fallback tags so react-helmet-async replaces them in-place (not true on React 19, where it only appends: fixed 2026-11-26, see that entry)
 - `TermsPage.tsx` — fixed period spacing ("purposes . Simulated" → "purposes. Simulated")
 
 **Back link**: LegalLayout uses `navigate(-1)` — verified correct for all navigation flows (Footer → legal page, cross-links between legal pages, direct visits).
@@ -4705,9 +4705,29 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
   "coming soon" titles.
 
+### 2026-11-28 — A voluntary tip through PayPal
+
+Owner, 2026-11-28: people who enjoy the app can leave a one-time tip. It unlocks nothing and the app stays free.
+
+- **Where:** a section on `/about`, between "Who is behind it" and the sign-up buttons ("Enjoying the app?", one
+  sentence, the outline button "Leave a tip with PayPal"), and "Support the app" in the public pages' footer
+  (landing, How it works, About), which jumps to it (`/about#tip`). Sign-in, register and the legal pages keep their
+  footer.
+- **How:** a plain link to the owner's PayPal.Me page in a new tab (`rel="noopener noreferrer"`). No script, widget or
+  request to PayPal, so the security headers are unchanged. No money passes through the app and nothing about a tip is
+  stored in it.
+- **Legal pages:** Terms 1.2 (a tip buys nothing; PayPal listed) and Privacy 1.8 (what happens when you tip, the legal
+  basis, and the "payment information" line of Section 4).
+- **Removable as one piece:** `lib/tipContent.ts`, `components/TipSection.tsx` (+ CSS and test), the line in
+  `AboutPage`, the footer link, the `about.tip` anchor, and those Terms and Privacy sentences.
+
 ### 2026-11-22 — About us page (first person, with the photo and the contact line)
 
 Owner: "use I", the name Mannar Hielal, the contact info@cryptopapertrade.com, the LinkedIn photo (`assets/landing/about-photo.webp`, 480 px square crop, 14 KB, sized, lazy, round on the page). `AboutPage` replaces the "coming soon" placeholder (`ComingSoonPage` is Support only now); copy in `lib/aboutContent.ts` states only what the project itself says (no personal history invented; no ads, no push to real money, independent of Bybit). Sections: why I built it, four promises, who is behind it, sign-up and chart links. **`noindex` and out of the sitemap** until the owner says otherwise. Anchors `about.register`, `about.chart`. Tests: `AboutPage.test` (one h1, first person and no "we", the mailto, photo size and alt, noindex, links), `BlogPages.test` (Support only).
+
+**Owner, 2026-11-28:** the header link and the browser tab title read **About** (was "About us"), and the owner's own
+introduction is the first paragraph under their name: frontend developer, living and working in Switzerland, out in nature
+or inline skating in their free time.
 
 ### 2026-11-23 — How it works: the visual redesign (accordion, post-its, tours, blueprint)
 
@@ -5801,3 +5821,154 @@ The Why section is a vertical slider (`WhySlider`, after the mouse-wheel demo on
 
 **Colour exception (owner, 2026-11-24):** the "What it is not" stop signs use `color.red`, a decoration that is not profit, loss or buy and sell; `design.md` reserves red for those, and the owner chose red stop signs in the visual Q&A, so this is the one accepted exception.
 **Focus exception (2026-11-24):** the Why slider's arrows and dots draw a white focus ring, not the purple `focusRing`, because the purple vanishes on the violet and blue slide colours. **Pictures:** the first Why capture loads normally and the other four with `fetchPriority="low"` (no `loading="lazy"`: inside the clipped, translated track a lazy image can arrive after its slide is moving in).
+
+### fix: one canonical per page, and the Blog in the sitemap (2026-11-26) ✅
+
+**Problem (Search Console, export of 2026-11-26: 3 pages indexed, 11 not).** `/how-it-works` and `/register` were
+"Alternate page with proper canonical tag": `index.html`, which answers every address, named the homepage as the
+canonical, and on React 19 `react-helmet-async` 3 only appends a page's own tags. So every page carried two
+canonicals (the homepage first), two descriptions and two sets of social tags. That Google chose the homepage one is
+inferred from the report. `SeoHead.test` missed it: its document had no static tags.
+
+**Changes.** `index.html` has no static canonical or `og:url`. Its other `data-rh` tags stay for readers that run no
+JavaScript, and `main.tsx` removes them before the first render (`lib/staticHeadTags.ts`); a new static tag that
+`SeoHead` also writes needs `data-rh`. The sitemap gained `/blog` and the nine articles and lost `/login` (18
+addresses). Tests: `SeoHead.test` renders over the real `index.html`; `blog/__tests__/sitemap.test` holds the sitemap
+to `ARTICLE_IDS`.
+
+**The report's other reasons need no change:** "Page with redirect" is the `http` and `www` addresses redirecting to
+the apex; "Not found (404)" is the API's root, which has no page; "Discovered - currently not indexed" (the legal pages
+and `/login`) had never been crawled.
+
+**Still open:** no prerendering; unknown addresses and `/features/` answer 200.
+
+### 2026-11-28 — Chapter 2's first practical stop: "Find the fee on your trade"
+
+Owner, 2026-11-28: chapter 2 gets two practical stops; the first, right after Lesson 8, is reading the Commission in Order
+History. Built on the existing tours and screens, to be reviewed by the owner afterwards. Chapter 2's order is now: Lessons 5
+to 8, this stop, Lesson 9, a practice wallet and swap, the checkpoint.
+
+- **The tour** (`find-the-fee`, `guide/tours.ts`): one job, a $100 Spot market buy of Bitcoin (five steps on a phone and on a
+  larger screen), saved and counted when the order is placed. The order's step says what to do if the form refuses it (read its
+  message; with too little USDT, Skip tour, sell some coin and start the stop again).
+- **What just happened** (`review-fee`): Order History, the newest row, its **Commission** (on a Spot buy it is taken in the
+  coin: 0.1%, about 10 cents, with the rate and "taker" under it), then the contrast: the exchange's fee is simulated here, a
+  network fee (Lesson 8) pays for moving crypto on a blockchain and a practice order moves nothing there; one question closes
+  it. A hidden Commission column is named in the step's missing hint (the Customize columns button).
+- **Shared steps:** `tradeSteps` builds the $100 trade for this stop and for the lessons' practice trades.
+- **Ids:** `find-the-fee` in the client's `TOUR_IDS`, the map (`learn/path.ts`), the landing path walk (`lib/pathWalk.ts`), the
+  server's `LEARN_TOUR_IDS` and `LEARN_ITEM_IDS`, and the SDK's `LEARN_ITEM_IDS`. No migration: progress is stored by id.
+- **Habit badges, unchanged:** "The whole path" (`all-tours`) still asks for the first three tours only (new constant
+  `ALL_TOURS_BADGE_IDS`), so nobody loses an earned badge. Whether the practical stops should count is the owner's open call.
+  "First guided practice" counts any path tour, this one included.
+- **Landing walk:** its columns follow the longest chapter, with one kept free for the "more chapters" dots.
+- **Phone fix (all tours):** the tour bubble covered a phone's full-width Buy button on the order step (the Buy lesson too).
+  `placeBubble` now sits inside a control by its height only; a wide, short one gets the bubble above or below.
+- **Checks:** fact checked twice by a technical-writer agent (the draft, then the built text) and `/code-review high`. Applied:
+  no reset advice on a refused order (a reset deletes history), the All filter named, the columns button's icon named, the
+  exchange's withdrawal fee told apart from the network's cost.
+- **Rollback:** the web app alone may be rolled back (an older app ignores the new item's progress). The API alone may not: an
+  older API refuses `find-the-fee` (400) and a tour's finish is not queued, so the stop shows undone again. Roll back both, or
+  the web app only.
+
+### 2026-11-28 — Chapter 2, Lesson 9 "Trading without a middleman: DApps and pools"
+
+The chapter's fifth and last lesson (owner 2026-11-28: build now, review the outline, text and pictures later; its own PR).
+`lesson-dapps`, 9 min, 22 screens, step base 60; first step 61. Comparison rows T17 to T21, all taken.
+
+- **One metaphor:** a smart contract is a vending machine, and a pool is two jars inside it. Berwyn's two analogies say where
+  they stop matching.
+- **Cards:** the sneak peek, the exchange in the middle, what you hand over (custody, Lesson 7), a multiple-choice question
+  (withdrawals paused), smart contracts, DApps, Web2 and Web3, a swap on a DEX, **Drag and drop** (a swap in order), two jars
+  (the pool and the automated market maker), **Do the math** (10 ETH and 20,000 USDC; taking 1 ETH costs about 2,222 USDC),
+  liquidity providers (impermanent loss), what a swap costs (pool fee, network fee, price impact, slippage), **Match boxes**,
+  a multiple-choice question (a big and a tiny pool), other chains and bridges, no help desk (the address, never the
+  phrase), read before you sign (approvals, permits, revoking), then **Your call** (free tokens for an approval: close it and
+  check the official site), **Pick the right ones** (what should make you stop), summary, close. No practice trade on a card:
+  the paper account has no wallet or swap (the practical stop after this lesson).
+- **Text:** fact checked twice by a technical-writer agent. From the draft: tokens (not coins) go in pools; "usually two
+  tokens held in a smart contract", not "locked"; no website needs a recovery phrase (a wallet app takes it only to restore);
+  a free signature (permit) can give the same power as an approval; the swap's first approval and a failed swap's fee; pool
+  fees "often between 0.01% and 1%"; impermanent loss explained and fees may not cover it; price impact told apart from
+  slippage; moving tokens between chains "usually" needs a bridge. From the built text: not every pool wraps ETH; slippage
+  as a gap that opens, not the price move itself; an exchange holds your keys (custody, Lesson 7); the approval comes before
+  the swap's signature; the pool fee goes "mostly" to providers.
+- **Pictures:** thirteen new flat drawings in the Lesson 7 and 8 style, and the sneak peek's graphic (`LessonArt.tsx`); the
+  jars carry the real ETH and USDC logos (cryptocurrency-icons, CC0). The two web addresses end in `.example`, so neither can
+  be a real site; no app or wallet is named.
+- **Concepts:** `smart-contract`, `dapp`, `liquidity-pool`, `liquidity-provider` (peeks, no article). Proposed Blog posts (not
+  linked from the lesson): "Swapping without an order book" and "Before you sign: approvals".
+- **Ids:** `lesson-dapps` in the client's `LESSON_IDS`, the server's `LEARN_LESSON_IDS`, `LEARN_ITEM_IDS` and
+  `LESSON_FIRST_STEP` (61), and the SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The public FAQ says nine lessons. The
+  map's chapter 2 now has only the checkpoint still "coming soon".
+- **Review:** `/code-review high` found no logic or id fault; its text points were applied. The summary's "Next up" names
+  what the map shows next (the checkpoint); the practice swap's change brings its own line. Left for the owner: Lesson 8
+  (approved) still says "Next up: trading without a middleman", though the fee practice now sits between.
+- **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses the new lesson's saves
+  (400). A finish is kept on the device and sent again once the API is back; part-way progress can be lost on a reload.
+
+### 2026-11-28 — Chapter 2's checkpoint "Checkpoint: wallets, fees and the networks"
+
+The chapter's last stop (owner 2026-11-28: build now, review later; its own PR). `checkpoint-ch2`: ten multiple-choice
+questions, pass at eight, question-set **version 1**. Comparison row T22.
+
+- **Questions** (`learn/checkpoints.ts`), our own order, words and situations: coin or token (Lesson 5), an exchange account's
+  risk (7), what a stablecoin is built to do (6), why a network fee (8), what pays a token's fee (5, a made-up token), what a
+  private key allows (7), what a liquidity provider does (9), a utility token (5), why a trader waits in a stablecoin (6), a
+  web address with a wrong letter (9). No question uses a lesson question's words (several test the same idea
+  in a new form, as a checkpoint should). A miss offers **Review Lesson N**.
+- **Text:** fact checked by a technical-writer agent. Applied from the draft: the fee answer no longer says every fee pays
+  somebody (some chains burn it all); the token question asks who pays the fee, so it no longer gives away the first one.
+  From the built text: the token send is from the learner's own wallet (an exchange can take its fee from the token); no
+  answer given away by a pattern or an earlier question; every question stands alone, because the result lists a missed one
+  without its context.
+- **Ids:** `checkpoint-ch2` in the client's `CHECKPOINT_IDS`, the map, the landing walk, the server's `LEARN_ITEM_IDS`,
+  `LEARN_CHECKPOINT_IDS` and `CHECKPOINT_VERSION`, and the SDK's `LEARN_ITEM_IDS` and `CHECKPOINT_VERSIONS`;
+  `LearnEventRequest` excludes every checkpoint by that list. No migration.
+- **The map and the pages:** chapter 2 has nothing left "coming soon"; the public FAQ says each chapter ends with a checkpoint.
+- **Two older lines fixed (code review):** a pass now says whether a next chapter is open (it always said "opens as soon as
+  it's ready"), and a locked chapter's checkpoint says to pass the one before (it named the lesson above it). Left for the
+  owner: the result lists a missed question without its context, so a few of chapter 1's read oddly there.
+- **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses the new checkpoint's pass
+  (400), which the app keeps on the device and sends again once the API is back.
+
+### 2026-11-28 — Chapter 2's second practical stop: "Try a swap with a practice wallet"
+
+Owner, 2026-11-28: "practice wallet and swap including building the widget", designed in a visual Q&A the same day: docked where
+the order form sits and guided by the tour (full screen on a phone), two tabs **App** and **Wallet** with a dot on Wallet when it
+wants an answer, the wallet's request as a sheet that rises at once over the dimmed app, and the flow swap then revoke. Between
+Lesson 9 and the checkpoint. Its own PR.
+
+- **Simulation only** (`apps/client/src/practice/`): no wallet connection, no network call, no keys, and no field that takes
+  text, so nothing asks for or accepts an address or a recovery phrase (a test holds this). In memory only, reset each time;
+  the paper account is untouched. The numbers are Lesson 9's pool (10 ETH, 20,000 USDC, x × y = k, fee 0.3% from the input),
+  start 500 USDC and 0.02 ETH, a pretend network fee of 0.0001 ETH a signature.
+- **USDC, not the paper account's USDT (owner, 2026-11-28):** kept so the wallet's money isn't mixed up with the practice
+  money, and the panel's warning line also says "Separate from your paper account."
+- **The panel** (`SwapPanel`, docked by `SwapDock` in place of the order form and edit panels): the App tab (connect, 100 or 200
+  USDC, the quote, Review swap), the Wallet tab (balances, the swap's costs, permissions with Revoke), the request sheet (its own
+  dialog: focus inside, Tab kept, Esc rejects and the guide stays; "Rejected" offers the request again). Focus goes back to the
+  button that asked, or the panel's heading. The dot comes with words for screen readers.
+- **The tour:** `try-a-swap` (four steps; saved and counted when the swap is signed), then `review-swap` (the Wallet tab,
+  balances, costs, permissions, Revoke) and `review-swap-clean`. New step field `clickAnchor`: the ring goes round the request
+  or the permissions card while the step ends on Sign, Review or Revoke, so the bubble never covers what it asks about.
+- **Choices made without a question to the owner, for review:** an old no-limit permission ("Practice Game") is in the wallet
+  from the start, so Revoke always has something to do (an "only this amount" permission is used up by the swap); the made-up
+  names "Practice Swap" and "Practice Game"; "Show the request again" after a rejection; the amount and Review swap are one step.
+- **Ids:** `try-a-swap` in the client's `TOUR_IDS`, the map, the landing walk, the server's `LEARN_TOUR_IDS` and
+  `LEARN_ITEM_IDS`, and the SDK's `LEARN_ITEM_IDS`. New anchors `swap.*`. The `all-tours` badge is unchanged (open call). The
+  stop is not read out as "on the real chart". Lesson 9's summary now says it comes next. No migration.
+- **Checks:** fact checked by a technical-writer agent on the built text, then `/code-review high`. Applied: a refused request
+  says only that it did nothing (a permission already signed stays); "transaction", not "signature", pays the fee; the swap's
+  receipt keeps its own fees; a minimum you get (0.5% under the quote); what connecting does; "cannot take your USDC"; the old
+  permission named; practice fees said to be equal. From the review: no Back onto a done action; a fresh wallet at each start of
+  the stop only; "Open the App tab" hints; Tab leaves a refused request, and a refused revoke can be closed; focus stays in the
+  dialog; the bubble stands beside a docked panel's control when there is no room above or below; the order form's controls end
+  the guide; the dock's styles in a CSS module and its width a token (`sidePanel`). Left for the owner: the map still gives the
+  swap the dumbbell, which the legend calls "Practice on the real chart" (an icon or legend change is a visual decision).
+- **Guide overlay (all tours):** a control cut off by a box that scrolls up and down is now scrolled into view, as one cut off
+  sideways already was.
+- **Landing walk:** with eight stops in chapter 2, labels wrap to their narrower column (they ran into each other around
+  800 px), and "More chapters on the way" sits further left, clear of the guides, who now end the walk beside it.
+- **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses `try-a-swap` (400) and a tour's
+  finish is not queued. Roll back both, or the web app only.

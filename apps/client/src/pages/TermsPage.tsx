@@ -12,7 +12,7 @@ export function TermsPage() {
         description="Terms of service for cryptopapertrade.com — a free crypto paper trading platform."
         path="/terms"
       />
-      <LegalLayout title="Terms of Service" lastUpdated="June 27, 2026" version="1.1">
+      <LegalLayout title="Terms of Service" lastUpdated="November 28, 2026" version="1.2">
         <section>
           <h2>1. Acceptance of Terms</h2>
           <p>
@@ -40,6 +40,11 @@ export function TermsPage() {
             The Service is provided <strong>free of charge</strong> for educational and research
             purposes. While we strive to keep the platform accessible, we reserve the right to
             modify or discontinue features at any time.
+          </p>
+          <p>
+            You may leave a voluntary tip through PayPal. A tip buys nothing, unlocks nothing and
+            adds no virtual balance. PayPal handles the payment on its own site, under its own
+            terms.
           </p>
         </section>
 
@@ -191,6 +196,9 @@ export function TermsPage() {
             <li>
               <strong>Cloudflare</strong> — frontend CDN, DDoS protection, and Cloudflare Web
               Analytics (cookieless)
+            </li>
+            <li>
+              <strong>PayPal</strong> — voluntary tips, only if you choose to open the tip link
             </li>
           </ul>
           <p>

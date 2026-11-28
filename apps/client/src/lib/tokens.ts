@@ -205,6 +205,12 @@ export const toolbar = {
   height: '40px',
 } as const;
 
+// ─── Docked side panel (order form, edit panels, practice swap) ──────────────
+
+export const sidePanel = {
+  width: 256,
+} as const;
+
 // ─── Range bar (chart time-range preset strip) ───────────────────────────────
 
 export const rangeBar = {

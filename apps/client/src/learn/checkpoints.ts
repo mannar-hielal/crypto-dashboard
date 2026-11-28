@@ -1,7 +1,7 @@
 /**
- * A chapter's checkpoint (learning map, owner's visual Q&A 2026-10-24): five mixed questions drawn
+ * A chapter's checkpoint (learning map, owner's visual Q&A 2026-10-24): ten mixed questions drawn
  * from the whole chapter, so the learner retrieves what each lesson taught rather than re-reading
- * it. Passing (4 of 5) opens the next chapter, and anyone may take it early to "test out". Every
+ * it. Passing (8 of 10) opens the next chapter, and anyone may take it early to "test out". Every
  * answer is explained and a miss points back to where it was taught; there are no lives, prizes or
  * timers. Pure data: no React.
  */
@@ -10,7 +10,7 @@ import { FREE, type Entitlement } from './access';
 import type { LessonId, LessonQuestion } from '@/guide/lessons';
 import type { TourId } from '@/guide/tours';
 
-export const CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
+export const CHECKPOINT_IDS = ['checkpoint-ch1', 'checkpoint-ch2'] as const;
 export type CheckpointId = (typeof CHECKPOINT_IDS)[number];
 
 export function isCheckpointId(value: string): value is CheckpointId {
@@ -171,7 +171,140 @@ const checkpointCh1: Checkpoint = {
   ],
 };
 
-export const CHECKPOINTS: readonly Checkpoint[] = [checkpointCh1];
+// Chapter 2's checkpoint (owner 2026-11-28, the comparison's row T22): ten multiple-choice questions
+// across Lessons 5 to 9, in our own order, words and situations; pass at eight, as chapter 1's. Fact
+// checked with Lesson 9 (the draft, then the built text); PlantPoint is made up.
+const checkpointCh2: Checkpoint = {
+  id: 'checkpoint-ch2',
+  title: 'Checkpoint: wallets, fees and the networks',
+  pass: 8,
+  version: 1,
+  access: FREE,
+  questions: [
+    {
+      question: 'Which of these makes a crypto a coin, not a token?',
+      options: [
+        'It runs on its own blockchain',
+        'It costs more than one dollar',
+        'It is listed on many exchanges',
+      ],
+      correct: 0,
+      explain:
+        'A coin is the money of its own blockchain. A token lives on someone else’s. Price and listings do not decide it.',
+      taughtIn: { kind: 'lesson', id: 'lesson-coins' },
+    },
+    {
+      question: 'Your coins sit in an exchange account. Which risk comes with that?',
+      options: [
+        'If you lose your recovery phrase, the company cannot help',
+        'If the company freezes or fails, you may not get them out',
+        'The blockchain deletes coins that sit still for too long',
+      ],
+      correct: 1,
+      explain:
+        'The exchange holds the keys, so your access depends on the company. FTX customers found that out in 2022.',
+      taughtIn: { kind: 'lesson', id: 'lesson-wallets' },
+    },
+    {
+      question: 'What is a stablecoin built to do?',
+      options: [
+        'Pay a fixed profit every year',
+        'Rise faster than other crypto',
+        'Hold a steady price, usually one US dollar',
+      ],
+      correct: 2,
+      explain: 'A stablecoin aims to stay at its peg. That is a goal, not a promise.',
+      taughtIn: { kind: 'lesson', id: 'lesson-stablecoins' },
+    },
+    {
+      question: 'Why does sending crypto cost a network fee?',
+      options: [
+        'A bank collects it as a tax on every payment you make',
+        'It helps run or protect the network, and makes spam costly',
+        'It buys you a refund if the price falls after you send',
+      ],
+      correct: 1,
+      explain:
+        'The fee pays for a seat in a block. On most chains it helps pay the people who run the network (some chains burn part or all of it), and it makes floods of junk payments expensive.',
+      taughtIn: { kind: 'lesson', id: 'lesson-fees' },
+    },
+    {
+      question:
+        'You send PlantPoint, a token on Ethereum, from your own wallet. What do you pay the network fee with?',
+      options: [
+        'Ether (ETH), the coin of that blockchain',
+        'PlantPoint, the token you are sending',
+        'Nothing: tokens travel for free',
+      ],
+      correct: 0,
+      explain:
+        'A token runs on another coin’s road. Fees on Ethereum are paid in ether, not in PlantPoint.',
+      taughtIn: { kind: 'lesson', id: 'lesson-coins' },
+    },
+    {
+      question: 'What can someone do with your private key?',
+      options: [
+        'See your balance, but nothing more',
+        'Send you coins, but nothing more',
+        'Spend the coins at your address',
+      ],
+      correct: 2,
+      explain:
+        'The key signs payments, so whoever holds it can spend. With only your address, they can look but not spend.',
+      taughtIn: { kind: 'lesson', id: 'lesson-wallets' },
+    },
+    {
+      question: 'In a pool on a decentralized exchange, what does a liquidity provider do?',
+      options: [
+        'Approves each swap by hand',
+        'Adds tokens and earns part of the fees',
+        'Stops the pool’s price from moving',
+      ],
+      correct: 1,
+      explain:
+        'Providers put tokens into the pool, and other people swap with it. Providers earn from fees, and can also lose value.',
+      taughtIn: { kind: 'lesson', id: 'lesson-dapps' },
+    },
+    {
+      question: 'Which of these is a utility token?',
+      options: [
+        'One that stands for a share in a company',
+        'One whose main job is voting on a project’s rules',
+        'One you spend to use an app’s service',
+      ],
+      correct: 2,
+      explain:
+        'A utility token is used for something, like credits at an arcade. The other two are a security token and a governance token.',
+      taughtIn: { kind: 'lesson', id: 'lesson-coins' },
+    },
+    {
+      question: 'You sold a coin and want to wait before your next buy. How can a stablecoin help?',
+      options: [
+        'You can wait without big price swings, then buy',
+        'You earn a sure profit while you wait',
+        'Your money gets bank-style protection while you wait',
+      ],
+      correct: 0,
+      explain:
+        'It is a place to wait without the big swings. The peg can still slip, and it is not a bank account.',
+      taughtIn: { kind: 'lesson', id: 'lesson-stablecoins' },
+    },
+    {
+      question: 'One letter of a swap app’s web address looks wrong. What is the safe move?',
+      options: [
+        'Connect, but swap only a little',
+        'Close it and use the project’s official address',
+        'Connect: the page looks the same as always',
+      ],
+      correct: 1,
+      explain:
+        'A real app’s look is easy to copy. Do not connect or sign on a doubtful address: leave, and open the app from the project’s official link.',
+      taughtIn: { kind: 'lesson', id: 'lesson-dapps' },
+    },
+  ],
+};
+
+export const CHECKPOINTS: readonly Checkpoint[] = [checkpointCh1, checkpointCh2];
 
 export function getCheckpoint(id: CheckpointId): Checkpoint {
   const checkpoint = CHECKPOINTS.find((c) => c.id === id);

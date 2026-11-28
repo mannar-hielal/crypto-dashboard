@@ -51,11 +51,12 @@ export const PATH_WALK_CHAPTERS: readonly WalkChapter[] = [
       { kind: 'lesson', title: 'Stablecoins: the coins that try to sit still' },
       { kind: 'lesson', title: 'Your wallet, your keys: who holds them?' },
       { kind: 'lesson', title: 'Why sending crypto costs a fee' },
-    ],
-    soon: [
+      { kind: 'practice', title: 'Find the fee on your trade' },
       { kind: 'lesson', title: 'Trading without a middleman: DApps and pools' },
+      { kind: 'practice', title: 'Try a swap with a practice wallet' },
       { kind: 'checkpoint', title: 'Checkpoint: wallets, fees and the networks' },
     ],
+    soon: [],
   },
 ];
 
@@ -79,6 +80,8 @@ export const CARD_LINE = 19;
 /** Below this width the path is one column, above it two rows */
 export const WIDE_FROM = 760;
 const STEP_COLUMN = 116;
+/** Half the width of the "More chapters" caption, about, with a little air */
+const CAPTION_HALF = 52;
 
 export function wrapText(text: string, max: number): string[] {
   const lines: string[] = [];
@@ -181,7 +184,11 @@ export function layoutWalk(
 
   if (wide) {
     const margin = 70;
-    const columns = 7;
+    // One column a stop of the longest chapter, and one more kept free past the last chapter's last
+    // stop for the "more chapters" dots, so a chapter that grows never pushes them off the picture
+    const longest = Math.max(...chapters.map((c) => c.stops.length + c.soon.length));
+    const lastRow = chapters[chapters.length - 1];
+    const columns = Math.max(7, longest, lastRow.stops.length + lastRow.soon.length + 1);
     const step = (width - 2 * margin) / (columns - 1);
     let y = 8;
     chapters.forEach((chapter, ci) => {
@@ -210,7 +217,9 @@ export function layoutWalk(
           soon,
           x: margin + col * step,
           y: rowY + Math.round(Math.sin(i * 0.9 + ci * 3) * 10),
-          maxChars: Math.max(12, Math.floor((step - 16) / 6.8)),
+          // Labels wrap to their column; a longer chapter makes the columns narrower, so the floor is
+          // low enough that neighbours never run into each other
+          maxChars: Math.max(8, Math.floor((step - 16) / 6.8)),
         });
       });
       y = rowY + R + 30 + 36 + 28;
@@ -224,7 +233,8 @@ export function layoutWalk(
       dots.push({ x: last.x - step * back, y: last.y, r, opacity });
     }
     caption = {
-      x: last.x - step * 0.72,
+      // Well left of the last stop: with every stop open the guides end there, beside the dots
+      x: Math.max(CAPTION_HALF, last.x - step * 1.15),
       y: last.y - R - 22,
       lines: ['More chapters', 'on the way'],
       anchor: 'middle',

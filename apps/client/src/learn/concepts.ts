@@ -51,6 +51,11 @@ export const CONCEPT_IDS = [
   // Chapter 2, Lesson 8 (2026-11-22)
   'validator',
   'network-fee',
+  // Chapter 2, Lesson 9 (2026-11-28)
+  'smart-contract',
+  'dapp',
+  'liquidity-pool',
+  'liquidity-provider',
 ] as const;
 
 export type ConceptId = (typeof CONCEPT_IDS)[number];
@@ -304,6 +309,34 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Network fee',
     peek: 'A small fee paid when you send crypto, for a seat in the next block. It rises when many people send at once.',
     think: 'the toll on a road, higher at rush hour.',
+    access: FREE,
+  },
+  {
+    id: 'smart-contract',
+    term: 'Smart contract',
+    peek: 'A program stored on a blockchain that does what its code says each time someone uses it.',
+    think: 'a vending machine: the right coins and a button, and it does the rest.',
+    access: FREE,
+  },
+  {
+    id: 'dapp',
+    term: 'DApp',
+    peek: 'An app whose main rules run as smart contracts on a blockchain. You use it by connecting a wallet.',
+    think: 'a self-service counter where you bring your own wallet.',
+    access: FREE,
+  },
+  {
+    id: 'liquidity-pool',
+    term: 'Liquidity pool',
+    peek: 'Usually two tokens held in a smart contract, so people can swap one for the other. A formula sets the price from the mix.',
+    think: 'two jars: pour into one, scoop from the other.',
+    access: FREE,
+  },
+  {
+    id: 'liquidity-provider',
+    term: 'Liquidity provider',
+    peek: 'Someone who puts tokens into a pool and earns a share of its fees, and can also lose value.',
+    think: 'the person who fills the jars and gets a small share of the fee on each scoop.',
     access: FREE,
   },
 ];

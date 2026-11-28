@@ -12,6 +12,7 @@ import { useLayoutEffect, useRef, useState, type JSX } from 'react';
 import {
   ArrowsLeftRight,
   Bank,
+  Browser,
   Bus,
   Camera,
   Certificate,
@@ -19,6 +20,7 @@ import {
   ChartPieSlice,
   Clock,
   Cloud,
+  Code,
   Coins,
   Compass,
   Cube,
@@ -31,6 +33,9 @@ import {
   HandPalm,
   Handbag,
   HardDrives,
+  Headset,
+  IdentificationCard,
+  Jar,
   Key,
   Leaf,
   ListChecks,
@@ -44,14 +49,17 @@ import {
   Notebook,
   Package,
   PencilSimple,
+  PlugsConnected,
   Prohibit,
   RoadHorizon,
+  ShieldCheck,
   Stack,
   Storefront,
   Swap,
   Ticket,
   Tray,
   Usb,
+  User,
   UsersThree,
   Vault,
   Wallet,
@@ -2021,6 +2029,490 @@ function FeeCheck() {
   );
 }
 
+// ─── Chapter 2, Lesson 9: DApps and pools ───
+// Flat shapes in the Lesson 7 and 8 style (owner 2026-11-28: build now, review later). One metaphor:
+// a smart contract is a vending machine, and a pool is two jars. The coins in the jars are the real
+// ETH and USDC logos (cryptocurrency-icons, CC0). The web addresses use the reserved .example ending,
+// so neither can be a real site; no app, wallet or brand is named.
+
+/** A small text line in a picture, centred on x */
+function Say({
+  x,
+  y,
+  tone = 'white',
+  children,
+}: {
+  x: number;
+  y: number;
+  tone?: 'white' | 'muted' | 'amber' | 'up' | 'down';
+  children: string;
+}) {
+  return (
+    <text x={x} y={y} textAnchor="middle" className={`${styles.small} ${styles[tone]}`}>
+      {children}
+    </text>
+  );
+}
+
+/** A centralized exchange: one company between the buyer and the seller */
+function CexMiddle() {
+  return (
+    <>
+      <User weight={DUO} x={90} y={46} size={36} className={styles.white} />
+      <PathArrow
+        points={[
+          [132, 66],
+          [162, 66],
+        ]}
+        className={styles.muted}
+      />
+      <Bank weight={DUO} x={170} y={36} size={60} className={styles.amber} />
+      <PathArrow
+        points={[
+          [268, 66],
+          [238, 66],
+        ]}
+        className={styles.muted}
+      />
+      <User weight={DUO} x={274} y={46} size={36} className={styles.white} />
+      <Say x={108} y={102}>
+        you buy
+      </Say>
+      <Say x={292} y={102}>
+        they sell
+      </Say>
+      <Say x={200} y={124} tone="amber">
+        a company matches you
+      </Say>
+    </>
+  );
+}
+
+/** What you give an exchange, and what you get back */
+function HandOver() {
+  return (
+    <>
+      <rect x="92" y="24" width="104" height="104" rx="8" className={styles.panel} />
+      <text x="144" y="44" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        you give
+      </text>
+      <IdentificationCard weight={DUO} x={104} y={56} size={36} className={styles.white} />
+      <Coins weight={DUO} x={148} y={56} size={36} className={styles.amber} />
+      <Say x={144} y={112}>
+        ID and control
+      </Say>
+      <rect x="208" y="24" width="104" height="104" rx="8" className={styles.panel} />
+      <text x="260" y="44" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        you get
+      </text>
+      <Headset weight={DUO} x={242} y={56} size={36} className={styles.up} />
+      <Say x={260} y={112}>
+        easy use, help
+      </Say>
+      <Say x={202} y={148} tone="muted">
+        and you trust the company
+      </Say>
+    </>
+  );
+}
+
+/** A smart contract as a vending machine: coins in, the result out, nobody behind the counter */
+function Vending() {
+  return (
+    <>
+      <rect x="162" y="10" width="76" height="118" rx="8" className={styles.panel} />
+      <rect x="172" y="20" width="56" height="44" rx="4" className={styles.note} />
+      <Code weight={DUO} x={184} y={26} size={32} className={styles.white} />
+      <circle cx="184" cy="82" r="6" className={styles.badge} />
+      <rect x="198" y="76" width="30" height="12" rx="4" className={styles.amberFill} />
+      <rect x="174" y="100" width="52" height="18" rx="4" className={styles.note} />
+      <Coins weight={DUO} x={94} y={52} size={34} className={styles.amber} />
+      <PathArrow
+        points={[
+          [134, 70],
+          [156, 70],
+        ]}
+        className={styles.muted}
+      />
+      <Say x={112} y={102}>
+        coins in
+      </Say>
+      <PathArrow
+        points={[
+          [244, 108],
+          [266, 108],
+        ]}
+        className={styles.muted}
+      />
+      <Package weight={DUO} x={272} y={90} size={34} className={styles.up} />
+      <Say x={286} y={138}>
+        result out
+      </Say>
+      <Say x={198} y={148} tone="muted">
+        it runs its code: no clerk
+      </Say>
+    </>
+  );
+}
+
+/** Three boxes in a row with arrows between, one icon and a word each */
+function Chain({
+  steps,
+  caption,
+}: {
+  steps: readonly { label: string; Icon: PeekIcon }[];
+  caption: string;
+}) {
+  return (
+    <>
+      {steps.map(({ label, Icon }, i) => {
+        const x = 86 + i * 80;
+        return (
+          <g key={label}>
+            <rect x={x} y={34} width="64" height="76" rx="8" className={styles.panel} />
+            <Icon weight={DUO} x={x + 14} y={44} size={36} className={styles.white} />
+            <text
+              x={x + 32}
+              y={100}
+              textAnchor="middle"
+              className={`${styles.chipText} ${styles.white}`}
+            >
+              {label}
+            </text>
+            {i < steps.length - 1 && (
+              <PathArrow
+                points={[
+                  [x + 66, 72],
+                  [x + 78, 72],
+                ]}
+                className={styles.amber}
+              />
+            )}
+          </g>
+        );
+      })}
+      <Say x={198} y={134}>
+        {caption}
+      </Say>
+    </>
+  );
+}
+
+/** A DApp: your wallet, a website, and the rules as a contract on the blockchain */
+function DappParts() {
+  return (
+    <Chain
+      steps={[
+        { label: 'wallet', Icon: Wallet },
+        { label: 'website', Icon: Browser },
+        { label: 'contract', Icon: Code },
+      ]}
+      caption="the main rules live on the blockchain"
+    />
+  );
+}
+
+/** Web2: a company keeps your account. Web3: your wallet is your login */
+function WebTwoThree() {
+  return (
+    <>
+      <rect x="92" y="22" width="104" height="108" rx="8" className={styles.panel} />
+      <text x="144" y="42" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Web2
+      </text>
+      <Bank weight={DUO} x={122} y={50} size={44} className={styles.muted} />
+      <Say x={144} y={108}>
+        a company keeps
+      </Say>
+      <Say x={144} y={122}>
+        your account
+      </Say>
+      <rect x="208" y="22" width="104" height="108" rx="8" className={styles.panel} />
+      <text x="260" y="42" textAnchor="middle" className={`${styles.chipText} ${styles.white}`}>
+        Web3
+      </text>
+      <Wallet weight={DUO} x={238} y={50} size={44} className={styles.amber} />
+      <Say x={260} y={108}>
+        your wallet
+      </Say>
+      <Say x={260} y={122}>
+        is your login
+      </Say>
+    </>
+  );
+}
+
+/** A swap in three moves: connect, check, sign */
+function SwapSteps() {
+  return (
+    <Chain
+      steps={[
+        { label: 'connect', Icon: PlugsConnected },
+        { label: 'check', Icon: MagnifyingGlass },
+        { label: 'sign', Icon: PencilSimple },
+      ]}
+      caption="then the contract swaps"
+    />
+  );
+}
+
+/** One jar of a pool: its coin's real logo over the amount inside (60 wide unless narrower) */
+function CoinJar({
+  x,
+  y,
+  symbol,
+  amount,
+  width = 60,
+}: {
+  x: number;
+  y: number;
+  symbol: 'ETH' | 'USDC';
+  amount: string;
+  width?: number;
+}) {
+  const middle = x + width / 2;
+  return (
+    <g>
+      <rect x={x + 10} y={y} width={width - 20} height="10" rx="3" className={styles.badge} />
+      <rect x={x} y={y + 10} width={width} height="60" rx="12" className={styles.panel} />
+      <CoinLogo symbol={symbol} x={middle - 12} y={y + 18} size={24} />
+      <text x={middle} y={y + 60} textAnchor="middle" className={styles.badgeText}>
+        {amount}
+      </text>
+    </g>
+  );
+}
+
+/** A pool as two jars: one coin goes in, the other comes out */
+function TwoJars() {
+  return (
+    <>
+      <CoinJar x={120} y={34} symbol="ETH" amount="ETH" />
+      <CoinJar x={216} y={34} symbol="USDC" amount="USDC" />
+      <PathArrow
+        points={[
+          [96, 34],
+          [118, 48],
+        ]}
+        className={styles.amber}
+      />
+      <PathArrow
+        points={[
+          [280, 48],
+          [304, 34],
+        ]}
+        className={styles.up}
+      />
+      <Say x={102} y={24} tone="amber">
+        put in
+      </Say>
+      <Say x={298} y={24} tone="up">
+        take out
+      </Say>
+      <Say x={198} y={128}>
+        a pool: two jars in a contract
+      </Say>
+      <Say x={198} y={144} tone="muted">
+        the mix sets the price
+      </Say>
+    </>
+  );
+}
+
+/** The math card: 10 ETH and 20,000 USDC before, 9 ETH and 22,222 USDC after you take one ETH */
+function JarPrice() {
+  return (
+    <>
+      <Say x={134} y={18} tone="muted">
+        before
+      </Say>
+      <CoinJar x={80} y={30} width={52} symbol="ETH" amount="10" />
+      <CoinJar x={136} y={30} width={52} symbol="USDC" amount="20,000" />
+      <PathArrow
+        points={[
+          [192, 70],
+          [204, 70],
+        ]}
+        className={styles.muted}
+      />
+      <Say x={262} y={18} tone="muted">
+        after
+      </Say>
+      <CoinJar x={208} y={30} width={52} symbol="ETH" amount="9" />
+      <CoinJar x={264} y={30} width={52} symbol="USDC" amount="22,222" />
+      <Say x={198} y={128}>
+        take 1 ETH: less ETH, more USDC
+      </Say>
+      <Say x={198} y={144} tone="amber">
+        so the next ETH costs more
+      </Say>
+    </>
+  );
+}
+
+/** Liquidity providers fill both jars and get a share of the fees back */
+function JarFillers() {
+  return (
+    <>
+      <UsersThree weight={DUO} x={88} y={26} size={44} className={styles.white} />
+      <Say x={110} y={84}>
+        providers
+      </Say>
+      <CoinJar x={188} y={26} symbol="ETH" amount="ETH" />
+      <CoinJar x={252} y={26} symbol="USDC" amount="USDC" />
+      <PathArrow
+        points={[
+          [140, 40],
+          [180, 40],
+        ]}
+        className={styles.amber}
+      />
+      <Say x={160} y={30} tone="amber">
+        fill
+      </Say>
+      <PathArrow
+        points={[
+          [180, 76],
+          [140, 76],
+        ]}
+        className={styles.up}
+      />
+      <Say x={160} y={94} tone="up">
+        fees
+      </Say>
+      <Say x={198} y={128}>
+        fill both, earn a share of fees
+      </Say>
+      <Say x={198} y={144} tone="down">
+        and can end with less than holding
+      </Say>
+    </>
+  );
+}
+
+/** A swap's costs, as a receipt */
+function SwapCosts() {
+  const rows = [
+    { y: 52, cost: 'pool fee', to: 'mostly to providers' },
+    { y: 76, cost: 'network fee', to: 'to the network' },
+    { y: 100, cost: 'price impact', to: 'worse price' },
+  ] as const;
+  return (
+    <>
+      <rect x="92" y="14" width="216" height="104" rx="8" className={styles.panel} />
+      <text x="106" y="32" className={`${styles.chipText} ${styles.white}`}>
+        A swap
+      </text>
+      {rows.map(({ y, cost, to }) => (
+        <g key={cost}>
+          <text x="106" y={y} className={`${styles.small} ${styles.amber}`}>
+            {cost}
+          </text>
+          <text x="294" y={y} textAnchor="end" className={`${styles.small} ${styles.white}`}>
+            {to}
+          </text>
+        </g>
+      ))}
+      <Say x={200} y={142}>
+        check the amount you will get
+      </Say>
+    </>
+  );
+}
+
+/** The same app on two chains, and a bridge between them */
+function OtherChains() {
+  return (
+    <>
+      <Road x1={84} x2={166} y={104} />
+      <Road x1={230} x2={312} y={104} />
+      <Storefront weight={DUO} x={104} y={48} size={42} className={styles.white} />
+      <Storefront weight={DUO} x={250} y={48} size={42} className={styles.white} />
+      <Say x={125} y={38}>
+        same app
+      </Say>
+      <Say x={271} y={38}>
+        same app
+      </Say>
+      <path
+        d="M168 100 Q198 70 228 100"
+        className={`${styles.stroke} ${styles.amber} ${styles.dashed}`}
+      />
+      <Say x={198} y={74} tone="amber">
+        bridge
+      </Say>
+      <Say x={125} y={132} tone="muted">
+        chain A
+      </Say>
+      <Say x={271} y={132} tone="muted">
+        chain B
+      </Say>
+      <Say x={198} y={150}>
+        check your network
+      </Say>
+    </>
+  );
+}
+
+/** Two web addresses one letter apart: the official one and a copy */
+function SiteCheck() {
+  return (
+    <>
+      <rect x="88" y="26" width="188" height="30" rx="15" className={styles.lockedPanel} />
+      <text x="104" y="45" className={`${styles.small} ${styles.white}`}>
+        swapdesk.example
+      </text>
+      <text x="260" y="46" textAnchor="middle" className={`${styles.chipText} ${styles.up}`}>
+        ✓
+      </text>
+      <rect x="88" y="72" width="188" height="30" rx="15" className={styles.brokenPanel} />
+      <text x="104" y="91" className={`${styles.small} ${styles.white}`}>
+        swapdesc.example
+      </text>
+      <text x="260" y="92" textAnchor="middle" className={`${styles.chipText} ${styles.down}`}>
+        ✕
+      </text>
+      <MagnifyingGlass weight={DUO} x={278} y={42} size={38} className={styles.white} />
+      <Say x={198} y={124}>
+        one letter off is another site
+      </Say>
+      <Say x={198} y={142} tone="muted">
+        use the official link
+      </Say>
+    </>
+  );
+}
+
+/** A wallet asking for an approval with no limit */
+function ApproveAsk() {
+  return (
+    <>
+      <rect x="100" y="12" width="196" height="108" rx="10" className={styles.panel} />
+      <text x="114" y="34" className={`${styles.chipText} ${styles.white}`}>
+        Your wallet asks
+      </text>
+      <text x="114" y="56" className={`${styles.small} ${styles.white}`}>
+        Approve USDC?
+      </text>
+      <text x="114" y="76" className={`${styles.small} ${styles.amber}`}>
+        Limit: no limit
+      </text>
+      <Warning weight={DUO} x={252} y={44} size={32} className={styles.amber} />
+      <rect x="114" y="88" width="76" height="20" rx="10" className={styles.badge} />
+      <text x="152" y="102" textAnchor="middle" className={styles.badgeText}>
+        Reject
+      </text>
+      <rect x="206" y="88" width="76" height="20" rx="10" className={styles.amberFill} />
+      <text x="244" y="102" textAnchor="middle" className={styles.tagText}>
+        Sign
+      </text>
+      <Say x={198} y={142}>
+        read it before you sign
+      </Say>
+    </>
+  );
+}
+
 // ─── The sneak peek's own graphic (owner 2026-11-22) ───
 // Each lesson's "What you will learn" card carries its own picture, derived from the lesson's topics:
 // a numbered path through three or four stops, one icon and a two-line label each, in the order of the
@@ -2116,6 +2608,12 @@ const PeekFees = peek([
   { Icon: ChartLineUp, line1: 'A real', line2: 'fee spike' },
   { Icon: MagnifyingGlass, line1: 'Check the', line2: 'fee' },
 ]);
+const PeekDapps = peek([
+  { Icon: Bank, line1: 'Using an', line2: 'exchange' },
+  { Icon: PlugsConnected, line1: 'DApps and', line2: 'swaps' },
+  { Icon: Jar, line1: 'Pools set', line2: 'prices' },
+  { Icon: ShieldCheck, line1: 'Stay', line2: 'safe' },
+]);
 
 const ART: Record<LessonArtId, () => JSX.Element> = {
   friends: Friends,
@@ -2181,6 +2679,19 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   chainsCompare: ChainsCompare,
   simpleComplex: SimpleComplex,
   feeCheck: FeeCheck,
+  cexMiddle: CexMiddle,
+  handOver: HandOver,
+  vending: Vending,
+  dappParts: DappParts,
+  webTwoThree: WebTwoThree,
+  swapSteps: SwapSteps,
+  twoJars: TwoJars,
+  jarPrice: JarPrice,
+  jarFillers: JarFillers,
+  swapCosts: SwapCosts,
+  otherChains: OtherChains,
+  siteCheck: SiteCheck,
+  approveAsk: ApproveAsk,
   peekOwnership: PeekOwnership,
   peekSwings: PeekSwings,
   peekStyle: PeekStyle,
@@ -2188,6 +2699,7 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   peekStable: PeekStable,
   peekWallets: PeekWallets,
   peekFees: PeekFees,
+  peekDapps: PeekDapps,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */

@@ -24,11 +24,12 @@ const el = <T extends HTMLElement>(anchor: Parameters<typeof guideSelector>[0], 
   document.querySelector<T>(guideSelector(anchor, key))!;
 
 describe('SiteNav (the public pages’ header links)', () => {
-  it('should link Blog, About us and Support to their pages (owner 2026-11-18)', () => {
+  it('should link Blog, About and Support to their pages (owner 2026-11-18)', () => {
     renderNav();
     expect(el('nav.how').getAttribute('href')).toBe('/how-it-works');
     expect(el('nav.blog').getAttribute('href')).toBe('/blog');
     expect(el('nav.about').getAttribute('href')).toBe('/about');
+    expect(el('nav.about').textContent).toBe('About');
     expect(el('nav.support').getAttribute('href')).toBe('/support');
   });
 

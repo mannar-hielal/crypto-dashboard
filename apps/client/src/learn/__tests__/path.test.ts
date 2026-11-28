@@ -48,7 +48,7 @@ describe('pathState', () => {
       'open',
     ]);
     expect(view.chapters[0].done).toBe(1);
-    expect(view.percent).toBe(9);
+    expect(view.percent).toBe(7);
   });
 
   it('should let a tour skipped on a phone stop blocking the path, without counting it as done', () => {
@@ -67,7 +67,7 @@ describe('pathState', () => {
       'current',
       'open',
     ]);
-    expect(view.percent).toBe(27);
+    expect(view.percent).toBe(20);
   });
 
   it('should keep Sell locked until Buy is done, then make it the next step (owner 2026-11-17)', () => {
@@ -124,7 +124,7 @@ describe('pathState', () => {
     expect(view.chapters[0].done).toBe(1);
     // Passing the checkpoint opens chapter 2: its first lesson is the next step (owner 2026-11-19)
     expect(view.current).toBe('lesson:lesson-coins');
-    expect(view.percent).toBe(9);
+    expect(view.percent).toBe(7);
   });
 
   it('should keep a chapter that is coming soon inert', () => {
@@ -144,7 +144,7 @@ describe('pathState', () => {
     expect(soon.firstIndex).toBe(7);
   });
 
-  it('should show chapter 2 as its built lessons, locked until chapter 1 is passed, then its unwritten stops as titles (owner 2026-11-19)', () => {
+  it('should show chapter 2 complete, with its checkpoint, locked until chapter 1 is passed (owner 2026-11-28)', () => {
     const view = pathState(empty());
     const two = view.chapters[1];
     expect(two.chapter.status).toBe('open');
@@ -154,11 +154,32 @@ describe('pathState', () => {
       'lesson:lesson-stablecoins=locked',
       'lesson:lesson-wallets=locked',
       'lesson:lesson-fees=locked',
+      'tour:find-the-fee=locked',
+      'lesson:lesson-dapps=locked',
+      'tour:try-a-swap=locked',
+      'checkpoint:checkpoint-ch2=locked',
     ]);
     expect(two.firstIndex).toBe(7);
-    const ch = two.chapter as Chapter & { status: 'open' };
-    // One lesson and the checkpoint are still to write, so the map shows them as titles only
-    expect(ch.soon?.map((n) => n.kind)).toEqual(['lesson', 'checkpoint']);
+    // Nothing in it is still to write
+    expect((two.chapter as Chapter & { status: 'open' }).soon).toBeUndefined();
+    // Passing chapter 1 opens it, and its checkpoint with it, to test out
+    const opened = pathState({ ...empty(), checkpoints: { 'checkpoint-ch1': true } }).chapters[1];
+    expect(opened.nodes.at(-1)).toMatchObject({ key: 'checkpoint:checkpoint-ch2', state: 'open' });
+  });
+
+  it('should count a chapter’s unwritten stops after its built ones, for the zig-zag', () => {
+    const open = CHAPTERS[0] as Chapter & { status: 'open' };
+    const partly: Chapter = { ...open, id: 'p', soon: [{ kind: 'lesson', title: 'Later' }] };
+    const view = pathState(empty(), [], [partly, open]);
+    expect(view.chapters[1].firstIndex).toBe(open.nodes.length + 1);
+  });
+
+  it('should tick chapter 2’s checkpoint once passed', () => {
+    const view = pathState({
+      ...empty(),
+      checkpoints: { 'checkpoint-ch1': true, 'checkpoint-ch2': true },
+    });
+    expect(view.chapters[1].nodes.at(-1)!.state).toBe('done');
   });
 
   it('should lock a later chapter until the one before it has its checkpoint passed', () => {
@@ -198,6 +219,11 @@ describe('pathState', () => {
 });
 
 describe('the map', () => {
+  it('should not call the practice swap a stop on the real chart: it is simulated (2026-11-28)', () => {
+    expect(onChart({ kind: 'tour', id: 'try-a-swap', access: FREE })).toBe(false);
+    expect(onChart({ kind: 'tour', id: 'find-the-fee', access: FREE })).toBe(true);
+  });
+
   it('should keep every chapter and checkpoint free today', () => {
     for (const c of CHAPTERS) {
       expect(c.access).toBe(FREE);

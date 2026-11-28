@@ -25,18 +25,18 @@ describe('PathWalk, drawn finished (no observer: a still browser, or reduced mot
     vi.unstubAllGlobals();
   });
 
-  it('should show every open stop done, and the two coming-soon ones locked', async () => {
+  it('should show every stop done: nothing on the path is still to write', async () => {
     const { container } = await renderWalk();
-    expect(stops(container)).toHaveLength(OPEN + 2);
+    expect(stops(container)).toHaveLength(OPEN);
     expect(done(container)).toHaveLength(OPEN);
-    expect(container.querySelectorAll('[class*="locked"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[class*="locked"]')).toHaveLength(0);
   });
 
   it('should count each chapter as complete on its card', async () => {
     const { container } = await renderWalk();
     const text = container.querySelector('svg')?.textContent ?? '';
     expect(text).toContain('Chapter 1 · 7 of 7 done');
-    expect(text).toContain('Chapter 2 · 4 of 4 done');
+    expect(text).toContain('Chapter 2 · 8 of 8 done');
   });
 
   it('should draw both guides, Pulin and Berwyn', async () => {
@@ -58,9 +58,7 @@ describe('PathWalk, drawn finished (no observer: a still browser, or reduced mot
       expect(screen.getByText(`Chapter ${c.number}: ${c.title}`, { exact: false })).not.toBeNull();
       for (const s of c.stops) expect(screen.getAllByText(s.title).length).toBeGreaterThan(0);
     }
-    expect(
-      screen.getByText('Trading without a middleman: DApps and pools (coming soon)')
-    ).not.toBeNull();
+    expect(screen.queryByText(/\(coming soon\)/)).toBeNull();
   });
 
   it('should offer no controls when there was nothing to play', async () => {
@@ -125,7 +123,7 @@ describe('PathWalk, played when it scrolls into view', () => {
     expect(early).toBeLessThan(OPEN);
     play(60000);
     expect(done(container)).toHaveLength(OPEN);
-    expect(container.querySelector('svg')?.textContent).toContain('Chapter 2 · 4 of 4 done');
+    expect(container.querySelector('svg')?.textContent).toContain('Chapter 2 · 8 of 8 done');
     expect(screen.getByRole('button', { name: 'Replay' })).not.toBeNull();
   });
 

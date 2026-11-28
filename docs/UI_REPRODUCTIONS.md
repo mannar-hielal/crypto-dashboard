@@ -362,7 +362,7 @@ Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the 
 
 1. Open the map ([nav.learn]) → Expect chapter 2 **Your crypto toolbox: coins, wallets and the networks behind them**: the
    lessons **Coins and tokens: who has their own road** and **Stablecoins: the coins that try to sit still** (open after the
-   checkpoint, one after the other), then three lesson titles and a checkpoint title as grey "coming soon" stops that can't be focused.
+   checkpoint, one after the other), then the chapter's later stops, ending on its checkpoint.
 2. [learn.card.start] the lesson → Expect screen 1 of 18, **What you will learn**: a numbered path of four stops (Coin or token, Token kinds, Altcoins and swings, Check fast gains), Pulin pointing, and four numbered lines (since 2026-11-22; it was the guides' chat). Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
    word _coin_ is a tappable term opening a peek), **The road needs upkeep** (a coin at a toll booth, "paid in the coin"),
    **The coins in our market** (eight purple ticker badges BTC ETH SOL BNB XRP ADA AVAX DOGE; LINK in an amber ring, "a token").
@@ -404,7 +404,7 @@ real feed for the practice buy.
 **UI reproduction** — as for Lesson 6 (a new account, chapter 1 passed, Lessons 5 and 6 done: Lesson 7 opens after them). No practice
 trade: nothing here starts a tour.
 
-1. Open the map → Expect Lesson 7 next after Lesson 6, and "Why sending crypto costs a fee" still a locked "coming soon" stop.
+1. Open the map → Expect Lesson 7 next after Lesson 6.
    [learn.card.start] it → Expect screen 1 of 25, **What you will learn**: a numbered path of four stops (Keys not coins, Who holds the key, Recovery phrase, Hot and cold), Pulin pointing, and four numbered lines.
 2. **A wallet holds keys, not coins** (a key ring beside mailboxes; the word _wallet_ a tappable term; Berwyn in glasses: "Think of it
    as a key ring…"), **Address and private key** (an address panel and a private key panel), **Who is who?** (Match boxes, four pairs).
@@ -428,7 +428,7 @@ trade: nothing here starts a tour.
 
 **UI reproduction** — as for Lesson 7 (a new account, chapter 1 passed, Lessons 5 to 7 done: Lesson 8 opens after them). No practice trade.
 
-1. Open the map → Expect Lesson 8 next after Lesson 7, and "Trading without a middleman: DApps and pools" still a locked "coming soon" stop.
+1. Open the map → Expect Lesson 8 next after Lesson 7.
    [learn.card.start] it → Expect screen 1 of 20, **What you will learn**: a numbered path of four stops (Send to confirmed, Why fees move, A real fee spike, Check the fee), Berwyn pointing, and four numbered lines.
 2. **Sending has a price** (coins to a mailbox with a "+ fee" tag; the words _network fee_ a tappable term), **A block is a bus** (a bus
    with six seats, five taken; Berwyn in glasses: "Think of it as a bus with limited seats…"), **Who picks the passengers?** (payments
@@ -447,6 +447,92 @@ trade: nothing here starts a tour.
 7. After three wrong tries on any question the right answer is shown. Phone (390 px): no sideways scroll; the pictures sit inside
    the picture box.
 
+### Learning path — Chapter 2, practical stop "Find the fee on your trade" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 8 (a new account, chapter 1 passed, Lessons 5 to 8 done: the stop opens after them), with
+the real feed. Also at 390 px. Since 2026-11-28.
+
+1. Open the map → Expect the dumbbell stop **Find the fee on your trade** next after Lesson 8, and Lesson 9 "Trading without a
+   middleman: DApps and pools" locked under it. [path.node `tour:find-the-fee`] → Expect the Spot BTC/USDT page and the
+   first bubble (a phone: **Buy / Long**; a larger screen: the form's Buy).
+2. [trade.type.market] → [trade.amount-unit `usdt`] → type 100 in [trade.amount] → [trade.submit] (the bubble ends "Next, we find
+   what it cost you."; under it, what to do when the order is refused: Skip tour, free some USDT, start the stop again).
+3. Expect **What just happened**: [account.tab `orderhistory`] → the top [order-history.row] (Side, Type, Fill Price, Status) → its
+   [order-history.row.commission] (a Bitcoin amount, "0.1% taker" under it) → the card comparing it with a network fee
+   (**One quick question**) → **Check yourself** → **A trading fee for the buy, and a network fee for the send** → **Finish** →
+   Expect the stop ticked on the map.
+   (On a short phone the Order History table shows one row: the cell's last line can sit partly under the Buy / Sell bar until
+   the table is scrolled or the panel dragged up.)
+4. Hide Commission with [account.columns] and replay the stop → the Commission step shows "…No Commission column? Turn it on with
+   the Customize columns button." and no ring. Phone: the ring brings the Commission cell into view inside the table, with no
+   sideways page scroll.
+
+### Learning path — Chapter 2, Lesson 9 "Trading without a middleman: DApps and pools" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 8 (a new account, chapter 1 passed, Lessons 5 to 8 and "Find the fee on your trade" done:
+Lesson 9 opens after them). No practice trade. Since 2026-11-28.
+
+1. Open the map → Expect Lesson 9 next after the fee practice. [learn.card.start] it → Expect screen 1 of 22, **What you will
+   learn**: a numbered path of four stops (Using an exchange, DApps and swaps, Pools set prices, Stay safe), Pulin pointing, and
+   four numbered lines.
+2. **The exchange in the middle** (a company between "you buy" and "they sell"), **What you hand over** (two panels; the word
+   _custody_ tappable), **Withdrawals paused** → **No: the company holds the keys, so she cannot for now**.
+3. **A machine with no shopkeeper** (a vending machine; _smart contract_ tappable; Berwyn in glasses: "Think of it as a vending
+   machine…"), **What is a DApp?** (wallet, website, contract; _DApp_ and _wallet_ tappable), **Web2 and Web3** (two panels),
+   **A swap with no order desk** (connect, check, sign), **Your swap, in order** (Drag and drop, four steps).
+4. **Two jars instead of a queue** (jars with the ETH and USDC logos; _liquidity pool_ tappable), **Scoop a token, move the
+   price** (before 10 and 20,000, after 9 and 22,222; Pulin's four steps: 10 × 20,000 = 200,000, 10 − 1 = 9,
+   200,000 ÷ 9 ≈ 22,222, 22,222 − 20,000 = 2,222), **Who fills the jars?** (_liquidity provider_ tappable), **What a swap
+   costs** (pool fee, network fee, price impact), **Who does what?** (Match boxes, four pairs), **Big pool, tiny pool** → **The
+   tiny pool moves your price more**.
+5. **Same app, other chains** (two roads and a bridge), **No help desk** (swapdesk.example ✓ and swapdesc.example ✕; the guide
+   looks worried), **Read before you sign** (a wallet asking for "no limit"). Then **Your call** → **Close it, and check on the
+   project's official site**, **What should make you stop?** (Pick, six tiles, pick three: the changed address, the recovery
+   phrase, the unknown site asking for all of a token), the summary, the journal line and the rating.
+6. Phone (390 px): no sideways scroll; the pictures sit inside the picture box.
+
+### Learning path — Chapter 2, practical stop "Try a swap with a practice wallet" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 9 (a new account, chapter 1 passed, Lesson 9 done: the stop opens after it). Simulated: no
+wallet, chain or paper account is touched. At 390, 820 and 1280 px. Since 2026-11-28.
+
+1. Open the map → Expect the dumbbell stop **Try a swap with a practice wallet** between Lesson 9 and the checkpoint, read out as
+   "Practice" (not "on the real chart"). [path.node `tour:try-a-swap`] → Expect [swap.panel] where the order form sits (a phone:
+   full screen; a tablet: a right-hand sheet), "Practice only: nothing here is real. Separate from your paper account.",
+   tabs **App** and **Wallet**, and no field that takes text. The Buy / Sell bar is hidden on a phone.
+2. [swap.connect] → [swap.amount `100` or `200`], read You get, Pool fee (0.30%), Price impact (0.50% / 0.99%), Minimum you get,
+   Network fees (2 × 0.0001 ETH) →
+   [swap.review] → Expect the sheet **Your wallet asks** rising at once over the dimmed app, a dot on **Wallet** ("wants an
+   answer" to a screen reader), and the guide's bubble above the sheet.
+3. [swap.reject] (or Esc) → "Rejected: this request did nothing. Saying no is always allowed." (after the permission was signed,
+   also "The permission you signed before is still there."), the dot gone, the guide still on its step → [swap.ask-again]. Tab
+   stays inside the sheet while it asks (from either radio, and after a click on its words); once refused, Tab leaves it. A
+   refused revoke also offers [swap.dismiss] **Close**.
+4. Pick [swap.limit `unlimited`] (or `exact`) → [swap.sign] → the swap's own request → [swap.sign] → "Waiting for a block…", then
+   "Confirmed" → **What just happened**: [swap.tab `wallet`] → [swap.balances] (USDC 400.00, ETH 0.0694 for 100) →
+   [swap.receipt] → [swap.permissions] → [swap.revoke] on an open permission (with "only this amount", **Practice Game**'s old one).
+5. **Clean up**: [swap.sign] → "Revoked: it can take nothing" → **Finish** → the panel closes, the order form comes back, and the
+   stop is ticked on the map (it is ticked once the swap is signed, even if the look is skipped).
+6. [swap.close] mid-way → the guide and the panel close; starting the stop again gives a fresh wallet (500 USDC, 0.02 ETH),
+   from the map during a run too. Another page and back keeps the wallet.
+7. The guide offers no **← Back** onto a connection or a signature already done. On a laptop, the Trade toggle, a position's or
+   order's edit pencil and Assets → Sell end the swap guide and do their own job.
+8. At 844 × 390 (a phone on its side) the panel scrolls as a whole and the bubble stands beside it, never over the button.
+
+### Learning path — Chapter 2's checkpoint "Checkpoint: wallets, fees and the networks" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 9 (a new account, chapter 1's checkpoint passed). Since 2026-11-28.
+
+1. Open the map → Expect the crown **Checkpoint: wallets, fees and the networks** at the end of chapter 2, open to test out (no
+   chapter 2 stop shows "coming soon" for it any more), and "Chapter 2 · 0 of 8 done" on a fresh chapter.
+2. [path.test-out] under chapter 2's first locked stop, or the crown → Expect 10 questions, "1 / 10", each explained once
+   answered, no second try.
+3. Answer three wrong, seven right → [checkpoint.result] "Not yet", "7 of 10 right", a **Review Lesson N →** button for each
+   lesson missed (Lessons 5 to 9; a second miss from the same lesson says "Taught in Lesson N"). [checkpoint.retry] starts again.
+4. Answer two wrong, eight right → "Checkpoint passed · 8 of 10 right"; [checkpoint.done] → the map with the crown ticked and the
+   rest of chapter 2 open but not ticked; the result says "More chapters are on the way." Reload → still ticked (version 1 saved).
+5. Phone (390 px): no sideways scroll.
+
 ### Learning path — the learning map (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`. The map is
@@ -455,15 +541,15 @@ trade: nothing here starts a tour.
 1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
    Sign out but no Learn.
 2. [nav.learn] → Expect **Crypto trading path** at 0 %, the legend (book = Lesson, dumbbell = Practice on the real
-   chart), chapter 1 "Start here: crypto and trading basics" in purple with "0 of 6 done", the zig-zag with
+   chart), chapter 1 "Start here: crypto and trading basics" in purple with "0 of 7 done", the zig-zag with
    **Start** and Pulin over Lesson 1, padlocks on the next four stops, a dumbbell on Lesson 3, "Buy your first coin" and
-   "Sell it and read the result", no "Hands-on" tag or badge anywhere, the crown open, and chapter 2 "Trade with a plan" greyed with "Coming soon" and dashed stops
-   nobody can tab to. Close and reopen → Expect no dot.
+   "Sell it and read the result", no "Hands-on" tag or badge anywhere, the crown open, and chapter 2 "Your crypto toolbox:
+   coins, wallets and the networks behind them" locked, ending on its crown. Close and reopen → Expect no dot.
    Open Lesson 1 to its sixth screen, close it, reload → Expect a ring about half round Lesson 1 (read back from the
    server) and **Continue**.
 3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “Up, down and your first trade” first." and no lesson.
    [path.chapter.info `ch1`] → Expect the seven stops with minutes and "What you’ll learn" (each lesson's summary lines).
-4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 14 %, **Continue** on Lesson 2,
+4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 7 %, **Continue** on Lesson 2,
    and the dot back on the Route icon before reopening.
 5. [path.test-out] → answer two wrong, eight right → Expect "Checkpoint passed · 8 of 10 right";
    [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked, except
@@ -486,7 +572,7 @@ trade: nothing here starts a tour.
    With no Bitcoin held (sold from Assets first, or the tour started from a failed checkpoint's **Review**): the
    second bubble shows "Open the Assets tab to find your Bitcoin. None there? You need some to sell: do “Buy your
    first coin” on the learning map first, then come back to this lesson." and no ring.
-8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
+8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per lesson missed (a tour's
    only on a larger screen), **Back to the path** full width and **Try again** under it.
 
 **Manual check (M).** The landing and features pages (rewrite, 2026-11-22), signed out, at 375, 412, 820 and 1440 px, no
@@ -537,9 +623,23 @@ sideways scroll at any width:
 **Manual check (M).** The public header (2026-11-18): on `/`, `/how-it-works`, `/blog` and `/about` at 1440 px [nav.product]
 opens Chart and Crypto path ([nav.how] sits between Product and Blog) (Esc closes it and the focus returns); [nav.blog], [nav.about] and [nav.support] link to
 their pages, the current one underlined; at 375 px [nav.menu] opens a full-width sheet of 44 px rows with Product
-expanding. `/about` and `/support` say "Coming soon." and are not indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
+expanding. [nav.about] reads **About** (since 2026-11-28); `/about` begins its "Hi, I am Mannar Hielal." part with "I am
+a frontend developer, and I live and work in Switzerland.…". `/support` says "Coming soon."; neither is indexed. The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the
 bubble (2026-11-17). Frequency: per release touching `learn/Path*`, `learn/CheckpointSheet.tsx` or `guide/tours.ts`.
+
+### The voluntary tip (2026-11-28)
+
+**Manual check (M).** On `/`, `/how-it-works` and `/about` the footer has **Support the app**; sign-in, register and the
+legal pages don't. At 375, 412, 820 and 1440 px:
+
+1. Click it from the bottom of `/`: `/about` opens with "Enjoying the app?" just below the top bar. Scroll away and
+   click it again: the page returns there.
+2. The section sits between your introduction and "Create free account": the heading, "You can leave a one-time tip
+   through PayPal…" and the outline button [about.tip], centred, nothing clipped, no sideways scroll.
+3. The button opens `paypal.me/mannarhielal` in a new tab (check the name shown is the owner's; send nothing).
+4. `/terms` reads version 1.2 and `/privacy` 1.8, each with its sentences about tips. Frequency: per release touching
+   `TipSection`, `Footer`, `TermsPage` or `PrivacyPage`.
 
 ### Report a bug (2026-11-25)
 

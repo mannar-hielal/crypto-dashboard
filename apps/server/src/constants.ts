@@ -40,6 +40,8 @@ export const LEARN_ITEM_IDS = [
   'primer',
   'buy-first-coin',
   'sell-and-review',
+  'find-the-fee',
+  'try-a-swap',
   'welcome-card',
   'fill-email-offer',
   'lesson-01',
@@ -50,12 +52,26 @@ export const LEARN_ITEM_IDS = [
   'lesson-stablecoins',
   'lesson-wallets',
   'lesson-fees',
+  'lesson-dapps',
   // A chapter's checkpoint on the learning path: passed, it opens the next chapter
   'checkpoint-ch1',
+  'checkpoint-ch2',
 ] as const;
 
 /** The guided tours (the offers have no steps) */
-export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
+export const LEARN_TOUR_IDS = [
+  'primer',
+  'buy-first-coin',
+  'sell-and-review',
+  'find-the-fee',
+  'try-a-swap',
+] as const;
+
+/**
+ * The tours the `all-tours` badge asks for: the three it asked for before chapter 2's practical stops
+ * (2026-11-28). Whether those count too is the owner's open call; until then an earned badge stays.
+ */
+export const ALL_TOURS_BADGE_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
 
 /** The lessons (cards → a tour → questions → a journal line); mirrors `LESSON_IDS` in the client */
 export const LEARN_LESSON_IDS = [
@@ -67,6 +83,7 @@ export const LEARN_LESSON_IDS = [
   'lesson-stablecoins',
   'lesson-wallets',
   'lesson-fees',
+  'lesson-dapps',
 ] as const;
 
 /**
@@ -97,10 +114,11 @@ export const LESSON_FIRST_STEP: Record<(typeof LEARN_LESSON_IDS)[number], number
   'lesson-stablecoins': 61,
   'lesson-wallets': 61,
   'lesson-fees': 61,
+  'lesson-dapps': 61,
 };
 
 /** The learning path's chapter checkpoints: progress only, never events */
-export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
+export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1', 'checkpoint-ch2'] as const;
 
 /**
  * Each checkpoint's question set version: a pass carries it as its `step` (held to the SDK's
@@ -109,6 +127,7 @@ export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
  */
 export const CHECKPOINT_VERSION: Record<(typeof LEARN_CHECKPOINT_IDS)[number], number> = {
   'checkpoint-ch1': 3,
+  'checkpoint-ch2': 1,
 };
 
 /** Events are only accepted for these: a lesson reports its screens like a tour reports its steps */

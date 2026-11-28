@@ -71,8 +71,7 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     // Chapter 2 (owner 2026-11-19): the benchmark's topic order, our own title and lesson titles. It
     // replaces the "Trade with a plan" placeholder, whose topics (limit orders, stop-loss and
-    // take-profit, risk, scams) move to a later chapter. Built lesson by lesson: the lessons still
-    // to write are `soon` titles
+    // take-profit, risk, scams) move to a later chapter. Built stop by stop (owner 2026-11-19)
     id: 'ch2',
     number: 2,
     title: 'Your crypto toolbox: coins, wallets and the networks behind them',
@@ -84,10 +83,12 @@ export const CHAPTERS: readonly Chapter[] = [
       { kind: 'lesson', id: 'lesson-stablecoins', access: FREE },
       { kind: 'lesson', id: 'lesson-wallets', access: FREE },
       { kind: 'lesson', id: 'lesson-fees', access: FREE },
-    ],
-    soon: [
-      { kind: 'lesson', title: 'Trading without a middleman: DApps and pools' },
-      { kind: 'checkpoint', title: 'Checkpoint: wallets, fees and the networks' },
+      // The practical stop after the fees lesson (owner 2026-11-28): a practice buy, then its fee
+      { kind: 'tour', id: 'find-the-fee', access: FREE },
+      { kind: 'lesson', id: 'lesson-dapps', access: FREE },
+      // The practical stop after DApps (owner 2026-11-28): a swap with a practice wallet, simulated
+      { kind: 'tour', id: 'try-a-swap', access: FREE },
+      { kind: 'checkpoint', id: 'checkpoint-ch2', access: FREE },
     ],
   },
 ];
@@ -112,6 +113,17 @@ export function missingPrerequisite(
 ): PathTourId | null {
   const needs = NEEDS_DONE[id];
   return needs && toursDone[needs] !== true ? needs : null;
+}
+
+/** Whether passing this checkpoint opens a chapter that is written (an `open` one after its own) */
+export function opensAnotherChapter(
+  id: CheckpointId,
+  chapters: readonly Chapter[] = CHAPTERS
+): boolean {
+  const at = chapters.findIndex(
+    (c) => c.status === 'open' && c.nodes.some((n) => n.kind === 'checkpoint' && n.id === id)
+  );
+  return at !== -1 && chapters[at + 1]?.status === 'open';
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -205,9 +217,13 @@ export function nodeTitle(node: BuiltNode): string {
   }
 }
 
-/** A stop done on the real chart: practice, or a lesson whose "Try it" is a tour there (Lesson 3) */
+/**
+ * A stop done on the real chart: practice, or a lesson whose "Try it" is a tour there (Lesson 3).
+ * Not the practice swap, which is simulated in its own panel and never touches the chart
+ */
 export function onChart(node: BuiltNode): boolean {
-  return node.kind === 'tour' || (node.kind === 'lesson' && getLesson(node.id).tour !== undefined);
+  if (node.kind === 'tour') return node.id !== 'try-a-swap';
+  return node.kind === 'lesson' && getLesson(node.id).tour !== undefined;
 }
 
 function nodeMinutes(node: BuiltNode): number {

@@ -49,9 +49,9 @@ describe('layoutWalk', () => {
     const ch1 = l.nodes.filter((n) => n.chapter === 0);
     const ch2 = l.nodes.filter((n) => n.chapter === 1);
     expect(ch1).toHaveLength(7);
-    expect(ch2).toHaveLength(6);
+    expect(ch2).toHaveLength(8);
     expect(ch1[6].x).toBeGreaterThan(ch1[0].x);
-    expect(ch2[5].x).toBeLessThan(ch2[0].x);
+    expect(ch2[7].x).toBeLessThan(ch2[0].x);
     expect(ch2[0].y).toBeGreaterThan(ch1[0].y + STOP_R * 2);
   });
 
@@ -96,11 +96,18 @@ describe('layoutWalk', () => {
   });
 
   it('should walk the open stops only, and leave the coming-soon ones locked', () => {
-    const l = layoutWalk(1100);
-    const open = PATH_WALK_CHAPTERS.reduce((n, c) => n + c.stops.length, 0);
+    // Every stop is open today: one still to write is given to chapter 2 here
+    const chapters = [
+      PATH_WALK_CHAPTERS[0],
+      { ...PATH_WALK_CHAPTERS[1], soon: [{ kind: 'lesson' as const, title: 'A lesson to come' }] },
+    ];
+    const l = layoutWalk(1100, chapters);
+    const open = chapters.reduce((n, c) => n + c.stops.length, 0);
     expect(l.built).toHaveLength(open);
-    expect(l.nodes.filter((n) => n.soon)).toHaveLength(2);
+    expect(l.nodes.filter((n) => n.soon)).toHaveLength(1);
     expect(l.nodes[l.built[l.built.length - 1] + 1].soon).toBe(true);
+    // Today's path: all open, none locked
+    expect(layoutWalk(1100).nodes.filter((n) => n.soon)).toHaveLength(0);
   });
 
   it('should keep the caption under the dots inside the drawing, on every width', () => {
@@ -232,6 +239,6 @@ describe('PathRun', () => {
   });
 
   it('should end a chapter at its last open stop', () => {
-    expect(chapterEnds()).toEqual({ 6: 0, 10: 1 });
+    expect(chapterEnds()).toEqual({ 6: 0, 14: 1 });
   });
 });

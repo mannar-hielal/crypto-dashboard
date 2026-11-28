@@ -280,6 +280,30 @@ describe('/api/learn/progress', () => {
     expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
   });
 
+  it('PUT: should take chapter 2’s checkpoint pass at its version 1 only (owner 2026-11-28)', async () => {
+    vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
+      itemId: 'checkpoint-ch2',
+      status: 'completed',
+      updatedAt: AT,
+    } as never);
+    const put = (payload: unknown) =>
+      app.inject({
+        method: 'PUT',
+        url: '/api/learn/progress/checkpoint-ch2',
+        headers: auth(),
+        payload: payload as never,
+      });
+    expect((await put({ status: 'completed' })).statusCode).toBe(409);
+    expect((await put({ status: 'completed', step: 2 })).statusCode).toBe(400);
+    expect((await put({ status: 'started', step: 1 })).statusCode).toBe(400);
+    expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
+    const res = await put({ status: 'completed', step: 1 });
+    expect(res.statusCode).toBe(200);
+    expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { status: 'completed', step: 1 } })
+    );
+  });
+
   it('PUT dismissed: only creates, so it never overwrites a completion', async () => {
     vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
       itemId: 'welcome-card',
@@ -605,6 +629,7 @@ describe('/api/learn/progress', () => {
       'lesson-stablecoins',
       'lesson-wallets',
       'lesson-fees',
+      'lesson-dapps',
     ]) {
       const url = `/api/learn/progress/${id}`;
       expect((await put(url, { status: 'started', step: 21 })).statusCode, id).toBe(409);

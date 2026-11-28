@@ -1,0 +1,14 @@
+/* What the tip section adds to the shared landing styles (components/landing/landing.module.css) */
+
+.title {
+  scroll-margin-top: 80px; /* below the sticky top bar when the footer link jumps here */
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+.link {
+  gap: 8px;
+}
