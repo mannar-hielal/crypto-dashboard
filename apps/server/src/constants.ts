@@ -41,6 +41,7 @@ export const LEARN_ITEM_IDS = [
   'buy-first-coin',
   'sell-and-review',
   'find-the-fee',
+  'try-a-swap',
   'welcome-card',
   'fill-email-offer',
   'lesson-01',
@@ -63,6 +64,7 @@ export const LEARN_TOUR_IDS = [
   'buy-first-coin',
   'sell-and-review',
   'find-the-fee',
+  'try-a-swap',
 ] as const;
 
 /**

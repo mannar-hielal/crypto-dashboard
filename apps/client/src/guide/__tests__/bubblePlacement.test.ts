@@ -42,6 +42,22 @@ describe('placeBubble', () => {
     expect(row).toMatchObject({ placement: 'below', top: 172 });
   });
 
+  it('should stand beside a tall control in a docked panel on a short screen, never over it', () => {
+    // 844 x 390: a 320 px panel on the right, its request taking most of the height
+    const target = { top: 130, left: 530, width: 308, height: 250 };
+    const bubble = { width: 340, height: 220 };
+    const p = placeBubble(target, bubble, { width: 844, height: 390 });
+    expect(p.placement).toBe('beside');
+    expect(p.left + bubble.width).toBeLessThanOrEqual(target.left);
+    expect(p.top).toBeLessThanOrEqual(390 - 220 - 8);
+    // A shorter one with no room above or below stands beside too
+    const short = placeBubble({ ...target, top: 150, height: 150 }, bubble, {
+      width: 844,
+      height: 390,
+    });
+    expect(short.placement).toBe('beside');
+  });
+
   it('should centre the bubble when there is no control', () => {
     const p = placeBubble(null, BUBBLE, VIEWPORT);
     expect(p).toEqual({ top: 320, left: 470, placement: 'center' });

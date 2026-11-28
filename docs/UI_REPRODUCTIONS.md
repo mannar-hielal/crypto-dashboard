@@ -491,12 +491,40 @@ Lesson 9 opens after them). No practice trade. Since 2026-11-28.
    phrase, the unknown site asking for all of a token), the summary, the journal line and the rating.
 6. Phone (390 px): no sideways scroll; the pictures sit inside the picture box.
 
+### Learning path — Chapter 2, practical stop "Try a swap with a practice wallet" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 9 (a new account, chapter 1 passed, Lesson 9 done: the stop opens after it). Simulated: no
+wallet, chain or paper account is touched. At 390, 820 and 1280 px. Since 2026-11-28.
+
+1. Open the map → Expect the dumbbell stop **Try a swap with a practice wallet** between Lesson 9 and the checkpoint, read out as
+   "Practice" (not "on the real chart"). [path.node `tour:try-a-swap`] → Expect [swap.panel] where the order form sits (a phone:
+   full screen; a tablet: a right-hand sheet), "Practice only: nothing here is real.", tabs **App** and **Wallet**, and no field
+   that takes text. The Buy / Sell bar is hidden on a phone.
+2. [swap.connect] → [swap.amount `100` or `200`], read You get, Pool fee (0.30%), Price impact (0.50% / 0.99%), Minimum you get,
+   Network fees (2 × 0.0001 ETH) →
+   [swap.review] → Expect the sheet **Your wallet asks** rising at once over the dimmed app, a dot on **Wallet** ("wants an
+   answer" to a screen reader), and the guide's bubble above the sheet.
+3. [swap.reject] (or Esc) → "Rejected: this request did nothing. Saying no is always allowed." (after the permission was signed,
+   also "The permission you signed before is still there."), the dot gone, the guide still on its step → [swap.ask-again]. Tab
+   stays inside the sheet while it asks (from either radio, and after a click on its words); once refused, Tab leaves it. A
+   refused revoke also offers [swap.dismiss] **Close**.
+4. Pick [swap.limit `unlimited`] (or `exact`) → [swap.sign] → the swap's own request → [swap.sign] → "Waiting for a block…", then
+   "Confirmed" → **What just happened**: [swap.tab `wallet`] → [swap.balances] (USDC 400.00, ETH 0.0694 for 100) →
+   [swap.receipt] → [swap.permissions] → [swap.revoke] on an open permission (with "only this amount", **Practice Game**'s old one).
+5. **Clean up**: [swap.sign] → "Revoked: it can take nothing" → **Finish** → the panel closes, the order form comes back, and the
+   stop is ticked on the map (it is ticked once the swap is signed, even if the look is skipped).
+6. [swap.close] mid-way → the guide and the panel close; starting the stop again gives a fresh wallet (500 USDC, 0.02 ETH),
+   from the map during a run too. Another page and back keeps the wallet.
+7. The guide offers no **← Back** onto a connection or a signature already done. On a laptop, the Trade toggle, a position's or
+   order's edit pencil and Assets → Sell end the swap guide and do their own job.
+8. At 844 × 390 (a phone on its side) the panel scrolls as a whole and the bubble stands beside it, never over the button.
+
 ### Learning path — Chapter 2's checkpoint "Checkpoint: wallets, fees and the networks" (no Part B rows yet)
 
 **UI reproduction** — as for Lesson 9 (a new account, chapter 1's checkpoint passed). Since 2026-11-28.
 
 1. Open the map → Expect the crown **Checkpoint: wallets, fees and the networks** at the end of chapter 2, open to test out (no
-   chapter 2 stop shows "coming soon" for it any more), and "Chapter 2 · 0 of 7 done" on a fresh chapter.
+   chapter 2 stop shows "coming soon" for it any more), and "Chapter 2 · 0 of 8 done" on a fresh chapter.
 2. [path.test-out] under chapter 2's first locked stop, or the crown → Expect 10 questions, "1 / 10", each explained once
    answered, no second try.
 3. Answer three wrong, seven right → [checkpoint.result] "Not yet", "7 of 10 right", a **Review Lesson N →** button for each

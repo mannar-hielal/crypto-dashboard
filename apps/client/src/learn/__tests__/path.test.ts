@@ -67,7 +67,7 @@ describe('pathState', () => {
       'current',
       'open',
     ]);
-    expect(view.percent).toBe(21);
+    expect(view.percent).toBe(20);
   });
 
   it('should keep Sell locked until Buy is done, then make it the next step (owner 2026-11-17)', () => {
@@ -156,6 +156,7 @@ describe('pathState', () => {
       'lesson:lesson-fees=locked',
       'tour:find-the-fee=locked',
       'lesson:lesson-dapps=locked',
+      'tour:try-a-swap=locked',
       'checkpoint:checkpoint-ch2=locked',
     ]);
     expect(two.firstIndex).toBe(7);
@@ -218,6 +219,11 @@ describe('pathState', () => {
 });
 
 describe('the map', () => {
+  it('should not call the practice swap a stop on the real chart: it is simulated (2026-11-28)', () => {
+    expect(onChart({ kind: 'tour', id: 'try-a-swap', access: FREE })).toBe(false);
+    expect(onChart({ kind: 'tour', id: 'find-the-fee', access: FREE })).toBe(true);
+  });
+
   it('should keep every chapter and checkpoint free today', () => {
     for (const c of CHAPTERS) {
       expect(c.access).toBe(FREE);

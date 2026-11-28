@@ -13,6 +13,7 @@ import {
   PRACTICE_TOUR_IDS,
   tourSteps,
   backIndex,
+  isSwapTour,
 } from '@/guide/tours';
 
 describe('tours', () => {
@@ -123,6 +124,67 @@ describe('tours', () => {
       /as a withdrawal fee, which may be different from the network cost/
     );
     expect(quiz.options[quiz.correct]).toMatch(/trading fee for the buy, and a network fee/);
+  });
+
+  it('should walk the practice swap: connect, swap, then the Wallet tab and the revoke (owner 2026-11-28)', () => {
+    const chain = ['try-a-swap', 'review-swap', 'review-swap-clean'] as const;
+    expect(getTour('try-a-swap').next).toBe('review-swap');
+    expect(getTour('review-swap').next).toBe('review-swap-clean');
+    expect(getTour('review-swap-clean').next).toBeUndefined();
+    for (const id of chain) {
+      expect(getTour(id).phoneReady, id).toBe(true);
+      expect(isSwapTour(id), id).toBe(true);
+      for (const s of getTour(id).steps) {
+        if (s.clickAnchor) expect(isGuideAnchor(s.clickAnchor), s.id).toBe(true);
+      }
+    }
+    expect(isSwapTour('find-the-fee')).toBe(false);
+    expect(isSwapTour(null)).toBe(false);
+    const where = (id: (typeof chain)[number]) =>
+      getTour(id).steps.map((s) => [s.kind, s.anchor, s.clickAnchor ?? s.key]);
+    expect(where('try-a-swap')).toEqual([
+      ['click', 'swap.connect', undefined],
+      ['click', 'swap.offer', 'swap.review'],
+      ['click', 'swap.request', 'swap.sign'],
+      ['click', 'swap.request', 'swap.sign'],
+    ]);
+    // What just happened, then the clean-up, both on the Wallet tab (the owner's condition)
+    expect(where('review-swap')).toEqual([
+      ['click', 'swap.tab', 'wallet'],
+      ['observe', 'swap.balances', undefined],
+      ['observe', 'swap.receipt', undefined],
+      ['observe', 'swap.permissions', undefined],
+      ['click', 'swap.permissions', 'swap.revoke'],
+    ]);
+    expect(where('review-swap-clean')).toEqual([
+      ['click', 'swap.request', 'swap.sign'],
+      ['observe', 'swap.permissions', undefined],
+    ]);
+    // No Revoke button left (one pressed early): the step says how to leave
+    expect(getTour('review-swap').steps.at(-1)!.text).toMatch(
+      /No Revoke button left\? Press Skip tour/
+    );
+    // 🔐 It says up front that nothing is real and no address or secret words are asked for
+    expect(getTour('try-a-swap').steps[0].text).toMatch(
+      /nothing here is real.*never asks for your recovery phrase.*does not let the app take your tokens/
+    );
+  });
+
+  it('should never go back to a wallet action already done, nor tell anyone to leave over a tab (review 2026-11-28)', () => {
+    const main = getTour('try-a-swap').steps;
+    expect(main.every((s) => s.once)).toBe(true);
+    const done = main.map((s) => s.id);
+    for (let i = 0; i < main.length; i++) expect(backIndex(main, i, done)).toBeNull();
+    const look = getTour('review-swap').steps;
+    expect(look.map((s) => !!s.once)).toEqual([false, false, false, false, true]);
+    // Reading steps may be reread
+    expect(backIndex(look, 3, [look[0].id, look[1].id, look[2].id])).toBe(2);
+    const clean = getTour('review-swap-clean').steps;
+    expect(backIndex(clean, 1, [clean[0].id])).toBeNull();
+    expect(main.slice(0, 2).map((s) => s.missingHint)).toEqual([
+      'Open the App tab.',
+      'Open the App tab.',
+    ]);
   });
 
   it('should keep the lessons’ looks out of the saved, reported tours, on the lesson’s own page, on phones too', () => {

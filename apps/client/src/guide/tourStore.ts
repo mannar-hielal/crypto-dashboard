@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { useSwapStore } from '@/practice/swapStore';
 import {
   backIndex,
   getTour,
@@ -86,6 +87,9 @@ export const useTourStore = create<TourState>()((set, get) => ({
   ...initial,
 
   start: (id) => {
+    // A fresh practice wallet for each run of the swap stop, and only then: a panel that comes back
+    // (another page and back) keeps the wallet the guide's step is about
+    if (id === 'try-a-swap') useSwapStore.getState().reset();
     const wide = isWideScreen();
     set({
       activeId: id,

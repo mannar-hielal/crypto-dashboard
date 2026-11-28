@@ -168,14 +168,22 @@ describe('PathDrawer', () => {
       renderDrawer();
       const stop = screen.getByText('A lesson to come').closest('li')!;
       expect(stop.textContent).toContain('(coming soon)');
-      expect(screen.getByText(/Chapter 2 · 0 of 8 done/)).toBeTruthy();
+      expect(screen.getByText(/Chapter 2 · 0 of 9 done/)).toBeTruthy();
     });
+  });
+
+  it('should show the practice swap as practice, not as a stop on the real chart', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    const label = nodeButton('tour:try-a-swap').getAttribute('aria-label')!;
+    expect(label).toContain('Practice: Try a swap with a practice wallet');
+    expect(label).not.toContain('real chart');
   });
 
   it('should show chapter 2 whole, ending on its checkpoint', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    expect(screen.getByText(/Chapter 2 · 0 of 7 done/)).toBeTruthy();
+    expect(screen.getByText(/Chapter 2 · 0 of 8 done/)).toBeTruthy();
     expect(nodeButton('checkpoint:checkpoint-ch2').getAttribute('aria-label')).toContain(
       'Checkpoint: wallets, fees and the networks'
     );

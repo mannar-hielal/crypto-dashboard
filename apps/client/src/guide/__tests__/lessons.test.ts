@@ -1315,7 +1315,7 @@ describe('lessons', () => {
     // The sneak peek matches the summary: four lines each, and the way on is what the map shows next
     expect(l.cards[0].preview).toHaveLength(4);
     expect(l.recap?.points).toHaveLength(4);
-    expect(l.recap?.highlight?.text).toMatch(/Next up: the chapter checkpoint/);
+    expect(l.recap?.highlight?.text).toMatch(/Next up: try a swap with a practice wallet/);
     expect(l.next).toBeUndefined();
   });
 
