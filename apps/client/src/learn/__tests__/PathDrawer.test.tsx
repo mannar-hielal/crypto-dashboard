@@ -38,6 +38,7 @@ import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson, lessonScreens } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
 import { guideSelector } from '@/lib/guideAnchors';
+import { CHAPTERS, type Chapter } from '@/learn/path';
 import { PathDrawer } from '@/learn/PathDrawer';
 import { usePathStore } from '@/learn/pathStore';
 
@@ -144,20 +145,48 @@ describe('PathDrawer', () => {
     expect(screen.getByText('Finish “Buy your first coin” first.')).toBeTruthy();
   });
 
-  it('should never make a coming-soon stop focusable', () => {
-    useTourStore.setState({ panelOpen: true });
-    renderDrawer();
-    const stop = screen.getByText('Checkpoint: wallets, fees and the networks').closest('li')!;
-    expect(stop.querySelectorAll('button')).toHaveLength(0);
+  describe('a stop still to write', () => {
+    // No chapter has one today: given to chapter 2 for these tests, then taken back
+    const two = CHAPTERS[1] as Chapter & { status: 'open' };
+    beforeEach(() => {
+      two.soon = [{ kind: 'lesson', title: 'A lesson to come' }];
+    });
+    afterEach(() => {
+      delete two.soon;
+    });
+
+    it('should never make a coming-soon stop focusable', () => {
+      useTourStore.setState({ panelOpen: true });
+      renderDrawer();
+      const stop = screen.getByText('A lesson to come').closest('li')!;
+      expect(stop.querySelectorAll('button')).toHaveLength(0);
+    });
+
+    it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
+      // Review fix 2026-11-19: an open chapter counts the stops still to come
+      useTourStore.setState({ panelOpen: true });
+      renderDrawer();
+      const stop = screen.getByText('A lesson to come').closest('li')!;
+      expect(stop.textContent).toContain('(coming soon)');
+      expect(screen.getByText(/Chapter 2 · 0 of 8 done/)).toBeTruthy();
+    });
   });
 
-  it('should tell a screen reader a coming-soon stop is not built yet, and count it in the chapter', () => {
-    // Review fix 2026-11-19: chapter 2 is open with six built stops and one stop still to come
+  it('should show chapter 2 whole, ending on its checkpoint', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
-    const stop = screen.getByText('Checkpoint: wallets, fees and the networks').closest('li')!;
-    expect(stop.textContent).toContain('(coming soon)');
     expect(screen.getByText(/Chapter 2 · 0 of 7 done/)).toBeTruthy();
+    expect(nodeButton('checkpoint:checkpoint-ch2').getAttribute('aria-label')).toContain(
+      'Checkpoint: wallets, fees and the networks'
+    );
+  });
+
+  it('should say a locked chapter’s checkpoint waits for the chapter before, not for its last lesson', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(nodeButton('checkpoint:checkpoint-ch2'));
+    expect(screen.getByText('Pass the checkpoint of the chapter before it first.')).toBeTruthy();
+    expect(usePathStore.getState().checkpointId).toBeNull();
   });
 
   it('should offer the checkpoint under the first locked stop, and open it', () => {

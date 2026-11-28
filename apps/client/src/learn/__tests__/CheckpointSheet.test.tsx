@@ -16,6 +16,7 @@ import { useTourStore } from '@/guide/tourStore';
 import { guideSelector } from '@/lib/guideAnchors';
 import { CheckpointSheet } from '@/learn/CheckpointSheet';
 import { getCheckpoint } from '@/learn/checkpoints';
+import { LESSONS } from '@/guide/lessons';
 import { usePathStore } from '@/learn/pathStore';
 
 const checkpoint = getCheckpoint('checkpoint-ch1');
@@ -77,6 +78,8 @@ describe('CheckpointSheet', () => {
 
     expect(screen.getByText('Checkpoint passed')).toBeTruthy();
     expect(screen.getByText('8 of 10 right')).toBeTruthy();
+    // Chapter 2 is written: the pass says it is open (review 2026-11-28)
+    expect(screen.getByText(/and the next chapter is open\./)).toBeTruthy();
     expect(usePathStore.getState().checkpoints).toEqual({ 'checkpoint-ch1': true });
     expect(document.querySelector(guideSelector('checkpoint.retry'))).toBeNull();
 
@@ -187,5 +190,78 @@ describe('CheckpointSheet', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(usePathStore.getState().checkpointId).toBeNull();
     expect(useTourStore.getState().panelOpen).toBe(true);
+  });
+});
+
+describe('chapter 2’s checkpoint (owner 2026-11-28)', () => {
+  const two = getCheckpoint('checkpoint-ch2');
+
+  beforeEach(() => {
+    usePathStore.getState().reset();
+    useTourStore.getState().reset();
+    useLessonStore.getState().reset();
+  });
+  afterEach(() => cleanup());
+
+  const answerTwo = (wrong: number) => {
+    two.questions.forEach((q, i) => {
+      const pick = i < wrong ? (q.correct + 1) % q.options.length : q.correct;
+      fireEvent.click(document.querySelector(guideSelector('lesson.option', String(pick)))!);
+      fireEvent.click(document.querySelector(guideSelector('checkpoint.next'))!);
+    });
+  };
+
+  it('should ask ten questions, pass at eight, from the chapter’s five lessons, in version 1', () => {
+    expect(two.title).toBe('Checkpoint: wallets, fees and the networks');
+    expect([two.questions.length, two.pass, two.version]).toEqual([10, 8, 1]);
+    const taught = two.questions.map((q) => q.taughtIn.id);
+    const count = (id: string) => taught.filter((t) => t === id).length;
+    expect([
+      count('lesson-coins'),
+      count('lesson-stablecoins'),
+      count('lesson-wallets'),
+      count('lesson-fees'),
+      count('lesson-dapps'),
+    ]).toEqual([3, 2, 2, 1, 2]);
+  });
+
+  it('should give each question three different options, a why, and no one position for the answer', () => {
+    for (const q of two.questions) {
+      expect(new Set(q.options).size, q.question).toBe(3);
+      expect(q.explain.trim().length, q.question).toBeGreaterThan(0);
+      expect(q.correct, q.question).toBeLessThan(3);
+    }
+    for (const at of [0, 1, 2])
+      expect(two.questions.filter((q) => q.correct === at).length).toBeGreaterThanOrEqual(3);
+    // A missed question is listed on the result without its context, so none needs one
+    for (const q of two.questions) expect(q.context, q.question).toBeUndefined();
+    // New situations: no question repeats one a lesson of the chapter asks
+    const asked = LESSONS.flatMap((l) => [
+      l.moment,
+      ...l.checks,
+      ...l.cards.flatMap((c) => (c.quiz ? [c.quiz] : [])),
+    ]).map((q) => q.question);
+    for (const q of two.questions) expect(asked).not.toContain(q.question);
+  });
+
+  it('should pass at eight right and record it', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch2');
+    renderSheet();
+    answerTwo(2);
+    expect(screen.getByText('8 of 10 right')).toBeTruthy();
+    // No chapter after it yet
+    expect(screen.getByText(/to revisit\. More chapters are on the way\./)).toBeTruthy();
+    expect(usePathStore.getState().checkpoints).toEqual({ 'checkpoint-ch2': true });
+  });
+
+  it('should not pass at seven, and point back to the lessons', () => {
+    usePathStore.getState().startCheckpoint('checkpoint-ch2');
+    renderSheet();
+    answerTwo(3);
+    expect(screen.getByText('Not yet')).toBeTruthy();
+    expect(usePathStore.getState().checkpoints).toEqual({});
+    // The three missed: Lesson 5 (coins), Lesson 7 (wallets) and Lesson 6 (stablecoins)
+    for (const id of ['lesson-coins', 'lesson-wallets', 'lesson-stablecoins'])
+      expect(document.querySelector(guideSelector('checkpoint.review', id)), id).not.toBeNull();
   });
 });

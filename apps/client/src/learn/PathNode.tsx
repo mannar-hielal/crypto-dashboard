@@ -109,10 +109,14 @@ export function PathNode({
   let note: ReactNode = null;
   if (state === 'locked') {
     // (The stop before: right for NEEDS_DONE too while each prerequisite sits just before its stop,
-    // Buy before Sell. A stop placed between them carries its own reason; weighed, review after #311)
-    note = previousTitle
-      ? `Finish “${previousTitle}” first.`
-      : 'Finish the chapter before it first.';
+    // Buy before Sell. A stop placed between them carries its own reason; weighed, review after #311.)
+    // A checkpoint is only ever locked with its whole chapter: the stop before it isn't what opens it
+    note =
+      node.kind === 'checkpoint'
+        ? 'Pass the checkpoint of the chapter before it first.'
+        : previousTitle
+          ? `Finish “${previousTitle}” first.`
+          : 'Finish the chapter before it first.';
   } else if (state === 'pro') {
     note =
       'This is part of a future Pro plan. Everything you need to learn to trade stays free, and nothing is sold yet.';

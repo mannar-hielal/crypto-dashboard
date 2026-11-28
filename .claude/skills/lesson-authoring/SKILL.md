@@ -73,7 +73,7 @@ The benchmark course is a **coverage and format benchmark**, not a source text.
 3. The lessons: `apps/client/src/guide/lessons.ts`. Ids in code: `lesson-01` (Lesson 1),
    `lesson-ownership` (Lesson 2), `lesson-02` (Lesson 3), `lesson-04` (Lesson 4), `lesson-coins` (Lesson 5,
    chapter 2's first lesson), `lesson-stablecoins` (Lesson 6), `lesson-wallets` (Lesson 7), `lesson-fees` (Lesson 8), `lesson-dapps` (Lesson 9). The chapter's
-   checkpoint is `learn/checkpoints.ts` (`checkpoint-ch1`: ten questions, pass at eight, version 3):
+   checkpoints are in `learn/checkpoints.ts` (`checkpoint-ch1` version 3, `checkpoint-ch2` version 1: ten questions, pass at eight):
    a new chapter gets its own, with its question-set version in `CHECKPOINT_VERSIONS` (SDK) and
    `CHECKPOINT_VERSION` (server).
 

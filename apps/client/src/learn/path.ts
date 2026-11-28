@@ -71,8 +71,7 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     // Chapter 2 (owner 2026-11-19): the benchmark's topic order, our own title and lesson titles. It
     // replaces the "Trade with a plan" placeholder, whose topics (limit orders, stop-loss and
-    // take-profit, risk, scams) move to a later chapter. Built lesson by lesson: the lessons still
-    // to write are `soon` titles
+    // take-profit, risk, scams) move to a later chapter. Built stop by stop (owner 2026-11-19)
     id: 'ch2',
     number: 2,
     title: 'Your crypto toolbox: coins, wallets and the networks behind them',
@@ -87,8 +86,8 @@ export const CHAPTERS: readonly Chapter[] = [
       // The practical stop after the fees lesson (owner 2026-11-28): a practice buy, then its fee
       { kind: 'tour', id: 'find-the-fee', access: FREE },
       { kind: 'lesson', id: 'lesson-dapps', access: FREE },
+      { kind: 'checkpoint', id: 'checkpoint-ch2', access: FREE },
     ],
-    soon: [{ kind: 'checkpoint', title: 'Checkpoint: wallets, fees and the networks' }],
   },
 ];
 
@@ -112,6 +111,17 @@ export function missingPrerequisite(
 ): PathTourId | null {
   const needs = NEEDS_DONE[id];
   return needs && toursDone[needs] !== true ? needs : null;
+}
+
+/** Whether passing this checkpoint opens a chapter that is written (an `open` one after its own) */
+export function opensAnotherChapter(
+  id: CheckpointId,
+  chapters: readonly Chapter[] = CHAPTERS
+): boolean {
+  const at = chapters.findIndex(
+    (c) => c.status === 'open' && c.nodes.some((n) => n.kind === 'checkpoint' && n.id === id)
+  );
+  return at !== -1 && chapters[at + 1]?.status === 'open';
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────

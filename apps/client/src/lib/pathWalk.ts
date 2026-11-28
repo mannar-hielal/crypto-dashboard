@@ -53,8 +53,9 @@ export const PATH_WALK_CHAPTERS: readonly WalkChapter[] = [
       { kind: 'lesson', title: 'Why sending crypto costs a fee' },
       { kind: 'practice', title: 'Find the fee on your trade' },
       { kind: 'lesson', title: 'Trading without a middleman: DApps and pools' },
+      { kind: 'checkpoint', title: 'Checkpoint: wallets, fees and the networks' },
     ],
-    soon: [{ kind: 'checkpoint', title: 'Checkpoint: wallets, fees and the networks' }],
+    soon: [],
   },
 ];
 

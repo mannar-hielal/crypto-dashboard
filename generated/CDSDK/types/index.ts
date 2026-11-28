@@ -123,6 +123,7 @@ export const LEARN_ITEM_IDS = [
   'lesson-dapps',
   // A chapter's checkpoint on the learning path: passed, it opens the next chapter
   'checkpoint-ch1',
+  'checkpoint-ch2',
 ] as const;
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
@@ -135,6 +136,7 @@ export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
  */
 export const CHECKPOINT_VERSIONS = {
   'checkpoint-ch1': 3,
+  'checkpoint-ch2': 1,
 } as const;
 
 /**
@@ -225,7 +227,10 @@ export type LearnEventName = (typeof LEARN_EVENT_NAMES)[number];
 export interface LearnEventRequest {
   name: LearnEventName;
   /** The tour or lesson: never one of the offers or a checkpoint */
-  itemId: Exclude<LearnItemId, 'welcome-card' | 'fill-email-offer' | 'checkpoint-ch1'>;
+  itemId: Exclude<
+    LearnItemId,
+    'welcome-card' | 'fill-email-offer' | keyof typeof CHECKPOINT_VERSIONS
+  >;
   /**
    * `<item id>.<n>`: the step (a lesson's screen) viewed, or the one it was closed on. For
    * `lesson_rated` (lessons only) `n` is the rating, 1–5.
