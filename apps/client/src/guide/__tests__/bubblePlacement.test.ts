@@ -31,6 +31,17 @@ describe('placeBubble', () => {
     expect(p.top).toBe(84);
   });
 
+  it('should never cover a wide, short control: a phone’s full-width order button keeps clear', () => {
+    // 390 × 844: the Buy button at the bottom is wider than 70 % of the screen
+    const target = { top: 706, left: 12, width: 366, height: 59 };
+    const p = placeBubble(target, { width: 340, height: 220 }, { width: 390, height: 844 });
+    expect(p.placement).toBe('above');
+    expect(p.top + 220).toBeLessThanOrEqual(target.top);
+    // A wide row near the top: below it
+    const row = placeBubble({ top: 120, left: 20, width: 1200, height: 40 }, BUBBLE, VIEWPORT);
+    expect(row).toMatchObject({ placement: 'below', top: 172 });
+  });
+
   it('should centre the bubble when there is no control', () => {
     const p = placeBubble(null, BUBBLE, VIEWPORT);
     expect(p).toEqual({ top: 320, left: 470, placement: 'center' });
