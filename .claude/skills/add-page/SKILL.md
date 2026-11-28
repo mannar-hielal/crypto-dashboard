@@ -67,7 +67,8 @@ Follow `.claude/rules/react.md`.
 
 ## Step 4 — Discoverability (indexable pages only)
 
-1. **`apps/client/public/sitemap.xml`** — static file, nothing generates it. Add:
+1. **`apps/client/public/sitemap.xml`** — static file, nothing generates it (a Blog article missing from it fails
+   `blog/__tests__/sitemap.test`). Add:
    ```xml
    <url>
      <loc>https://cryptopapertrade.com/your-path</loc>

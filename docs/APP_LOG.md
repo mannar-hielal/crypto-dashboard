@@ -2019,7 +2019,7 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 **Other fixes:**
 
-- `index.html` — extended `data-rh="true"` to all OG/Twitter/description/canonical fallback tags so react-helmet-async replaces them in-place
+- `index.html` — extended `data-rh="true"` to all OG/Twitter/description/canonical fallback tags so react-helmet-async replaces them in-place (not true on React 19, where it only appends: fixed 2026-11-26, see that entry)
 - `TermsPage.tsx` — fixed period spacing ("purposes . Simulated" → "purposes. Simulated")
 
 **Back link**: LegalLayout uses `navigate(-1)` — verified correct for all navigation flows (Footer → legal page, cross-links between legal pages, direct visits).
@@ -5801,3 +5801,23 @@ The Why section is a vertical slider (`WhySlider`, after the mouse-wheel demo on
 
 **Colour exception (owner, 2026-11-24):** the "What it is not" stop signs use `color.red`, a decoration that is not profit, loss or buy and sell; `design.md` reserves red for those, and the owner chose red stop signs in the visual Q&A, so this is the one accepted exception.
 **Focus exception (2026-11-24):** the Why slider's arrows and dots draw a white focus ring, not the purple `focusRing`, because the purple vanishes on the violet and blue slide colours. **Pictures:** the first Why capture loads normally and the other four with `fetchPriority="low"` (no `loading="lazy"`: inside the clipped, translated track a lazy image can arrive after its slide is moving in).
+
+### fix: one canonical per page, and the Blog in the sitemap (2026-11-26) ✅
+
+**Problem (Search Console, export of 2026-11-26: 3 pages indexed, 11 not).** `/how-it-works` and `/register` were
+"Alternate page with proper canonical tag": `index.html`, which answers every address, named the homepage as the
+canonical, and on React 19 `react-helmet-async` 3 only appends a page's own tags. So every page carried two
+canonicals (the homepage first), two descriptions and two sets of social tags. That Google chose the homepage one is
+inferred from the report. `SeoHead.test` missed it: its document had no static tags.
+
+**Changes.** `index.html` has no static canonical or `og:url`. Its other `data-rh` tags stay for readers that run no
+JavaScript, and `main.tsx` removes them before the first render (`lib/staticHeadTags.ts`); a new static tag that
+`SeoHead` also writes needs `data-rh`. The sitemap gained `/blog` and the nine articles and lost `/login` (18
+addresses). Tests: `SeoHead.test` renders over the real `index.html`; `blog/__tests__/sitemap.test` holds the sitemap
+to `ARTICLE_IDS`.
+
+**The report's other reasons need no change:** "Page with redirect" is the `http` and `www` addresses redirecting to
+the apex; "Not found (404)" is the API's root, which has no page; "Discovered - currently not indexed" (the legal pages
+and `/login`) had never been crawled.
+
+**Still open:** no prerendering; unknown addresses and `/features/` answer 200.

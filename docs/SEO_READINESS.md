@@ -2,10 +2,10 @@
 
 ## Tier 1 — Blocking (must do before public launch)
 
-- [x] **robots.txt + sitemap.xml** — Place in `apps/client/public/`. Sitemap lists all 9 indexable public routes. Excludes `/dashboard`, `/unverified`, verify routes.
+- [x] **robots.txt + sitemap.xml** — Place in `apps/client/public/`. Sitemap lists 18 public addresses (the pages, the Blog and its articles; `/login` is left out, 2026-11-26). Excludes `/dashboard`, `/unverified`, verify routes.
 - [x] **Install `react-helmet-async`** — Set unique `<title>` + `<meta name="description">` on every public page component.
 - [x] **OG + Twitter Card meta tags** — Default values in `index.html`, per-page overrides via react-helmet-async. `og-image.svg` (1200×630) placeholder created.
-- [x] **`<link rel="canonical">`** — Static fallback in `index.html`, dynamic per-page via `SeoHead` component.
+- [x] **`<link rel="canonical">`** — One per page, written by `SeoHead` only: `index.html` answers every address, so it names none (2026-11-26).
 - [x] **Per-page meta titles** — Unique titles set on all 15 public pages (see `SeoHead.tsx` for full list).
 
 ## Tier 2 — Trust & conversion
@@ -22,7 +22,7 @@
 
 ## Tier 4 — Content & growth
 
-- [ ] **Blog / educational content** — the Blog exists since 2026-11-18 (`/blog`, nine articles moved out of the lessons, client-rendered with `SeoHead`). **Still to do (second PR):** add `/blog` and each `/blog/<id>` to `sitemap.xml`, per-article structured data, decide on prerendering; then 3–5 new articles ("What is paper trading?", "How to read candlestick charts"). `/about` and `/support` are `noindex` placeholders.
+- [ ] **Blog / educational content** — the Blog exists since 2026-11-18 (`/blog`, nine articles moved out of the lessons, client-rendered with `SeoHead`). In `sitemap.xml` since 2026-11-26. **Still to do:** per-article structured data, decide on prerendering; then 3–5 new articles ("What is paper trading?", "How to read candlestick charts"). `/about` and `/support` are `noindex` placeholders.
 - [ ] **Backlink strategy** — Product Hunt, relevant subreddits, paper trading comparison sites, GitHub.
 - [x] **Competitive differentiation** — Visible USP on landing page (real-time Bybit data, free, no sign-up wall). Done 2026-10-03: hero "Live crypto charts. No signup." → `/chart`; landing retitled "Free Live Crypto Charts & Paper Trading" (Bybit only as the data source); **2026-11-22 rewrite:** landing "Learn Crypto Trading Free", features "Features: Learn Crypto by Doing", both about 35 characters before the site suffix; `/chart` description no longer promises trading without an account.
 
