@@ -65,6 +65,16 @@ describe('AboutPage (owner 2026-11-22)', () => {
     expect(screen.queryByText(/guaranteed|get rich|passive income/i)).toBeNull();
   });
 
+  it('should offer the tip after the introduction and before sign-up (owner 2026-11-28)', async () => {
+    const { container } = await renderAbout();
+    const links = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    const mail = links.indexOf('mailto:info@cryptopapertrade.com');
+    const tip = links.indexOf('https://paypal.me/mannarhielal');
+    expect(mail).toBeGreaterThanOrEqual(0);
+    expect(tip).toBeGreaterThan(mail);
+    expect(links.indexOf('/register')).toBeGreaterThan(tip);
+  });
+
   it('should send the visitor on to sign-up, the chart and How it works', async () => {
     const { container } = await renderAbout();
     for (const href of ['/register', '/chart', '/how-it-works'])

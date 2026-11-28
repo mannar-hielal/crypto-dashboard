@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { SeoHead } from '@/components/SeoHead';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
+import { TipSection } from '@/components/TipSection';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { SectionHead } from '@/components/landing/SectionHead';
 import { StartLink } from '@/components/landing/StartLink';
@@ -16,7 +17,8 @@ const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
 /**
  * The About page (owner 2026-11-22; the words are in `lib/aboutContent.ts`, in the first person):
- * what the site is, why it was built, what it stands for, who is behind it and how to write to them.
+ * what the site is, why it was built, what it stands for, who is behind it and how to write to them,
+ * then the voluntary tip (`TipSection`).
  * Kept out of search results until the owner says otherwise, and out of the sitemap.
  */
 export function AboutPage() {
@@ -82,6 +84,8 @@ export function AboutPage() {
               </div>
             </div>
           </section>
+
+          <TipSection />
 
           <section className={shared.section} aria-label="Get started">
             <div className={styles.actions}>

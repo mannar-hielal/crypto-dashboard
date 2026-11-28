@@ -628,6 +628,19 @@ a frontend developer, and I live and work in Switzerland.…". `/support` says "
 the bubble, Pulin and a progress ring never clipped. The Buy and Sell lessons' bubbles at 375 and 1440 px: each ring on its row or column, never under the
 bubble (2026-11-17). Frequency: per release touching `learn/Path*`, `learn/CheckpointSheet.tsx` or `guide/tours.ts`.
 
+### The voluntary tip (2026-11-28)
+
+**Manual check (M).** On `/`, `/how-it-works` and `/about` the footer has **Support the app**; sign-in, register and the
+legal pages don't. At 375, 412, 820 and 1440 px:
+
+1. Click it from the bottom of `/`: `/about` opens with "Enjoying the app?" just below the top bar. Scroll away and
+   click it again: the page returns there.
+2. The section sits between your introduction and "Create free account": the heading, "You can leave a one-time tip
+   through PayPal…" and the outline button [about.tip], centred, nothing clipped, no sideways scroll.
+3. The button opens `paypal.me/mannarhielal` in a new tab (check the name shown is the owner's; send nothing).
+4. `/terms` reads version 1.2 and `/privacy` 1.8, each with its sentences about tips. Frequency: per release touching
+   `TipSection`, `Footer`, `TermsPage` or `PrivacyPage`.
+
 ### Report a bug (2026-11-25)
 
 **Manual check (M).** Signed in, on `/chart` or `/dashboard`: a bug icon [nav.report] sits in the top bar beside the learning-path icon
