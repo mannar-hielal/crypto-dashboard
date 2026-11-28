@@ -40,7 +40,7 @@ export const GUIDE_ANCHORS = [
   'nav.trade-menu',
   'nav.trade-menu.option',
   // The public pages' header links (owner 2026-11-18): Product ▾ with Chart and Crypto path (key), How it works, Blog,
-  // About us, Support, and the phone menu with its sheet
+  // About, Support, and the phone menu with its sheet
   'nav.product',
   'nav.product.item',
   'nav.how',
@@ -50,7 +50,7 @@ export const GUIDE_ANCHORS = [
   'nav.menu',
   'nav.menu.sheet',
   // The Blog (owner 2026-11-18): the card list, a card (key: the article), the back link, a "More
-  // articles" card, and the About us / Support placeholder (key: which)
+  // articles" card, and the About / Support placeholder (key: which)
   'blog.list',
   'blog.card',
   'blog.back',
