@@ -270,6 +270,7 @@ export const GUIDE_ANCHORS = [
   'landing.faq.start',
   'about.register',
   'about.chart',
+  'about.tip',
   'how.hero.chart',
   'how.hero.register',
   'how.faq.start',

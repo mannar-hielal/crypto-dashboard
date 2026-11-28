@@ -4705,6 +4705,22 @@ The second lesson of chapter 2 (its own PR, owner 2026-11-19). `lesson-stablecoi
   SDK's `LEARN_ITEM_IDS` and `LESSON_FIRST_STEPS`. The map's chapter 2 lists it as a built lesson; three lessons and the checkpoint stay
   "coming soon" titles.
 
+### 2026-11-28 — A voluntary tip through PayPal
+
+Owner, 2026-11-28: people who enjoy the app can leave a one-time tip. It unlocks nothing and the app stays free.
+
+- **Where:** a section on `/about`, between "Who is behind it" and the sign-up buttons ("Enjoying the app?", one
+  sentence, the outline button "Leave a tip with PayPal"), and "Support the app" in the public pages' footer
+  (landing, How it works, About), which jumps to it (`/about#tip`). Sign-in, register and the legal pages keep their
+  footer.
+- **How:** a plain link to the owner's PayPal.Me page in a new tab (`rel="noopener noreferrer"`). No script, widget or
+  request to PayPal, so the security headers are unchanged. No money passes through the app and nothing about a tip is
+  stored in it.
+- **Legal pages:** Terms 1.2 (a tip buys nothing; PayPal listed) and Privacy 1.8 (what happens when you tip, the legal
+  basis, and the "payment information" line of Section 4).
+- **Removable as one piece:** `lib/tipContent.ts`, `components/TipSection.tsx` (+ CSS and test), the line in
+  `AboutPage`, the footer link, the `about.tip` anchor, and those Terms and Privacy sentences.
+
 ### 2026-11-22 — About us page (first person, with the photo and the contact line)
 
 Owner: "use I", the name Mannar Hielal, the contact info@cryptopapertrade.com, the LinkedIn photo (`assets/landing/about-photo.webp`, 480 px square crop, 14 KB, sized, lazy, round on the page). `AboutPage` replaces the "coming soon" placeholder (`ComingSoonPage` is Support only now); copy in `lib/aboutContent.ts` states only what the project itself says (no personal history invented; no ads, no push to real money, independent of Bybit). Sections: why I built it, four promises, who is behind it, sign-up and chart links. **`noindex` and out of the sitemap** until the owner says otherwise. Anchors `about.register`, `about.chart`. Tests: `AboutPage.test` (one h1, first person and no "we", the mailto, photo size and alt, noindex, links), `BlogPages.test` (Support only).
