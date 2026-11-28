@@ -5911,3 +5911,44 @@ questions, pass at eight, question-set **version 1**. Comparison row T22.
   owner: the result lists a missed question without its context, so a few of chapter 1's read oddly there.
 - **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses the new checkpoint's pass
   (400), which the app keeps on the device and sends again once the API is back.
+
+### 2026-11-28 — Chapter 2's second practical stop: "Try a swap with a practice wallet"
+
+Owner, 2026-11-28: "practice wallet and swap including building the widget", designed in a visual Q&A the same day: docked where
+the order form sits and guided by the tour (full screen on a phone), two tabs **App** and **Wallet** with a dot on Wallet when it
+wants an answer, the wallet's request as a sheet that rises at once over the dimmed app, and the flow swap then revoke. Between
+Lesson 9 and the checkpoint. Its own PR.
+
+- **Simulation only** (`apps/client/src/practice/`): no wallet connection, no network call, no keys, and no field that takes
+  text, so nothing asks for or accepts an address or a recovery phrase (a test holds this). In memory only, reset each time;
+  the paper account is untouched. The numbers are Lesson 9's pool (10 ETH, 20,000 USDC, x × y = k, fee 0.3% from the input),
+  start 500 USDC and 0.02 ETH, a pretend network fee of 0.0001 ETH a signature.
+- **USDC, not the paper account's USDT (owner, 2026-11-28):** kept so the wallet's money isn't mixed up with the practice
+  money, and the panel's warning line also says "Separate from your paper account."
+- **The panel** (`SwapPanel`, docked by `SwapDock` in place of the order form and edit panels): the App tab (connect, 100 or 200
+  USDC, the quote, Review swap), the Wallet tab (balances, the swap's costs, permissions with Revoke), the request sheet (its own
+  dialog: focus inside, Tab kept, Esc rejects and the guide stays; "Rejected" offers the request again). Focus goes back to the
+  button that asked, or the panel's heading. The dot comes with words for screen readers.
+- **The tour:** `try-a-swap` (four steps; saved and counted when the swap is signed), then `review-swap` (the Wallet tab,
+  balances, costs, permissions, Revoke) and `review-swap-clean`. New step field `clickAnchor`: the ring goes round the request
+  or the permissions card while the step ends on Sign, Review or Revoke, so the bubble never covers what it asks about.
+- **Choices made without a question to the owner, for review:** an old no-limit permission ("Practice Game") is in the wallet
+  from the start, so Revoke always has something to do (an "only this amount" permission is used up by the swap); the made-up
+  names "Practice Swap" and "Practice Game"; "Show the request again" after a rejection; the amount and Review swap are one step.
+- **Ids:** `try-a-swap` in the client's `TOUR_IDS`, the map, the landing walk, the server's `LEARN_TOUR_IDS` and
+  `LEARN_ITEM_IDS`, and the SDK's `LEARN_ITEM_IDS`. New anchors `swap.*`. The `all-tours` badge is unchanged (open call). The
+  stop is not read out as "on the real chart". Lesson 9's summary now says it comes next. No migration.
+- **Checks:** fact checked by a technical-writer agent on the built text, then `/code-review high`. Applied: a refused request
+  says only that it did nothing (a permission already signed stays); "transaction", not "signature", pays the fee; the swap's
+  receipt keeps its own fees; a minimum you get (0.5% under the quote); what connecting does; "cannot take your USDC"; the old
+  permission named; practice fees said to be equal. From the review: no Back onto a done action; a fresh wallet at each start of
+  the stop only; "Open the App tab" hints; Tab leaves a refused request, and a refused revoke can be closed; focus stays in the
+  dialog; the bubble stands beside a docked panel's control when there is no room above or below; the order form's controls end
+  the guide; the dock's styles in a CSS module and its width a token (`sidePanel`). Left for the owner: the map still gives the
+  swap the dumbbell, which the legend calls "Practice on the real chart" (an icon or legend change is a visual decision).
+- **Guide overlay (all tours):** a control cut off by a box that scrolls up and down is now scrolled into view, as one cut off
+  sideways already was.
+- **Landing walk:** with eight stops in chapter 2, labels wrap to their narrower column (they ran into each other around
+  800 px), and "More chapters on the way" sits further left, clear of the guides, who now end the walk beside it.
+- **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses `try-a-swap` (400) and a tour's
+  finish is not queued. Roll back both, or the web app only.

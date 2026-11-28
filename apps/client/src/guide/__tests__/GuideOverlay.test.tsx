@@ -46,6 +46,57 @@ describe('GuideOverlay', () => {
   });
   afterEach(() => cleanup());
 
+  it('should finish a step on its click control only, when the ring goes around more than it', async () => {
+    const offer = addControl('swap.offer', { tag: 'button' });
+    const review = addControl('swap.review');
+    offer.appendChild(review);
+    const other = addControl('swap.amount');
+    offer.appendChild(other);
+    useTourStore.getState().start('try-a-swap');
+    useTourStore.setState({ stepIndex: 1 });
+    render(<GuideOverlay />);
+    await frame();
+
+    fireEvent.click(other); // inside the ring, but not the step's control
+    await frame();
+    expect(useTourStore.getState().stepIndex).toBe(1);
+    fireEvent.click(review);
+    await frame();
+    expect(useTourStore.getState().stepIndex).toBe(2);
+  });
+
+  it('should take a click on any of a step’s click controls, not only the first', async () => {
+    const card = addControl('swap.permissions');
+    card.appendChild(addControl('swap.revoke', { key: 'swap' }));
+    const second = addControl('swap.revoke', { key: 'game' });
+    card.appendChild(second);
+    useTourStore.getState().start('review-swap');
+    useTourStore.setState({ stepIndex: 4 });
+    render(<GuideOverlay />);
+    await frame();
+
+    fireEvent.click(second);
+    await frame();
+    expect(useTourStore.getState().activeId).toBe('review-swap-clean');
+  });
+
+  it('should scroll a control into view when a box that scrolls cuts it off', async () => {
+    const box = document.createElement('div');
+    box.style.overflowY = 'auto';
+    box.getBoundingClientRect = () =>
+      ({ top: 0, left: 0, width: 400, height: 110, right: 400, bottom: 110 }) as DOMRect;
+    document.body.appendChild(box);
+    // 100 to 132: its lower part is under the box's edge
+    const cell = addControl('symbolbar.price');
+    const scroll = vi.fn();
+    cell.scrollIntoView = scroll;
+    box.appendChild(cell);
+    useTourStore.getState().start('primer');
+    render(<GuideOverlay />);
+    await frame();
+    expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+  });
+
   it('should render nothing while no tour runs', () => {
     render(<GuideOverlay />);
     expect(document.querySelector('[data-guide="tour.bubble"]')).toBeNull();

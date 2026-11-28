@@ -2938,7 +2938,7 @@ const lessonDapps: Lesson = {
       { text: 'Check the web address, read what you sign, and never share your phrase.' },
     ],
     highlight: {
-      text: 'You can now say what an exchange does for you, how a swap on a DApp works, how a pool sets a price, and what to check before you sign. Next up: the chapter checkpoint.',
+      text: 'You can now say what an exchange does for you, how a swap on a DApp works, how a pool sets a price, and what to check before you sign. Next up: try a swap with a practice wallet.',
     },
   },
   access: FREE,

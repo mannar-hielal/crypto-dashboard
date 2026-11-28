@@ -33,10 +33,14 @@ import type { OrderTab } from '@/components/dashboard/TradingPanel';
 import { SignInLock } from '@/components/dashboard/SignInLock';
 import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
 import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
-import { bg, color, fontSize, rangeBar } from '@/lib/tokens';
+import { bg, color, fontSize, rangeBar, sidePanel } from '@/lib/tokens';
 import { TIME_RANGE_PRESETS } from '@/lib/markets';
 import { TimeRangeSwitcher } from '@/components/dashboard/TimeRangeSwitcher';
 import { GuideOverlay } from '@/guide/GuideOverlay';
+import { SwapDock } from '@/practice/SwapDock';
+import { leaveSwapGuide } from '@/practice/leaveSwapGuide';
+import { isSwapTour } from '@/guide/tours';
+import { useTourStore } from '@/guide/tourStore';
 import { FillEmailOffer } from '@/guide/FillEmailOffer';
 import { LearnCard } from '@/guide/LearnCard';
 import { CheckpointSheet } from '@/learn/CheckpointSheet';
@@ -200,7 +204,9 @@ export function DashboardInner() {
   const [isMaximized, setIsMaximized] = useState(false);
   /** When set, an edit panel replaces the TradingPanel in the right column */
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
-  const isTradingPanelVisible = !editTarget && tradingPanelOpen;
+  // The practice swap takes the order form's place while its guide runs (owner 2026-11-28)
+  const swapOpen = useTourStore((s) => isSwapTour(s.activeId));
+  const isTradingPanelVisible = !editTarget && tradingPanelOpen && !swapOpen;
 
   // Below lg the form isn't docked: a prefill (Assets → Sell) must also open it, on its side, or the
   // tap looks dead (review #200). A limit order from a position drawing ("Create limit order…")
@@ -408,7 +414,11 @@ export function DashboardInner() {
 
       <SymbolBar
         tradingPanelOpen={tradingPanelOpen}
-        onToggleTrading={() => setTradingPanelOpen((v) => !v)}
+        onToggleTrading={() => {
+          // During the practice swap the form is behind it: the toggle leaves the guide and shows it
+          leaveSwapGuide();
+          setTradingPanelOpen((v) => swapOpen || !v);
+        }}
         leftToolbarOpen={leftToolbarOpen}
         onToggleLeftToolbar={() => setLeftToolbarOpen((v) => !v)}
       />
@@ -526,8 +536,14 @@ export function DashboardInner() {
                 onSizeChange={setPanelSize}
                 isMaximized={isMaximized}
                 onToggleMaximize={handleToggleMaximize}
-                onEditPosition={(positionId) => setEditTarget({ kind: 'position', positionId })}
-                onEditPendingOrder={(orderId) => setEditTarget({ kind: 'pending', orderId })}
+                onEditPosition={(positionId) => {
+                  leaveSwapGuide();
+                  setEditTarget({ kind: 'position', positionId });
+                }}
+                onEditPendingOrder={(orderId) => {
+                  leaveSwapGuide();
+                  setEditTarget({ kind: 'pending', orderId });
+                }}
               />
             </SignInLock>
           </motion.div>
@@ -538,13 +554,13 @@ export function DashboardInner() {
 
         {/* Edit panels (position / pending-order) */}
         <AnimatePresence initial={false}>
-          {editTarget?.kind === 'position' && (
+          {!swapOpen && editTarget?.kind === 'position' && (
             <motion.div
               key={`edit-pos-${editTarget.positionId}`}
               // Below lg an overlay like the order form (full screen / a 320 px sheet), so the
               // chart isn't squeezed to ~120 px on a phone (review #200)
               initial={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
-              animate={isMobile ? { x: 0, opacity: 1 } : { width: 256, opacity: 1 }}
+              animate={isMobile ? { x: 0, opacity: 1 } : { width: sidePanel.width, opacity: 1 }}
               exit={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
@@ -555,13 +571,13 @@ export function DashboardInner() {
               />
             </motion.div>
           )}
-          {editTarget?.kind === 'pending' && (
+          {!swapOpen && editTarget?.kind === 'pending' && (
             <motion.div
               key={`edit-pending-${editTarget.orderId}`}
               // Below lg an overlay like the order form (full screen / a 320 px sheet), so the
               // chart isn't squeezed to ~120 px on a phone (review #200)
               initial={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
-              animate={isMobile ? { x: 0, opacity: 1 } : { width: 256, opacity: 1 }}
+              animate={isMobile ? { x: 0, opacity: 1 } : { width: sidePanel.width, opacity: 1 }}
               exit={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
@@ -574,6 +590,9 @@ export function DashboardInner() {
           )}
         </AnimatePresence>
 
+        {/* The practice wallet and swap, docked here while its guide runs */}
+        <SwapDock narrow={isMobile} />
+
         {/* TradingPanel — always mounted so form state (amount, price, TP/SL) survives
             close/reopen. Width is animated to 0 when hidden.
             key={`${activePane}-${category}-${symbol}`} still resets the form on a market change. */}
@@ -581,7 +600,10 @@ export function DashboardInner() {
           animate={
             isMobile
               ? { x: isTradingPanelVisible ? 0 : '100%', opacity: isTradingPanelVisible ? 1 : 0 }
-              : { width: isTradingPanelVisible ? 256 : 0, opacity: isTradingPanelVisible ? 1 : 0 }
+              : {
+                  width: isTradingPanelVisible ? sidePanel.width : 0,
+                  opacity: isTradingPanelVisible ? 1 : 0,
+                }
           }
           transition={{ duration: 0.2, ease: 'easeInOut' }}
           // Below lg: full screen on phones, a right-hand sheet on tablets (md+)
@@ -617,7 +639,7 @@ export function DashboardInner() {
 
       {/* Phones and tablets: Buy / Sell open the order form (it isn't docked below lg) */}
       {/* Not while an edit panel is open: it covers the screen, and Buy / Sell couldn't show the form */}
-      {isMobile && !isTradingPanelVisible && !editTarget && (
+      {isMobile && !isTradingPanelVisible && !editTarget && !swapOpen && (
         // Signed-out visitors: shown dimmed and inert — the account panel's lock right above it
         // carries "Sign in to trade", so this one has no prompt of its own
         <SignInLock prompt={false}>

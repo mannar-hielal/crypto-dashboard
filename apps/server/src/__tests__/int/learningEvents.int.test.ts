@@ -156,6 +156,7 @@ describe('LearningEvent (Postgres)', () => {
       'buy-first-coin',
       'sell-and-review',
       'find-the-fee',
+      'try-a-swap',
     ]);
   });
 

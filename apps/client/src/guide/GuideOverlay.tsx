@@ -12,7 +12,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, X } from 'lucide-react';
 import { guide, guideSelector } from '@/lib/guideAnchors';
-import { placeBubble, type Box } from './bubblePlacement';
+import { placeBubble, type Box, type Placement } from './bubblePlacement';
 import { matchesHover, newestCandleBox, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
 import { backIndex, getTour, type TourStep, tourSteps } from './tours';
@@ -34,11 +34,7 @@ const ARROW_CLASS = {
 /** Beside the control, in the free space (never over the text above it); above or below only
  *  when the control has no room at either side. A candle is pointed at from above (below when
  *  it's at the top of the chart), like a marker on the chart. */
-function arrowSideFor(
-  rect: Box,
-  bubble: 'below' | 'above' | 'inside' | 'center',
-  candle = false
-): ArrowSide {
+function arrowSideFor(rect: Box, bubble: Placement['placement'], candle = false): ArrowSide {
   const room = ARROW_GAP + ARROW_SIZE + RING_PAD + 8;
   if (candle) return rect.top >= room ? 'above' : 'below';
   if (rect.left >= room) return 'left';
@@ -106,9 +102,10 @@ function useTracked(step: TourStep): Tracked {
           rect = { top: r.top, left: r.left, width: r.width, height: r.height };
           if (!scrolled) {
             scrolled = true;
-            // Only when it can't be seen: off the screen, or clipped by a row that scrolls across
-            // (the account summary on a phone); a step already in view never moves the page
-            if (r.top < 0 || r.bottom > window.innerHeight || clippedSideways(el, r)) {
+            // Only when it can't be seen: off the screen, or clipped by a box that scrolls (the
+            // account summary on a phone, the practice wallet's list); a step already in view
+            // never moves the page
+            if (r.top < 0 || r.bottom > window.innerHeight || clippedByScroller(el, r)) {
               el.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
             }
           }
@@ -251,10 +248,18 @@ function TourBubble({
 
   useEffect(() => {
     if (step.kind !== 'click' || !step.anchor) return;
-    const selector = guideSelector(step.anchor, step.key);
+    const selector = step.clickAnchor
+      ? guideSelector(step.clickAnchor)
+      : guideSelector(step.anchor, step.key);
     const onClick = (e: MouseEvent) => {
-      const el = document.querySelector(selector);
-      if (!el || !(e.target instanceof Node) || !el.contains(e.target)) return;
+      // A step with its own click control takes any of them (a Revoke on either permission); the
+      // others, the first match, the one the ring is on
+      if (step.clickAnchor) {
+        if (!(e.target instanceof Element) || !e.target.closest(selector)) return;
+      } else {
+        const el = document.querySelector(selector);
+        if (!el || !(e.target instanceof Node) || !el.contains(e.target)) return;
+      }
       if (step.doneWhenEmpty) {
         const input = document.querySelector<HTMLInputElement>(guideSelector(step.doneWhenEmpty));
         setAwaiting({ since: Date.now(), hadValue: !!input && input.value !== '' });
@@ -469,13 +474,20 @@ function TourBubble({
   );
 }
 
-/** Cut off by an ancestor that scrolls sideways (overflow-x auto or scroll) */
-function clippedSideways(el: Element, r: DOMRect): boolean {
+const scrolls = (overflow: string) => overflow === 'auto' || overflow === 'scroll';
+
+/**
+ * Cut off by an ancestor that scrolls: sideways, or up and down when the control could fit in it
+ * (the practice wallet's permissions on a phone)
+ */
+function clippedByScroller(el: Element, r: DOMRect): boolean {
   for (let p = el.parentElement; p; p = p.parentElement) {
-    const overflow = getComputedStyle(p).overflowX;
-    if (overflow !== 'auto' && overflow !== 'scroll') continue;
+    const { overflowX, overflowY } = getComputedStyle(p);
+    if (!scrolls(overflowX) && !scrolls(overflowY)) continue;
     const box = p.getBoundingClientRect();
-    if (r.left < box.left || r.right > box.right) return true;
+    if (scrolls(overflowX) && (r.left < box.left || r.right > box.right)) return true;
+    if (scrolls(overflowY) && r.height <= box.height && (r.top < box.top || r.bottom > box.bottom))
+      return true;
   }
   return false;
 }

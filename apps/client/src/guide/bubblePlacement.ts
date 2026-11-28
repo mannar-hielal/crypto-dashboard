@@ -13,7 +13,7 @@ export interface Box {
 export interface Placement {
   top: number;
   left: number;
-  placement: 'below' | 'above' | 'inside' | 'center';
+  placement: 'below' | 'above' | 'beside' | 'inside' | 'center';
 }
 
 export const BUBBLE_GAP = 12;
@@ -43,10 +43,19 @@ export function placeBubble(
     maxLeft
   );
 
+  // To its left, level with it: for a control with no room above or below (a docked panel's request
+  // on a short screen), so the bubble never hides it
+  const besideLeft = target.left - BUBBLE_GAP - bubble.width;
+  const beside: Placement | null =
+    besideLeft >= VIEWPORT_MARGIN
+      ? { top: clamp(target.top, VIEWPORT_MARGIN, maxTop), left: besideLeft, placement: 'beside' }
+      : null;
+
   // A control that fills most of the screen (the chart): the bubble sits inside it, near the top.
   // By height only (2026-11-28): a wide, short control (a phone's full-width Buy button, a table row)
   // has room above or below, and a bubble inside it covered the very button the step asked for
   if (target.height > viewport.height * 0.5) {
+    if (beside) return beside;
     return {
       top: clamp(target.top + 24, VIEWPORT_MARGIN, maxTop),
       left: centredLeft,
@@ -62,6 +71,6 @@ export function placeBubble(
   if (above >= VIEWPORT_MARGIN) {
     return { top: above, left: centredLeft, placement: 'above' };
   }
-  // Neither side fits: beside it would hide it; park the bubble in the nearest free corner
-  return { top: maxTop, left: centredLeft, placement: 'inside' };
+  // Neither above nor below: beside it, else the nearest free corner
+  return beside ?? { top: maxTop, left: centredLeft, placement: 'inside' };
 }

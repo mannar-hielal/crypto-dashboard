@@ -2,8 +2,8 @@
  * The guided tours (docs/GUIDED_TRADE_MVP.md, reshaped 2026-10-11): short chapters of at most five
  * steps — a primer of three small tasks on the live chart (Lesson 3's "Try it", guide/lessons.ts),
  * then buying a first coin, (its own map stop, owner 2026-11-17) selling it back, and chapter 2's
- * practice buy that finds its fee (owner 2026-11-28); each ends with
- * a look at what it changed in the account panel. Research (reports/) says completion falls fast
+ * practice buy that finds its fee and its swap with a practice wallet (owner 2026-11-28); each ends
+ * with a look at what it changed (in the account panel, or the practice wallet). Research (reports/) says completion falls fast
  * past five steps.
  *
  * Steps that repeat a scenario action reuse the shared builders in `steps.ts` (one wording for the
@@ -18,7 +18,13 @@ import { chooseType, openTab, submit } from './steps';
 import type { StepDraft } from './scenario';
 
 /** The Learn panel's tours: their progress is saved and they report the funnel */
-export const TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review', 'find-the-fee'] as const;
+export const TOUR_IDS = [
+  'primer',
+  'buy-first-coin',
+  'sell-and-review',
+  'find-the-fee',
+  'try-a-swap',
+] as const;
 /**
  * Practice trades started from a lesson card (owner 2026-11-16): a guided arrow on the real chart,
  * then back to the lesson. Not saved or reported on their own: the lesson's screens are.
@@ -45,6 +51,8 @@ export const PATH_REVIEW_IDS = [
   'review-sell',
   'review-sell-result',
   'review-fee',
+  'review-swap',
+  'review-swap-clean',
 ] as const;
 export type PathReviewId = (typeof PATH_REVIEW_IDS)[number];
 /** The path's tours: saved, reported and counted (a practice trade is none of these) */
@@ -74,6 +82,16 @@ export interface TourStep {
   /** The control the ring goes around; absent = a centred card */
   anchor?: GuideAnchor;
   key?: string;
+  /**
+   * `click`: the control whose click finishes the step, when the ring goes around more than it (a
+   * request to read before its Sign button, so the bubble never covers what it asks about)
+   */
+  clickAnchor?: GuideAnchor;
+  /**
+   * An action that can't be done twice (a signature, a connection): once this run is past it, Back
+   * never returns to it, which would ask for a control that is gone
+   */
+  once?: true;
   text: string;
   /** "You should see …", muted, for live prices where numbers move */
   liveNote?: string;
@@ -178,7 +196,13 @@ export function backIndex(
   passed: readonly string[]
 ): number | null {
   let to = stepIndex - 1;
-  while (to >= 0 && steps[to].screen === 'phone' && passed.includes(steps[to].id)) to--;
+  while (
+    to >= 0 &&
+    (steps[to].screen === 'phone' || steps[to].once) &&
+    passed.includes(steps[to].id)
+  ) {
+    to--;
+  }
   return to >= 0 ? to : null;
 }
 
@@ -362,6 +386,141 @@ const findTheFee: Tour = {
       'The amount field emptying, or on a small screen the form closing. If not, read the form’s message. Not enough USDT? Press Skip tour, free some (for example, sell some coin), then start “Find the fee on your trade” again from the learning map.',
   }),
 };
+
+// ─── 5. Try a swap with a practice wallet (chapter 2, owner 2026-11-28) ──────
+
+/** The swap panel closed mid-tour has no way to be reopened on its own: start the stop again */
+const SWAP_HINT = 'Close this guide, then start the stop again from the learning map.';
+
+/**
+ * One job: a swap in a pretend app with a pretend wallet (practice/SwapPanel.tsx), docked where the
+ * order form sits; then what changed, and taking a no-limit permission back. Nothing is real, nothing
+ * asks for an address or secret words, and the paper account is untouched
+ */
+const trySwap: Tour = {
+  id: 'try-a-swap',
+  title: 'Try a swap with a practice wallet',
+  blurb: 'Try a pretend swap, read the costs, take a permission back.',
+  minutes: 3,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  next: 'review-swap',
+  phoneReady: true,
+  steps: numbered('try-a-swap', [
+    {
+      kind: 'click',
+      once: true,
+      anchor: 'swap.connect',
+      text: 'This wallet is for practice: nothing here is real, and it never asks for your recovery phrase. In real life, connecting shows the app your address. It does not let the app take your tokens. Press Connect.',
+      missingHint: 'Open the App tab.',
+    },
+    {
+      // One step for the amount and the button: a separate amount step could be skipped past by
+      // pressing Review first, leaving the guide asking for a control behind the wallet's sheet
+      kind: 'click',
+      once: true,
+      anchor: 'swap.offer',
+      clickAnchor: 'swap.review',
+      text: 'Pick 100 or 200 pretend USDC. Read what you get, the minimum, and the costs: the pool fee, price impact and network fees. Then press Review swap.',
+      missingHint: 'Open the App tab.',
+    },
+    {
+      kind: 'click',
+      once: true,
+      anchor: 'swap.request',
+      clickAnchor: 'swap.sign',
+      text: 'First the wallet asks: may the app use your USDC? Pick “Only” your amount, or “No limit”. Then press Sign.',
+      missingHint: SWAP_HINT,
+    },
+    {
+      kind: 'click',
+      once: true,
+      anchor: 'swap.request',
+      clickAnchor: 'swap.sign',
+      text: 'Now the swap itself. Read what will happen, then press Sign. Next, we look at what changed.',
+      missingHint: SWAP_HINT,
+    },
+  ]),
+};
+
+/** What just happened: the Wallet tab's balances, costs and permissions, then Revoke */
+const reviewSwap: Tour = {
+  id: 'review-swap',
+  title: 'What just happened',
+  blurb: 'Your balances, the costs and the permissions.',
+  minutes: 1,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  next: 'review-swap-clean',
+  phoneReady: true,
+  steps: numbered('review-swap', [
+    {
+      kind: 'click',
+      anchor: 'swap.tab',
+      key: 'wallet',
+      text: 'A pretend block confirms your swap in a moment. Open the Wallet tab.',
+      missingHint: SWAP_HINT,
+    },
+    {
+      kind: 'observe',
+      anchor: 'swap.balances',
+      text: 'Your USDC went down by what you paid, and the ETH you got arrived. You also paid a little ETH: each transaction you signed here paid a network fee.',
+      missingHint: 'Open the Wallet tab.',
+    },
+    {
+      kind: 'observe',
+      anchor: 'swap.receipt',
+      text: 'Three costs. The pool fee and price impact (your own swap moved the price) are already inside the ETH you got. The network fees are extra, paid in ETH.',
+      missingHint: 'Open the Wallet tab. The swap shows once the block confirms it.',
+    },
+    {
+      kind: 'observe',
+      anchor: 'swap.permissions',
+      text: 'This list shows what each app can still take. A permission for only your amount is used up by the swap. A no-limit one stays open until you remove it.',
+      missingHint: 'Open the Wallet tab.',
+    },
+    {
+      kind: 'click',
+      once: true,
+      // The ring goes round the whole card, so the bubble never hides whose permission it is
+      anchor: 'swap.permissions',
+      clickAnchor: 'swap.revoke',
+      text: 'Clean up: press Revoke on an open permission. Closing or disconnecting an app does not remove it. No Revoke button left? Press Skip tour: you have already cleaned up.',
+      missingHint: 'Open the Wallet tab.',
+    },
+  ]),
+};
+
+/** The revoke's own signature, and what it cost */
+const reviewSwapClean: Tour = {
+  id: 'review-swap-clean',
+  title: 'Clean up',
+  blurb: 'Sign the revoke and see it gone.',
+  minutes: 1,
+  startUrl: '/dashboard/spot/BTC/USDT',
+  phoneReady: true,
+  steps: numbered('review-swap-clean', [
+    {
+      kind: 'click',
+      once: true,
+      anchor: 'swap.request',
+      clickAnchor: 'swap.sign',
+      text: 'Removing a permission is a transaction too, so the wallet asks. Press Sign.',
+      missingHint: 'Press Revoke on an open permission, on the Wallet tab.',
+    },
+    {
+      kind: 'observe',
+      anchor: 'swap.permissions',
+      text: 'Done: that app cannot take your USDC now. It cost a small network fee. In real life, check old permissions now and then, with a tool you trust.',
+      missingHint: 'Open the Wallet tab.',
+    },
+  ]),
+};
+
+/** The practice swap's chapters: while one runs, its panel is docked on the dashboard */
+const SWAP_TOUR_IDS: readonly TourId[] = ['try-a-swap', 'review-swap', 'review-swap-clean'];
+
+export function isSwapTour(id: TourId | null): boolean {
+  return id !== null && SWAP_TOUR_IDS.includes(id);
+}
 
 // ─── Practice trades from a lesson card (owner 2026-11-16) ──────────────────
 
@@ -731,7 +890,7 @@ const reviewFee: Tour = {
   ]),
 };
 
-export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview, findTheFee];
+export const TOURS: readonly Tour[] = [primer, buyFirstCoin, sellAndReview, findTheFee, trySwap];
 export const PRACTICE_TOURS: readonly Tour[] = [practiceBuy, practiceLong, practiceShort];
 export const PRACTICE_REVIEWS: readonly Tour[] = [reviewBuy, reviewLong, reviewShort];
 export const PATH_REVIEWS: readonly Tour[] = [
@@ -739,6 +898,8 @@ export const PATH_REVIEWS: readonly Tour[] = [
   reviewSell,
   reviewSellResult,
   reviewFee,
+  reviewSwap,
+  reviewSwapClean,
 ];
 
 export function getTour(id: TourId): Tour {
