@@ -5886,3 +5886,28 @@ The chapter's fifth and last lesson (owner 2026-11-28: build now, review the out
   (approved) still says "Next up: trading without a middleman", though the fee practice now sits between.
 - **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses the new lesson's saves
   (400). A finish is kept on the device and sent again once the API is back; part-way progress can be lost on a reload.
+
+### 2026-11-28 — Chapter 2's checkpoint "Checkpoint: wallets, fees and the networks"
+
+The chapter's last stop (owner 2026-11-28: build now, review later; its own PR). `checkpoint-ch2`: ten multiple-choice
+questions, pass at eight, question-set **version 1**. Comparison row T22.
+
+- **Questions** (`learn/checkpoints.ts`), our own order, words and situations: coin or token (Lesson 5), an exchange account's
+  risk (7), what a stablecoin is built to do (6), why a network fee (8), what pays a token's fee (5, a made-up token), what a
+  private key allows (7), what a liquidity provider does (9), a utility token (5), why a trader waits in a stablecoin (6), a
+  web address with a wrong letter (9). No question uses a lesson question's words (several test the same idea
+  in a new form, as a checkpoint should). A miss offers **Review Lesson N**.
+- **Text:** fact checked by a technical-writer agent. Applied from the draft: the fee answer no longer says every fee pays
+  somebody (some chains burn it all); the token question asks who pays the fee, so it no longer gives away the first one.
+  From the built text: the token send is from the learner's own wallet (an exchange can take its fee from the token); no
+  answer given away by a pattern or an earlier question; every question stands alone, because the result lists a missed one
+  without its context.
+- **Ids:** `checkpoint-ch2` in the client's `CHECKPOINT_IDS`, the map, the landing walk, the server's `LEARN_ITEM_IDS`,
+  `LEARN_CHECKPOINT_IDS` and `CHECKPOINT_VERSION`, and the SDK's `LEARN_ITEM_IDS` and `CHECKPOINT_VERSIONS`;
+  `LearnEventRequest` excludes every checkpoint by that list. No migration.
+- **The map and the pages:** chapter 2 has nothing left "coming soon"; the public FAQ says each chapter ends with a checkpoint.
+- **Two older lines fixed (code review):** a pass now says whether a next chapter is open (it always said "opens as soon as
+  it's ready"), and a locked chapter's checkpoint says to pass the one before (it named the lesson above it). Left for the
+  owner: the result lists a missed question without its context, so a few of chapter 1's read oddly there.
+- **Rollback:** the web app alone may be rolled back. The API alone may not: an older API refuses the new checkpoint's pass
+  (400), which the app keeps on the device and sends again once the API is back.

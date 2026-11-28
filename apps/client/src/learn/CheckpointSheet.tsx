@@ -1,6 +1,6 @@
 /**
  * A chapter's checkpoint (learning map, owner's visual Q&A 2026-10-24), in the lesson sheet's frame
- * and with its question view: five mixed questions, each explained once answered, then the result.
+ * and with its question view: ten mixed questions, each explained once answered, then the result.
  * A pass opens the rest of the path; a miss names where the idea was taught, with a way back
  * there, and the checkpoint can be taken again at once. No lives, timers or prizes. Closing it goes
  * back to the map.
@@ -13,7 +13,7 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { guide } from '@/lib/guideAnchors';
 import { startLesson, startTour } from '@/guide/afterNote';
-import { missingPrerequisite } from './path';
+import { missingPrerequisite, opensAnotherChapter } from './path';
 import { getTour, isTourId, runsHere } from '@/guide/tours';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
@@ -215,7 +215,11 @@ export function CheckpointSheet() {
               </p>
               <p className={styles.text}>
                 {passed
-                  ? 'You know this chapter. Everything in it stays open to revisit, and the next chapter opens as soon as it’s ready.'
+                  ? `You know this chapter. Everything in it stays open to revisit${
+                      opensAnotherChapter(checkpointId)
+                        ? ', and the next chapter is open.'
+                        : '. More chapters are on the way.'
+                    }`
                   : `You need ${checkpoint.pass} to pass. That’s normal on a first try: here is where each idea was taught.`}
               </p>
               {missed.length > 0 && (

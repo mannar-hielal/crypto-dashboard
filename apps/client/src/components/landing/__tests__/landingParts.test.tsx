@@ -197,19 +197,19 @@ describe('Timeline', () => {
 });
 
 describe('the chapter claims on the pages', () => {
-  it('should say only Chapter 1 ends with a checkpoint while only Chapter 1 has one (review 2026-11-22)', async () => {
+  it('should say each chapter ends with a checkpoint, as each now has one (owner 2026-11-28)', async () => {
     const { CHAPTERS } = await import('@/learn/path');
     const { FEATURES_FAQ } = await import('@/lib/landingContent');
     const hasCheckpoint = CHAPTERS.map(
       (c) => c.status === 'open' && c.nodes.some((n) => n.kind === 'checkpoint')
     );
-    expect(hasCheckpoint).toEqual([true, false]);
+    expect(hasCheckpoint).toEqual([true, true]);
     const answers = [...BEGINNER_FAQ, ...FEATURES_FAQ].map((q) => q.answer);
     const mentions = answers.filter((a) => /checkpoint/i.test(a));
     expect(mentions.length).toBeGreaterThan(0);
     for (const a of mentions) {
-      expect(a).toMatch(/Chapter 1 ends with a checkpoint/);
-      expect(a).not.toMatch(/Each chapter/);
+      expect(a).toMatch(/Each chapter ends with a checkpoint/);
+      expect(a).not.toMatch(/Chapter 1 ends with/);
     }
   });
 });

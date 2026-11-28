@@ -305,7 +305,7 @@ export const GUIDE_ANCHORS = [
   'path.legend',
   'path.test-out',
   'path.tour.skip',
-  // checkpoint (a chapter's five mixed questions)
+  // checkpoint (a chapter's ten mixed questions)
   'checkpoint.sheet',
   'checkpoint.close',
   'checkpoint.next',

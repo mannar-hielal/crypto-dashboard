@@ -362,8 +362,7 @@ Bybit feed for the LINK charts). Pass chapter 1's checkpoint first, or open the 
 
 1. Open the map ([nav.learn]) → Expect chapter 2 **Your crypto toolbox: coins, wallets and the networks behind them**: the
    lessons **Coins and tokens: who has their own road** and **Stablecoins: the coins that try to sit still** (open after the
-   checkpoint, one after the other), then the chapter's later stops; one still to be written shows as a grey "coming soon" stop
-   that can't be focused.
+   checkpoint, one after the other), then the chapter's later stops, ending on its checkpoint.
 2. [learn.card.start] the lesson → Expect screen 1 of 18, **What you will learn**: a numbered path of four stops (Coin or token, Token kinds, Altcoins and swings, Check fast gains), Pulin pointing, and four numbered lines (since 2026-11-22; it was the guides' chat). Continue → **A coin has its own road** (a coin on a road, a signpost "Its blockchain"; the
    word _coin_ is a tappable term opening a peek), **The road needs upkeep** (a coin at a toll booth, "paid in the coin"),
    **The coins in our market** (eight purple ticker badges BTC ETH SOL BNB XRP ADA AVAX DOGE; LINK in an amber ring, "a token").
@@ -492,6 +491,20 @@ Lesson 9 opens after them). No practice trade. Since 2026-11-28.
    phrase, the unknown site asking for all of a token), the summary, the journal line and the rating.
 6. Phone (390 px): no sideways scroll; the pictures sit inside the picture box.
 
+### Learning path — Chapter 2's checkpoint "Checkpoint: wallets, fees and the networks" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 9 (a new account, chapter 1's checkpoint passed). Since 2026-11-28.
+
+1. Open the map → Expect the crown **Checkpoint: wallets, fees and the networks** at the end of chapter 2, open to test out (no
+   chapter 2 stop shows "coming soon" for it any more), and "Chapter 2 · 0 of 7 done" on a fresh chapter.
+2. [path.test-out] under chapter 2's first locked stop, or the crown → Expect 10 questions, "1 / 10", each explained once
+   answered, no second try.
+3. Answer three wrong, seven right → [checkpoint.result] "Not yet", "7 of 10 right", a **Review Lesson N →** button for each
+   lesson missed (Lessons 5 to 9; a second miss from the same lesson says "Taught in Lesson N"). [checkpoint.retry] starts again.
+4. Answer two wrong, eight right → "Checkpoint passed · 8 of 10 right"; [checkpoint.done] → the map with the crown ticked and the
+   rest of chapter 2 open but not ticked; the result says "More chapters are on the way." Reload → still ticked (version 1 saved).
+5. Phone (390 px): no sideways scroll.
+
 ### Learning path — the learning map (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`. The map is
@@ -503,13 +516,12 @@ Lesson 9 opens after them). No practice trade. Since 2026-11-28.
    chart), chapter 1 "Start here: crypto and trading basics" in purple with "0 of 7 done", the zig-zag with
    **Start** and Pulin over Lesson 1, padlocks on the next four stops, a dumbbell on Lesson 3, "Buy your first coin" and
    "Sell it and read the result", no "Hands-on" tag or badge anywhere, the crown open, and chapter 2 "Your crypto toolbox:
-   coins, wallets and the networks behind them" locked, its unwritten stops dashed "coming soon" ones
-   nobody can tab to. Close and reopen → Expect no dot.
+   coins, wallets and the networks behind them" locked, ending on its crown. Close and reopen → Expect no dot.
    Open Lesson 1 to its sixth screen, close it, reload → Expect a ring about half round Lesson 1 (read back from the
    server) and **Continue**.
 3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “Up, down and your first trade” first." and no lesson.
    [path.chapter.info `ch1`] → Expect the seven stops with minutes and "What you’ll learn" (each lesson's summary lines).
-4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 8 %, **Continue** on Lesson 2,
+4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 7 %, **Continue** on Lesson 2,
    and the dot back on the Route icon before reopening.
 5. [path.test-out] → answer two wrong, eight right → Expect "Checkpoint passed · 8 of 10 right";
    [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked, except
@@ -532,7 +544,7 @@ Lesson 9 opens after them). No practice trade. Since 2026-11-28.
    With no Bitcoin held (sold from Assets first, or the tour started from a failed checkpoint's **Review**): the
    second bubble shows "Open the Assets tab to find your Bitcoin. None there? You need some to sell: do “Buy your
    first coin” on the learning map first, then come back to this lesson." and no ring.
-8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
+8. A failed checkpoint (seven right or fewer) → Expect "Not yet", a **Review Lesson N →** per lesson missed (a tour's
    only on a larger screen), **Back to the path** full width and **Try again** under it.
 
 **Manual check (M).** The landing and features pages (rewrite, 2026-11-22), signed out, at 375, 412, 820 and 1440 px, no
