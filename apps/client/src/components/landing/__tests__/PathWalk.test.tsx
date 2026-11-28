@@ -36,7 +36,7 @@ describe('PathWalk, drawn finished (no observer: a still browser, or reduced mot
     const { container } = await renderWalk();
     const text = container.querySelector('svg')?.textContent ?? '';
     expect(text).toContain('Chapter 1 · 7 of 7 done');
-    expect(text).toContain('Chapter 2 · 4 of 4 done');
+    expect(text).toContain('Chapter 2 · 5 of 5 done');
   });
 
   it('should draw both guides, Pulin and Berwyn', async () => {
@@ -125,7 +125,7 @@ describe('PathWalk, played when it scrolls into view', () => {
     expect(early).toBeLessThan(OPEN);
     play(60000);
     expect(done(container)).toHaveLength(OPEN);
-    expect(container.querySelector('svg')?.textContent).toContain('Chapter 2 · 4 of 4 done');
+    expect(container.querySelector('svg')?.textContent).toContain('Chapter 2 · 5 of 5 done');
     expect(screen.getByRole('button', { name: 'Replay' })).not.toBeNull();
   });
 

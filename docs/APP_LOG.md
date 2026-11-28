@@ -5821,3 +5821,32 @@ the apex; "Not found (404)" is the API's root, which has no page; "Discovered - 
 and `/login`) had never been crawled.
 
 **Still open:** no prerendering; unknown addresses and `/features/` answer 200.
+
+### 2026-11-28 — Chapter 2's first practical stop: "Find the fee on your trade"
+
+Owner, 2026-11-28: chapter 2 gets two practical stops; the first, right after Lesson 8, is reading the Commission in Order
+History. Built on the existing tours and screens, to be reviewed by the owner afterwards. Chapter 2's order is now: Lessons 5
+to 8, this stop, Lesson 9, a practice wallet and swap, the checkpoint.
+
+- **The tour** (`find-the-fee`, `guide/tours.ts`): one job, a $100 Spot market buy of Bitcoin (five steps on a phone and on a
+  larger screen), saved and counted when the order is placed. The order's step says what to do if the form refuses it (read its
+  message; with too little USDT, Skip tour, sell some coin and start the stop again).
+- **What just happened** (`review-fee`): Order History, the newest row, its **Commission** (on a Spot buy it is taken in the
+  coin: 0.1%, about 10 cents, with the rate and "taker" under it), then the contrast: the exchange's fee is simulated here, a
+  network fee (Lesson 8) pays for moving crypto on a blockchain and a practice order moves nothing there; one question closes
+  it. A hidden Commission column is named in the step's missing hint (the Customize columns button).
+- **Shared steps:** `tradeSteps` builds the $100 trade for this stop and for the lessons' practice trades.
+- **Ids:** `find-the-fee` in the client's `TOUR_IDS`, the map (`learn/path.ts`), the landing path walk (`lib/pathWalk.ts`), the
+  server's `LEARN_TOUR_IDS` and `LEARN_ITEM_IDS`, and the SDK's `LEARN_ITEM_IDS`. No migration: progress is stored by id.
+- **Habit badges, unchanged:** "The whole path" (`all-tours`) still asks for the first three tours only (new constant
+  `ALL_TOURS_BADGE_IDS`), so nobody loses an earned badge. Whether the practical stops should count is the owner's open call.
+  "First guided practice" counts any path tour, this one included.
+- **Landing walk:** its columns follow the longest chapter, with one kept free for the "more chapters" dots.
+- **Phone fix (all tours):** the tour bubble covered a phone's full-width Buy button on the order step (the Buy lesson too).
+  `placeBubble` now sits inside a control by its height only; a wide, short one gets the bubble above or below.
+- **Checks:** fact checked twice by a technical-writer agent (the draft, then the built text) and `/code-review high`. Applied:
+  no reset advice on a refused order (a reset deletes history), the All filter named, the columns button's icon named, the
+  exchange's withdrawal fee told apart from the network's cost.
+- **Rollback:** the web app alone may be rolled back (an older app ignores the new item's progress). The API alone may not: an
+  older API refuses `find-the-fee` (400) and a tour's finish is not queued, so the stop shows undone again. Roll back both, or
+  the web app only.

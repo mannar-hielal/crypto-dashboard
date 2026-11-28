@@ -447,6 +447,26 @@ trade: nothing here starts a tour.
 7. After three wrong tries on any question the right answer is shown. Phone (390 px): no sideways scroll; the pictures sit inside
    the picture box.
 
+### Learning path — Chapter 2, practical stop "Find the fee on your trade" (no Part B rows yet)
+
+**UI reproduction** — as for Lesson 8 (a new account, chapter 1 passed, Lessons 5 to 8 done: the stop opens after them), with
+the real feed. Also at 390 px. Since 2026-11-28.
+
+1. Open the map → Expect the dumbbell stop **Find the fee on your trade** next after Lesson 8, and "Trading without a middleman:
+   DApps and pools" still a locked "coming soon" stop. [path.node `tour:find-the-fee`] → Expect the Spot BTC/USDT page and the
+   first bubble (a phone: **Buy / Long**; a larger screen: the form's Buy).
+2. [trade.type.market] → [trade.amount-unit `usdt`] → type 100 in [trade.amount] → [trade.submit] (the bubble ends "Next, we find
+   what it cost you."; under it, what to do when the order is refused: Skip tour, free some USDT, start the stop again).
+3. Expect **What just happened**: [account.tab `orderhistory`] → the top [order-history.row] (Side, Type, Fill Price, Status) → its
+   [order-history.row.commission] (a Bitcoin amount, "0.1% taker" under it) → the card comparing it with a network fee
+   (**One quick question**) → **Check yourself** → **A trading fee for the buy, and a network fee for the send** → **Finish** →
+   Expect the stop ticked on the map.
+   (On a short phone the Order History table shows one row: the cell's last line can sit partly under the Buy / Sell bar until
+   the table is scrolled or the panel dragged up.)
+4. Hide Commission with [account.columns] and replay the stop → the Commission step shows "…No Commission column? Turn it on with
+   the Customize columns button." and no ring. Phone: the ring brings the Commission cell into view inside the table, with no
+   sideways page scroll.
+
 ### Learning path — the learning map (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`. The map is
@@ -455,15 +475,16 @@ trade: nothing here starts a tour.
 1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
    Sign out but no Learn.
 2. [nav.learn] → Expect **Crypto trading path** at 0 %, the legend (book = Lesson, dumbbell = Practice on the real
-   chart), chapter 1 "Start here: crypto and trading basics" in purple with "0 of 6 done", the zig-zag with
+   chart), chapter 1 "Start here: crypto and trading basics" in purple with "0 of 7 done", the zig-zag with
    **Start** and Pulin over Lesson 1, padlocks on the next four stops, a dumbbell on Lesson 3, "Buy your first coin" and
-   "Sell it and read the result", no "Hands-on" tag or badge anywhere, the crown open, and chapter 2 "Trade with a plan" greyed with "Coming soon" and dashed stops
+   "Sell it and read the result", no "Hands-on" tag or badge anywhere, the crown open, and chapter 2 "Your crypto toolbox:
+   coins, wallets and the networks behind them" locked, its unwritten stops dashed "coming soon" ones
    nobody can tab to. Close and reopen → Expect no dot.
    Open Lesson 1 to its sixth screen, close it, reload → Expect a ring about half round Lesson 1 (read back from the
    server) and **Continue**.
 3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “Up, down and your first trade” first." and no lesson.
    [path.chapter.info `ch1`] → Expect the seven stops with minutes and "What you’ll learn" (each lesson's summary lines).
-4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 14 %, **Continue** on Lesson 2,
+4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 8 %, **Continue** on Lesson 2,
    and the dot back on the Route icon before reopening.
 5. [path.test-out] → answer two wrong, eight right → Expect "Checkpoint passed · 8 of 10 right";
    [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked, except

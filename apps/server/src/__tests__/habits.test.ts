@@ -6,10 +6,17 @@ import {
   dayCounter,
   zoneFormatsKept,
 } from '../services/Habits.js';
+import { ALL_TOURS_BADGE_IDS, LEARN_TOUR_IDS } from '../constants.js';
 
 const NOW = new Date('2026-10-14T12:00:00Z');
 const day = (iso: string) => new Date(`${iso}T09:00:00Z`);
-const base: HabitInput = { stopLossOrders: 0, noteTimes: [], tourTimes: [], toursCompleted: 0 };
+const base: HabitInput = {
+  stopLossOrders: 0,
+  noteTimes: [],
+  tourTimes: [],
+  toursCompleted: 0,
+  badgeToursCompleted: 0,
+};
 const badge = (r: ReturnType<typeof computeHabits>, id: string) =>
   r.badges.find((b) => b.id === id)!;
 
@@ -52,15 +59,19 @@ describe('computeHabits', () => {
   });
 
   it('should award the tour badges by tours finished', () => {
-    expect(badge(computeHabits({ ...base, toursCompleted: 1 }, NOW), 'first-tour').earned).toBe(
-      true
-    );
-    expect(badge(computeHabits({ ...base, toursCompleted: 1 }, NOW), 'all-tours').earned).toBe(
-      false
-    );
-    expect(badge(computeHabits({ ...base, toursCompleted: 3 }, NOW), 'all-tours').earned).toBe(
-      true
-    );
+    const finished = (toursCompleted: number, badgeToursCompleted: number) =>
+      computeHabits({ ...base, toursCompleted, badgeToursCompleted }, NOW);
+    expect(badge(finished(1, 1), 'first-tour').earned).toBe(true);
+    expect(badge(finished(1, 1), 'all-tours').earned).toBe(false);
+    expect(badge(finished(3, 3), 'all-tours')).toMatchObject({ earned: true, target: 3 });
+  });
+
+  it('should ask `all-tours` for its three tours only, a newer practical stop aside (open call, 2026-11-28)', () => {
+    expect(ALL_TOURS_BADGE_IDS).toEqual(['primer', 'buy-first-coin', 'sell-and-review']);
+    for (const id of ALL_TOURS_BADGE_IDS) expect(LEARN_TOUR_IDS).toContain(id);
+    // Two of the three and the fee practice: three tours finished, the badge not yet
+    const r = computeHabits({ ...base, toursCompleted: 3, badgeToursCompleted: 2 }, NOW);
+    expect(badge(r, 'all-tours')).toMatchObject({ earned: false, progress: 2 });
   });
 
   it('should count a learning day from a tour step or a note, once', () => {

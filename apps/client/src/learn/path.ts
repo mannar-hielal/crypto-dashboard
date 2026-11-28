@@ -84,6 +84,8 @@ export const CHAPTERS: readonly Chapter[] = [
       { kind: 'lesson', id: 'lesson-stablecoins', access: FREE },
       { kind: 'lesson', id: 'lesson-wallets', access: FREE },
       { kind: 'lesson', id: 'lesson-fees', access: FREE },
+      // The practical stop after the fees lesson (owner 2026-11-28): a practice buy, then its fee
+      { kind: 'tour', id: 'find-the-fee', access: FREE },
     ],
     soon: [
       { kind: 'lesson', title: 'Trading without a middleman: DApps and pools' },

@@ -49,9 +49,9 @@ describe('layoutWalk', () => {
     const ch1 = l.nodes.filter((n) => n.chapter === 0);
     const ch2 = l.nodes.filter((n) => n.chapter === 1);
     expect(ch1).toHaveLength(7);
-    expect(ch2).toHaveLength(6);
+    expect(ch2).toHaveLength(7);
     expect(ch1[6].x).toBeGreaterThan(ch1[0].x);
-    expect(ch2[5].x).toBeLessThan(ch2[0].x);
+    expect(ch2[6].x).toBeLessThan(ch2[0].x);
     expect(ch2[0].y).toBeGreaterThan(ch1[0].y + STOP_R * 2);
   });
 
@@ -232,6 +232,6 @@ describe('PathRun', () => {
   });
 
   it('should end a chapter at its last open stop', () => {
-    expect(chapterEnds()).toEqual({ 6: 0, 10: 1 });
+    expect(chapterEnds()).toEqual({ 6: 0, 11: 1 });
   });
 });

@@ -86,6 +86,45 @@ describe('tours', () => {
       expect(st.text, st.id).not.toMatch(/next tour/);
   });
 
+  it('should walk the fee practice through a $100 buy, then its Commission and the network fee (owner 2026-11-28)', () => {
+    const fee = getTour('find-the-fee');
+    expect(fee.next).toBe('review-fee');
+    expect(getTour('review-fee').next).toBeUndefined();
+    expect(fee.phoneReady).toBe(true);
+    expect(fee.steps.find((s) => s.kind === 'type')?.suggest).toBe('100');
+    // The order's step says what to do when the form refuses the order: never a dead end. Skip
+    // first, then sell (a sell during the step would finish the stop), and no reset advice
+    const note = tourSteps(fee, true).at(-1)!.liveNote!;
+    expect(note).toContain(`then start “${fee.title}” again from the learning map.`);
+    expect(note).toMatch(/Press Skip tour.*sell some coin/);
+    // A phone closes the form on an accepted order, so the note says that too
+    expect(note).toMatch(/on a small screen the form closing/);
+    expect(note).not.toMatch(/reset/i);
+    expect(tourSteps(fee, true).at(-1)!.text).toMatch(/Next, we find what it cost you/);
+    expect(getTour('review-fee').steps.map((s) => [s.kind, s.anchor, s.key])).toEqual([
+      ['click', 'account.tab', 'orderhistory'],
+      // No key: the newest row, the buy
+      ['observe', 'order-history.row', undefined],
+      ['observe', 'order-history.row.commission', undefined],
+      ['observe', undefined, undefined],
+      ['quiz', undefined, undefined],
+    ]);
+    const steps = getTour('review-fee').steps;
+    // The column hidden: its step says how to bring it back
+    expect(steps[2].missingHint).toMatch(/Customize columns/);
+    // Spot's fee is taken in the coin bought: 0.1% of $100 is about 10 cents
+    expect(steps[2].text).toMatch(/taken in the coin: 0\.1%.*about 10 cents/);
+    // The contrast: a network fee moves crypto on a blockchain, which a practice order never does
+    expect(steps[3].text).toMatch(/network fee, from Lesson 8.*moved nothing on a blockchain/);
+    // Fact check 2026-11-28: a taker took a waiting offer; the exchange sets its own withdrawal fee
+    expect(steps[2].text).toMatch(/Taker means your order took an offer already waiting/);
+    const quiz = steps[4].quiz!;
+    expect(quiz.explain).toMatch(
+      /as a withdrawal fee, which may be different from the network cost/
+    );
+    expect(quiz.options[quiz.correct]).toMatch(/trading fee for the buy, and a network fee/);
+  });
+
   it('should keep the lessons’ looks out of the saved, reported tours, on the lesson’s own page, on phones too', () => {
     expect(PATH_REVIEWS.map((t) => t.id)).toEqual([...PATH_REVIEW_IDS]);
     for (const t of PATH_REVIEWS) {
@@ -184,7 +223,7 @@ describe('tours', () => {
   });
 
   it('should open the order form from the phone’s bar on a phone, and from the side button on a larger screen (owner 2026-11-16)', () => {
-    for (const tour of [getTour('buy-first-coin'), ...PRACTICE_TOURS]) {
+    for (const tour of [getTour('buy-first-coin'), getTour('find-the-fee'), ...PRACTICE_TOURS]) {
       expect(tourSteps(tour, false)[0].anchor, tour.id).toMatch(/^trade\.mobile\./);
       expect(tourSteps(tour, true)[0].anchor, tour.id).toMatch(/^trade\.side\./);
       expect(tour.phoneReady, tour.id).toBe(true);

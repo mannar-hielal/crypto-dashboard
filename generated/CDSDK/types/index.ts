@@ -109,6 +109,7 @@ export const LEARN_ITEM_IDS = [
   'primer',
   'buy-first-coin',
   'sell-and-review',
+  'find-the-fee',
   'welcome-card',
   'fill-email-offer',
   'lesson-01',
